@@ -1,0 +1,16 @@
+{
+  "html_url": "https://github.com/pytorch/pytorch/issues/888888",
+  "title": "`torch.special.expit` should preserve NaN values on CPU",
+  "body": "On CPU builds, `torch.special.expit` returns finite values for NaN inputs instead of preserving NaN. This diverges from the documented behavior and from the CUDA path.",
+  "labels": [
+    {
+      "name": "module: special"
+    },
+    {
+      "name": "cpu"
+    }
+  ],
+  "user": {
+    "login": "sample-reporter"
+  }
+}

@@ -1,0 +1,312 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "op_bench task manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "task_id",
+    "version",
+    "source",
+    "statement",
+    "operator",
+    "environment",
+    "agent_visible",
+    "evaluation",
+    "artifacts",
+    "metadata"
+  ],
+  "properties": {
+    "task_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^v[0-9]+$"
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pr_url",
+        "issue_url",
+        "repo",
+        "issue_number",
+        "pr_number",
+        "base_commit",
+        "merge_commit"
+      ],
+      "properties": {
+        "pr_url": {
+          "type": "string"
+        },
+        "issue_url": {
+          "type": "string"
+        },
+        "repo": {
+          "type": "string",
+          "minLength": 1
+        },
+        "issue_number": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "pr_number": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "base_commit": {
+          "type": "string",
+          "minLength": 7
+        },
+        "merge_commit": {
+          "type": "string",
+          "minLength": 7
+        }
+      }
+    },
+    "statement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "title",
+        "body",
+        "labels"
+      ],
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string"
+        },
+        "labels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "operator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "framework",
+        "component",
+        "operator_name",
+        "problem_type",
+        "tags"
+      ],
+      "properties": {
+        "framework": {
+          "type": "string"
+        },
+        "component": {
+          "type": "string"
+        },
+        "operator_name": {
+          "type": "string"
+        },
+        "problem_type": {
+          "type": "string"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tier",
+        "image",
+        "python_version",
+        "os",
+        "build_mode",
+        "hardware",
+        "dependencies"
+      ],
+      "properties": {
+        "tier": {
+          "type": "string",
+          "enum": [
+            "cpu-deterministic",
+            "single-gpu",
+            "kernel-build"
+          ]
+        },
+        "image": {
+          "type": "string"
+        },
+        "python_version": {
+          "type": "string"
+        },
+        "os": {
+          "type": "string"
+        },
+        "build_mode": {
+          "type": "string",
+          "enum": [
+            "editable-python",
+            "source-build",
+            "prebuilt-wheel"
+          ]
+        },
+        "hardware": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "device",
+            "min_memory_gb"
+          ],
+          "properties": {
+            "device": {
+              "type": "string"
+            },
+            "min_memory_gb": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "gpu_model": {
+              "type": "string"
+            },
+            "cuda_version": {
+              "type": "string"
+            }
+          }
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "agent_visible": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repo_setup_commands",
+        "known_constraints",
+        "allowed_test_commands"
+      ],
+      "properties": {
+        "repo_setup_commands": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "known_constraints": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "allowed_test_commands": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "evaluation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "setup_commands",
+        "fail_to_pass",
+        "pass_to_pass",
+        "test_command",
+        "timeout_sec"
+      ],
+      "properties": {
+        "setup_commands": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "fail_to_pass": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "pass_to_pass": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "test_command": {
+          "type": "string"
+        },
+        "timeout_sec": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "artifacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "gold_patch",
+        "test_patch"
+      ],
+      "properties": {
+        "gold_patch": {
+          "type": "string"
+        },
+        "test_patch": {
+          "type": "string"
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "difficulty",
+        "curation_status",
+        "deterministic",
+        "estimated_runtime_min"
+      ],
+      "properties": {
+        "difficulty": {
+          "type": "string",
+          "enum": [
+            "easy",
+            "medium",
+            "hard"
+          ]
+        },
+        "curation_status": {
+          "type": "string",
+          "enum": [
+            "draft",
+            "verified"
+          ]
+        },
+        "deterministic": {
+          "type": "boolean"
+        },
+        "estimated_runtime_min": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

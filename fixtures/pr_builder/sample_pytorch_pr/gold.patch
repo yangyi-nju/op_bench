@@ -1,0 +1,32 @@
+From 2222222222222222222222222222222222222222 Mon Sep 17 00:00:00 2001
+From: sample-contributor <sample@example.com>
+Date: Fri, 12 Apr 2026 09:00:00 +0000
+Subject: [PATCH] Fix torch.special.expit NaN handling on CPU
+
+---
+ test/test_special.py         | 14 ++++++++++++++
+ torch/special/_special_ops.py | 8 +++++++-
+ 2 files changed, 21 insertions(+), 1 deletion(-)
+
+diff --git a/torch/special/_special_ops.py b/torch/special/_special_ops.py
+index 1111111..2222222 100644
+--- a/torch/special/_special_ops.py
++++ b/torch/special/_special_ops.py
+@@ -10,7 +10,13 @@ def expit(x):
+-    return _cpu_expit(x)
++    if torch.isnan(x).any():
++        result = _cpu_expit(x)
++        return torch.where(torch.isnan(x), x, result)
++    return _cpu_expit(x)
+
+diff --git a/test/test_special.py b/test/test_special.py
+index 3333333..4444444 100644
+--- a/test/test_special.py
++++ b/test/test_special.py
+@@ -100,3 +100,17 @@ def test_expit_grad_cpu():
+     ...
++
++def test_expit_preserves_nan_cpu():
++    x = torch.tensor([float("nan"), 1.0], device="cpu")
++    y = torch.special.expit(x)
++    assert torch.isnan(y[0])

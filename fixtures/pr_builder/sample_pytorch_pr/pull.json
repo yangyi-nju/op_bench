@@ -1,0 +1,15 @@
+{
+  "html_url": "https://github.com/pytorch/pytorch/pull/999999",
+  "title": "Fix `torch.special.expit` NaN handling on CPU",
+  "body": "Fixes #888888\n\nThis PR updates the CPU path so that NaN inputs propagate correctly and adds a regression test.",
+  "merge_commit_sha": "2222222222222222222222222222222222222222",
+  "base": {
+    "sha": "1111111111111111111111111111111111111111"
+  },
+  "head": {
+    "sha": "3333333333333333333333333333333333333333"
+  },
+  "user": {
+    "login": "sample-contributor"
+  }
+}
