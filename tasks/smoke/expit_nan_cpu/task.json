@@ -1,0 +1,80 @@
+{
+  "task_id": "smoke__expit_nan_cpu",
+  "version": "v1",
+  "source": {
+    "pr_url": "https://github.com/local/op-smoke/pull/1",
+    "issue_url": "https://github.com/local/op-smoke/issues/1",
+    "repo": "local/op-smoke",
+    "issue_number": 1,
+    "pr_number": 1,
+    "base_commit": "localbase",
+    "merge_commit": "localmerge",
+    "checkout_mode": "local-copy",
+    "local_path": "../../../fixtures/smoke_repo"
+  },
+  "statement": {
+    "title": "`torch.special.expit` should preserve NaN values on CPU",
+    "body": "On CPU builds, `torch.special.expit` should preserve NaN inputs. The current operator path returns a finite value for NaN, which masks invalid numerical inputs and diverges from the documented behavior.",
+    "labels": [
+      "module: special",
+      "cpu",
+      "smoke"
+    ]
+  },
+  "operator": {
+    "framework": "pytorch",
+    "component": "torch.special",
+    "operator_name": "torch.special.expit",
+    "problem_type": "numerical-semantics",
+    "tags": [
+      "cpu",
+      "nan",
+      "numerical-semantics",
+      "pytorch"
+    ]
+  },
+  "environment": {
+    "tier": "cpu-deterministic",
+    "image": "local",
+    "python_version": "3",
+    "os": "local",
+    "build_mode": "editable-python",
+    "hardware": {
+      "device": "cpu",
+      "min_memory_gb": 1
+    },
+    "dependencies": []
+  },
+  "agent_visible": {
+    "repo_setup_commands": [],
+    "known_constraints": [
+      "Smoke task uses a local Python-only operator fixture.",
+      "Task is expected to be reproducible on CPU only."
+    ],
+    "allowed_test_commands": [
+      "{python} -m unittest {test}"
+    ]
+  },
+  "evaluation": {
+    "setup_commands": [],
+    "fail_to_pass": [
+      "tests.test_special.TestSpecialExpit.test_nan_is_preserved"
+    ],
+    "pass_to_pass": [
+      "tests.test_special.TestSpecialExpit.test_regular_value"
+    ],
+    "test_command": "{python} -m unittest {test}",
+    "timeout_sec": 30
+  },
+  "artifacts": {
+    "gold_patch": "artifacts/gold.patch",
+    "test_patch": "artifacts/test.patch"
+  },
+  "metadata": {
+    "difficulty": "easy",
+    "curation_status": "verified",
+    "deterministic": true,
+    "estimated_runtime_min": 1,
+    "notes": "Local smoke task for validating the op_bench runner and evaluator loop."
+  }
+}

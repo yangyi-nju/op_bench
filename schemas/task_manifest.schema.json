@@ -62,6 +62,16 @@
         "merge_commit": {
           "type": "string",
           "minLength": 7
+        },
+        "checkout_mode": {
+          "type": "string",
+          "enum": [
+            "git",
+            "local-copy"
+          ]
+        },
+        "local_path": {
+          "type": "string"
         }
       }
     },

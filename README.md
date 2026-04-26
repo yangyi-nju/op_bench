@@ -33,9 +33,25 @@ The first version should optimize for a reliable end-to-end pipeline, not for be
 - `docs/`: design notes and benchmark decisions
 - `fixtures/`: local builder fixtures for offline development
 - `schemas/`: task manifest schema
+- `tasks/smoke/`: verified local smoke tasks for runner development
 - `tasks/examples/`: example task bundle metadata
 - `scripts/`: small utilities for validation and local workflow checks
-- `src/op_bench/`: future runner/evaluator package code
+- `src/op_bench/`: builder, task model, runner, evaluator, agent, and reporter code
+
+## Python Environment
+
+Create and use a local virtual environment:
+
+```bash
+python3 -m venv .venv
+PATH=.venv/bin:$PATH python --version
+```
+
+After the environment exists, run project commands with `python`:
+
+```bash
+PATH=.venv/bin:$PATH PYTHONPATH=src python -m unittest discover tests -v
+```
 
 ## Builder MVP
 
@@ -45,6 +61,25 @@ You can bootstrap draft benchmark tasks directly from GitHub pull requests with 
 - output: a draft task bundle with raw metadata, a draft manifest, and the merged patch
 
 Builder details and example commands live in [docs/builder_workflow.md](/Users/yy/dev/graduate/op_bench/docs/builder_workflow.md).
+
+## MVP Smoke Experiment
+
+Run the local smoke benchmark:
+
+```bash
+PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/run_experiment.py \
+  --task tasks/smoke/expit_nan_cpu \
+  --agent noop \
+  --agent gold \
+  --output-dir /tmp/op_bench_smoke
+```
+
+Expected result:
+
+- `gold` resolves the task
+- `noop` fails the fail-to-pass test
+- `/tmp/op_bench_smoke/results.jsonl` contains per-run records
+- `/tmp/op_bench_smoke/summary.json` contains aggregate resolved rates
 
 ## Recommended Build Order
 

@@ -42,6 +42,10 @@ ALLOWED_TIERS = {"cpu-deterministic", "single-gpu", "kernel-build"}
 ALLOWED_BUILD_MODES = {"editable-python", "source-build", "prebuilt-wheel"}
 ALLOWED_DIFFICULTIES = {"easy", "medium", "hard"}
 ALLOWED_CURATION_STATUSES = {"draft", "verified"}
+ALLOWED_CHECKOUT_MODES = {"git", "local-copy"}
+ALLOW_EMPTY_REQUIRED_PATHS = {
+    ("agent_visible", "repo_setup_commands"),
+}
 
 
 def lookup(data: dict[str, Any], path: tuple[str, ...]) -> Any:
@@ -63,8 +67,17 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
             errors.append(f"missing required field: {'.'.join(path)}")
             continue
 
-        if value in ("", [], {}):
+        if path not in ALLOW_EMPTY_REQUIRED_PATHS and value in ("", [], {}):
             errors.append(f"empty required field: {'.'.join(path)}")
+
+    source = data.get("source", {})
+    checkout_mode = source.get("checkout_mode", "git")
+    if checkout_mode not in ALLOWED_CHECKOUT_MODES:
+        errors.append(
+            f"invalid source.checkout_mode: {checkout_mode!r}; expected one of {sorted(ALLOWED_CHECKOUT_MODES)}"
+        )
+    if checkout_mode == "local-copy" and not source.get("local_path"):
+        errors.append("source.local_path is required when source.checkout_mode is 'local-copy'")
 
     try:
         tier = lookup(data, ("environment", "tier"))
@@ -108,6 +121,8 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
         fail_to_pass = lookup(data, ("evaluation", "fail_to_pass"))
         if not isinstance(fail_to_pass, list) or not fail_to_pass:
             errors.append("evaluation.fail_to_pass must be a non-empty list")
+        elif contains_draft_test_entry(fail_to_pass):
+            errors.append("evaluation.fail_to_pass contains unresolved draft test entries")
     except KeyError:
         pass
 
@@ -115,10 +130,17 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
         pass_to_pass = lookup(data, ("evaluation", "pass_to_pass"))
         if not isinstance(pass_to_pass, list) or not pass_to_pass:
             errors.append("evaluation.pass_to_pass must be a non-empty list")
+        elif contains_draft_test_entry(pass_to_pass):
+            errors.append("evaluation.pass_to_pass contains unresolved draft test entries")
     except KeyError:
         pass
 
     return errors
+
+
+def contains_draft_test_entry(tests: list[Any]) -> bool:
+    draft_prefix = "TO" + "DO:"
+    return any(str(test).startswith(draft_prefix) for test in tests)
 
 
 def main() -> int:

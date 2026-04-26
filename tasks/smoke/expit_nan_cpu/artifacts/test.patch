@@ -1,0 +1,24 @@
+diff --git a/tests/test_special.py b/tests/test_special.py
+new file mode 100644
+index 0000000..4af1891
+--- /dev/null
++++ b/tests/test_special.py
+@@ -0,0 +1,18 @@
++from __future__ import annotations
++
++import math
++import unittest
++
++from op_lib import expit
++
++
++class TestSpecialExpit(unittest.TestCase):
++    def test_nan_is_preserved(self) -> None:
++        self.assertTrue(math.isnan(expit(float("nan"))))
++
++    def test_regular_value(self) -> None:
++        self.assertAlmostEqual(expit(0.0), 0.5)
++
++
++if __name__ == "__main__":
++    unittest.main()

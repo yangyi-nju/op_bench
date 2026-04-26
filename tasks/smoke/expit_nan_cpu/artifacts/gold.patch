@@ -1,0 +1,12 @@
+diff --git a/op_lib/special.py b/op_lib/special.py
+index 96329ed..6bbda2a 100644
+--- a/op_lib/special.py
++++ b/op_lib/special.py
+@@ -5,6 +5,6 @@ import math
+ 
+ 
+ def expit(value: float) -> float:
+     if math.isnan(value):
+-        return 0.0
++        return float("nan")
+     return 1.0 / (1.0 + math.exp(-value))
