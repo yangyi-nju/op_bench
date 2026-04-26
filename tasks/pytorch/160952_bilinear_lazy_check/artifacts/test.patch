@@ -1,0 +1,29 @@
+diff --git a/test/nn/test_bilinear_lazy_op_bench.py b/test/nn/test_bilinear_lazy_op_bench.py
+new file mode 100644
+index 00000000000..f87f25ba0fd
+--- /dev/null
++++ b/test/nn/test_bilinear_lazy_op_bench.py
+@@ -0,0 +1,23 @@
++import unittest
++
++import torch
++from torch import nn
++from torch.nn.modules.lazy import LazyModuleMixin
++
++
++class LazyBilinearForTest(LazyModuleMixin, nn.Bilinear):
++    cls_to_become = nn.Bilinear
++
++    def __init__(self, out_features):
++        super().__init__(0, 0, out_features)
++
++    def initialize_parameters(self, input1, input2):
++        self.in1_features = input1.shape[-1]
++        self.in2_features = input2.shape[-1]
++        self.reset_parameters()
++
++
++class TestLazyBilinearOpBench(unittest.TestCase):
++    def test_lazy_bilinear_can_be_constructed(self):
++        module = LazyBilinearForTest(3)
++        self.assertIsInstance(module, LazyBilinearForTest)

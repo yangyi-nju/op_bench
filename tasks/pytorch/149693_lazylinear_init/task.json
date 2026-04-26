@@ -1,0 +1,86 @@
+{
+  "task_id": "pytorch__149693__lazylinear_init",
+  "version": "v1",
+  "source": {
+    "pr_url": "https://github.com/pytorch/pytorch/pull/149693",
+    "issue_url": "https://github.com/pytorch/pytorch/issues/149691",
+    "repo": "pytorch/pytorch",
+    "repo_url": "https://github.com/pytorch/pytorch.git",
+    "issue_number": 149691,
+    "pr_number": 149693,
+    "base_commit": "362b40939dd6faeebf0569beac563afa51e81dcd",
+    "merge_commit": "35e7652438440aa547f434810cd41411ad836b2a",
+    "checkout_mode": "git"
+  },
+  "statement": {
+    "title": "LazyLinear broken by new init logic",
+    "body": "`nn.LazyLinear` returns zero output after lazy initialization because `in_features` remains zero when `reset_parameters()` is called.",
+    "labels": [
+      "module: nn",
+      "module: lazy",
+      "module: regression",
+      "high priority",
+      "triaged"
+    ]
+  },
+  "operator": {
+    "framework": "pytorch",
+    "component": "torch.nn",
+    "operator_name": "torch.nn.LazyLinear",
+    "problem_type": "initialization-semantics",
+    "tags": [
+      "lazy",
+      "nn",
+      "regression",
+      "python-level",
+      "cpu-deterministic"
+    ]
+  },
+  "environment": {
+    "tier": "cpu-deterministic",
+    "image": "local-full-pytorch",
+    "python_version": "3.9",
+    "os": "local",
+    "build_mode": "source-build",
+    "hardware": {
+      "device": "cpu",
+      "min_memory_gb": 8
+    },
+    "dependencies": [
+      "pytorch source checkout dependencies"
+    ]
+  },
+  "agent_visible": {
+    "repo_setup_commands": [],
+    "known_constraints": [
+      "Full PyTorch source checkout task.",
+      "Do not assume CUDA availability.",
+      "Keep the fix focused on LazyLinear initialization semantics."
+    ],
+    "allowed_test_commands": [
+      "{python} test/nn/test_lazy_modules.py {test}"
+    ]
+  },
+  "evaluation": {
+    "setup_commands": [],
+    "fail_to_pass": [
+      "TestLazyModules.test_linear"
+    ],
+    "pass_to_pass": [
+      "TestLazyModules.test_lazy_module_kwargs"
+    ],
+    "test_command": "{python} test/nn/test_lazy_modules.py {test}",
+    "timeout_sec": 900
+  },
+  "artifacts": {
+    "gold_patch": "artifacts/gold.patch",
+    "test_patch": "artifacts/test.patch"
+  },
+  "metadata": {
+    "difficulty": "medium",
+    "curation_status": "draft",
+    "deterministic": true,
+    "estimated_runtime_min": 15,
+    "notes": "Primary real PyTorch full-repo candidate. Promote to verified only after local replay baseline fails and gold passes."
+  }
+}

@@ -81,6 +81,35 @@ Expected result:
 - `/tmp/op_bench_smoke/results.jsonl` contains per-run records
 - `/tmp/op_bench_smoke/summary.json` contains aggregate resolved rates
 
+## Real PyTorch Candidate Tasks
+
+The first full-repository PyTorch candidates live under `tasks/pytorch/`.
+
+- `tasks/pytorch/149693_lazylinear_init`: PR https://github.com/pytorch/pytorch/pull/149693
+- `tasks/pytorch/160952_bilinear_lazy_check`: PR https://github.com/pytorch/pytorch/pull/160952
+
+These tasks stay in `draft` status until replay evidence proves baseline failure and gold success on the declared environment.
+If replay reports `environment_error`, the repository checkout and patches may be valid, but the declared runtime is not yet available on the machine running the benchmark.
+
+Verify replay for one task:
+
+```bash
+PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/verify_task_replay.py \
+  tasks/pytorch/149693_lazylinear_init \
+  --output runs/replay/pytorch_149693.json
+```
+
+Run a real agent after replay is viable:
+
+```bash
+PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/run_experiment.py \
+  --task tasks/pytorch/149693_lazylinear_init \
+  --agent noop \
+  --agent gold \
+  --agent codex \
+  --output-dir runs/pytorch-mini-codex
+```
+
 ## Recommended Build Order
 
 1. Curate 3 to 5 hand-picked CPU tasks from one framework first.

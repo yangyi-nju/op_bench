@@ -158,6 +158,7 @@ The result format should distinguish:
 - `pass_to_pass_regressed`
 - `timeout`
 - `environment_mismatch`
+- `environment_error`
 - `runner_error`
 
 This is important for op_bench because environment and operator behavior failures are materially different from ordinary patch correctness failures.

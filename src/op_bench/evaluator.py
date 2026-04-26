@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shlex
 import shutil
 import tempfile
 import time
@@ -51,7 +52,7 @@ class Evaluator:
                 return self._result(task, mode, "runner_error", start, environment, command_log)
 
             for command in task.setup_commands:
-                result = self.executor.run(command.split(), workspace, task.timeout_sec)
+                result = self.executor.run(shlex.split(command), workspace, task.timeout_sec)
                 command_log.append(result)
                 if result.timed_out:
                     return self._result(task, mode, "timeout", start, environment, command_log)
@@ -82,6 +83,8 @@ class Evaluator:
             command_log.extend(pass_results)
             if any(result.timed_out for result in pass_results):
                 return self._result(task, mode, "timeout", start, environment, command_log)
+            if self._has_environment_error(fail_results + pass_results):
+                return self._result(task, mode, "environment_error", start, environment, command_log)
 
             fail_passed = sum(1 for result in fail_results if result.exit_code == 0)
             pass_passed = sum(1 for result in pass_results if result.exit_code == 0)
@@ -106,6 +109,17 @@ class Evaluator:
             )
 
     def _prepare_workspace(self, task: TaskManifest, workspace: Path) -> str | None:
+        return self.prepare_workspace(task, workspace)
+
+    def prepare_workspace(self, task: TaskManifest, workspace: Path) -> str | None:
+        if task.checkout_mode == "git":
+            clone = self.executor.run(["git", "clone", "--no-checkout", task.repo_url, str(workspace)], workspace.parent, 300)
+            if clone.exit_code != 0:
+                return clone.stderr or clone.stdout or "git clone failed"
+            checkout = self.executor.run(["git", "checkout", task.base_commit], workspace, 300)
+            if checkout.exit_code != 0:
+                return checkout.stderr or checkout.stdout or "git checkout failed"
+            return None
         if task.checkout_mode != "local-copy":
             return f"unsupported checkout mode: {task.checkout_mode}"
         source = task.local_source_path
@@ -122,6 +136,33 @@ class Evaluator:
             self.executor.run(task.command_for_test(test_name), workspace, task.timeout_sec)
             for test_name in tests
         ]
+
+    def _has_environment_error(self, results: list[CommandResult]) -> bool:
+        if not results:
+            return False
+        failed_outputs = [
+            f"{result.stdout}\n{result.stderr}"
+            for result in results
+            if result.exit_code != 0
+        ]
+        if not failed_outputs:
+            return False
+        environment_markers = (
+            "ModuleNotFoundError:",
+            "ImportError:",
+            "OSError:",
+            "No module named",
+            "cannot open shared object file",
+            "Library not loaded:",
+            "CUDA error:",
+            "CUDA is not available",
+            "Found no NVIDIA driver",
+            "No CUDA GPUs are available",
+        )
+        return any(
+            any(marker in output for marker in environment_markers)
+            for output in failed_outputs
+        )
 
     def _classify(
         self,

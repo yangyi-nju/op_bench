@@ -47,6 +47,9 @@
           "type": "string",
           "minLength": 1
         },
+        "repo_url": {
+          "type": "string"
+        },
         "issue_number": {
           "type": "integer",
           "minimum": 1

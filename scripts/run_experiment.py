@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import shutil
 from pathlib import Path
 
 
@@ -31,7 +32,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--agent",
         action="append",
         required=True,
-        choices=["noop", "gold"],
+        choices=["noop", "gold", "codex"],
         help="Agent adapter to run. May be provided multiple times.",
     )
     parser.add_argument("--output-dir", required=True, help="Directory for result artifacts.")
@@ -53,7 +54,32 @@ def main(argv: list[str] | None = None) -> int:
 
         for agent_name in args.agent:
             agent = agent_by_name(agent_name)
-            agent_output = agent.produce_patch(task, patches_dir / agent_name)
+            workspace = None
+            if agent_name == "codex":
+                workspace = output_dir / "workspaces" / task.task_id / agent_name
+                if workspace.exists():
+                    shutil.rmtree(workspace)
+                workspace.parent.mkdir(parents=True, exist_ok=True)
+                prepare_error = evaluator.prepare_workspace(task, workspace)
+                if prepare_error is not None:
+                    records.append(
+                        {
+                            "agent": agent_name,
+                            "task_id": task.task_id,
+                            "mode": f"agent:{agent_name}",
+                            "status": "runner_error",
+                            "error": prepare_error,
+                            "fail_to_pass_total": len(task.fail_to_pass_tests),
+                            "fail_to_pass_passed": 0,
+                            "pass_to_pass_total": len(task.pass_to_pass_tests),
+                            "pass_to_pass_passed": 0,
+                            "duration_sec": 0.0,
+                            "environment": {},
+                            "commands": [],
+                        }
+                    )
+                    continue
+            agent_output = agent.produce_patch(task, patches_dir / agent_name, workspace=workspace)
             result = evaluator.evaluate_patch(task, agent_output.patch_path, agent_name)
             record = _record(agent=agent_name, result=result)
             record["agent_metadata"] = agent_output.metadata

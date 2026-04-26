@@ -39,6 +39,24 @@ class TaskManifest:
         return path
 
     @property
+    def repo_url(self) -> str:
+        explicit = self.data["source"].get("repo_url")
+        if explicit:
+            return str(explicit)
+        repo = str(self.data["source"]["repo"])
+        if repo.startswith(("http://", "https://", "ssh://", "git@")):
+            return repo
+        return f"https://github.com/{repo}.git"
+
+    @property
+    def base_commit(self) -> str:
+        return str(self.data["source"]["base_commit"])
+
+    @property
+    def issue_markdown_path(self) -> Path:
+        return self.task_dir / "issue.md"
+
+    @property
     def gold_patch_path(self) -> Path:
         return self.task_dir / self.data["artifacts"]["gold_patch"]
 

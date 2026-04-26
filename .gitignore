@@ -1,3 +1,5 @@
 .venv/
+.op_bench_cache/
+runs/
 __pycache__/
 *.pyc

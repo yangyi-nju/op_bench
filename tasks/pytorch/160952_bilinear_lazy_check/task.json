@@ -1,0 +1,82 @@
+{
+  "task_id": "pytorch__160952__bilinear_lazy_check",
+  "version": "v1",
+  "source": {
+    "pr_url": "https://github.com/pytorch/pytorch/pull/160952",
+    "issue_url": "https://github.com/pytorch/pytorch/issues/160407",
+    "repo": "pytorch/pytorch",
+    "repo_url": "https://github.com/pytorch/pytorch.git",
+    "issue_number": 160407,
+    "pr_number": 160952,
+    "base_commit": "df6073641079c781e66a905e4f15ee49ac257eb2",
+    "merge_commit": "10838530e9625afda0076d573124aaa03251dba6",
+    "checkout_mode": "git"
+  },
+  "statement": {
+    "title": "`Bilinear` module can't be made lazy due to new checks introduced in `__init__`",
+    "body": "`nn.Bilinear` rejects zero input feature values in `__init__`, preventing lazy bilinear module construction.",
+    "labels": [
+      "module: nn",
+      "triaged"
+    ]
+  },
+  "operator": {
+    "framework": "pytorch",
+    "component": "torch.nn",
+    "operator_name": "torch.nn.Bilinear",
+    "problem_type": "lazy-module-initialization",
+    "tags": [
+      "bilinear",
+      "lazy",
+      "nn",
+      "python-level",
+      "cpu-deterministic"
+    ]
+  },
+  "environment": {
+    "tier": "cpu-deterministic",
+    "image": "local-full-pytorch",
+    "python_version": "3.9",
+    "os": "local",
+    "build_mode": "source-build",
+    "hardware": {
+      "device": "cpu",
+      "min_memory_gb": 8
+    },
+    "dependencies": [
+      "pytorch source checkout dependencies"
+    ]
+  },
+  "agent_visible": {
+    "repo_setup_commands": [],
+    "known_constraints": [
+      "Full PyTorch source checkout task.",
+      "Candidate hidden test is hand-authored from the issue and must be replay-verified before benchmark admission."
+    ],
+    "allowed_test_commands": [
+      "{python} test/nn/test_bilinear_lazy_op_bench.py {test}"
+    ]
+  },
+  "evaluation": {
+    "setup_commands": [],
+    "fail_to_pass": [
+      "TestLazyBilinearOpBench.test_lazy_bilinear_can_be_constructed"
+    ],
+    "pass_to_pass": [
+      "TestLazyBilinearOpBench.test_lazy_bilinear_can_be_constructed"
+    ],
+    "test_command": "{python} test/nn/test_bilinear_lazy_op_bench.py {test}",
+    "timeout_sec": 900
+  },
+  "artifacts": {
+    "gold_patch": "artifacts/gold.patch",
+    "test_patch": "artifacts/test.patch"
+  },
+  "metadata": {
+    "difficulty": "medium",
+    "curation_status": "draft",
+    "deterministic": true,
+    "estimated_runtime_min": 15,
+    "notes": "Candidate task. Hidden test design must be validated against the full PyTorch checkout before promotion."
+  }
+}

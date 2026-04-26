@@ -78,6 +78,8 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
         )
     if checkout_mode == "local-copy" and not source.get("local_path"):
         errors.append("source.local_path is required when source.checkout_mode is 'local-copy'")
+    if checkout_mode == "git" and not (source.get("repo_url") or source.get("repo")):
+        errors.append("source.repo_url or source.repo is required when source.checkout_mode is 'git'")
 
     try:
         tier = lookup(data, ("environment", "tier"))
