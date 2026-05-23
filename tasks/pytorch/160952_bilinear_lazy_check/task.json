@@ -10,7 +10,8 @@
     "pr_number": 160952,
     "base_commit": "df6073641079c781e66a905e4f15ee49ac257eb2",
     "merge_commit": "10838530e9625afda0076d573124aaa03251dba6",
-    "checkout_mode": "git"
+    "checkout_mode": "git",
+    "snapshot_path": "../../../.op_bench_cache/sources/pytorch/pytorch/df6073641079c781e66a905e4f15ee49ac257eb2/source"
   },
   "statement": {
     "title": "`Bilinear` module can't be made lazy due to new checks introduced in `__init__`",
@@ -34,17 +35,41 @@
     ]
   },
   "environment": {
+    "backend": "docker",
     "tier": "cpu-deterministic",
-    "image": "local-full-pytorch",
-    "python_version": "3.9",
-    "os": "local",
-    "build_mode": "source-build",
+    "image": "op-bench/pytorch-cpu:torch2.6.0-py311",
+    "dockerfile": "../../../environments/pytorch-cpu/Dockerfile",
+    "build_context": "../../../environments/pytorch-cpu",
+    "workspace_dir": "/workspace",
+    "preflight_workdir": "/tmp",
+    "python_executable": "python",
+    "python_version": "3.11",
+    "os": "linux",
+    "platform": "linux/amd64",
+    "build_mode": "prebuilt-wheel",
     "hardware": {
       "device": "cpu",
       "min_memory_gb": 8
     },
+    "resource_requirements": {
+      "cpu": true,
+      "gpu": false
+    },
     "dependencies": [
-      "pytorch source checkout dependencies"
+      "pytorch wheel with selected Python source overlay"
+    ],
+    "source_loading": {
+      "mode": "python_overlay",
+      "installed_package": "torch",
+      "overlay_paths": [
+        "torch/nn/modules/linear.py"
+      ],
+      "runtime_site_packages": "/tmp/op_bench_runtime/site-packages",
+      "sync_before_tests": true
+    },
+    "preflight_commands": [
+      "{python} --version",
+      "{python} -c \"import torch; print(torch.__version__); print(torch.__file__)\""
     ]
   },
   "agent_visible": {
@@ -77,6 +102,9 @@
     "curation_status": "draft",
     "deterministic": true,
     "estimated_runtime_min": 15,
+    "layer": "A",
+    "admission_status": "source_ready",
+    "source_loading_verified": false,
     "notes": "Candidate task. Hidden test design must be validated against the full PyTorch checkout before promotion."
   }
 }

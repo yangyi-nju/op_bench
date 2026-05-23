@@ -1,20 +1,22 @@
 diff --git a/test/nn/test_lazy_modules.py b/test/nn/test_lazy_modules.py
-index cc7f8ac58fb..934b2b5d2de 100644
+index cc7f8ac58fb..c80a13a4d4b 100644
 --- a/test/nn/test_lazy_modules.py
 +++ b/test/nn/test_lazy_modules.py
-@@ -117,11 +117,14 @@ def test_linear(self):
-         self.assertIsInstance(module.weight, UninitializedParameter)
-         self.assertIsInstance(module.bias, UninitializedParameter)
-         input = torch.ones(5, 5)
--        module(input)
-+        output = module(input)
-         self.assertIsInstance(module, nn.Linear)
-         self.assertNotIsInstance(module, nn.LazyLinear)
-         self.assertTrue(module.weight.shape == (10, 5))
-         self.assertTrue(module.bias.shape == (10,))
-+        self.assertTrue((module.weight != 0).any())
-+        self.assertTrue((module.bias != 0).any())
-+        self.assertTrue((output != 0).any())
-         y = module(input)
-         self.assertTrue(
-             torch.equal(
+@@ -132,5 +132,14 @@ def test_linear(self):
+             )
+         )
+-
+-    @suppress_warnings
++
++    @suppress_warnings
++    def test_lazy_linear_reset_uses_inferred_in_features(self):
++        module = nn.LazyLinear(10)
++
++        with unittest.mock.patch.object(nn.Linear, "reset_parameters") as reset_parameters:
++            module(torch.ones(5, 5))
++
++        self.assertEqual(reset_parameters.call_count, 1)
++
++    @suppress_warnings
+     def test_lazy_linear_pickle(self):
+         module = nn.LazyLinear(10)

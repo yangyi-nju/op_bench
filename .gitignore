@@ -3,3 +3,5 @@
 runs/
 __pycache__/
 *.pyc
+.DS_Store
+configs/agents/*.local.json

@@ -75,6 +75,21 @@
         },
         "local_path": {
           "type": "string"
+        },
+        "snapshot_path": {
+          "type": "string"
+        },
+        "snapshot_hash": {
+          "type": "string",
+          "minLength": 1
+        },
+        "snapshot_method": {
+          "type": "string",
+          "enum": [
+            "from_local_repo",
+            "github_archive",
+            "git_fetch"
+          ]
         }
       }
     },
@@ -145,6 +160,13 @@
         "dependencies"
       ],
       "properties": {
+        "backend": {
+          "type": "string",
+          "enum": [
+            "local",
+            "docker"
+          ]
+        },
         "tier": {
           "type": "string",
           "enum": [
@@ -155,6 +177,101 @@
         },
         "image": {
           "type": "string"
+        },
+        "image_digest": {
+          "type": "string",
+          "minLength": 1
+        },
+        "digest_kind": {
+          "type": "string",
+          "enum": [
+            "repo_digest",
+            "local_image_id",
+            "build_hash"
+          ]
+        },
+        "platform": {
+          "type": "string",
+          "minLength": 1
+        },
+        "dockerfile": {
+          "type": "string"
+        },
+        "build_context": {
+          "type": "string"
+        },
+        "workspace_dir": {
+          "type": "string"
+        },
+        "preflight_workdir": {
+          "type": "string"
+        },
+        "python_executable": {
+          "type": "string"
+        },
+        "preflight_commands": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "resource_requirements": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "source_loading": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mode"
+          ],
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": [
+                "python_overlay",
+                "prebuilt_source_image",
+                "full_source_build"
+              ]
+            },
+            "installed_package": {
+              "type": "string",
+              "minLength": 1
+            },
+            "overlay_paths": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "runtime_site_packages": {
+              "type": "string",
+              "minLength": 1
+            },
+            "sync_before_tests": {
+              "type": "boolean"
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "mode": {
+                    "const": "python_overlay"
+                  }
+                }
+              },
+              "then": {
+                "required": [
+                  "installed_package",
+                  "overlay_paths",
+                  "runtime_site_packages",
+                  "sync_before_tests"
+                ]
+              }
+            }
+          ]
         },
         "python_version": {
           "type": "string"
@@ -318,6 +435,29 @@
         },
         "notes": {
           "type": "string"
+        },
+        "layer": {
+          "type": "string",
+          "enum": [
+            "A",
+            "B"
+          ]
+        },
+        "admission_status": {
+          "type": "string",
+          "enum": [
+            "candidate",
+            "environment_ready",
+            "source_ready",
+            "baseline_reproduced",
+            "gold_verified",
+            "verified",
+            "blocked",
+            "deprecated"
+          ]
+        },
+        "source_loading_verified": {
+          "type": "boolean"
         }
       }
     }

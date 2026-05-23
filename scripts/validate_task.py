@@ -40,9 +40,24 @@ REQUIRED_PATHS = [
 
 ALLOWED_TIERS = {"cpu-deterministic", "single-gpu", "kernel-build"}
 ALLOWED_BUILD_MODES = {"editable-python", "source-build", "prebuilt-wheel"}
+ALLOWED_ENVIRONMENT_BACKENDS = {"local", "docker"}
 ALLOWED_DIFFICULTIES = {"easy", "medium", "hard"}
 ALLOWED_CURATION_STATUSES = {"draft", "verified"}
 ALLOWED_CHECKOUT_MODES = {"git", "local-copy"}
+ALLOWED_SNAPSHOT_METHODS = {"from_local_repo", "github_archive", "git_fetch"}
+ALLOWED_DIGEST_KINDS = {"repo_digest", "local_image_id", "build_hash"}
+ALLOWED_SOURCE_LOADING_MODES = {"python_overlay", "prebuilt_source_image", "full_source_build"}
+ALLOWED_LAYERS = {"A", "B"}
+ALLOWED_ADMISSION_STATUSES = {
+    "candidate",
+    "environment_ready",
+    "source_ready",
+    "baseline_reproduced",
+    "gold_verified",
+    "verified",
+    "blocked",
+    "deprecated",
+}
 ALLOW_EMPTY_REQUIRED_PATHS = {
     ("agent_visible", "repo_setup_commands"),
 }
@@ -78,8 +93,49 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
         )
     if checkout_mode == "local-copy" and not source.get("local_path"):
         errors.append("source.local_path is required when source.checkout_mode is 'local-copy'")
-    if checkout_mode == "git" and not (source.get("repo_url") or source.get("repo")):
-        errors.append("source.repo_url or source.repo is required when source.checkout_mode is 'git'")
+    if checkout_mode == "git" and not (source.get("repo_url") or source.get("repo") or source.get("snapshot_path")):
+        errors.append("source.repo_url, source.repo, or source.snapshot_path is required when source.checkout_mode is 'git'")
+    snapshot_method = source.get("snapshot_method")
+    if snapshot_method is not None and snapshot_method not in ALLOWED_SNAPSHOT_METHODS:
+        errors.append(
+            f"invalid source.snapshot_method: {snapshot_method!r}; expected one of {sorted(ALLOWED_SNAPSHOT_METHODS)}"
+        )
+    snapshot_hash = source.get("snapshot_hash")
+    if snapshot_hash is not None and not str(snapshot_hash).startswith("sha256:"):
+        errors.append("source.snapshot_hash must start with 'sha256:' when provided")
+
+    try:
+        backend = lookup(data, ("environment", "backend"))
+    except KeyError:
+        backend = "local"
+    if backend not in ALLOWED_ENVIRONMENT_BACKENDS:
+        errors.append(
+            "invalid environment.backend: "
+            f"{backend!r}; expected one of {sorted(ALLOWED_ENVIRONMENT_BACKENDS)}"
+        )
+    if backend == "docker":
+        environment = data.get("environment", {})
+        if not environment.get("image"):
+            errors.append("environment.image is required when environment.backend is 'docker'")
+        preflight_commands = environment.get("preflight_commands")
+        if not isinstance(preflight_commands, list) or not preflight_commands:
+            errors.append("environment.preflight_commands must be a non-empty list for docker tasks")
+        preflight_workdir = environment.get("preflight_workdir", "/tmp")
+        workspace_dir = environment.get("workspace_dir", "/workspace")
+        if preflight_workdir == workspace_dir:
+            errors.append("environment.preflight_workdir must not equal environment.workspace_dir for docker tasks")
+        digest_kind = environment.get("digest_kind")
+        if environment.get("image_digest") and digest_kind not in ALLOWED_DIGEST_KINDS:
+            errors.append(
+                "environment.digest_kind is required with environment.image_digest "
+                f"and must be one of {sorted(ALLOWED_DIGEST_KINDS)}"
+            )
+        if digest_kind is not None and not environment.get("image_digest"):
+            errors.append("environment.image_digest is required when environment.digest_kind is provided")
+
+    source_loading = data.get("environment", {}).get("source_loading")
+    if source_loading is not None:
+        errors.extend(validate_source_loading(source_loading))
 
     try:
         tier = lookup(data, ("environment", "tier"))
@@ -118,6 +174,20 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
             )
     except KeyError:
         pass
+    metadata = data.get("metadata", {})
+    layer = metadata.get("layer")
+    if layer is not None and layer not in ALLOWED_LAYERS:
+        errors.append(f"invalid metadata.layer: {layer!r}; expected one of {sorted(ALLOWED_LAYERS)}")
+    admission_status = metadata.get("admission_status")
+    if admission_status is not None and admission_status not in ALLOWED_ADMISSION_STATUSES:
+        errors.append(
+            f"invalid metadata.admission_status: {admission_status!r}; "
+            f"expected one of {sorted(ALLOWED_ADMISSION_STATUSES)}"
+        )
+    if metadata.get("curation_status") == "verified" and admission_status not in (None, "verified"):
+        errors.append("metadata.admission_status must be 'verified' when metadata.curation_status is 'verified'")
+    if "source_loading_verified" in metadata and not isinstance(metadata["source_loading_verified"], bool):
+        errors.append("metadata.source_loading_verified must be a boolean when provided")
 
     try:
         fail_to_pass = lookup(data, ("evaluation", "fail_to_pass"))
@@ -137,6 +207,37 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
     except KeyError:
         pass
 
+    return errors
+
+
+def validate_source_loading(source_loading: Any) -> list[str]:
+    errors: list[str] = []
+    if not isinstance(source_loading, dict):
+        return ["environment.source_loading must be an object"]
+    mode = source_loading.get("mode")
+    if mode not in ALLOWED_SOURCE_LOADING_MODES:
+        errors.append(
+            f"invalid environment.source_loading.mode: {mode!r}; "
+            f"expected one of {sorted(ALLOWED_SOURCE_LOADING_MODES)}"
+        )
+        return errors
+    if mode == "python_overlay":
+        for field in ("installed_package", "runtime_site_packages"):
+            if not source_loading.get(field):
+                errors.append(f"environment.source_loading.{field} is required for python_overlay")
+        overlay_paths = source_loading.get("overlay_paths")
+        if not isinstance(overlay_paths, list) or not overlay_paths:
+            errors.append("environment.source_loading.overlay_paths must be a non-empty list for python_overlay")
+        else:
+            for path in overlay_paths:
+                path_value = Path(str(path))
+                if path_value.is_absolute() or ".." in path_value.parts:
+                    errors.append(
+                        "environment.source_loading.overlay_paths entries must be workspace-relative paths "
+                        f"without '..': {path!r}"
+                    )
+        if not isinstance(source_loading.get("sync_before_tests"), bool):
+            errors.append("environment.source_loading.sync_before_tests must be a boolean for python_overlay")
     return errors
 
 

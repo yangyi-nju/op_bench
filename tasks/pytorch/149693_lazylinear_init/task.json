@@ -10,7 +10,8 @@
     "pr_number": 149693,
     "base_commit": "362b40939dd6faeebf0569beac563afa51e81dcd",
     "merge_commit": "35e7652438440aa547f434810cd41411ad836b2a",
-    "checkout_mode": "git"
+    "checkout_mode": "git",
+    "snapshot_path": "../../../.op_bench_cache/sources/pytorch/pytorch/362b40939dd6faeebf0569beac563afa51e81dcd/source"
   },
   "statement": {
     "title": "LazyLinear broken by new init logic",
@@ -37,17 +38,43 @@
     ]
   },
   "environment": {
+    "backend": "docker",
     "tier": "cpu-deterministic",
-    "image": "local-full-pytorch",
-    "python_version": "3.9",
-    "os": "local",
-    "build_mode": "source-build",
+    "image": "op-bench/pytorch-cpu:torch2.6.0-py311",
+    "image_digest": "sha256:9507757065fd73fa7a958cd13f01de163a3fa46d826c09142f9522eda0f1e400",
+    "digest_kind": "local_image_id",
+    "dockerfile": "../../../environments/pytorch-cpu/Dockerfile",
+    "build_context": "../../../environments/pytorch-cpu",
+    "workspace_dir": "/workspace",
+    "preflight_workdir": "/tmp",
+    "python_executable": "python",
+    "python_version": "3.11",
+    "os": "linux",
+    "platform": "linux/amd64",
+    "build_mode": "prebuilt-wheel",
     "hardware": {
       "device": "cpu",
       "min_memory_gb": 8
     },
+    "resource_requirements": {
+      "cpu": true,
+      "gpu": false
+    },
     "dependencies": [
-      "pytorch source checkout dependencies"
+      "pytorch wheel with selected Python source overlay"
+    ],
+    "source_loading": {
+      "mode": "python_overlay",
+      "installed_package": "torch",
+      "overlay_paths": [
+        "torch/nn/modules/linear.py"
+      ],
+      "runtime_site_packages": "/tmp/op_bench_runtime/site-packages",
+      "sync_before_tests": true
+    },
+    "preflight_commands": [
+      "{python} --version",
+      "{python} -c \"import torch; print(torch.__version__); print(torch.__file__)\""
     ]
   },
   "agent_visible": {
@@ -64,10 +91,10 @@
   "evaluation": {
     "setup_commands": [],
     "fail_to_pass": [
-      "TestLazyModules.test_linear"
+      "TestLazyModules.test_lazy_linear_reset_uses_inferred_in_features"
     ],
     "pass_to_pass": [
-      "TestLazyModules.test_lazy_module_kwargs"
+      "TestLazyModules.test_linear_state"
     ],
     "test_command": "{python} test/nn/test_lazy_modules.py {test}",
     "timeout_sec": 900
@@ -78,9 +105,12 @@
   },
   "metadata": {
     "difficulty": "medium",
-    "curation_status": "draft",
+    "curation_status": "verified",
     "deterministic": true,
     "estimated_runtime_min": 15,
-    "notes": "Primary real PyTorch full-repo candidate. Promote to verified only after local replay baseline fails and gold passes."
+    "layer": "A",
+    "admission_status": "verified",
+    "source_loading_verified": true,
+    "notes": "Verified Layer A task using python_overlay source loading. Replay evidence: runs/replay/pytorch_149693_overlay.json."
   }
 }

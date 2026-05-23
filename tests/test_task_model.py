@@ -15,18 +15,21 @@ class TaskManifestTests(unittest.TestCase):
             root = Path(tmp).resolve()
             (root / "artifacts").mkdir()
             data = {
-                "task_id": "smoke",
+                "task_id": "fixture",
                 "version": "v1",
                 "source": {
-                    "pr_url": "https://github.com/local/op-smoke/pull/1",
-                    "issue_url": "https://github.com/local/op-smoke/issues/1",
-                    "repo": "local/op-smoke",
+                    "pr_url": "https://github.com/local/op-fixture/pull/1",
+                    "issue_url": "https://github.com/local/op-fixture/issues/1",
+                    "repo": "local/op-fixture",
                     "issue_number": 1,
                     "pr_number": 1,
                     "base_commit": "localbase",
                     "merge_commit": "localmerge",
                     "checkout_mode": "local-copy",
-                    "local_path": "../../fixtures/smoke_repo",
+                    "local_path": "../../fixtures/source_repo",
+                    "snapshot_path": "snapshot/source",
+                    "snapshot_hash": "sha256:abc123",
+                    "snapshot_method": "from_local_repo",
                 },
                 "statement": {"title": "bug", "body": "body", "labels": []},
                 "operator": {
@@ -39,11 +42,21 @@ class TaskManifestTests(unittest.TestCase):
                 "environment": {
                     "tier": "cpu-deterministic",
                     "image": "local",
+                    "image_digest": "sha256:image123",
+                    "digest_kind": "local_image_id",
+                    "platform": "linux/amd64",
                     "python_version": "3",
                     "os": "local",
                     "build_mode": "editable-python",
                     "hardware": {"device": "cpu", "min_memory_gb": 1},
                     "dependencies": [],
+                    "source_loading": {
+                        "mode": "python_overlay",
+                        "installed_package": "torch",
+                        "overlay_paths": ["torch/nn/modules/linear.py"],
+                        "runtime_site_packages": "/tmp/op_bench_runtime/site-packages",
+                        "sync_before_tests": True,
+                    },
                 },
                 "agent_visible": {
                     "repo_setup_commands": [],
@@ -66,15 +79,30 @@ class TaskManifestTests(unittest.TestCase):
                     "curation_status": "verified",
                     "deterministic": True,
                     "estimated_runtime_min": 1,
+                    "layer": "A",
+                    "admission_status": "verified",
+                    "source_loading_verified": True,
                 },
             }
             (root / "task.json").write_text(json.dumps(data), encoding="utf-8")
 
             task = TaskManifest.load(root / "task.json")
 
-            self.assertEqual(task.task_id, "smoke")
+            self.assertEqual(task.task_id, "fixture")
             self.assertEqual(task.task_dir, root)
             self.assertEqual(task.gold_patch_path, root / "artifacts/gold.patch")
+            self.assertEqual(task.source_snapshot_path, root / "snapshot" / "source")
+            self.assertEqual(task.source_snapshot_hash, "sha256:abc123")
+            self.assertEqual(task.source_snapshot_method, "from_local_repo")
+            self.assertEqual(task.environment_image_digest, "sha256:image123")
+            self.assertEqual(task.environment_digest_kind, "local_image_id")
+            self.assertEqual(task.environment_platform, "linux/amd64")
+            self.assertEqual(task.environment_preflight_workdir, "/tmp")
+            self.assertEqual(task.source_loading_mode, "python_overlay")
+            self.assertEqual(task.source_loading_overlay_paths, ["torch/nn/modules/linear.py"])
+            self.assertEqual(task.metadata_layer, "A")
+            self.assertEqual(task.metadata_admission_status, "verified")
+            self.assertIs(task.metadata_source_loading_verified, True)
             self.assertEqual(
                 task.command_for_test("tests.test_special.TestSpecialExpit.test_nan_is_preserved"),
                 [sys.executable, "-m", "unittest", "tests.test_special.TestSpecialExpit.test_nan_is_preserved"],

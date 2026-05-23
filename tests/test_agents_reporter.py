@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -9,24 +10,22 @@ from op_bench.reporter import summarize_results
 from op_bench.task import TaskManifest
 
 
-ROOT = Path(__file__).resolve().parents[1]
-TASK = TaskManifest.load(ROOT / "tasks" / "smoke" / "expit_nan_cpu" / "task.json")
-
-
 class AgentReporterTests(unittest.TestCase):
     def test_noop_agent_returns_empty_patch(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            output = NoopAgent().produce_patch(TASK, Path(tmp))
+            task = self._task(Path(tmp))
+            output = NoopAgent().produce_patch(task, Path(tmp) / "out")
             self.assertEqual(output.agent_name, "noop")
             self.assertEqual(output.patch_path.read_text(encoding="utf-8"), "")
 
     def test_gold_agent_returns_gold_patch(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            output = GoldAgent().produce_patch(TASK, Path(tmp))
+            task = self._task(Path(tmp))
+            output = GoldAgent().produce_patch(task, Path(tmp) / "out")
             self.assertEqual(output.agent_name, "gold")
             self.assertEqual(
                 output.patch_path.read_text(encoding="utf-8"),
-                TASK.gold_patch_path.read_text(encoding="utf-8"),
+                task.gold_patch_path.read_text(encoding="utf-8"),
             )
 
     def test_summarize_results_counts_resolved_rate(self) -> None:
@@ -37,6 +36,53 @@ class AgentReporterTests(unittest.TestCase):
         summary = summarize_results(records)
         self.assertEqual(summary["agents"]["gold"]["resolved_rate"], 1.0)
         self.assertEqual(summary["agents"]["noop"]["resolved_rate"], 0.0)
+
+    def _task(self, root: Path) -> TaskManifest:
+        source = root / "source"
+        source.mkdir()
+        task_dir = root / "task"
+        artifacts = task_dir / "artifacts"
+        artifacts.mkdir(parents=True)
+        (artifacts / "gold.patch").write_text("diff --git a/a.py b/a.py\n", encoding="utf-8")
+        (artifacts / "test.patch").write_text("", encoding="utf-8")
+        manifest = {
+            "task_id": "local__agent_fixture",
+            "version": "v1",
+            "source": {
+                "repo": "local/repo",
+                "local_path": str(source),
+                "base_commit": "local",
+                "checkout_mode": "local-copy",
+            },
+            "statement": {"title": "fixture", "body": "body", "labels": []},
+            "operator": {
+                "framework": "pytorch",
+                "component": "test",
+                "operator_name": "op",
+                "problem_type": "tooling",
+                "tags": [],
+            },
+            "environment": {
+                "tier": "cpu-deterministic",
+                "image": "local",
+                "python_version": "3",
+                "os": "local",
+                "build_mode": "editable-python",
+                "hardware": {"device": "cpu", "min_memory_gb": 1},
+                "dependencies": [],
+            },
+            "evaluation": {
+                "setup_commands": [],
+                "fail_to_pass": ["unused"],
+                "pass_to_pass": ["unused"],
+                "test_command": "{python} -m unittest {test}",
+                "timeout_sec": 30,
+            },
+            "artifacts": {"gold_patch": "artifacts/gold.patch", "test_patch": "artifacts/test.patch"},
+            "metadata": {"curation_status": "draft"},
+        }
+        (task_dir / "task.json").write_text(json.dumps(manifest), encoding="utf-8")
+        return TaskManifest.load(task_dir / "task.json")
 
 
 if __name__ == "__main__":

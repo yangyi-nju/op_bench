@@ -1,13 +1,15 @@
 from __future__ import annotations
 
-import shlex
 import shutil
 import tempfile
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-from op_bench.executor import CommandResult, LocalExecutor
+from op_bench.environment import EnvironmentManager
+from op_bench.executor import CommandExecutor, CommandResult, LocalExecutor
+from op_bench.progress import Progress, format_command, format_duration, noop_progress
+from op_bench.source_loading import build_source_loading_command
 from op_bench.task import TaskManifest
 
 
@@ -21,7 +23,7 @@ class EvaluationResult:
     pass_to_pass_total: int
     pass_to_pass_passed: int
     duration_sec: float
-    environment: dict[str, str]
+    environment: dict[str, object]
     commands: list[dict[str, object]]
 
     def to_dict(self) -> dict[str, object]:
@@ -29,8 +31,17 @@ class EvaluationResult:
 
 
 class Evaluator:
-    def __init__(self, executor: LocalExecutor | None = None) -> None:
+    def __init__(
+        self,
+        executor: LocalExecutor | None = None,
+        environment_manager: EnvironmentManager | None = None,
+        workspace_root: Path | None = None,
+        progress: Progress | None = None,
+    ) -> None:
         self.executor = executor or LocalExecutor()
+        self.progress = progress or noop_progress
+        self.environment_manager = environment_manager or EnvironmentManager(self.executor, progress=self.progress)
+        self.workspace_root = workspace_root
 
     def evaluate_baseline(self, task: TaskManifest) -> EvaluationResult:
         return self._evaluate(task=task, mode="baseline", patch_path=None)
@@ -43,48 +54,82 @@ class Evaluator:
 
     def _evaluate(self, task: TaskManifest, mode: str, patch_path: Path | None) -> EvaluationResult:
         start = time.monotonic()
+        self.progress(f"{mode} start: task={task.task_id}")
         command_log: list[CommandResult] = []
         environment = self.executor.collect_environment().to_dict()
-        with tempfile.TemporaryDirectory(prefix=f"op-bench-{task.task_id}-") as tmp:
+        workspace_parent = self._workspace_parent(task)
+        with tempfile.TemporaryDirectory(prefix=f"op-bench-{task.task_id}-", dir=workspace_parent) as tmp:
             workspace = Path(tmp) / "workspace"
-            prepare_error = self._prepare_workspace(task, workspace)
+            self.progress(f"{mode}: workspace={workspace}")
+            environment_precheck = self.environment_manager.precheck(task)
+            if environment_precheck is not None:
+                environment = environment_precheck.evidence
+                if environment_precheck.error:
+                    environment["error"] = environment_precheck.error
+                return self._result(task, mode, "environment_unavailable", start, environment, command_log)
+
+            prepare_error = self._prepare_workspace(task, workspace, command_log)
             if prepare_error is not None:
+                self.progress(f"{mode} workspace preparation failed: {prepare_error}")
                 return self._result(task, mode, "runner_error", start, environment, command_log)
 
+            self.progress(f"{mode}: prepare environment")
+            environment_preparation = self.environment_manager.prepare(task, workspace)
+            command_log.extend(environment_preparation.commands)
+            environment = environment_preparation.evidence
+            if not environment_preparation.available:
+                if environment_preparation.error:
+                    environment["error"] = environment_preparation.error
+                    self.progress(f"{mode} environment unavailable: {environment_preparation.error}")
+                return self._result(task, mode, "environment_unavailable", start, environment, command_log)
+            runtime_executor = environment_preparation.executor
+
+            def finish(status: str) -> EvaluationResult:
+                cleanup_result = self.environment_manager.cleanup(environment_preparation)
+                if cleanup_result is not None:
+                    command_log.append(cleanup_result)
+                return self._result(task, mode, status, start, environment, command_log)
+
             for command in task.setup_commands:
-                result = self.executor.run(shlex.split(command), workspace, task.timeout_sec)
+                result = self._run_logged(
+                    runtime_executor,
+                    task.render_command(command, python_executable=task.environment_python_executable),
+                    workspace,
+                    task.timeout_sec,
+                    label=f"{mode} setup",
+                )
                 command_log.append(result)
                 if result.timed_out:
-                    return self._result(task, mode, "timeout", start, environment, command_log)
+                    return finish("timeout")
                 if result.exit_code != 0:
-                    return self._result(task, mode, "setup_failed", start, environment, command_log)
+                    return finish("setup_failed")
 
             test_patch_result = self._apply_patch(task.test_patch_path, workspace)
             command_log.append(test_patch_result)
             if test_patch_result.timed_out:
-                return self._result(task, mode, "timeout", start, environment, command_log)
+                return finish("timeout")
             if test_patch_result.exit_code != 0:
-                return self._result(task, mode, "runner_error", start, environment, command_log)
+                return finish("runner_error")
 
             if patch_path is not None and patch_path.read_text(encoding="utf-8").strip():
                 patch_result = self._apply_patch(patch_path, workspace)
                 command_log.append(patch_result)
                 if patch_result.timed_out:
-                    return self._result(task, mode, "timeout", start, environment, command_log)
+                    return finish("timeout")
                 if patch_result.exit_code != 0:
-                    return self._result(task, mode, "patch_apply_failed", start, environment, command_log)
+                    return finish("patch_apply_failed")
 
-            fail_results = self._run_tests(task.fail_to_pass_tests, task, workspace)
-            command_log.extend(fail_results)
+            fail_commands, fail_results = self._run_tests(task.fail_to_pass_tests, task, workspace, runtime_executor)
+            command_log.extend(fail_commands)
             if any(result.timed_out for result in fail_results):
-                return self._result(task, mode, "timeout", start, environment, command_log)
+                return finish("timeout")
 
-            pass_results = self._run_tests(task.pass_to_pass_tests, task, workspace)
-            command_log.extend(pass_results)
+            pass_commands, pass_results = self._run_tests(task.pass_to_pass_tests, task, workspace, runtime_executor)
+            command_log.extend(pass_commands)
             if any(result.timed_out for result in pass_results):
-                return self._result(task, mode, "timeout", start, environment, command_log)
+                return finish("timeout")
             if self._has_environment_error(fail_results + pass_results):
-                return self._result(task, mode, "environment_error", start, environment, command_log)
+                return finish("environment_error")
 
             fail_passed = sum(1 for result in fail_results if result.exit_code == 0)
             pass_passed = sum(1 for result in pass_results if result.exit_code == 0)
@@ -95,7 +140,10 @@ class Evaluator:
                 pass_total=len(pass_results),
                 pass_passed=pass_passed,
             )
-            return EvaluationResult(
+            cleanup_result = self.environment_manager.cleanup(environment_preparation)
+            if cleanup_result is not None:
+                command_log.append(cleanup_result)
+            result = EvaluationResult(
                 task_id=task.task_id,
                 mode=mode,
                 status=status,
@@ -107,18 +155,75 @@ class Evaluator:
                 environment=environment,
                 commands=[result.to_dict() for result in command_log],
             )
+            self._log_evaluation_result(result)
+            return result
 
-    def _prepare_workspace(self, task: TaskManifest, workspace: Path) -> str | None:
-        return self.prepare_workspace(task, workspace)
+    def _workspace_parent(self, task: TaskManifest) -> str | None:
+        if self.workspace_root is not None:
+            self.workspace_root.mkdir(parents=True, exist_ok=True)
+            return str(self.workspace_root)
+        if task.environment_backend != "docker":
+            return None
+        root = self._repo_root(task.task_dir)
+        workspace_root = root / ".op_bench_cache" / "workspaces"
+        workspace_root.mkdir(parents=True, exist_ok=True)
+        return str(workspace_root)
 
-    def prepare_workspace(self, task: TaskManifest, workspace: Path) -> str | None:
+    def _repo_root(self, start: Path) -> Path:
+        for path in [start.resolve(), *start.resolve().parents]:
+            if (path / ".git").exists():
+                return path
+        return Path.cwd().resolve()
+
+    def _prepare_workspace(
+        self,
+        task: TaskManifest,
+        workspace: Path,
+        command_log: list[CommandResult],
+    ) -> str | None:
+        return self.prepare_workspace(task, workspace, command_log)
+
+    def prepare_workspace(
+        self,
+        task: TaskManifest,
+        workspace: Path,
+        command_log: list[CommandResult] | None = None,
+    ) -> str | None:
+        snapshot_error = self._prepare_snapshot_workspace(task, workspace, command_log)
+        if snapshot_error is None:
+            return None
+        if snapshot_error != "source snapshot not configured":
+            return snapshot_error
+
         if task.checkout_mode == "git":
-            clone = self.executor.run(["git", "clone", "--no-checkout", task.repo_url, str(workspace)], workspace.parent, 300)
-            if clone.exit_code != 0:
-                return clone.stderr or clone.stdout or "git clone failed"
-            checkout = self.executor.run(["git", "checkout", task.base_commit], workspace, 300)
-            if checkout.exit_code != 0:
-                return checkout.stderr or checkout.stdout or "git checkout failed"
+            clone_timeout = max(300, task.timeout_sec)
+            workspace.mkdir(parents=True, exist_ok=True)
+            for command, cwd, error_label in [
+                (["git", "init"], workspace, "git init failed"),
+                (["git", "remote", "add", "origin", task.repo_url], workspace, "git remote add failed"),
+                (
+                    [
+                        "git",
+                        "fetch",
+                        "--depth=1",
+                        "--filter=blob:none",
+                        "origin",
+                        task.base_commit,
+                    ],
+                    workspace,
+                    "git fetch failed",
+                ),
+                (
+                    ["git", "-c", "advice.detachedHead=false", "checkout", "--detach", "FETCH_HEAD"],
+                    workspace,
+                    "git checkout failed",
+                ),
+            ]:
+                result = self._run_logged(self.executor, command, cwd, clone_timeout, label="prepare git workspace")
+                if command_log is not None:
+                    command_log.append(result)
+                if result.exit_code != 0:
+                    return result.stderr or result.stdout or error_label
             return None
         if task.checkout_mode != "local-copy":
             return f"unsupported checkout mode: {task.checkout_mode}"
@@ -128,14 +233,92 @@ class Evaluator:
         shutil.copytree(source, workspace)
         return None
 
-    def _apply_patch(self, patch_path: Path, workspace: Path) -> CommandResult:
-        return self.executor.run(["git", "apply", str(patch_path)], workspace, timeout_sec=30)
+    def _prepare_snapshot_workspace(
+        self,
+        task: TaskManifest,
+        workspace: Path,
+        command_log: list[CommandResult] | None,
+    ) -> str | None:
+        snapshot = task.source_snapshot_path
+        if snapshot is None:
+            return "source snapshot not configured"
+        start = time.monotonic()
+        if not snapshot.exists():
+            result = CommandResult(
+                command=["op_bench", "copy-source-snapshot", str(snapshot), str(workspace)],
+                cwd=str(workspace.parent),
+                exit_code=1,
+                stdout="",
+                stderr=f"source snapshot not found: {snapshot}",
+                duration_sec=time.monotonic() - start,
+            )
+            if command_log is not None:
+                command_log.append(result)
+            return "source snapshot not configured"
+        try:
+            self.progress(f"prepare source snapshot: {snapshot} -> {workspace}")
+            shutil.copytree(snapshot, workspace, symlinks=True)
+        except OSError as exc:
+            result = CommandResult(
+                command=["op_bench", "copy-source-snapshot", str(snapshot), str(workspace)],
+                cwd=str(workspace.parent),
+                exit_code=1,
+                stdout="",
+                stderr=str(exc),
+                duration_sec=time.monotonic() - start,
+            )
+            if command_log is not None:
+                command_log.append(result)
+            return str(exc)
+        result = CommandResult(
+            command=["op_bench", "copy-source-snapshot", str(snapshot), str(workspace)],
+            cwd=str(workspace.parent),
+            exit_code=0,
+            stdout=f"copied source snapshot from {snapshot}\n",
+            stderr="",
+            duration_sec=time.monotonic() - start,
+        )
+        if command_log is not None:
+            command_log.append(result)
+        self.progress(f"prepare source snapshot done: duration={format_duration(result.duration_sec)}")
+        return None
 
-    def _run_tests(self, tests: list[str], task: TaskManifest, workspace: Path) -> list[CommandResult]:
-        return [
-            self.executor.run(task.command_for_test(test_name), workspace, task.timeout_sec)
-            for test_name in tests
-        ]
+    def _apply_patch(self, patch_path: Path, workspace: Path) -> CommandResult:
+        return self._run_logged(self.executor, ["git", "apply", str(patch_path)], workspace, timeout_sec=30, label="apply patch")
+
+    def _run_tests(
+        self,
+        tests: list[str],
+        task: TaskManifest,
+        workspace: Path,
+        executor: CommandExecutor,
+    ) -> tuple[list[CommandResult], list[CommandResult]]:
+        command_results: list[CommandResult] = []
+        test_results: list[CommandResult] = []
+        source_loading_command = build_source_loading_command(task)
+        for test_name in tests:
+            if source_loading_command is not None:
+                source_result = self._run_logged(
+                    executor,
+                    source_loading_command,
+                    workspace,
+                    task.timeout_sec,
+                    label=f"sync source overlay for {test_name}",
+                )
+                command_results.append(source_result)
+                if source_result.timed_out or source_result.exit_code != 0:
+                    test_results.append(source_result)
+                    continue
+            test_result = self._run_logged(
+                executor,
+                task.command_for_test(test_name, python_executable=task.environment_python_executable),
+                workspace,
+                task.timeout_sec,
+                label=f"run test {test_name}",
+            )
+            command_results.append(test_result)
+            test_results.append(test_result)
+        return command_results, test_results
 
     def _has_environment_error(self, results: list[CommandResult]) -> bool:
         if not results:
@@ -189,10 +372,10 @@ class Evaluator:
         mode: str,
         status: str,
         start: float,
-        environment: dict[str, str],
+        environment: dict[str, object],
         command_log: list[CommandResult],
     ) -> EvaluationResult:
-        return EvaluationResult(
+        result = EvaluationResult(
             task_id=task.task_id,
             mode=mode,
             status=status,
@@ -203,4 +386,28 @@ class Evaluator:
             duration_sec=time.monotonic() - start,
             environment=environment,
             commands=[result.to_dict() for result in command_log],
+        )
+        self._log_evaluation_result(result)
+        return result
+
+    def _run_logged(
+        self,
+        executor: CommandExecutor,
+        command: list[str],
+        cwd: Path,
+        timeout_sec: int,
+        label: str,
+    ) -> CommandResult:
+        self.progress(f"{label}: {format_command(command)}")
+        result = executor.run(command, cwd, timeout_sec)
+        suffix = " timeout" if result.timed_out else ""
+        self.progress(f"{label} done: exit={result.exit_code}{suffix}, duration={format_duration(result.duration_sec)}")
+        return result
+
+    def _log_evaluation_result(self, result: EvaluationResult) -> None:
+        self.progress(
+            f"{result.mode} done: status={result.status}, "
+            f"fail_to_pass={result.fail_to_pass_passed}/{result.fail_to_pass_total}, "
+            f"pass_to_pass={result.pass_to_pass_passed}/{result.pass_to_pass_total}, "
+            f"duration={format_duration(result.duration_sec)}"
         )
