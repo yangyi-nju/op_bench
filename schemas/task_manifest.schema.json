@@ -20,6 +20,61 @@
       "type": "string",
       "minLength": 1
     },
+    "environment_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "runtime_tier": {
+      "type": "string",
+      "enum": [
+        "cpu-deterministic",
+        "single-gpu",
+        "kernel-build",
+        "cpu_python_overlay",
+        "cpu_package_runtime",
+        "cpu_source_snapshot_fuller",
+        "cuda_declared",
+        "hardware_specific"
+      ]
+    },
+    "source_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "admission": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "candidate",
+            "draft",
+            "environment_ready",
+            "source_ready",
+            "baseline_reproduced",
+            "gold_verified",
+            "verified",
+            "blocked",
+            "blocked_environment",
+            "blocked_source",
+            "blocked_test",
+            "not_reproduced",
+            "gold_failed",
+            "deprecated"
+          ]
+        },
+        "evidence": {
+          "type": "string",
+          "minLength": 1
+        },
+        "verified_at": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
     "version": {
       "type": "string",
       "pattern": "^v[0-9]+$"
@@ -172,7 +227,12 @@
           "enum": [
             "cpu-deterministic",
             "single-gpu",
-            "kernel-build"
+            "kernel-build",
+            "cpu_python_overlay",
+            "cpu_package_runtime",
+            "cpu_source_snapshot_fuller",
+            "cuda_declared",
+            "hardware_specific"
           ]
         },
         "image": {
