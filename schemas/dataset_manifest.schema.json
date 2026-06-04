@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OpBench dataset manifest",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["dataset_id", "version", "status", "tasks"],
+  "properties": {
+    "dataset_id": {"type": "string", "minLength": 1},
+    "version": {"type": "string", "minLength": 1},
+    "status": {"type": "string", "enum": ["draft", "verified"]},
+    "registries": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "environments": {"type": "string", "minLength": 1},
+        "sources": {"type": "string", "minLength": 1}
+      }
+    },
+    "tasks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": [
+          "task_id",
+          "task_path",
+          "admission_status",
+          "environment_status",
+          "source_status",
+          "replay_status"
+        ],
+        "properties": {
+          "task_id": {"type": "string", "minLength": 1},
+          "task_path": {"type": "string", "minLength": 1},
+          "admission_status": {"type": "string", "minLength": 1},
+          "admission_evidence": {"type": "string", "minLength": 1},
+          "environment_status": {"type": "string", "minLength": 1},
+          "source_status": {"type": "string", "minLength": 1},
+          "replay_status": {"type": "string", "minLength": 1}
+        }
+      }
+    }
+  }
+}
