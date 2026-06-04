@@ -1,0 +1,181 @@
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Generic, TypeVar
+
+
+class RegistryError(ValueError):
+    """Raised when a registry is malformed or cannot resolve an asset."""
+
+
+def _resolve_path(registry_dir: Path, value: object | None) -> Path | None:
+    if not value:
+        return None
+    path = Path(str(value))
+    if path.is_absolute():
+        return path
+    return (registry_dir / path).resolve()
+
+
+@dataclass(frozen=True)
+class EnvironmentAsset:
+    registry_dir: Path
+    data: dict[str, Any]
+
+    @property
+    def asset_id(self) -> str:
+        return str(self.data["id"])
+
+    @property
+    def framework(self) -> str:
+        return str(self.data["framework"])
+
+    @property
+    def runtime_tier(self) -> str:
+        return str(self.data["runtime_tier"])
+
+    @property
+    def image(self) -> str:
+        return str(self.data["docker"]["image"])
+
+    @property
+    def image_digest(self) -> str | None:
+        value = self.data["docker"].get("digest")
+        return str(value) if value else None
+
+    @property
+    def dockerfile_path(self) -> Path | None:
+        return _resolve_path(self.registry_dir, self.data["docker"].get("dockerfile"))
+
+    @property
+    def build_context_path(self) -> Path | None:
+        return _resolve_path(self.registry_dir, self.data["docker"].get("build_context"))
+
+    @property
+    def preflight_workdir(self) -> str:
+        return str(self.data["preflight"].get("workdir", "/tmp"))
+
+    @property
+    def preflight_commands(self) -> list[str]:
+        return [str(command) for command in self.data["preflight"].get("commands", [])]
+
+
+@dataclass(frozen=True)
+class SourceAsset:
+    registry_dir: Path
+    data: dict[str, Any]
+
+    @property
+    def asset_id(self) -> str:
+        return str(self.data["id"])
+
+    @property
+    def repo_url(self) -> str:
+        return str(self.data["repo_url"])
+
+    @property
+    def commit(self) -> str:
+        return str(self.data["commit"])
+
+    @property
+    def local_path(self) -> Path | None:
+        return _resolve_path(self.registry_dir, self.data.get("local_path"))
+
+    @property
+    def submodule_policy(self) -> str:
+        return str(self.data["submodules"]["policy"])
+
+    @property
+    def submodule_status(self) -> str:
+        return str(self.data["submodules"]["status"])
+
+    @property
+    def source_loading_modes(self) -> list[str]:
+        return [str(mode) for mode in self.data.get("source_loading_modes", [])]
+
+    @property
+    def related_tasks(self) -> list[str]:
+        return [str(task_id) for task_id in self.data.get("related_tasks", [])]
+
+
+Asset = TypeVar("Asset", EnvironmentAsset, SourceAsset)
+
+
+class _Registry(Generic[Asset]):
+    collection_name: str
+    asset_name: str
+    asset_type: type[Asset]
+
+    def __init__(self, path: Path, version: str, assets: dict[str, Asset]) -> None:
+        self.path = path
+        self.version = version
+        self.assets = assets
+
+    @classmethod
+    def load(cls, path: Path | str) -> "_Registry[Asset]":
+        registry_path = Path(path).resolve()
+        try:
+            with registry_path.open("r", encoding="utf-8") as handle:
+                data = json.load(handle)
+        except (OSError, json.JSONDecodeError) as exc:
+            raise RegistryError(f"cannot load registry {registry_path}: {exc}") from exc
+
+        collection = data.get(cls.collection_name)
+        if not isinstance(collection, list):
+            raise RegistryError(f"registry field {cls.collection_name!r} must be a list")
+
+        assets: dict[str, Asset] = {}
+        for index, item in enumerate(collection):
+            if not isinstance(item, dict):
+                raise RegistryError(f"{cls.collection_name}[{index}] must be an object")
+            asset_id = str(item.get("id", ""))
+            if not asset_id:
+                raise RegistryError(f"{cls.collection_name}[{index}].id is required")
+            if asset_id in assets:
+                raise RegistryError(f"duplicate asset id: {asset_id}")
+            cls._validate_item(item, asset_id)
+            assets[asset_id] = cls.asset_type(registry_path.parent, item)
+        return cls(registry_path, str(data.get("version", "")), assets)
+
+    @classmethod
+    def _validate_item(cls, item: dict[str, Any], asset_id: str) -> None:
+        raise NotImplementedError
+
+    def get(self, asset_id: str) -> Asset:
+        try:
+            return self.assets[asset_id]
+        except KeyError as exc:
+            raise RegistryError(f"unknown {self.asset_name} asset: {asset_id}") from exc
+
+
+class EnvironmentRegistry(_Registry[EnvironmentAsset]):
+    collection_name = "environments"
+    asset_name = "environment"
+    asset_type = EnvironmentAsset
+
+    @classmethod
+    def _validate_item(cls, item: dict[str, Any], asset_id: str) -> None:
+        for field in ("framework", "runtime_tier", "docker", "preflight"):
+            if not item.get(field):
+                raise RegistryError(f"environment asset {asset_id}: {field} is required")
+        if not isinstance(item["docker"], dict) or not item["docker"].get("image"):
+            raise RegistryError(f"environment asset {asset_id}: docker.image is required")
+        if not isinstance(item["preflight"], dict):
+            raise RegistryError(f"environment asset {asset_id}: preflight must be an object")
+
+
+class SourceRegistry(_Registry[SourceAsset]):
+    collection_name = "sources"
+    asset_name = "source"
+    asset_type = SourceAsset
+
+    @classmethod
+    def _validate_item(cls, item: dict[str, Any], asset_id: str) -> None:
+        for field in ("repo_url", "commit", "submodules"):
+            if not item.get(field):
+                raise RegistryError(f"source asset {asset_id}: {field} is required")
+        submodules = item["submodules"]
+        if not isinstance(submodules, dict) or not submodules.get("policy") or not submodules.get("status"):
+            raise RegistryError(f"source asset {asset_id}: submodules.policy and submodules.status are required")

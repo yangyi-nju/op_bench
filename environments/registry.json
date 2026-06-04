@@ -1,0 +1,36 @@
+{
+  "version": "v1",
+  "environments": [
+    {
+      "id": "pytorch-cpu-torch2.6.0-py311",
+      "framework": "pytorch",
+      "runtime_tier": "cpu_python_overlay",
+      "docker": {
+        "image": "op-bench/pytorch-cpu:torch2.6.0-py311",
+        "digest": "sha256:9507757065fd73fa7a958cd13f01de163a3fa46d826c09142f9522eda0f1e400",
+        "digest_kind": "local_image_id",
+        "dockerfile": "pytorch-cpu/Dockerfile",
+        "build_context": "pytorch-cpu"
+      },
+      "python": "3.11",
+      "packages": {
+        "torch": "2.6.0"
+      },
+      "hardware": {
+        "requires_gpu": false,
+        "cuda": null
+      },
+      "preflight": {
+        "workdir": "/tmp",
+        "commands": [
+          "python --version",
+          "python -c \"import torch; print(torch.__version__); print(torch.__file__)\""
+        ]
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "cache_policy": "local_build"
+    }
+  ]
+}

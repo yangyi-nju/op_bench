@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OpBench environment registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "environments"],
+  "properties": {
+    "version": {"type": "string", "pattern": "^v[0-9]+$"},
+    "environments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["id", "framework", "runtime_tier", "docker", "preflight"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "framework": {"type": "string", "minLength": 1},
+          "runtime_tier": {
+            "type": "string",
+            "enum": [
+              "cpu_python_overlay",
+              "cpu_package_runtime",
+              "cpu_source_snapshot_fuller",
+              "cuda_declared",
+              "hardware_specific"
+            ]
+          },
+          "docker": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": ["image"],
+            "properties": {
+              "image": {"type": "string", "minLength": 1},
+              "digest": {"type": ["string", "null"]},
+              "dockerfile": {"type": "string"},
+              "build_context": {"type": "string"}
+            }
+          },
+          "preflight": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["workdir", "commands"],
+            "properties": {
+              "workdir": {"type": "string", "minLength": 1},
+              "commands": {
+                "type": "array",
+                "minItems": 1,
+                "items": {"type": "string", "minLength": 1}
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
