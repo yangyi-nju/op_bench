@@ -1,0 +1,65 @@
+{
+  "version": "v1",
+  "sources": [
+    {
+      "id": "pytorch-362b409-python-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "362b40939dd6faeebf0569beac563afa51e81dcd",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/362b40939dd6faeebf0569beac563afa51e81dcd/source",
+      "checksum": null,
+      "snapshot_git_commit": "3a36b668f1b575c1612abd9d3b8adbf4fd847193",
+      "tracked_file_count": 16542,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__149693__lazylinear_init"
+      ],
+      "notes": "The task only overlays torch/nn/modules/linear.py into an installed wheel. PyTorch third-party submodules are intentionally not initialized."
+    },
+    {
+      "id": "pytorch-df607364-python-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "df6073641079c781e66a905e4f15ee49ac257eb2",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/df6073641079c781e66a905e4f15ee49ac257eb2/source",
+      "checksum": null,
+      "snapshot_git_commit": "aca0343a1352405ec02529b9768cd562a50730f6",
+      "tracked_file_count": 19340,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__160952__bilinear_lazy_check"
+      ],
+      "notes": "The task only overlays torch/nn/modules/linear.py into an installed wheel. PyTorch third-party submodules are intentionally not initialized."
+    },
+    {
+      "id": "pytorch-8bf3f3f-python-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "8bf3f3fc43bd8c6a35f7dc92e1dfe21623b648bb",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/8bf3f3fc43bd8c6a35f7dc92e1dfe21623b648bb/source",
+      "checksum": null,
+      "snapshot_git_commit": "31d9aa96c9c8a4af537050274bd100cd760535bc",
+      "tracked_file_count": 16551,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__147599__lazylinear_state_forward"
+      ],
+      "notes": "The task only overlays torch/nn/modules/linear.py into an installed wheel. PyTorch third-party submodules are intentionally not initialized."
+    }
+  ]
+}

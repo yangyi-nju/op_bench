@@ -212,7 +212,14 @@ def _validate_asset_references(
             errors.append(f"{task_id}: environment_ref requires a dataset environment registry")
         else:
             try:
-                environment_registry.get(task.environment_ref)
+                environment_asset = environment_registry.get(task.environment_ref)
+                if task.runtime_tier != environment_asset.runtime_tier:
+                    errors.append(f"{task_id}: task runtime_tier must match environment asset runtime_tier")
+                if (
+                    task.source_loading_mode
+                    and task.source_loading_mode not in environment_asset.source_loading_modes
+                ):
+                    errors.append(f"{task_id}: task source_loading mode is not supported by environment asset")
             except RegistryError as exc:
                 errors.append(f"{task_id}: {exc}")
     if task.source_ref:
@@ -220,7 +227,11 @@ def _validate_asset_references(
             errors.append(f"{task_id}: source_ref requires a dataset source registry")
         else:
             try:
-                source_registry.get(task.source_ref)
+                source_asset = source_registry.get(task.source_ref)
+                if task.base_commit != source_asset.commit:
+                    errors.append(f"{task_id}: task base_commit must match source asset commit")
+                if task.source_loading_mode and task.source_loading_mode not in source_asset.source_loading_modes:
+                    errors.append(f"{task_id}: task source_loading mode is not supported by source asset")
             except RegistryError as exc:
                 errors.append(f"{task_id}: {exc}")
 

@@ -91,6 +91,8 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
     errors: list[str] = []
 
     for path in REQUIRED_PATHS:
+        if data.get("environment_ref") and path[:1] == ("environment",):
+            continue
         try:
             value = lookup(data, path)
         except KeyError:

@@ -37,10 +37,12 @@ class EnvironmentManager:
     def prepare(self, task: TaskManifest, workspace: Path) -> EnvironmentPreparation:
         if task.environment_backend == "docker":
             return self._prepare_docker(task, workspace)
+        evidence = self.host_executor.collect_environment().to_dict()
+        evidence.update(self._asset_evidence(task))
         return EnvironmentPreparation(
             status="ready",
             executor=self.host_executor,
-            evidence=self.host_executor.collect_environment().to_dict(),
+            evidence=evidence,
             commands=[],
         )
 
@@ -55,6 +57,7 @@ class EnvironmentManager:
                 "image": task.environment_image,
                 "workspace_dir": task.environment_workspace_dir,
                 "docker_available": False,
+                **self._asset_evidence(task),
             },
             commands=[],
             error="docker command not found",
@@ -74,6 +77,7 @@ class EnvironmentManager:
                     "image": task.environment_image,
                     "workspace_dir": task.environment_workspace_dir,
                     "docker_available": False,
+                    **self._asset_evidence(task),
                 },
                 commands=commands,
                 error="docker command not found",
@@ -124,6 +128,12 @@ class EnvironmentManager:
             task.environment_image,
             task.environment_workspace_dir,
             container_name=self._container_name(task),
+            labels={
+                "op-bench.managed": "true",
+                "op-bench.task-id": task.task_id,
+                "op-bench.environment-id": task.environment_ref or "inline",
+                "op-bench.runtime-tier": task.runtime_tier or "unspecified",
+            },
         )
         start_result = self._run_executor(executor.start, workspace, timeout_sec=60, label="start docker container")
         commands.append(start_result)
@@ -143,6 +153,7 @@ class EnvironmentManager:
             task.environment_workspace_dir,
             container_name=executor.container_name,
             command_workdir=task.environment_preflight_workdir,
+            labels=executor.labels,
         )
         for command in task.environment_preflight_commands:
             result = self._run_executor(
@@ -168,6 +179,7 @@ class EnvironmentManager:
         evidence["preflight_passed"] = True
         evidence["preflight_command_count"] = len(task.environment_preflight_commands)
         evidence["preflight_workdir"] = task.environment_preflight_workdir
+        evidence.update(self._asset_evidence(task))
         return EnvironmentPreparation(
             status="ready",
             executor=executor,
@@ -197,10 +209,20 @@ class EnvironmentManager:
                 "workspace_dir": task.environment_workspace_dir,
                 "docker_available": True,
                 "preflight_passed": False,
+                **self._asset_evidence(task),
             },
             commands=commands,
             error=error,
         )
+
+    def _asset_evidence(self, task: TaskManifest) -> dict[str, object]:
+        return {
+            "environment_id": task.environment_ref,
+            "runtime_tier": task.runtime_tier,
+            "image_digest": task.environment_image_digest,
+            "digest_kind": task.environment_digest_kind,
+            "platform": task.environment_platform,
+        }
 
     def _run_host(self, command: list[str], cwd: Path, timeout_sec: int, label: str) -> CommandResult:
         self.progress(f"{label}: {format_command(command)}")

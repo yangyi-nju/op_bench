@@ -22,7 +22,7 @@ v0.1 的目标不是扩大数据集规模，而是验证一个完整、可复现
 - `src/op_bench/evaluator.py`：执行 baseline、gold、agent patch 判分。判分标准为 fail-to-pass 修复且 pass-to-pass 不回归。
 - `src/op_bench/actions.py`：标准 action interface，支持读取文件、写入文件、应用 patch、运行命令、运行测试和导出 diff。
 - `src/op_bench/action_bridge.py`：给 Codex CLI 使用的文件队列 action bridge。Codex 不直接进入目标仓库，只能通过 `opbench_action.py` 请求 action。
-- `src/op_bench/agents.py`：agent adapter，包括 `noop`、`gold`、`codex`、`codex_action_bridge`。其中 `codex_action_bridge` 是 v0.1 的正式真实 agent 路径。
+- `src/op_bench/agents.py`：agent adapter，包括 `gold` 和 `codex_action_bridge`。其中 `codex_action_bridge` 是 v0.1 的正式真实 agent 路径。
 - `scripts/run_experiment.py`：实验入口，负责 baseline gating、agent 多次尝试、patch 收集、结果聚合。
 - `scripts/validate_dataset.py`、`scripts/validate_task.py`、`scripts/verify_task_replay.py`：数据集和任务验证工具。
 
@@ -165,7 +165,7 @@ v0.1 开发和验证过程中，主要问题集中在环境可复现、源码加
 | timeout 过短导致真实 agent 被误判失败 | 真实 agent 首次读取、定位、测试和修复大型仓库任务时耗时明显高于普通单元测试 | Codex CLI 默认 timeout 调整为 1200 秒，并保留 `OP_BENCH_CODEX_TIMEOUT_SEC` 覆盖 | 当前 Codex action bridge 实验未因 timeout 中断，最终 `resolved` |
 | 手动实验时终端长时间无输出 | replay 和 agent 修复阶段可能持续数分钟，只有最终 summary 会让使用者误以为进程卡住 | 增加默认 progress log：输出 task 阶段、环境准备、命令退出码、agent attempt、action bridge 调用和结果写入；保留 `--quiet` | 实验室手动验证时可以直接从终端观察进度和卡点，机器可读结果仍写入 `results.jsonl` 和 `summary.json` |
 | 开发阶段临时 agent loop 容易混淆正式能力 | 早期为了验证模型调用，存在手写模型 action loop 和具体模型配置；Codex action bridge 跑通后，这些不应作为 v0.1 正式入口 | 从公开代码、配置、测试和 README 中移除临时模型直连入口；文档明确新 agent 应复用 action-interface boundary | 项目边界更清晰：v0.1 的正式真实 agent 是 `codex_action_bridge`，后续 Claude Code、OpenHands 等应按同一隔离边界接入 |
-| 项目入口文档混乱 | README 同时承载设计背景、历史实验、临时方案和操作命令，新开发者难以判断阅读顺序 | 重写 README 为入口文档，新增 `docs/developer_guide.md` 解释模块职责、数据流、状态含义和扩展方式，新增 `docs/README.md` 作为文档索引 | 开发者可以按 README -> developer guide -> manual validation -> experiment report 的顺序理解和复现项目 |
+| 项目入口文档混乱 | README 同时承载设计背景、历史实验、临时方案和操作命令，新开发者难以判断阅读顺序 | 重写 README 为入口文档，新增 `docs/v0.1/developer_guide.md` 解释模块职责、数据流、状态含义和扩展方式，新增 `docs/README.md` 作为文档索引 | 开发者可以按 README -> developer guide -> manual validation -> experiment report 的顺序理解和复现项目 |
 
 这些问题的共同结论是：OpBench 不能简单复制 SWE-bench 的“仓库 + 测试”模型。算子 benchmark 的可靠性来自三件事同时成立：环境 artifact 可执行、源码加载策略可复现、agent 操作边界可审计。v0.1 的最终实现围绕这三点进行了收敛。
 

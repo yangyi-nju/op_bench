@@ -22,6 +22,7 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
+from op_bench.registry import load_resolved_task
 from op_bench.task import TaskManifest
 
 
@@ -58,6 +59,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--output",
         help="Optional JSON file for snapshot preparation evidence.",
     )
+    parser.add_argument(
+        "--environment-registry",
+        default=str(ROOT / "environments/registry.json"),
+        help="Environment registry used to resolve task.environment_ref.",
+    )
+    parser.add_argument(
+        "--source-registry",
+        default=str(ROOT / "sources/registry.json"),
+        help="Source registry used to resolve task.source_ref.",
+    )
     return parser
 
 
@@ -68,7 +79,11 @@ def main(argv: list[str] | None = None) -> int:
 
     for task_dir in args.task:
         task_path = Path(task_dir).resolve() / "task.json"
-        task = TaskManifest.load(task_path)
+        task = load_resolved_task(
+            task_path,
+            environment_registry_path=args.environment_registry,
+            source_registry_path=args.source_registry,
+        )
         destination = snapshot_destination(cache_dir, task)
         record = prepare_snapshot(
             task,
@@ -343,12 +358,35 @@ def record(
     status: str,
     commands: list[dict[str, object]],
 ) -> dict[str, object]:
+    loading_mode = task.source_loading_mode
+    submodule_policy = "none_required" if loading_mode == "python_overlay" else "unknown"
+    snapshot_ready = status == "ready" and destination.exists()
     return {
         "task_id": task.task_id,
         "status": status,
+        "source_id": task.source_ref or f"{str(task.data['source']['repo']).replace('/', '-')}-{task.base_commit[:12]}",
+        "repo_url": task.repo_url,
+        "commit": task.base_commit,
         "snapshot_path": str(destination),
+        "file_count": _file_count(destination) if snapshot_ready else None,
+        "snapshot_git_commit": _snapshot_git_commit(destination) if snapshot_ready else None,
+        "submodules": {
+            "policy": submodule_policy,
+            "status": "not_initialized" if submodule_policy == "none_required" else "unknown",
+        },
+        "source_loading_modes": [loading_mode] if loading_mode else [],
+        "related_tasks": [task.task_id],
         "commands": commands,
     }
+
+
+def _file_count(path: Path) -> int:
+    return sum(1 for entry in path.rglob("*") if entry.is_file() and ".git" not in entry.parts)
+
+
+def _snapshot_git_commit(path: Path) -> str | None:
+    result = run_command(["git", "rev-parse", "HEAD"], path)
+    return str(result["stdout"]).strip() if result["exit_code"] == 0 else None
 
 
 if __name__ == "__main__":

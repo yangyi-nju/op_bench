@@ -36,6 +36,7 @@
           "admission_status": {"type": "string", "minLength": 1},
           "admission_evidence": {"type": "string", "minLength": 1},
           "environment_status": {"type": "string", "minLength": 1},
+          "runtime_tier": {"type": "string", "minLength": 1},
           "source_status": {"type": "string", "minLength": 1},
           "replay_status": {"type": "string", "minLength": 1}
         }

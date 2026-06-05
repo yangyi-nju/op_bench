@@ -4,13 +4,17 @@
 
 OpBench 是一个面向算子问题的 benchmark，用于评测 coding agent 解决真实框架 issue 的能力。它借鉴 SWE-bench 的真实仓库修复思路，但把运行环境作为每条任务的一部分，因为算子问题经常依赖框架版本、Python 包布局、设备可用性、数值行为和后端选择。
 
-v0.1 刻意保持小规模：一条已验证的 PyTorch CPU 任务、一套 Docker-backed replay/evaluation 闭环，以及一条通过 Codex CLI 跑通的真实隔离 agent 路径。
+v0.1 已经建立隔离 replay/evaluation 闭环。v0.2 已完成数据集扩展所需的平台能力：资产 registry、正式 admission evidence、dataset curation，以及容器和 cache 管理。当前 `pytorch_mini` 已扩展为 3 条 verified PyTorch CPU operator tasks，v0.3 设计目标是扩展到 10 条 PyTorch verified tasks，并支持 public/hidden test 分层和 multi-file overlay。
 
-## v0.1 包含什么
+## 当前代码包含什么
 
 - 两层数据集模型：`datasets/<slice>/dataset.json` 指向 `tasks/` 下的 task bundle。
 - 真实 PyTorch task bundle，包含 PR/issue 元数据、hidden test patch、gold patch、source snapshot 和环境声明。
 - 位于 `environments/pytorch-cpu/` 的可复用 CPU Docker 环境。
+- 位于 `environments/registry.json` 和 `sources/registry.json` 的环境与源码资产 registry。
+- 通过 `scripts/run_admission.py` 生成正式 admission evidence。
+- 通过 `scripts/curate_dataset.py` 生成 verified-only 数据集切片。
+- 通过 `scripts/inspect_assets.py` 和 `scripts/manage_containers.py` 检查资产和管理容器。
 - Replay evaluator，用于检查 baseline failure、gold success、agent patch success 和 pass-to-pass 回归。
 - 标准 workspace action interface，覆盖文件操作、patch 应用、命令执行、测试执行和 diff 导出。
 - `codex_action_bridge` 作为参考真实 agent adapter。Codex 在 host 侧 scratch workspace 中运行，只能通过 OpBench actions 操作目标仓库。
@@ -23,12 +27,14 @@ v0.1 刻意保持小规模：一条已验证的 PyTorch CPU 任务、一套 Dock
 | --- | --- |
 | `datasets/` | 数据集 manifest，用于选择实验 task bundle。 |
 | `tasks/` | 单条 benchmark 任务，包含 issue 文本、patch、环境元数据和测试列表。 |
-| `environments/` | task 引用的 Docker 环境 artifact。 |
+| `environments/` | task 引用的 Docker 环境 artifact 和环境 registry。 |
+| `sources/` | source snapshot registry 元数据。 |
 | `src/op_bench/` | 核心实现：task model、环境准备、evaluator、actions、agent bridge、reporting。 |
 | `scripts/` | 校验、环境准备、source snapshot、replay、实验运行等 CLI 入口。 |
-| `docs/developer_guide.md` | 模块级架构和开发指南。 |
-| `docs/manual_validation.md` | 将 task 从 draft 晋升为 verified 的手动验证流程。 |
-| `docs/OpBench_v0.1_experiment_report.md` | v0.1 实验证据和结果分析。 |
+| `docs/` | 按版本归档的设计、实验报告、开发指南和历史记录。 |
+| `docs/v0.3/design.md` | v0.3 数据扩展、multi-file overlay、public/hidden test 分层和 CUDA 试点设计。 |
+| `docs/v0.2/developer_guide.md` | v0.2 registry、admission、curation、资产和容器管理流程。 |
+| `docs/v0.1/developer_guide.md` | v0.1 模块级架构和开发指南。 |
 
 ## 快速开始
 
@@ -52,12 +58,40 @@ PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/validate_dataset.py \
   datasets/pytorch_mini/dataset.json
 ```
 
-验证第一条已准入 PyTorch 任务的 replay：
+运行第一条已准入 PyTorch 任务的正式 admission：
 
 ```bash
-PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/verify_task_replay.py \
-  tasks/pytorch/149693_lazylinear_init \
-  --output runs/replay/pytorch_149693.json
+PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/run_admission.py \
+  --task tasks/pytorch/149693_lazylinear_init \
+  --output-dir runs/admission/pytorch__149693__lazylinear_init/manual \
+  --write-task-evidence
+```
+
+运行当前 mini dataset 的 gold 闭环检查：
+
+```bash
+PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/run_experiment.py \
+  --dataset datasets/pytorch_mini/dataset.json \
+  --agent gold \
+  --output runs/experiments/pytorch_mini_gold_v0.2.json
+```
+
+检查已登记资产：
+
+```bash
+PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/inspect_assets.py
+```
+
+从当前混合数据集生成 verified-only 数据集切片：
+
+```bash
+PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/curate_dataset.py \
+  --dataset datasets/pytorch_mini/dataset.json \
+  --output-dataset datasets/pytorch_mini_v0.2/dataset.json \
+  --output-summary datasets/pytorch_mini_v0.2/summary.json \
+  --verified-only \
+  --dataset-id pytorch_mini_v0.2 \
+  --version v0.2
 ```
 
 运行真实隔离 Codex CLI 评测：
@@ -79,9 +113,12 @@ PATH=.venv/bin:$PATH PYTHONPATH=src OP_BENCH_CODEX_TIMEOUT_SEC=1200 python scrip
 | Task | PR | 状态 |
 | --- | --- | --- |
 | `pytorch__149693__lazylinear_init` | https://github.com/pytorch/pytorch/pull/149693 | verified |
-| `pytorch__160952__bilinear_lazy_check` | https://github.com/pytorch/pytorch/pull/160952 | draft |
+| `pytorch__160952__bilinear_lazy_check` | https://github.com/pytorch/pytorch/pull/160952 | verified |
+| `pytorch__147599__lazylinear_state_forward` | https://github.com/pytorch/pytorch/pull/147599 | verified |
 
 正式 benchmark 运行请使用 `--verified-only`，只统计已准入任务。
+
+每条 verified task 都有 task-local stable admission evidence，位于对应 task 目录的 `admission/evidence.json`。完整 replay 日志在本地运行 admission 时写入 `runs/admission/`。
 
 ## 运行边界
 
@@ -100,18 +137,20 @@ Agent 身份、模型调用和控制逻辑运行在 host 侧。每次修复 atte
 
 ## 继续扩展
 
-修改内部实现前先阅读 [docs/developer_guide.md](docs/developer_guide.md)。通常扩展路径是：
+修改内部实现前先阅读 [docs/v0.2/developer_guide.md](docs/v0.2/developer_guide.md) 和 [docs/v0.3/design.md](docs/v0.3/design.md)。通常扩展路径是：
 
 1. 在 `tasks/<framework>/` 下新增或整理 task bundle。
-2. 在 `datasets/` 下的数据集 manifest 中登记 task。
-3. 在 `environments/` 下准备或 pin 任务环境。
-4. 用 `scripts/verify_task_replay.py` 验证 baseline/gold replay。
+2. 在 `environments/registry.json` 和 `sources/registry.json` 中登记可复用环境和源码资产。
+3. 运行 `scripts/run_admission.py --write-task-evidence`。
+4. 用 `scripts/curate_dataset.py` 只把有 evidence 的 verified task 写入正式切片。
 5. 用 `scripts/run_experiment.py --verified-only` 运行实验。
 6. 新增真实 agent 时，实现 action-interface 边界，而不是让 agent 直接访问目标 workspace。
 
 ## 参考文档
 
-- [开发者指南](docs/developer_guide.md)
-- [手动验证流程](docs/manual_validation.md)
-- [v0.1 实验报告](docs/OpBench_v0.1_experiment_report.md)
-- [数据构建流程](docs/builder_workflow.md)
+- [文档索引](docs/README.zh-CN.md)
+- [v0.3 设计方案](docs/v0.3/design.md)
+- [v0.2 开发者指南](docs/v0.2/developer_guide.md)
+- [v0.2 实验报告](docs/v0.2/experiment_report.md)
+- [v0.1 开发者指南](docs/v0.1/developer_guide.md)
+- [v0.1 手动验证流程](docs/v0.1/manual_validation.md)

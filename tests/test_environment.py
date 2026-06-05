@@ -29,13 +29,21 @@ class DockerEnvironmentTests(unittest.TestCase):
         self.assertEqual(command[-3:], ["python", "-m", "pytest"])
 
     def test_docker_executor_builds_persistent_container_commands(self) -> None:
-        executor = DockerExecutor("example/image:tag", "/repo", container_name="op-bench-test")
+        executor = DockerExecutor(
+            "example/image:tag",
+            "/repo",
+            container_name="op-bench-test",
+            labels={"op-bench.managed": "true", "op-bench.task-id": "fixture"},
+        )
 
         start_command = executor.command_for_start(Path("/tmp/workspace"))
         run_command = executor.command_for_run(["python", "-m", "pytest"], Path("/tmp/workspace"))
 
         self.assertEqual(start_command[:5], ["docker", "run", "--detach", "--name", "op-bench-test"])
         self.assertIn("--volume", start_command)
+        self.assertIn("--label", start_command)
+        self.assertIn("op-bench.managed=true", start_command)
+        self.assertIn("op-bench.task-id=fixture", start_command)
         self.assertTrue(start_command[start_command.index("--volume") + 1].endswith("/tmp/workspace:/repo"))
         self.assertEqual(start_command[-3:], ["tail", "-f", "/dev/null"])
         self.assertEqual(
@@ -97,6 +105,19 @@ class DockerEnvironmentTests(unittest.TestCase):
             workspace_parent = Evaluator()._workspace_parent(task)
 
             self.assertEqual(workspace_parent, str(ROOT / ".op_bench_cache" / "workspaces"))
+
+    def test_environment_evidence_includes_task_asset_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            task = self._docker_task(Path(tmp))
+            task.data["environment_ref"] = "pytorch-cpu"
+            task.data["runtime_tier"] = "cpu_python_overlay"
+            task.data["environment"]["image_digest"] = "sha256:image"
+
+            preparation = EnvironmentManager()._unavailable(task, [], "test")
+
+            self.assertEqual(preparation.evidence["environment_id"], "pytorch-cpu")
+            self.assertEqual(preparation.evidence["runtime_tier"], "cpu_python_overlay")
+            self.assertEqual(preparation.evidence["image_digest"], "sha256:image")
 
     def _docker_task(self, root: Path, source: Path | None = None) -> TaskManifest:
         source = source or root

@@ -66,6 +66,28 @@ class ValidateDatasetTests(unittest.TestCase):
 
             self.assertEqual(errors, [])
 
+    def test_asset_references_must_be_compatible_with_task(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            dataset, dataset_dir = self._verified_dataset(root)
+            source_registry_path = dataset_dir / "source-registry.json"
+            source_registry = json.loads(source_registry_path.read_text(encoding="utf-8"))
+            source_registry["sources"][0]["commit"] = "different"
+            source_registry["sources"][0]["source_loading_modes"] = ["full_source_build"]
+            source_registry_path.write_text(json.dumps(source_registry), encoding="utf-8")
+            environment_registry_path = dataset_dir / "environment-registry.json"
+            environment_registry = json.loads(environment_registry_path.read_text(encoding="utf-8"))
+            environment_registry["environments"][0]["runtime_tier"] = "cuda_declared"
+            environment_registry["environments"][0]["source_loading_modes"] = ["full_source_build"]
+            environment_registry_path.write_text(json.dumps(environment_registry), encoding="utf-8")
+
+            errors = validate_dataset(dataset, dataset_dir, require_verified=True)
+
+            self.assertIn("fixture: task runtime_tier must match environment asset runtime_tier", errors)
+            self.assertIn("fixture: task base_commit must match source asset commit", errors)
+            self.assertIn("fixture: task source_loading mode is not supported by environment asset", errors)
+            self.assertIn("fixture: task source_loading mode is not supported by source asset", errors)
+
     def _verified_dataset(self, root: Path) -> tuple[dict[str, object], Path]:
         task_dir = root / "tasks/fixture"
         admission_dir = task_dir / "admission"
@@ -108,6 +130,7 @@ class ValidateDatasetTests(unittest.TestCase):
                             "runtime_tier": "cpu_python_overlay",
                             "docker": {"image": "fixture"},
                             "preflight": {"workdir": "/tmp", "commands": ["python --version"]},
+                            "source_loading_modes": ["python_overlay"],
                         }
                     ],
                 }
@@ -194,6 +217,13 @@ class ValidateDatasetTests(unittest.TestCase):
                 "build_mode": "editable-python",
                 "hardware": {"device": "cpu", "min_memory_gb": 1},
                 "dependencies": [],
+                "source_loading": {
+                    "mode": "python_overlay",
+                    "installed_package": "torch",
+                    "overlay_paths": ["torch/nn/modules/linear.py"],
+                    "runtime_site_packages": "/tmp/op_bench_runtime/site-packages",
+                    "sync_before_tests": True,
+                },
             },
             "agent_visible": {
                 "repo_setup_commands": [],

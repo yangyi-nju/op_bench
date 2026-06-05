@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Generic, TypeVar
+
+from op_bench.task import TaskManifest
 
 
 class RegistryError(ValueError):
@@ -61,6 +64,38 @@ class EnvironmentAsset:
     def preflight_commands(self) -> list[str]:
         return [str(command) for command in self.data["preflight"].get("commands", [])]
 
+    @property
+    def source_loading_modes(self) -> list[str]:
+        return [str(mode) for mode in self.data.get("source_loading_modes", [])]
+
+    def task_environment_defaults(self) -> dict[str, Any]:
+        docker = self.data["docker"]
+        runtime = self.data.get("runtime", {})
+        defaults: dict[str, Any] = {
+            "backend": "docker",
+            "tier": self.runtime_tier,
+            "image": self.image,
+            "preflight_workdir": self.preflight_workdir,
+            "preflight_commands": self.preflight_commands,
+        }
+        if isinstance(runtime, dict):
+            defaults.update(deepcopy(runtime))
+        for source, target in (
+            ("digest", "image_digest"),
+            ("digest_kind", "digest_kind"),
+            ("platform", "platform"),
+        ):
+            if docker.get(source):
+                defaults[target] = docker[source]
+        if self.dockerfile_path:
+            defaults["dockerfile"] = str(self.dockerfile_path)
+        if self.build_context_path:
+            defaults["build_context"] = str(self.build_context_path)
+        for field in ("python_version", "os", "build_mode", "hardware", "dependencies", "resource_requirements"):
+            if field in self.data:
+                defaults[field] = deepcopy(self.data[field])
+        return defaults
+
 
 @dataclass(frozen=True)
 class SourceAsset:
@@ -98,6 +133,17 @@ class SourceAsset:
     @property
     def related_tasks(self) -> list[str]:
         return [str(task_id) for task_id in self.data.get("related_tasks", [])]
+
+    def task_source_defaults(self) -> dict[str, Any]:
+        defaults: dict[str, Any] = {
+            "repo_url": self.repo_url,
+            "base_commit": self.commit,
+        }
+        if self.local_path:
+            defaults["snapshot_path"] = str(self.local_path)
+        if self.data.get("checksum"):
+            defaults["snapshot_hash"] = str(self.data["checksum"])
+        return defaults
 
 
 Asset = TypeVar("Asset", EnvironmentAsset, SourceAsset)
@@ -179,3 +225,60 @@ class SourceRegistry(_Registry[SourceAsset]):
         submodules = item["submodules"]
         if not isinstance(submodules, dict) or not submodules.get("policy") or not submodules.get("status"):
             raise RegistryError(f"source asset {asset_id}: submodules.policy and submodules.status are required")
+
+
+def resolve_task_assets(
+    task: TaskManifest,
+    environment_registry: EnvironmentRegistry | None = None,
+    source_registry: SourceRegistry | None = None,
+) -> TaskManifest:
+    data = deepcopy(task.data)
+    if task.environment_ref:
+        if environment_registry is None:
+            raise RegistryError(f"task {task.task_id}: environment_ref requires an environment registry")
+        environment_asset = environment_registry.get(task.environment_ref)
+        data["environment"] = _deep_merge(environment_asset.task_environment_defaults(), data.get("environment", {}))
+        data.setdefault("runtime_tier", environment_asset.runtime_tier)
+    if task.source_ref:
+        if source_registry is None:
+            raise RegistryError(f"task {task.task_id}: source_ref requires a source registry")
+        source_asset = source_registry.get(task.source_ref)
+        if task.base_commit != source_asset.commit:
+            raise RegistryError(
+                f"task {task.task_id}: base_commit {task.base_commit} "
+                f"does not match source asset commit {source_asset.commit}"
+            )
+        data["source"] = _deep_merge(source_asset.task_source_defaults(), data.get("source", {}))
+    return TaskManifest(task_dir=task.task_dir, data=data)
+
+
+def load_resolved_task(
+    task_path: Path | str,
+    *,
+    environment_registry_path: Path | str | None = None,
+    source_registry_path: Path | str | None = None,
+) -> TaskManifest:
+    task = TaskManifest.load(task_path)
+    environment_registry = None
+    source_registry = None
+    if task.environment_ref:
+        if environment_registry_path is None:
+            raise RegistryError(f"task {task.task_id}: environment_ref requires an environment registry path")
+        environment_registry = EnvironmentRegistry.load(environment_registry_path)
+    if task.source_ref:
+        if source_registry_path is None:
+            raise RegistryError(f"task {task.task_id}: source_ref requires a source registry path")
+        source_registry = SourceRegistry.load(source_registry_path)
+    return resolve_task_assets(task, environment_registry=environment_registry, source_registry=source_registry)
+
+
+def _deep_merge(defaults: dict[str, Any], overrides: object) -> dict[str, Any]:
+    result = deepcopy(defaults)
+    if not isinstance(overrides, dict):
+        return result
+    for key, value in overrides.items():
+        if isinstance(value, dict) and isinstance(result.get(key), dict):
+            result[key] = _deep_merge(result[key], value)
+        else:
+            result[key] = deepcopy(value)
+    return result

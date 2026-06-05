@@ -63,17 +63,16 @@ A task can be promoted only when:
 
 Keep `metadata.curation_status` and the dataset entry `admission_status` as `draft` until both conditions are true on the declared environment.
 
-## 5. Run A Reference Agent Experiment
+## 5. Run Reference Agent Experiments
 
-Run sanity agents:
+Run the gold upper-bound check:
 
 ```bash
 PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/run_experiment.py \
   --dataset datasets/pytorch_mini/dataset.json \
   --verified-only \
-  --agent noop \
   --agent gold \
-  --output-dir runs/pytorch-mini-verified-sanity
+  --output-dir runs/pytorch-mini-verified-gold
 ```
 
 Run the reference real-agent path:

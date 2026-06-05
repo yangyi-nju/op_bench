@@ -1,6 +1,14 @@
 {
   "task_id": "pytorch__160952__bilinear_lazy_check",
   "version": "v1",
+  "environment_ref": "pytorch-cpu-torch2.6.0-py311",
+  "runtime_tier": "cpu_python_overlay",
+  "source_ref": "pytorch-df607364-python-overlay",
+  "admission": {
+    "status": "verified",
+    "evidence": "admission/evidence.json",
+    "verified_at": "2026-06-05T03:22:48Z"
+  },
   "source": {
     "pr_url": "https://github.com/pytorch/pytorch/pull/160952",
     "issue_url": "https://github.com/pytorch/pytorch/issues/160407",
@@ -76,7 +84,8 @@
     "repo_setup_commands": [],
     "known_constraints": [
       "Full PyTorch source checkout task.",
-      "Candidate hidden test is hand-authored from the issue and must be replay-verified before benchmark admission."
+      "Do not assume CUDA availability.",
+      "Keep the fix focused on Bilinear lazy initialization semantics."
     ],
     "allowed_test_commands": [
       "{python} test/nn/test_bilinear_lazy_op_bench.py {test}"
@@ -88,7 +97,7 @@
       "TestLazyBilinearOpBench.test_lazy_bilinear_can_be_constructed"
     ],
     "pass_to_pass": [
-      "TestLazyBilinearOpBench.test_lazy_bilinear_can_be_constructed"
+      "TestLazyBilinearOpBench.test_regular_bilinear_still_runs"
     ],
     "test_command": "{python} test/nn/test_bilinear_lazy_op_bench.py {test}",
     "timeout_sec": 900
@@ -99,12 +108,12 @@
   },
   "metadata": {
     "difficulty": "medium",
-    "curation_status": "draft",
+    "curation_status": "verified",
     "deterministic": true,
     "estimated_runtime_min": 15,
     "layer": "A",
-    "admission_status": "source_ready",
-    "source_loading_verified": false,
-    "notes": "Candidate task. Hidden test design must be validated against the full PyTorch checkout before promotion."
+    "admission_status": "verified",
+    "source_loading_verified": true,
+    "notes": "Verified Layer A task using python_overlay source loading. Stable v0.2 admission evidence is admission/evidence.json."
   }
 }

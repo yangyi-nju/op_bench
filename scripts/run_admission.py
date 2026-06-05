@@ -19,7 +19,7 @@ from op_bench.admission import AdmissionRunner
 from op_bench.environment import EnvironmentManager
 from op_bench.evaluator import Evaluator
 from op_bench.progress import ProgressLogger
-from op_bench.task import TaskManifest
+from op_bench.registry import load_resolved_task
 from scripts.validate_task import validate_manifest
 
 
@@ -27,6 +27,16 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run baseline/gold admission replay for one OpBench task.")
     parser.add_argument("--task", required=True, help="Task directory or task.json path.")
     parser.add_argument("--output-dir", help="Directory for full admission evidence and logs.")
+    parser.add_argument(
+        "--environment-registry",
+        default=str(ROOT / "environments/registry.json"),
+        help="Environment registry used to resolve task.environment_ref.",
+    )
+    parser.add_argument(
+        "--source-registry",
+        default=str(ROOT / "sources/registry.json"),
+        help="Source registry used to resolve task.source_ref.",
+    )
     parser.add_argument(
         "--write-task-evidence",
         action="store_true",
@@ -41,7 +51,11 @@ def main(argv: list[str] | None = None) -> int:
     task_path = Path(args.task).resolve()
     if task_path.is_dir():
         task_path = task_path / "task.json"
-    task = TaskManifest.load(task_path)
+    task = load_resolved_task(
+        task_path,
+        environment_registry_path=args.environment_registry,
+        source_registry_path=args.source_registry,
+    )
     validation_errors = validate_manifest(task.data)
     if validation_errors:
         print(f"{task_path}: invalid task", file=sys.stderr)

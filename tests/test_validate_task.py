@@ -39,6 +39,24 @@ class ValidateTaskTests(unittest.TestCase):
 
         self.assertIn("admission.status must match metadata.admission_status when both are provided", errors)
 
+    def test_environment_ref_allows_registry_driven_environment_fields(self) -> None:
+        manifest = self._manifest()
+        manifest["environment_ref"] = "pytorch-cpu"
+        manifest["runtime_tier"] = "cpu_python_overlay"
+        manifest["environment"] = {
+            "source_loading": {
+                "mode": "python_overlay",
+                "installed_package": "torch",
+                "overlay_paths": ["torch/nn/modules/linear.py"],
+                "runtime_site_packages": "/tmp/op_bench_runtime/site-packages",
+                "sync_before_tests": True,
+            }
+        }
+
+        errors = validate_manifest(manifest)
+
+        self.assertEqual(errors, [])
+
     def _manifest(self) -> dict[str, object]:
         return {
             "task_id": "fixture",

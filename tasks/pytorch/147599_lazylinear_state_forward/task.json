@@ -1,0 +1,121 @@
+{
+  "task_id": "pytorch__147599__lazylinear_state_forward",
+  "version": "v1",
+  "environment_ref": "pytorch-cpu-torch2.6.0-py311",
+  "runtime_tier": "cpu_python_overlay",
+  "source_ref": "pytorch-8bf3f3f-python-overlay",
+  "admission": {
+    "status": "verified",
+    "evidence": "admission/evidence.json",
+    "verified_at": "2026-06-05T03:32:04Z"
+  },
+  "source": {
+    "pr_url": "https://github.com/pytorch/pytorch/pull/147599",
+    "issue_url": "https://github.com/pytorch/pytorch/issues/147389",
+    "repo": "pytorch/pytorch",
+    "repo_url": "https://github.com/pytorch/pytorch.git",
+    "issue_number": 147389,
+    "pr_number": 147599,
+    "base_commit": "8bf3f3fc43bd8c6a35f7dc92e1dfe21623b648bb",
+    "merge_commit": "466d5295c1edf2482d8d162a0ca8a124840ac989",
+    "checkout_mode": "git",
+    "snapshot_path": "../../../.op_bench_cache/sources/pytorch/pytorch/8bf3f3fc43bd8c6a35f7dc92e1dfe21623b648bb/source"
+  },
+  "statement": {
+    "title": "LazyLinear keeps in_features at zero after loading initialized state and forwarding",
+    "body": "`nn.LazyLinear` can load an initialized `nn.Linear` state dict, but its first forward pass leaves `in_features` at zero instead of recording the inferred input feature size.",
+    "labels": [
+      "module: nn",
+      "module: lazy",
+      "triaged"
+    ]
+  },
+  "operator": {
+    "framework": "pytorch",
+    "component": "torch.nn",
+    "operator_name": "torch.nn.LazyLinear",
+    "problem_type": "lazy-module-state-inference",
+    "tags": [
+      "lazy",
+      "linear",
+      "state-dict",
+      "nn",
+      "python-level",
+      "cpu-deterministic"
+    ]
+  },
+  "environment": {
+    "backend": "docker",
+    "tier": "cpu-deterministic",
+    "image": "op-bench/pytorch-cpu:torch2.6.0-py311",
+    "dockerfile": "../../../environments/pytorch-cpu/Dockerfile",
+    "build_context": "../../../environments/pytorch-cpu",
+    "workspace_dir": "/workspace",
+    "preflight_workdir": "/tmp",
+    "python_executable": "python",
+    "python_version": "3.11",
+    "os": "linux",
+    "platform": "linux/amd64",
+    "build_mode": "prebuilt-wheel",
+    "hardware": {
+      "device": "cpu",
+      "min_memory_gb": 8
+    },
+    "resource_requirements": {
+      "cpu": true,
+      "gpu": false
+    },
+    "dependencies": [
+      "pytorch wheel with selected Python source overlay"
+    ],
+    "source_loading": {
+      "mode": "python_overlay",
+      "installed_package": "torch",
+      "overlay_paths": [
+        "torch/nn/modules/linear.py"
+      ],
+      "runtime_site_packages": "/tmp/op_bench_runtime/site-packages",
+      "sync_before_tests": true
+    },
+    "preflight_commands": [
+      "{python} --version",
+      "{python} -c \"import torch; print(torch.__version__); print(torch.__file__)\""
+    ]
+  },
+  "agent_visible": {
+    "repo_setup_commands": [],
+    "known_constraints": [
+      "Full PyTorch source checkout task.",
+      "Do not assume CUDA availability.",
+      "Keep the fix focused on LazyLinear state-dict initialization semantics."
+    ],
+    "allowed_test_commands": [
+      "{python} test/nn/test_lazylinear_state_op_bench.py {test}"
+    ]
+  },
+  "evaluation": {
+    "setup_commands": [],
+    "fail_to_pass": [
+      "TestLazyLinearStateOpBench.test_lazy_linear_load_state_forward_sets_in_features"
+    ],
+    "pass_to_pass": [
+      "TestLazyLinearStateOpBench.test_lazy_linear_regular_forward_still_initializes"
+    ],
+    "test_command": "{python} test/nn/test_lazylinear_state_op_bench.py {test}",
+    "timeout_sec": 900
+  },
+  "artifacts": {
+    "gold_patch": "artifacts/gold.patch",
+    "test_patch": "artifacts/test.patch"
+  },
+  "metadata": {
+    "difficulty": "medium",
+    "curation_status": "verified",
+    "deterministic": true,
+    "estimated_runtime_min": 15,
+    "layer": "A",
+    "admission_status": "verified",
+    "source_loading_verified": true,
+    "notes": "Verified Layer A task using python_overlay source loading. Stable v0.2 admission evidence is admission/evidence.json."
+  }
+}

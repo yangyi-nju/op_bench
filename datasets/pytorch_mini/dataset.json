@@ -1,8 +1,12 @@
 {
   "dataset_id": "pytorch_mini",
   "version": "v0",
-  "status": "draft",
-  "description": "Initial PyTorch CPU operator benchmark slice built from real upstream PRs.",
+  "status": "verified",
+  "description": "PyTorch CPU operator benchmark slice built from real upstream PRs and verified Docker replay evidence.",
+  "registries": {
+    "environments": "environments/registry.json",
+    "sources": "sources/registry.json"
+  },
   "environment_policy": {
     "backend": "docker",
     "image": "op-bench/pytorch-cpu:torch2.6.0-py311",
@@ -19,7 +23,9 @@
       "source_status": "ready",
       "replay_status": "verified",
       "admission_status": "verified",
-      "notes": "Verified with python_overlay source loading: baseline_reproduced and gold resolved in runs/replay/pytorch_149693_overlay.json."
+      "runtime_tier": "cpu_python_overlay",
+      "admission_evidence": "tasks/pytorch/149693_lazylinear_init/admission/evidence.json",
+      "notes": "Verified with python_overlay source loading. v0.1 replay evidence remains in runs/replay/pytorch_149693_overlay.json; v0.2 stable evidence is task-local."
     },
     {
       "task_id": "pytorch__160952__bilinear_lazy_check",
@@ -28,9 +34,24 @@
       "issue_url": "https://github.com/pytorch/pytorch/issues/160407",
       "environment_status": "ready",
       "source_status": "ready",
-      "replay_status": "pending",
-      "admission_status": "draft",
-      "notes": "Docker environment preflight passes. Local PyTorch source snapshot is prepared. Full replay is pending."
+      "replay_status": "verified",
+      "admission_status": "verified",
+      "runtime_tier": "cpu_python_overlay",
+      "admission_evidence": "tasks/pytorch/160952_bilinear_lazy_check/admission/evidence.json",
+      "notes": "Verified with python_overlay source loading. Stable v0.2 admission evidence is task-local."
+    },
+    {
+      "task_id": "pytorch__147599__lazylinear_state_forward",
+      "task_path": "tasks/pytorch/147599_lazylinear_state_forward",
+      "pr_url": "https://github.com/pytorch/pytorch/pull/147599",
+      "issue_url": "https://github.com/pytorch/pytorch/issues/147389",
+      "environment_status": "ready",
+      "source_status": "ready",
+      "replay_status": "verified",
+      "admission_status": "verified",
+      "runtime_tier": "cpu_python_overlay",
+      "admission_evidence": "tasks/pytorch/147599_lazylinear_state_forward/admission/evidence.json",
+      "notes": "Verified with python_overlay source loading. Stable v0.2 admission evidence is task-local."
     }
   ]
 }

@@ -1,6 +1,14 @@
 {
   "task_id": "pytorch__149693__lazylinear_init",
   "version": "v1",
+  "environment_ref": "pytorch-cpu-torch2.6.0-py311",
+  "runtime_tier": "cpu_python_overlay",
+  "source_ref": "pytorch-362b409-python-overlay",
+  "admission": {
+    "status": "verified",
+    "evidence": "admission/evidence.json",
+    "verified_at": "2026-06-04T17:45:53Z"
+  },
   "source": {
     "pr_url": "https://github.com/pytorch/pytorch/pull/149693",
     "issue_url": "https://github.com/pytorch/pytorch/issues/149691",
@@ -111,6 +119,6 @@
     "layer": "A",
     "admission_status": "verified",
     "source_loading_verified": true,
-    "notes": "Verified Layer A task using python_overlay source loading. Replay evidence: runs/replay/pytorch_149693_overlay.json."
+    "notes": "Verified Layer A task using python_overlay source loading. v0.1 replay evidence remains at runs/replay/pytorch_149693_overlay.json; stable v0.2 admission evidence is admission/evidence.json."
   }
 }

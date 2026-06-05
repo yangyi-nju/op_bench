@@ -121,10 +121,14 @@ class AdmissionRunnerTests(unittest.TestCase):
 
             self.assertEqual(exit_code, 0)
             evidence = json.loads((output / "evidence.json").read_text(encoding="utf-8"))
+            stable = json.loads((task.task_dir / "admission/evidence.json").read_text(encoding="utf-8"))
             self.assertEqual(evidence["admission"]["decision"], "verified")
             self.assertEqual(evidence["baseline"]["status"], "baseline_reproduced")
             self.assertEqual(evidence["gold"]["status"], "resolved")
-            self.assertTrue((task.task_dir / "admission/evidence.json").exists())
+            self.assertIn("commands", evidence["baseline"])
+            self.assertNotIn("commands", stable["baseline"])
+            self.assertNotIn("observed", stable["environment"])
+            self.assertNotIn("snapshot_path", stable["source"])
 
     def _now(self) -> datetime:
         return datetime(2026, 6, 4, tzinfo=timezone.utc)

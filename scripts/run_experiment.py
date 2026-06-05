@@ -20,6 +20,7 @@ from op_bench.dataset import DatasetManifest
 from op_bench.environment import EnvironmentManager
 from op_bench.evaluator import Evaluator
 from op_bench.progress import ProgressLogger, format_duration
+from op_bench.registry import load_resolved_task
 from op_bench.reporter import summarize_results, write_json, write_jsonl
 from op_bench.task import TaskManifest
 
@@ -48,7 +49,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="append",
         required=True,
         help=(
-            "Agent adapter to run, e.g. noop, gold, codex, or codex_action_bridge. "
+            "Agent adapter to run, e.g. gold or codex_action_bridge. "
             "May be provided multiple times."
         ),
     )
@@ -165,7 +166,7 @@ def main(argv: list[str] | None = None) -> int:
                             }
                         )
                         continue
-                    if getattr(agent, "requires_actions", False) or agent_name == "codex":
+                    if getattr(agent, "requires_actions", False):
                         actions = WorkspaceActions(task=task, workspace=workspace, command_executor=environment_preparation.executor)
                 try:
                     progress(f"agent patch generation start: task={task.task_id}, agent={agent_label}")
@@ -236,7 +237,14 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _load_tasks(task_dirs: list[str], dataset_paths: list[str], verified_only: bool = False) -> list[TaskManifest]:
-    tasks = [TaskManifest.load(Path(task_dir) / "task.json") for task_dir in task_dirs]
+    tasks = [
+        load_resolved_task(
+            Path(task_dir) / "task.json",
+            environment_registry_path=ROOT / "environments/registry.json",
+            source_registry_path=ROOT / "sources/registry.json",
+        )
+        for task_dir in task_dirs
+    ]
     for dataset_path in dataset_paths:
         dataset = DatasetManifest.load(dataset_path)
         tasks.extend(dataset.load_tasks(verified_only=verified_only))

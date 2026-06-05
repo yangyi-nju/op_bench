@@ -205,15 +205,6 @@
     "environment": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "tier",
-        "image",
-        "python_version",
-        "os",
-        "build_mode",
-        "hardware",
-        "dependencies"
-      ],
       "properties": {
         "backend": {
           "type": "string",
@@ -513,6 +504,11 @@
             "gold_verified",
             "verified",
             "blocked",
+            "blocked_environment",
+            "blocked_source",
+            "blocked_test",
+            "not_reproduced",
+            "gold_failed",
             "deprecated"
           ]
         },
@@ -521,5 +517,29 @@
         }
       }
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "not": {
+          "required": ["environment_ref"]
+        }
+      },
+      "then": {
+        "properties": {
+          "environment": {
+            "required": [
+              "tier",
+              "image",
+              "python_version",
+              "os",
+              "build_mode",
+              "hardware",
+              "dependencies"
+            ]
+          }
+        }
+      }
+    }
+  ]
 }

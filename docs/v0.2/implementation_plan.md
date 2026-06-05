@@ -38,7 +38,7 @@ Modified files:
 ## Task 1: Preserve Version History
 
 - [x] Add `CHANGELOG.md` with separate v0.1 and v0.2 sections.
-- [x] Link `docs/OpBench_v0.2_design.md` and this implementation plan from both docs indexes.
+- [x] Link `docs/v0.2/design.md` and this implementation plan from both docs indexes.
 - [x] Confirm all v0.1 documents and recorded run artifacts remain present.
 - [x] Commit with `docs: record v0.2 implementation plan`.
 
@@ -82,22 +82,24 @@ Modified files:
 
 ## Task 6: Migrate the Existing Verified Task
 
-- [ ] Run `scripts/run_admission.py` for `pytorch__149693__lazylinear_init` and write a full run under `runs/admission/`.
-- [ ] Copy the stable evidence summary to `tasks/pytorch/149693_lazylinear_init/admission/evidence.json`.
-- [ ] Update the task and dataset manifests to reference the stable evidence, environment ID, source ID, and runtime tier while preserving v0.1 fields.
-- [ ] Validate the task and dataset with the existing validation CLIs.
-- [ ] Re-run admission and confirm baseline is `baseline_reproduced` and gold is `resolved`.
-- [ ] Commit with `data: migrate verified task to v0.2 admission evidence`.
+- [x] Run `scripts/run_admission.py` for `pytorch__149693__lazylinear_init` and write a full run under `runs/admission/`.
+- [x] Copy the stable evidence summary to `tasks/pytorch/149693_lazylinear_init/admission/evidence.json`.
+- [x] Update the task and dataset manifests to reference the stable evidence, environment ID, source ID, and runtime tier while preserving v0.1 fields.
+- [x] Validate the task and dataset with the existing validation CLIs.
+- [x] Re-run admission and confirm baseline is `baseline_reproduced` and gold is `resolved`.
+- [x] Commit with `data: migrate verified task to v0.2 admission evidence`.
 
 ## Task 7: Expand and Verify the v0.2 Dataset
 
-- [ ] Select 8-12 real PyTorch PR candidates and record selection rationale.
-- [ ] Build draft bundles without marking them verified.
-- [ ] Prepare source/environment assets and run admission for each candidate.
-- [ ] Promote only 3-5 tasks with complete passing evidence into `datasets/pytorch_mini_v0.2`.
+- [x] Select real PyTorch PR candidates and record selection rationale.
+- [x] Build draft bundles without marking them verified.
+- [x] Prepare source/environment assets and run admission for selected candidates.
+- [x] Promote 3 tasks with complete passing evidence into `datasets/pytorch_mini`.
 - [ ] Run one Codex action-bridge experiment on the verified slice.
-- [ ] Write `docs/OpBench_v0.2_experiment_report.md` with process, results, failures, and environment-management findings.
+- [ ] Write `docs/v0.2/experiment_report.md` with process, results, failures, and environment-management findings.
 - [ ] Commit dataset and report as separate traceable milestones.
+
+2026-06-05 update: `pytorch__160952__bilinear_lazy_check` was promoted from draft to verified after hidden test replay fixes. `pytorch__147599__lazylinear_state_forward` was added from PyTorch PR #147599 and verified. A `gold` agent loop over the 3-task `pytorch_mini` slice resolved 3/3 tasks; the real Codex action-bridge experiment remains pending.
 
 ## Verification
 

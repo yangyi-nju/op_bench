@@ -113,11 +113,13 @@ class DockerExecutor:
         workspace_dir: str = "/workspace",
         container_name: str | None = None,
         command_workdir: str | None = None,
+        labels: dict[str, str] | None = None,
     ) -> None:
         self.image = image
         self.workspace_dir = workspace_dir
         self.container_name = container_name
         self.command_workdir = command_workdir or workspace_dir
+        self.labels = dict(labels or {})
 
     def run(self, command: list[str], cwd: Path, timeout_sec: int) -> CommandResult:
         docker_command = self.command_for_run(command, cwd)
@@ -210,12 +212,16 @@ class DockerExecutor:
         if not self.container_name:
             raise ValueError("DockerExecutor.command_for_start requires a container_name")
         host_workspace = cwd.resolve()
-        return [
+        command = [
             "docker",
             "run",
             "--detach",
             "--name",
             self.container_name,
+        ]
+        for key, value in sorted(self.labels.items()):
+            command.extend(["--label", f"{key}={value}"])
+        command.extend([
             "--volume",
             f"{host_workspace}:{self.workspace_dir}",
             "--workdir",
@@ -224,7 +230,8 @@ class DockerExecutor:
             "tail",
             "-f",
             "/dev/null",
-        ]
+        ])
+        return command
 
     def close(self, timeout_sec: int = 30) -> CommandResult | None:
         if not self.container_name:

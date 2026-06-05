@@ -36,6 +36,31 @@ class AdmissionEvidence:
         }
         return data
 
+    def summary_dict(self) -> dict[str, object]:
+        data = self.to_dict()
+        source = dict(data["source"])
+        source.pop("snapshot_path", None)
+        data["source"] = source
+        environment = dict(data["environment"])
+        environment.pop("observed", None)
+        data["environment"] = environment
+        data["baseline"] = self._evaluation_summary(self.baseline)
+        data["gold"] = self._evaluation_summary(self.gold) if self.gold is not None else None
+        return data
+
+    def _evaluation_summary(self, evaluation: dict[str, object]) -> dict[str, object]:
+        fields = (
+            "task_id",
+            "mode",
+            "status",
+            "fail_to_pass_total",
+            "fail_to_pass_passed",
+            "pass_to_pass_total",
+            "pass_to_pass_passed",
+            "duration_sec",
+        )
+        return {field: evaluation[field] for field in fields if field in evaluation}
+
 
 class AdmissionRunner:
     def __init__(
@@ -109,7 +134,7 @@ class AdmissionRunner:
 
     def write_task_evidence(self, task: TaskManifest, evidence: AdmissionEvidence) -> Path:
         output = task.task_dir / "admission" / "evidence.json"
-        self._write_json(output, evidence.to_dict())
+        self._write_json(output, evidence.summary_dict())
         return output
 
     def _manifest_hash(self, task: TaskManifest) -> str:
