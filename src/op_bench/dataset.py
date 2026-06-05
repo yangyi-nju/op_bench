@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from op_bench.registry import EnvironmentRegistry, SourceRegistry, resolve_task_assets
 from op_bench.task import TaskManifest
 
 
@@ -44,6 +45,20 @@ class DatasetTaskEntry:
     def replay_status(self) -> str:
         return str(self.data.get("replay_status", "pending"))
 
+    @property
+    def admission_evidence_path(self) -> Path | None:
+        value = self.data.get("admission_evidence")
+        if not value:
+            return None
+        path = Path(str(value))
+        if path.is_absolute():
+            return path
+        repo_root = self._repo_root(self.dataset_dir)
+        repo_relative = (repo_root / path).resolve()
+        if repo_relative.exists():
+            return repo_relative
+        return (self.dataset_dir / path).resolve()
+
     def load_task(self) -> TaskManifest:
         return TaskManifest.load(self.task_path / "task.json")
 
@@ -82,8 +97,51 @@ class DatasetManifest:
     def tasks(self) -> list[DatasetTaskEntry]:
         return [DatasetTaskEntry(self.dataset_dir, entry) for entry in self.data.get("tasks", [])]
 
+    @property
+    def registries(self) -> dict[str, str]:
+        value = self.data.get("registries", {})
+        if not isinstance(value, dict):
+            return {}
+        return {str(key): str(path) for key, path in value.items()}
+
     def load_tasks(self, verified_only: bool = False) -> list[TaskManifest]:
         entries = self.tasks
         if verified_only:
             entries = [entry for entry in entries if entry.admission_status == "verified"]
-        return [entry.load_task() for entry in entries]
+        environment_registry = self._environment_registry()
+        source_registry = self._source_registry()
+        return [
+            resolve_task_assets(
+                entry.load_task(),
+                environment_registry=environment_registry,
+                source_registry=source_registry,
+            )
+            for entry in entries
+        ]
+
+    def _environment_registry(self) -> EnvironmentRegistry | None:
+        path = self._registry_path("environments")
+        return EnvironmentRegistry.load(path) if path else None
+
+    def _source_registry(self) -> SourceRegistry | None:
+        path = self._registry_path("sources")
+        return SourceRegistry.load(path) if path else None
+
+    def _registry_path(self, name: str) -> Path | None:
+        value = self.registries.get(name)
+        if not value:
+            return None
+        path = Path(value)
+        if path.is_absolute():
+            return path
+        repo_root = self._repo_root(self.dataset_dir)
+        repo_relative = (repo_root / path).resolve()
+        if repo_relative.exists():
+            return repo_relative
+        return (self.dataset_dir / path).resolve()
+
+    def _repo_root(self, start: Path) -> Path:
+        for path in [start.resolve(), *start.resolve().parents]:
+            if (path / ".git").exists():
+                return path
+        return Path.cwd().resolve()

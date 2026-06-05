@@ -374,9 +374,8 @@ Gold replay 步骤：
 
 第一版至少支持：
 
-- `noop`：不修改代码，用于负例 sanity check。
-- `gold`：应用 gold patch，用于上界 sanity check。
-- 一个真实 agent：例如 Codex CLI 或等价 agent。
+- `gold`：应用 gold patch，用于上界 replay check。
+- 一个真实 agent：例如 Codex CLI 或等价 agent，并且必须遵守 action interface 边界。
 
 ### 11.2 Docker Task 的 Agent 边界
 
@@ -531,7 +530,7 @@ MVP 完成需要满足：
 - baseline replay 和 gold replay 命令可重复执行。
 - 至少接入一个真实 agent。
 - agent 对 Docker task 的操作遵守 action interface。
-- `noop`、`gold`、真实 agent 均能通过同一 runner 执行。
+- `gold` 和真实 agent 均能通过同一 runner 执行。
 - 数据集和任务 manifest 校验通过。
 - 单元测试通过。
 - README 或 manual validation 文档能指导人工跑通。
@@ -546,7 +545,7 @@ MVP 完成需要满足：
 - Docker executor；
 - source snapshot 准备脚本；
 - replay 脚本；
-- `noop`、`gold`、Codex agent 基础适配；
+- `gold` 和 Codex agent 基础适配；
 - PyTorch mini dataset draft；
 - 两条 PyTorch PR draft task；
 - 本地 source snapshot 准备能力；

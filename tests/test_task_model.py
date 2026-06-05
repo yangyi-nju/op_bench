@@ -17,6 +17,14 @@ class TaskManifestTests(unittest.TestCase):
             data = {
                 "task_id": "fixture",
                 "version": "v1",
+                "environment_ref": "pytorch-cpu",
+                "runtime_tier": "cpu_python_overlay",
+                "source_ref": "pytorch-fixture",
+                "admission": {
+                    "status": "verified",
+                    "evidence": "admission/evidence.json",
+                    "verified_at": "2026-06-04T00:00:00Z",
+                },
                 "source": {
                     "pr_url": "https://github.com/local/op-fixture/pull/1",
                     "issue_url": "https://github.com/local/op-fixture/issues/1",
@@ -94,15 +102,21 @@ class TaskManifestTests(unittest.TestCase):
             self.assertEqual(task.source_snapshot_path, root / "snapshot" / "source")
             self.assertEqual(task.source_snapshot_hash, "sha256:abc123")
             self.assertEqual(task.source_snapshot_method, "from_local_repo")
+            self.assertEqual(task.source_ref, "pytorch-fixture")
             self.assertEqual(task.environment_image_digest, "sha256:image123")
             self.assertEqual(task.environment_digest_kind, "local_image_id")
             self.assertEqual(task.environment_platform, "linux/amd64")
+            self.assertEqual(task.environment_ref, "pytorch-cpu")
+            self.assertEqual(task.runtime_tier, "cpu_python_overlay")
             self.assertEqual(task.environment_preflight_workdir, "/tmp")
             self.assertEqual(task.source_loading_mode, "python_overlay")
             self.assertEqual(task.source_loading_overlay_paths, ["torch/nn/modules/linear.py"])
             self.assertEqual(task.metadata_layer, "A")
             self.assertEqual(task.metadata_admission_status, "verified")
             self.assertIs(task.metadata_source_loading_verified, True)
+            self.assertEqual(task.admission_status, "verified")
+            self.assertEqual(task.admission_evidence_path, root / "admission/evidence.json")
+            self.assertEqual(task.admission_verified_at, "2026-06-04T00:00:00Z")
             self.assertEqual(
                 task.command_for_test("tests.test_special.TestSpecialExpit.test_nan_is_preserved"),
                 [sys.executable, "-m", "unittest", "tests.test_special.TestSpecialExpit.test_nan_is_preserved"],

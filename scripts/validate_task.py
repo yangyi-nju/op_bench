@@ -38,7 +38,16 @@ REQUIRED_PATHS = [
     ("metadata", "deterministic"),
 ]
 
-ALLOWED_TIERS = {"cpu-deterministic", "single-gpu", "kernel-build"}
+ALLOWED_TIERS = {
+    "cpu-deterministic",
+    "single-gpu",
+    "kernel-build",
+    "cpu_python_overlay",
+    "cpu_package_runtime",
+    "cpu_source_snapshot_fuller",
+    "cuda_declared",
+    "hardware_specific",
+}
 ALLOWED_BUILD_MODES = {"editable-python", "source-build", "prebuilt-wheel"}
 ALLOWED_ENVIRONMENT_BACKENDS = {"local", "docker"}
 ALLOWED_DIFFICULTIES = {"easy", "medium", "hard"}
@@ -50,12 +59,18 @@ ALLOWED_SOURCE_LOADING_MODES = {"python_overlay", "prebuilt_source_image", "full
 ALLOWED_LAYERS = {"A", "B"}
 ALLOWED_ADMISSION_STATUSES = {
     "candidate",
+    "draft",
     "environment_ready",
     "source_ready",
     "baseline_reproduced",
     "gold_verified",
     "verified",
     "blocked",
+    "blocked_environment",
+    "blocked_source",
+    "blocked_test",
+    "not_reproduced",
+    "gold_failed",
     "deprecated",
 }
 ALLOW_EMPTY_REQUIRED_PATHS = {
@@ -76,6 +91,8 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
     errors: list[str] = []
 
     for path in REQUIRED_PATHS:
+        if data.get("environment_ref") and path[:1] == ("environment",):
+            continue
         try:
             value = lookup(data, path)
         except KeyError:
@@ -86,6 +103,11 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
             errors.append(f"empty required field: {'.'.join(path)}")
 
     source = data.get("source", {})
+    for reference in ("environment_ref", "source_ref"):
+        value = data.get(reference)
+        if value is not None and (not isinstance(value, str) or not value):
+            errors.append(f"{reference} must be a non-empty string when provided")
+
     checkout_mode = source.get("checkout_mode", "git")
     if checkout_mode not in ALLOWED_CHECKOUT_MODES:
         errors.append(
@@ -145,6 +167,9 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
             )
     except KeyError:
         pass
+    runtime_tier = data.get("runtime_tier")
+    if runtime_tier is not None and runtime_tier not in ALLOWED_TIERS:
+        errors.append(f"invalid runtime_tier: {runtime_tier!r}; expected one of {sorted(ALLOWED_TIERS)}")
 
     try:
         build_mode = lookup(data, ("environment", "build_mode"))
@@ -188,6 +213,25 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
         errors.append("metadata.admission_status must be 'verified' when metadata.curation_status is 'verified'")
     if "source_loading_verified" in metadata and not isinstance(metadata["source_loading_verified"], bool):
         errors.append("metadata.source_loading_verified must be a boolean when provided")
+
+    admission = data.get("admission")
+    if admission is not None:
+        if not isinstance(admission, dict):
+            errors.append("admission must be an object")
+        else:
+            formal_status = admission.get("status")
+            if formal_status not in ALLOWED_ADMISSION_STATUSES:
+                errors.append(
+                    f"invalid admission.status: {formal_status!r}; "
+                    f"expected one of {sorted(ALLOWED_ADMISSION_STATUSES)}"
+                )
+            if formal_status == "verified":
+                if not admission.get("evidence"):
+                    errors.append("admission.evidence is required when admission.status is 'verified'")
+                if not admission.get("verified_at"):
+                    errors.append("admission.verified_at is required when admission.status is 'verified'")
+            if admission_status is not None and formal_status != admission_status:
+                errors.append("admission.status must match metadata.admission_status when both are provided")
 
     try:
         fail_to_pass = lookup(data, ("evaluation", "fail_to_pass"))

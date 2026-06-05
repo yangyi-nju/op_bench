@@ -1,0 +1,123 @@
+# OpBench v0.2 Platform Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Build the v0.2 task-admission and environment-asset platform while preserving the complete v0.1 implementation and evidence history.
+
+**Architecture:** Add backward-compatible registries for reusable Docker environments and source snapshots, then add a single admission service that validates a task, resolves its assets, replays baseline and gold, and writes stable evidence. Dataset validation consumes that evidence, while the existing evaluator and Codex action-bridge scoring path remain the execution core.
+
+**Tech Stack:** Python 3 standard library, JSON manifests, Docker CLI, `unittest`, existing OpBench evaluator/action interface.
+
+---
+
+## File Structure
+
+New files:
+
+- `CHANGELOG.md`: chronological version-level development record.
+- `src/op_bench/registry.py`: typed environment/source registry loading and reference resolution.
+- `src/op_bench/admission.py`: admission decisions, evidence generation, and stable evidence writing.
+- `scripts/run_admission.py`: user-facing admission CLI.
+- `environments/registry.json`: committed reusable environment metadata.
+- `schemas/environment_registry.schema.json`: environment registry contract.
+- `schemas/source_registry.schema.json`: source snapshot registry contract.
+- `schemas/admission_evidence.schema.json`: admission evidence contract.
+- `tests/test_registry.py`: registry behavior tests.
+- `tests/test_admission.py`: admission decision and evidence tests.
+- `tests/test_validate_dataset.py`: evidence-aware dataset validation tests.
+
+Modified files:
+
+- `src/op_bench/task.py`: expose backward-compatible environment/source references and admission fields.
+- `scripts/validate_task.py`: accept v0.2 runtime tiers, references, and admission statuses.
+- `scripts/validate_dataset.py`: require resolvable evidence for verified entries.
+- `tasks/pytorch/149693_lazylinear_init/task.json`: reference stable v0.2 evidence without removing v0.1 metadata.
+- `datasets/pytorch_mini/dataset.json`: reference stable evidence for the existing verified task.
+- `docs/README.md`, `docs/README.zh-CN.md`: link versioned design, plans, and reports.
+
+## Task 1: Preserve Version History
+
+- [x] Add `CHANGELOG.md` with separate v0.1 and v0.2 sections.
+- [x] Link `docs/v0.2/design.md` and this implementation plan from both docs indexes.
+- [x] Confirm all v0.1 documents and recorded run artifacts remain present.
+- [x] Commit with `docs: record v0.2 implementation plan`.
+
+## Task 2: Add Asset Registries
+
+- [x] Write failing tests in `tests/test_registry.py` proving that environment and source entries load by ID, duplicate IDs fail, and relative paths resolve from the registry file.
+- [x] Run `PATH=.venv/bin:$PATH PYTHONPATH=src python -m unittest tests.test_registry -v` and confirm failure because `op_bench.registry` does not exist.
+- [x] Implement focused registry models and loaders in `src/op_bench/registry.py`.
+- [x] Add JSON schemas and an initial `environments/registry.json` entry for the v0.1 PyTorch CPU image.
+- [x] Run registry tests and the full suite.
+- [x] Commit with `feat: add environment and source asset registries`.
+
+## Task 3: Resolve Task References Backward-Compatibly
+
+- [x] Extend `tests/test_task_model.py` with failing cases for `environment_ref`, `source_ref`, runtime tier, and task-local admission evidence.
+- [x] Run the focused test and confirm the new properties are missing.
+- [x] Add properties to `src/op_bench/task.py` without changing existing inline environment/source behavior.
+- [x] Extend `scripts/validate_task.py` to accept v0.2 statuses and runtime tiers while retaining v0.1 values.
+- [x] Run focused and full tests.
+- [x] Commit with `feat: expose v0.2 task asset references`.
+
+## Task 4: Add Admission Evidence and CLI
+
+- [x] Write failing tests in `tests/test_admission.py` for verified, not-reproduced, environment-blocked, and gold-failed decisions.
+- [x] Run the focused test and confirm failure because the admission service is missing.
+- [x] Implement `AdmissionRunner` in `src/op_bench/admission.py`, reusing `Evaluator.evaluate_baseline` and `Evaluator.evaluate_gold`.
+- [x] Ensure evidence contains task-manifest hash, environment/source IDs, runtime tier, baseline/gold results, decision, timestamp, and failure classification.
+- [x] Implement `scripts/run_admission.py` with `--output-dir` and `--write-task-evidence`; it must not silently mutate task status.
+- [x] Add `schemas/admission_evidence.schema.json`.
+- [x] Run focused and full tests.
+- [x] Commit with `feat: add replay admission pipeline`.
+
+## Task 5: Enforce Evidence-Aware Dataset Validation
+
+- [x] Write failing tests in `tests/test_validate_dataset.py` proving verified tasks require existing evidence whose task ID and decision match.
+- [x] Run the focused test and confirm the old validator accepts invalid verified entries.
+- [x] Extend `scripts/validate_dataset.py` with explicit blocked statuses and evidence consistency checks.
+- [x] Add admission fields to `src/op_bench/dataset.py`.
+- [x] Run focused and full tests.
+- [x] Commit with `feat: validate dataset admission evidence`.
+
+## Task 6: Migrate the Existing Verified Task
+
+- [x] Run `scripts/run_admission.py` for `pytorch__149693__lazylinear_init` and write a full run under `runs/admission/`.
+- [x] Copy the stable evidence summary to `tasks/pytorch/149693_lazylinear_init/admission/evidence.json`.
+- [x] Update the task and dataset manifests to reference the stable evidence, environment ID, source ID, and runtime tier while preserving v0.1 fields.
+- [x] Validate the task and dataset with the existing validation CLIs.
+- [x] Re-run admission and confirm baseline is `baseline_reproduced` and gold is `resolved`.
+- [x] Commit with `data: migrate verified task to v0.2 admission evidence`.
+
+## Task 7: Expand and Verify the v0.2 Dataset
+
+- [x] Select real PyTorch PR candidates and record selection rationale.
+- [x] Build draft bundles without marking them verified.
+- [x] Prepare source/environment assets and run admission for selected candidates.
+- [x] Promote 3 tasks with complete passing evidence into `datasets/pytorch_mini`.
+- [ ] Run one Codex action-bridge experiment on the verified slice.
+- [ ] Write `docs/v0.2/experiment_report.md` with process, results, failures, and environment-management findings.
+- [ ] Commit dataset and report as separate traceable milestones.
+
+2026-06-05 update: `pytorch__160952__bilinear_lazy_check` was promoted from draft to verified after hidden test replay fixes. `pytorch__147599__lazylinear_state_forward` was added from PyTorch PR #147599 and verified. A `gold` agent loop over the 3-task `pytorch_mini` slice resolved 3/3 tasks; the real Codex action-bridge experiment remains pending.
+
+## Verification
+
+Run after every implementation milestone:
+
+```bash
+PATH=.venv/bin:$PATH PYTHONPATH=src python -m unittest discover tests -v
+PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/validate_task.py tasks/pytorch/149693_lazylinear_init/task.json
+PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/validate_dataset.py datasets/pytorch_mini/dataset.json
+```
+
+Before declaring v0.2 complete:
+
+```bash
+PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/validate_dataset.py \
+  datasets/pytorch_mini_v0.2/dataset.json --require-verified
+PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/run_experiment.py \
+  --dataset datasets/pytorch_mini_v0.2/dataset.json \
+  --verified-only \
+  --agent codex_action_bridge
+```

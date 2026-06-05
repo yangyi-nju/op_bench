@@ -1,0 +1,36 @@
+diff --git a/test/nn/test_lazylinear_state_op_bench.py b/test/nn/test_lazylinear_state_op_bench.py
+new file mode 100644
+index 00000000000..07aa0be0000
+--- /dev/null
++++ b/test/nn/test_lazylinear_state_op_bench.py
+@@ -0,0 +1,30 @@
++import unittest
++
++import torch
++from torch import nn
++
++
++class TestLazyLinearStateOpBench(unittest.TestCase):
++    def test_lazy_linear_load_state_forward_sets_in_features(self):
++        eager = nn.Linear(5, 10)
++        lazy = nn.LazyLinear(10)
++        lazy.load_state_dict(eager.state_dict())
++
++        self.assertFalse(lazy.has_uninitialized_params())
++        self.assertIsInstance(lazy, nn.LazyLinear)
++        self.assertEqual(lazy.in_features, 0)
++
++        output = lazy(torch.randn(4, 5))
++        self.assertEqual(tuple(output.shape), (4, 10))
++        self.assertIsInstance(lazy, nn.Linear)
++        self.assertNotIsInstance(lazy, nn.LazyLinear)
++        self.assertEqual(lazy.in_features, 5)
++
++    def test_lazy_linear_regular_forward_still_initializes(self):
++        lazy = nn.LazyLinear(10)
++        output = lazy(torch.randn(4, 5))
++        self.assertEqual(tuple(output.shape), (4, 10))
++
++
++if __name__ == "__main__":
++    unittest.main()

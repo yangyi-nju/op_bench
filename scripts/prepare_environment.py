@@ -15,7 +15,7 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from op_bench.environment import EnvironmentManager
-from op_bench.task import TaskManifest
+from op_bench.registry import load_resolved_task
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -33,6 +33,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="Task directory containing task.json. May be provided multiple times.",
     )
     parser.add_argument("--output", help="Optional JSON file for environment preparation evidence.")
+    parser.add_argument(
+        "--environment-registry",
+        default=str(ROOT / "environments/registry.json"),
+        help="Environment registry used to resolve task.environment_ref.",
+    )
+    parser.add_argument(
+        "--source-registry",
+        default=str(ROOT / "sources/registry.json"),
+        help="Source registry used to resolve task.source_ref.",
+    )
     return parser
 
 
@@ -42,7 +52,11 @@ def main(argv: list[str] | None = None) -> int:
     records: list[dict[str, object]] = []
 
     for task_dir in args.task:
-        task = TaskManifest.load(Path(task_dir) / "task.json")
+        task = load_resolved_task(
+            Path(task_dir) / "task.json",
+            environment_registry_path=args.environment_registry,
+            source_registry_path=args.source_registry,
+        )
         with tempfile.TemporaryDirectory(prefix=f"op-bench-env-{task.task_id}-") as tmp:
             workspace = Path(tmp) / "workspace"
             workspace.mkdir(parents=True, exist_ok=True)

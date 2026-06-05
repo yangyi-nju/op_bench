@@ -56,24 +56,6 @@ def _run_codex(command: list[str], cwd: Path) -> tuple[subprocess.CompletedProce
         )
 
 
-class NoopAgent:
-    name = "noop"
-    requires_workspace = False
-    requires_actions = False
-
-    def produce_patch(
-        self,
-        task: TaskManifest,
-        output_dir: Path,
-        workspace: Path | None = None,
-        actions: WorkspaceActions | None = None,
-    ) -> AgentOutput:
-        output_dir.mkdir(parents=True, exist_ok=True)
-        patch_path = output_dir / f"{task.task_id}__noop.patch"
-        patch_path.write_text("", encoding="utf-8")
-        return AgentOutput(agent_name=self.name, patch_path=patch_path, metadata={})
-
-
 class GoldAgent:
     name = "gold"
     requires_workspace = False
@@ -92,101 +74,10 @@ class GoldAgent:
         return AgentOutput(agent_name=self.name, patch_path=patch_path, metadata={"source": "gold_patch"})
 
 
-class CodexAgent:
-    name = "codex"
-    requires_workspace = True
-    requires_actions = False
-    allow_docker_runtime = False
-    runtime_boundary = "action_interface_required"
-
-    def produce_patch(
-        self,
-        task: TaskManifest,
-        output_dir: Path,
-        workspace: Path | None = None,
-        actions: WorkspaceActions | None = None,
-    ) -> AgentOutput:
-        if workspace is None:
-            raise ValueError("CodexAgent requires a prepared workspace")
-        if actions is not None and actions.command_executor.name == "docker" and not self.allow_docker_runtime:
-            raise AgentRuntimeUnsupported(
-                "CodexAgent is disabled for Docker-backed tasks until it uses the action interface "
-                "for all command execution."
-            )
-        output_dir.mkdir(parents=True, exist_ok=True)
-        last_message_path = output_dir / f"{task.task_id}__{self.name}_last_message.txt"
-        prompt = self._build_prompt(task)
-        start = time.monotonic()
-        completed, timed_out = _run_codex(
-            [
-                "codex",
-                "exec",
-                "--cd",
-                str(workspace),
-                "--sandbox",
-                "workspace-write",
-                "--output-last-message",
-                str(last_message_path),
-                prompt,
-            ],
-            workspace,
-        )
-        diff_stdout = ""
-        diff_exit_code = 0
-        diff_stderr = ""
-        if actions is not None:
-            diff_stdout = actions.git_diff()
-        else:
-            diff = subprocess.run(
-                ["git", "diff", "--binary"],
-                cwd=str(workspace),
-                text=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                check=False,
-            )
-            diff_stdout = diff.stdout
-            diff_exit_code = diff.returncode
-            diff_stderr = diff.stderr
-        patch_path = output_dir / f"{task.task_id}__{self.name}.patch"
-        patch_path.write_text(diff_stdout, encoding="utf-8")
-        return AgentOutput(
-            agent_name=self.name,
-            patch_path=patch_path,
-            metadata={
-                "command": "codex exec",
-                "exit_code": completed.returncode,
-                "stdout": completed.stdout,
-                "stderr": completed.stderr,
-                "timed_out": timed_out,
-                "timeout_sec": _codex_timeout_sec(),
-                "duration_sec": time.monotonic() - start,
-                "last_message_path": str(last_message_path),
-                "diff_exit_code": diff_exit_code,
-                "diff_stderr": diff_stderr,
-                "action_interface": actions is not None,
-                "runtime_boundary": self.runtime_boundary,
-            },
-        )
-
-    def _build_prompt(self, task: TaskManifest) -> str:
-        issue_text = ""
-        if task.issue_markdown_path.exists():
-            issue_text = task.issue_markdown_path.read_text(encoding="utf-8")
-        return (
-            "You are solving an op_bench task in this repository checkout.\n"
-            "Edit the source code to fix the issue. Do not commit changes. "
-            "Keep changes minimal and leave tests runnable by the benchmark.\n\n"
-            f"Task id: {task.task_id}\n\n"
-            f"Issue:\n{issue_text or task.data['statement']['body']}\n"
-        )
-
-
-class CodexActionBridgeAgent(CodexAgent):
+class CodexActionBridgeAgent:
     name = "codex_action_bridge"
     requires_workspace = True
     requires_actions = True
-    allow_docker_runtime = True
     runtime_boundary = "op_bench_action_interface_file_cli"
 
     def __init__(self, progress: Progress | None = None) -> None:
@@ -296,13 +187,9 @@ class CodexActionBridgeAgent(CodexAgent):
 def agent_by_name(
     name: str,
     progress: Progress | None = None,
-) -> NoopAgent | GoldAgent | CodexAgent | CodexActionBridgeAgent:
-    if name == "noop":
-        return NoopAgent()
+) -> GoldAgent | CodexActionBridgeAgent:
     if name == "gold":
         return GoldAgent()
-    if name == "codex":
-        return CodexAgent()
     if name == "codex_action_bridge":
         return CodexActionBridgeAgent(progress=progress)
     raise ValueError(f"unknown agent: {name}")

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -17,6 +18,7 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from op_bench.task import TaskManifest
+from op_bench.registry import EnvironmentRegistry, RegistryError, SourceRegistry
 from scripts.validate_task import validate_manifest
 
 
@@ -30,6 +32,11 @@ ALLOWED_TASK_STATUSES = {
     "gold_verified",
     "verified",
     "blocked",
+    "blocked_environment",
+    "blocked_source",
+    "blocked_test",
+    "not_reproduced",
+    "gold_failed",
     "deprecated",
 }
 ALLOWED_ENVIRONMENT_STATUSES = {"pending", "ready", "unavailable"}
@@ -87,6 +94,7 @@ def validate_dataset(data: dict[str, Any], dataset_dir: Path, require_verified: 
         return errors
 
     seen_task_ids: set[str] = set()
+    environment_registry, source_registry = _load_registries(data, dataset_dir, errors)
     for index, entry in enumerate(tasks):
         if not isinstance(entry, dict):
             errors.append(f"tasks[{index}] must be an object")
@@ -137,8 +145,146 @@ def validate_dataset(data: dict[str, Any], dataset_dir: Path, require_verified: 
             errors.append(f"{task_id}: invalid replay_status: {replay_status!r}")
         if admission_status == "verified" and replay_status != "verified":
             errors.append(f"{task_id}: verified tasks must have replay_status='verified'")
+        formal_admission = task.data.get("admission")
+        if isinstance(formal_admission, dict) and formal_admission.get("status") != admission_status:
+            errors.append(f"{task_id}: dataset admission_status must match task admission.status")
+
+        _validate_asset_references(task, task_id, environment_registry, source_registry, errors)
+        _validate_admission_evidence(entry, task, task_id, admission_status, dataset_dir, errors)
 
     return errors
+
+
+def _load_registries(
+    data: dict[str, Any],
+    dataset_dir: Path,
+    errors: list[str],
+) -> tuple[EnvironmentRegistry | None, SourceRegistry | None]:
+    registries = data.get("registries", {})
+    if registries is None:
+        return None, None
+    if not isinstance(registries, dict):
+        errors.append("registries must be an object when provided")
+        return None, None
+    environment_registry = _load_registry(
+        EnvironmentRegistry,
+        registries.get("environments"),
+        "environment",
+        dataset_dir,
+        errors,
+    )
+    source_registry = _load_registry(
+        SourceRegistry,
+        registries.get("sources"),
+        "source",
+        dataset_dir,
+        errors,
+    )
+    return environment_registry, source_registry
+
+
+def _load_registry(
+    registry_type: type[EnvironmentRegistry] | type[SourceRegistry],
+    path_value: object,
+    label: str,
+    dataset_dir: Path,
+    errors: list[str],
+) -> EnvironmentRegistry | SourceRegistry | None:
+    if not path_value:
+        return None
+    path = _resolve_repo_path(dataset_dir, str(path_value))
+    try:
+        return registry_type.load(path)
+    except RegistryError as exc:
+        errors.append(f"cannot load {label} registry: {exc}")
+        return None
+
+
+def _validate_asset_references(
+    task: TaskManifest,
+    task_id: str,
+    environment_registry: EnvironmentRegistry | None,
+    source_registry: SourceRegistry | None,
+    errors: list[str],
+) -> None:
+    if task.environment_ref:
+        if environment_registry is None:
+            errors.append(f"{task_id}: environment_ref requires a dataset environment registry")
+        else:
+            try:
+                environment_asset = environment_registry.get(task.environment_ref)
+                if task.runtime_tier != environment_asset.runtime_tier:
+                    errors.append(f"{task_id}: task runtime_tier must match environment asset runtime_tier")
+                if (
+                    task.source_loading_mode
+                    and task.source_loading_mode not in environment_asset.source_loading_modes
+                ):
+                    errors.append(f"{task_id}: task source_loading mode is not supported by environment asset")
+            except RegistryError as exc:
+                errors.append(f"{task_id}: {exc}")
+    if task.source_ref:
+        if source_registry is None:
+            errors.append(f"{task_id}: source_ref requires a dataset source registry")
+        else:
+            try:
+                source_asset = source_registry.get(task.source_ref)
+                if task.base_commit != source_asset.commit:
+                    errors.append(f"{task_id}: task base_commit must match source asset commit")
+                if task.source_loading_mode and task.source_loading_mode not in source_asset.source_loading_modes:
+                    errors.append(f"{task_id}: task source_loading mode is not supported by source asset")
+            except RegistryError as exc:
+                errors.append(f"{task_id}: {exc}")
+
+
+def _validate_admission_evidence(
+    entry: dict[str, Any],
+    task: TaskManifest,
+    task_id: str,
+    admission_status: object,
+    dataset_dir: Path,
+    errors: list[str],
+) -> None:
+    evidence_value = entry.get("admission_evidence")
+    if not evidence_value:
+        if admission_status == "verified":
+            errors.append(f"{task_id}: admission_evidence is required for verified tasks")
+        return
+    evidence_path = _resolve_repo_path(dataset_dir, str(evidence_value))
+    if not evidence_path.exists():
+        errors.append(f"{task_id}: admission evidence not found at {evidence_path}")
+        return
+    try:
+        with evidence_path.open("r", encoding="utf-8") as handle:
+            evidence = json.load(handle)
+    except (OSError, json.JSONDecodeError) as exc:
+        errors.append(f"{task_id}: cannot load admission evidence: {exc}")
+        return
+    if evidence.get("task_id") != task_id:
+        errors.append(f"{task_id}: admission evidence task_id mismatch: {evidence.get('task_id')}")
+    expected_hash = f"sha256:{hashlib.sha256(task.task_json_path.read_bytes()).hexdigest()}"
+    if evidence.get("task_manifest_hash") != expected_hash:
+        errors.append(f"{task_id}: admission evidence task_manifest_hash does not match current task.json")
+
+    admission = evidence.get("admission", {})
+    if admission_status == "verified":
+        if not isinstance(admission, dict) or admission.get("decision") != "verified":
+            errors.append(f"{task_id}: verified admission evidence must have decision='verified'")
+        if not isinstance(admission, dict) or admission.get("verified") is not True:
+            errors.append(f"{task_id}: verified admission evidence must have verified=true")
+        if evidence.get("baseline", {}).get("status") != "baseline_reproduced":
+            errors.append(f"{task_id}: verified admission evidence baseline must be 'baseline_reproduced'")
+        gold = evidence.get("gold")
+        if not isinstance(gold, dict) or gold.get("status") != "resolved":
+            errors.append(f"{task_id}: verified admission evidence gold must be 'resolved'")
+
+    environment = evidence.get("environment", {})
+    if task.environment_ref and (
+        not isinstance(environment, dict) or environment.get("id") != task.environment_ref
+    ):
+        errors.append(f"{task_id}: admission evidence environment id must match task environment_ref")
+    source = evidence.get("source", {})
+    if task.source_ref and (not isinstance(source, dict) or source.get("id") != task.source_ref):
+        errors.append(f"{task_id}: admission evidence source id must match task source_ref")
 
 
 def _resolve_repo_path(dataset_dir: Path, path_value: str) -> Path:

@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OpBench admission evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "evidence_id",
+    "task_id",
+    "task_manifest_hash",
+    "created_at",
+    "source",
+    "environment",
+    "baseline",
+    "gold",
+    "admission"
+  ],
+  "properties": {
+    "schema_version": {"const": "v1"},
+    "evidence_id": {"type": "string", "minLength": 1},
+    "task_id": {"type": "string", "minLength": 1},
+    "task_manifest_hash": {"type": "string", "pattern": "^sha256:"},
+    "created_at": {"type": "string", "minLength": 1},
+    "source": {"type": "object"},
+    "environment": {"type": "object"},
+    "baseline": {"type": "object"},
+    "gold": {"type": ["object", "null"]},
+    "admission": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["decision", "verified", "failure_classification"],
+      "properties": {
+        "decision": {
+          "type": "string",
+          "enum": [
+            "blocked_environment",
+            "blocked_test",
+            "not_reproduced",
+            "gold_failed",
+            "verified"
+          ]
+        },
+        "verified": {"type": "boolean"},
+        "failure_classification": {"type": ["string", "null"]}
+      }
+    }
+  }
+}

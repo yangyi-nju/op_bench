@@ -29,6 +29,11 @@ class TaskManifest:
         return self.task_dir / "task.json"
 
     @property
+    def source_ref(self) -> str | None:
+        value = self.data.get("source_ref")
+        return str(value) if value else None
+
+    @property
     def checkout_mode(self) -> str:
         return str(self.data["source"].get("checkout_mode", "git"))
 
@@ -107,6 +112,16 @@ class TaskManifest:
     @property
     def environment_backend(self) -> str:
         return str(self.data["environment"].get("backend", "local"))
+
+    @property
+    def environment_ref(self) -> str | None:
+        value = self.data.get("environment_ref")
+        return str(value) if value else None
+
+    @property
+    def runtime_tier(self) -> str:
+        value = self.data.get("runtime_tier", self.data["environment"].get("tier", ""))
+        return str(value)
 
     @property
     def environment_image(self) -> str:
@@ -194,6 +209,30 @@ class TaskManifest:
     def metadata_source_loading_verified(self) -> bool | None:
         value = self.data["metadata"].get("source_loading_verified")
         return value if isinstance(value, bool) else None
+
+    @property
+    def admission_status(self) -> str | None:
+        admission = self.data.get("admission")
+        if isinstance(admission, dict) and admission.get("status"):
+            return str(admission["status"])
+        return self.metadata_admission_status
+
+    @property
+    def admission_evidence_path(self) -> Path | None:
+        admission = self.data.get("admission")
+        if not isinstance(admission, dict) or not admission.get("evidence"):
+            return None
+        path = Path(str(admission["evidence"]))
+        if not path.is_absolute():
+            path = (self.task_dir / path).resolve()
+        return path
+
+    @property
+    def admission_verified_at(self) -> str | None:
+        admission = self.data.get("admission")
+        if not isinstance(admission, dict) or not admission.get("verified_at"):
+            return None
+        return str(admission["verified_at"])
 
     def render_command(self, command: str, python_executable: str | None = None) -> list[str]:
         rendered = command.replace("{python}", shlex.quote(python_executable or self.environment_python_executable))

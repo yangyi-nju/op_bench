@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class RunExperimentTests(unittest.TestCase):
-    def test_cli_runs_noop_and_gold(self) -> None:
+    def test_cli_runs_gold(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             output_dir = root / "out"
@@ -28,8 +28,6 @@ class RunExperimentTests(unittest.TestCase):
                     "scripts/run_experiment.py",
                     "--task",
                     str(task_dir),
-                    "--agent",
-                    "noop",
                     "--agent",
                     "gold",
                     "--output-dir",
@@ -44,7 +42,6 @@ class RunExperimentTests(unittest.TestCase):
             self.assertEqual(completed.returncode, 0, completed.stderr)
             summary = json.loads((output_dir / "summary.json").read_text(encoding="utf-8"))
             self.assertEqual(summary["agents"]["gold"]["resolved_rate"], 1.0)
-            self.assertEqual(summary["agents"]["noop"]["resolved_rate"], 0.0)
 
     def test_cli_can_repeat_agent_attempts(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -97,7 +94,7 @@ class RunExperimentTests(unittest.TestCase):
                     "--task",
                     str(task_dir),
                     "--agent",
-                    "noop",
+                    "gold",
                     "--output-dir",
                     str(output_dir),
                 ],
@@ -153,7 +150,7 @@ class RunExperimentTests(unittest.TestCase):
                     "--dataset",
                     str(dataset_path),
                     "--agent",
-                    "noop",
+                    "gold",
                     "--output-dir",
                     str(output_dir),
                 ],
@@ -170,7 +167,7 @@ class RunExperimentTests(unittest.TestCase):
                 for line in (output_dir / "results.jsonl").read_text(encoding="utf-8").splitlines()
             ]
             self.assertEqual(records[0]["task_id"], "local__not_reproduced")
-            self.assertEqual(records[1]["agent"], "noop")
+            self.assertEqual(records[1]["agent"], "gold")
 
     def test_cli_can_filter_dataset_to_verified_tasks(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -218,7 +215,7 @@ class RunExperimentTests(unittest.TestCase):
                     str(dataset_path),
                     "--verified-only",
                     "--agent",
-                    "noop",
+                    "gold",
                     "--output-dir",
                     str(output_dir),
                 ],
@@ -300,16 +297,31 @@ class RunExperimentTests(unittest.TestCase):
                     workspace.mkdir(parents=True, exist_ok=True)
                     return None
 
+            class UnsupportedAgent:
+                name = "unsupported_bridge"
+                requires_workspace = True
+                requires_actions = True
+
+                def produce_patch(self, task, output_dir, workspace=None, actions=None):
+                    from op_bench.agents import AgentRuntimeUnsupported
+
+                    raise AgentRuntimeUnsupported("unsupported test agent")
+
+            def fake_agent_by_name(name, progress=None):
+                return UnsupportedAgent()
+
             task_dir = self._fixable_git_task(root)
             with mock.patch.object(run_experiment, "EnvironmentManager", FakeEnvironmentManager), mock.patch.object(
                 run_experiment, "Evaluator", FakeEvaluator
+            ), mock.patch.object(
+                run_experiment, "agent_by_name", fake_agent_by_name
             ):
                 exit_code = run_experiment.main(
                     [
                         "--task",
                         str(task_dir),
                         "--agent",
-                        "codex",
+                        "unsupported_bridge",
                         "--output-dir",
                         str(output_dir),
                     ]
@@ -320,7 +332,7 @@ class RunExperimentTests(unittest.TestCase):
                 json.loads(line)
                 for line in (output_dir / "results.jsonl").read_text(encoding="utf-8").splitlines()
             ]
-            agent_record = next(record for record in records if record["agent"] == "codex")
+            agent_record = next(record for record in records if record["agent"] == "unsupported_bridge")
             self.assertEqual(agent_record["status"], "agent_runtime_unsupported")
             self.assertEqual(agent_record["commands"][-1]["command"], ["docker", "rm", "-f", "op-bench-test"])
 
