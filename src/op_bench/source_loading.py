@@ -30,6 +30,11 @@ package_destination = runtime_site_packages / package.split(".")[0]
 if not package_destination.exists():
     shutil.copytree(package_source, package_destination, symlinks=True)
 
+package_libs_source = package_source.parent / f"{package.split('.')[0]}.libs"
+package_libs_destination = runtime_site_packages / package_libs_source.name
+if package_libs_source.exists() and not package_libs_destination.exists():
+    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)
+
 pth_line = "import sys; sys.path.insert(0, {!r})\n".format(str(runtime_site_packages))
 for site_packages in site.getsitepackages():
     site_packages_path = pathlib.Path(site_packages)
