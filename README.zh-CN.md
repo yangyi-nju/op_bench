@@ -4,7 +4,7 @@
 
 OpBench 是一个面向算子问题的 benchmark，用于评测 coding agent 解决真实框架 issue 的能力。它借鉴 SWE-bench 的真实仓库修复思路，但把运行环境作为每条任务的一部分，因为算子问题经常依赖框架版本、Python 包布局、设备可用性、数值行为和后端选择。
 
-v0.1 已经建立隔离 replay/evaluation 闭环。v0.2 已完成数据集扩展所需的平台能力：资产 registry、正式 admission evidence、dataset curation，以及容器和 cache 管理。当前 `pytorch_mini` 已扩展为 3 条 verified PyTorch CPU operator tasks，v0.3 设计目标是扩展到 10 条 PyTorch verified tasks，并支持 public/hidden test 分层和 multi-file overlay。
+v0.1 已经建立隔离 replay/evaluation 闭环。v0.2 已完成数据集扩展所需的平台能力：资产 registry、正式 admission evidence、dataset curation，以及容器和 cache 管理。v0.3 将数据集扩展到 10 条 verified task，覆盖 5 个 PyTorch 子系统，新增 patch scope enforcement、public/hidden test 分层、multi-file overlay 和 3 次重复稳定性评测。当前 `pytorch_v0.3` 切片 Codex CLI resolved rate 为 76.7%。
 
 ## 当前代码包含什么
 
@@ -45,17 +45,23 @@ python3 -m venv .venv
 PATH=.venv/bin:$PATH python --version
 ```
 
+重建 source snapshot（新设备 clone 后必须执行）：
+
+```bash
+PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/setup_sources.py
+```
+
 运行单元测试：
 
 ```bash
 PATH=.venv/bin:$PATH PYTHONPATH=src python -m unittest discover tests -v
 ```
 
-校验当前 mini dataset：
+校验当前数据集：
 
 ```bash
 PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/validate_dataset.py \
-  datasets/pytorch_mini/dataset.json
+  datasets/pytorch_v0.3/dataset.json
 ```
 
 运行第一条已准入 PyTorch 任务的正式 admission：
@@ -67,13 +73,14 @@ PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/run_admission.py \
   --write-task-evidence
 ```
 
-运行当前 mini dataset 的 gold 闭环检查：
+运行当前数据集的 gold 闭环检查：
 
 ```bash
 PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/run_experiment.py \
-  --dataset datasets/pytorch_mini/dataset.json \
+  --dataset datasets/pytorch_v0.3/dataset.json \
+  --verified-only \
   --agent gold \
-  --output runs/experiments/pytorch_mini_gold_v0.2.json
+  --output-dir runs/experiments/pytorch_v0.3_gold
 ```
 
 检查已登记资产：
@@ -98,27 +105,47 @@ PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/curate_dataset.py \
 
 ```bash
 PATH=.venv/bin:$PATH PYTHONPATH=src OP_BENCH_CODEX_TIMEOUT_SEC=1200 python scripts/run_experiment.py \
-  --dataset datasets/pytorch_mini/dataset.json \
+  --dataset datasets/pytorch_v0.3/dataset.json \
   --verified-only \
   --agent codex_action_bridge \
-  --output-dir runs/pytorch-mini-codex-action-bridge
+  --agent-repeat 3 \
+  --output-dir runs/v0.3_codex_r3
+```
+
+只运行指定 task：
+
+```bash
+PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/run_experiment.py \
+  --dataset datasets/pytorch_v0.3/dataset.json \
+  --verified-only \
+  --filter-tasks autograd lbfgs \
+  --agent codex_action_bridge \
+  --agent-repeat 3 \
+  --output-dir runs/v0.3_subset
 ```
 
 `scripts/run_experiment.py` 默认向 stderr 输出带时间戳的进度日志。若只需要 `results.jsonl` 和 `summary.json`，可添加 `--quiet`。
 
 ## 当前数据集
 
-第一个数据集切片是 [datasets/pytorch_mini](datasets/pytorch_mini/README.zh-CN.md)。
+主数据集是 [datasets/pytorch_v0.3](datasets/pytorch_v0.3/dataset.json)（10 条 verified task）。
 
-| Task | PR | 状态 |
-| --- | --- | --- |
-| `pytorch__149693__lazylinear_init` | https://github.com/pytorch/pytorch/pull/149693 | verified |
-| `pytorch__160952__bilinear_lazy_check` | https://github.com/pytorch/pytorch/pull/160952 | verified |
-| `pytorch__147599__lazylinear_state_forward` | https://github.com/pytorch/pytorch/pull/147599 | verified |
+| Task | PR | 组件 | 通过率 (3 次重复) |
+| --- | --- | --- | --- |
+| `pytorch__168295__autograd_create_graph` | #168295 | torch.autograd | 3/3 |
+| `pytorch__150975__autograd_backward_inputs` | #150975 | torch.autograd | 3/3 |
+| `pytorch__161488__lbfgs_wolfe` | #161488 | torch.optim | 3/3 |
+| `pytorch__124385__load_state_dict_prefix` | #124385 | torch.nn.Module | 3/3 |
+| `pytorch__149693__lazylinear_init` | #149693 | torch.nn.LazyLinear | 3/3 |
+| `pytorch__147599__lazylinear_state_forward` | #147599 | torch.nn.LazyLinear | 3/3 |
+| `pytorch__160952__bilinear_lazy_check` | #160952 | torch.nn.Bilinear | 3/3 |
+| `pytorch__143455__set_submodule` | #143455 | torch.nn.Module | 2/3 |
+| `pytorch__162340__nn_arg_length` | #162340 | torch.nn.conv/utils | 0/3 |
+| `pytorch__163961__dataloader_subset` | #163961 | torch.utils.data | 0/3 |
 
-正式 benchmark 运行请使用 `--verified-only`，只统计已准入任务。
+正式 benchmark 运行请使用 `--verified-only`，只统计已准入任务。使用 `--filter-tasks` 可只运行子集。
 
-每条 verified task 都有 task-local stable admission evidence，位于对应 task 目录的 `admission/evidence.json`。完整 replay 日志在本地运行 admission 时写入 `runs/admission/`。
+每条 verified task 都有 task-local stable admission evidence，位于对应 task 目录的 `admission/evidence.json`。
 
 ## 运行边界
 
@@ -149,7 +176,9 @@ Agent 身份、模型调用和控制逻辑运行在 host 侧。每次修复 atte
 ## 参考文档
 
 - [文档索引](docs/README.zh-CN.md)
+- [v0.4 设计方案](docs/v0.4/design.md)
 - [v0.3 设计方案](docs/v0.3/design.md)
+- [v0.3 实验报告](docs/v0.3/experiment_report.md)
 - [v0.2 开发者指南](docs/v0.2/developer_guide.md)
 - [v0.2 实验报告](docs/v0.2/experiment_report.md)
 - [v0.1 开发者指南](docs/v0.1/developer_guide.md)
