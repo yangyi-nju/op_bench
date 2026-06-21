@@ -1,0 +1,103 @@
+{
+  "task_id": "pytorch__168159__embeddingbag_2d_offset",
+  "version": "v1",
+  "environment_ref": "pytorch-cpu-torch2.6.0-py311",
+  "runtime_tier": "cpu_python_overlay",
+  "source_ref": "pytorch-6707dc8-python-overlay",
+  "admission": {
+    "status": "draft"
+  },
+  "patch_scope": {
+    "allowed_paths": [
+      "torch/nn/functional.py",
+      "torch/nn/modules/sparse.py"
+    ],
+    "mode": "enforced"
+  },
+  "source": {
+    "pr_url": "https://github.com/pytorch/pytorch/pull/168159",
+    "issue_url": "https://github.com/pytorch/pytorch/issues/167974",
+    "repo": "pytorch/pytorch",
+    "repo_url": "https://github.com/pytorch/pytorch.git",
+    "issue_number": 167974,
+    "pr_number": 168159,
+    "base_commit": "6707dc8e444de405401f2e36e2868a19bb7ba43a",
+    "merge_commit": "TODO",
+    "checkout_mode": "git",
+    "snapshot_path": "../../../.op_bench_cache/sources/pytorch/pytorch/6707dc8e444de405401f2e36e2868a19bb7ba43a/source"
+  },
+  "statement": {
+    "title": "EmbeddingBag produces wrong results when input is 2D and include_last_offset is True",
+    "body": "When using `nn.EmbeddingBag` with a 2D input tensor and `include_last_offset=True`, the offsets are computed incorrectly, leading to wrong aggregation results. The issue is in how `torch.nn.functional.embedding_bag` constructs the offsets tensor when the input is already 2D \u2014 it fails to account for `include_last_offset` properly.",
+    "labels": [
+      "module: nn",
+      "bug",
+      "module: sparse"
+    ]
+  },
+  "operator": {
+    "framework": "pytorch",
+    "component": "torch.nn.functional",
+    "operator_name": "torch.nn.functional.embedding_bag",
+    "problem_type": "shape-offset-inference",
+    "tags": [
+      "nn",
+      "sparse",
+      "embedding",
+      "cpu-deterministic",
+      "multi-file"
+    ]
+  },
+  "environment": {
+    "backend": "docker",
+    "tier": "cpu_python_overlay",
+    "source_loading": {
+      "mode": "python_overlay",
+      "installed_package": "torch",
+      "overlay_paths": [
+        "torch/nn/functional.py",
+        "torch/nn/modules/sparse.py"
+      ],
+      "runtime_site_packages": "/tmp/op_bench_runtime/site-packages",
+      "sync_before_tests": true
+    },
+    "preflight_commands": [
+      "{python} --version",
+      "{python} -c \"import torch; print(torch.__version__); print(torch.__file__)\""
+    ]
+  },
+  "agent_visible": {
+    "repo_setup_commands": [],
+    "known_constraints": [
+      "Full PyTorch source checkout task.",
+      "Do not assume CUDA availability.",
+      "The bug is in EmbeddingBag offset computation when input is 2D with include_last_offset=True."
+    ],
+    "allowed_test_commands": [
+      "{python} test/nn/test_embedding.py -k {test}"
+    ]
+  },
+  "evaluation": {
+    "setup_commands": [],
+    "fail_to_pass": [
+      "TestEmbeddingNN.test_embeddingbag_2d_include_last_offset"
+    ],
+    "pass_to_pass": [
+      "TestEmbeddingNNDeviceType.test_embedding_dense_grad"
+    ],
+    "test_command": "{python} test/nn/test_embedding.py {test}",
+    "timeout_sec": 900
+  },
+  "artifacts": {
+    "gold_patch": "artifacts/gold.patch",
+    "hidden_test_patch": "artifacts/hidden_test.patch"
+  },
+  "metadata": {
+    "difficulty": "medium",
+    "curation_status": "draft",
+    "deterministic": true,
+    "estimated_runtime_min": 15,
+    "layer": "A",
+    "admission_status": "draft"
+  }
+}

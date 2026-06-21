@@ -45,6 +45,17 @@ def build_parser() -> argparse.ArgumentParser:
         help="When using --dataset, run only task entries with admission_status='verified'.",
     )
     parser.add_argument(
+        "--filter-tasks",
+        nargs="+",
+        default=None,
+        metavar="PATTERN",
+        help=(
+            "Only run tasks whose task_id contains one of the given substrings. "
+            "Applied after --verified-only filtering. "
+            "Example: --filter-tasks lazylinear autograd"
+        ),
+    )
+    parser.add_argument(
         "--agent",
         action="append",
         required=True,
@@ -81,6 +92,11 @@ def main(argv: list[str] | None = None) -> int:
     evaluator.progress = progress
     records: list[dict[str, object]] = []
     tasks = _load_tasks(args.task, args.dataset, verified_only=args.verified_only)
+    if args.filter_tasks:
+        tasks = [t for t in tasks if any(pat in t.task_id for pat in args.filter_tasks)]
+        if not tasks:
+            print(f"no tasks matched --filter-tasks {args.filter_tasks}", file=sys.stderr)
+            return 2
     progress(
         f"experiment start: tasks={len(tasks)}, agents={args.agent}, "
         f"repeat={args.agent_repeat}, output={output_dir}"
@@ -141,6 +157,14 @@ def main(argv: list[str] | None = None) -> int:
                             }
                         )
                         continue
+                    if task.public_test_patch_path is not None and task.public_test_patch_path.exists():
+                        import subprocess
+                        patch_result = subprocess.run(
+                            ["git", "apply", str(task.public_test_patch_path)],
+                            cwd=str(workspace), capture_output=True, text=True, timeout=30,
+                        )
+                        if patch_result.returncode != 0:
+                            progress(f"agent public_test_patch apply failed: {patch_result.stderr}")
                     progress(f"agent environment prepare: task={task.task_id}, agent={agent_label}")
                     environment_preparation = environment_manager.prepare(task, workspace)
                     if not environment_preparation.available:

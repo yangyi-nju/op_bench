@@ -1,0 +1,8 @@
+Implemented the focused source fix in `torch/nn/modules/linear.py`.
+
+`LazyLinear.initialize_parameters()` now handles the case where `load_state_dict()` has already materialized `weight`: if there are no uninitialized params but `in_features` is still `0`, it sets `in_features` from `self.weight.shape[-1]` before the lazy module converts to `Linear`.
+
+Verification:
+- `./opbench_action.py git_diff` shows only the intended two-line change.
+- `./opbench_action.py run_test 'TestLazyModules.test_linear_state'` could not run because `test/nn/test_lazylinear_state_op_bench.py` is absent in this workspace.
+- A `/tmp` Python probe imported the preinstalled PyTorch package instead of the patched checkout, so it was not a valid verification of this patch.

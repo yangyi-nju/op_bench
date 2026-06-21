@@ -1,0 +1,54 @@
+diff --git a/torch/autograd/__init__.py b/torch/autograd/__init__.py
+index c370a03..41afc07 100644
+--- a/torch/autograd/__init__.py
++++ b/torch/autograd/__init__.py
+@@ -325,8 +325,6 @@ def backward(
+                 "arguments both passed to `backward()`. Please only "
+                 "use `grad_tensors`."
+             )
+-    if inputs is not None and len(inputs) == 0:
+-        raise RuntimeError("`inputs` argument to `backward()` cannot be empty.")
+ 
+     if is_tensor_like(tensors) or isinstance(tensors, graph.GradientEdge):
+         tensors = cast(
+@@ -334,13 +332,33 @@ def backward(
+         )
+     else:
+         tensors = tuple(tensors)
+-    inputs = (
+-        (inputs,)
+-        if isinstance(inputs, (torch.Tensor, graph.GradientEdge))
+-        else tuple(inputs)
+-        if inputs is not None
+-        else ()
+-    )
++
++    inputs_was_none = inputs is None
++    if inputs_was_none:
++        inputs = ()
++    elif is_tensor_like(inputs) or isinstance(inputs, graph.GradientEdge):
++        inputs = cast(
++            Union[tuple[torch.Tensor], tuple[graph.GradientEdge]], (inputs,)
++        )
++    else:
++        inputs = tuple(inputs)
++
++    if not inputs_was_none and len(inputs) == 0:
++        raise RuntimeError("`inputs` argument to `backward()` cannot be empty.")
++
++    t_tensors = tuple(t for t in tensors if is_tensor_like(t))
++    t_inputs = tuple(t for t in inputs if is_tensor_like(t))
++    overridable_args = t_tensors + t_inputs
++    if has_torch_function(overridable_args):
++        return handle_torch_function(
++            backward,
++            overridable_args,
++            tensors,
++            grad_tensors=grad_tensors,
++            retain_graph=retain_graph,
++            create_graph=create_graph,
++            inputs=inputs if not inputs_was_none else None,
++        )
+ 
+     grad_tensors_ = _tensor_or_tensors_to_tuple(grad_tensors, len(tensors))
+     grad_tensors_ = _make_grads(tensors, grad_tensors_, is_grads_batched=False)

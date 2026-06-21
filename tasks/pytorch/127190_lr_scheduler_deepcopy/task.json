@@ -1,0 +1,102 @@
+{
+  "task_id": "pytorch__127190__lr_scheduler_deepcopy",
+  "version": "v1",
+  "environment_ref": "pytorch-cpu-torch2.6.0-py311",
+  "runtime_tier": "cpu_python_overlay",
+  "source_ref": "pytorch-d8d0bf2-python-overlay",
+  "admission": {
+    "status": "draft"
+  },
+  "patch_scope": {
+    "allowed_paths": [
+      "torch/optim/lr_scheduler.py",
+      "torch/optim/swa_utils.py"
+    ],
+    "mode": "enforced"
+  },
+  "source": {
+    "pr_url": "https://github.com/pytorch/pytorch/pull/127190",
+    "issue_url": "https://github.com/pytorch/pytorch/issues/126854",
+    "repo": "pytorch/pytorch",
+    "repo_url": "https://github.com/pytorch/pytorch.git",
+    "issue_number": 126854,
+    "pr_number": 127190,
+    "base_commit": "d8d0bf264a736c7fb3cd17799a1c1aba4addf8d9",
+    "merge_commit": "TODO",
+    "checkout_mode": "git",
+    "snapshot_path": "../../../.op_bench_cache/sources/pytorch/pytorch/d8d0bf264a736c7fb3cd17799a1c1aba4addf8d9/source"
+  },
+  "statement": {
+    "title": "lr_scheduler and swa_utils fail to deepcopy lr and base parameters",
+    "body": "When using deepcopy on lr_scheduler objects, the lr values and other base_parameters are shared between the original and the copy. Modifying lr in one scheduler unexpectedly affects the other.",
+    "labels": [
+      "module: nn",
+      "bug"
+    ]
+  },
+  "operator": {
+    "framework": "pytorch",
+    "component": "torch.optim",
+    "operator_name": "torch.optim.lr_scheduler",
+    "problem_type": "state-management",
+    "tags": [
+      "optim",
+      "scheduler",
+      "deepcopy",
+      "cpu-deterministic",
+      "multi-file"
+    ]
+  },
+  "environment": {
+    "backend": "docker",
+    "tier": "cpu_python_overlay",
+    "source_loading": {
+      "mode": "python_overlay",
+      "installed_package": "torch",
+      "overlay_paths": [
+        "torch/optim/lr_scheduler.py",
+        "torch/optim/swa_utils.py",
+        "torch/optim/optimizer.py"
+      ],
+      "runtime_site_packages": "/tmp/op_bench_runtime/site-packages",
+      "sync_before_tests": true
+    },
+    "preflight_commands": [
+      "{python} --version",
+      "{python} -c \"import torch; print(torch.__version__); print(torch.__file__)\""
+    ]
+  },
+  "agent_visible": {
+    "repo_setup_commands": [],
+    "known_constraints": [
+      "Full PyTorch source checkout task.",
+      "Do not assume CUDA availability."
+    ],
+    "allowed_test_commands": [
+      "{python} test/optim/test_lrscheduler.py -k {test}"
+    ]
+  },
+  "evaluation": {
+    "setup_commands": [],
+    "fail_to_pass": [
+      "TestLRScheduler.test_constant_initial_lr"
+    ],
+    "pass_to_pass": [
+      "TestLRScheduler.test_constant_initial_params_swalr"
+    ],
+    "test_command": "{python} test/optim/test_lrscheduler.py {test}",
+    "timeout_sec": 900
+  },
+  "artifacts": {
+    "gold_patch": "artifacts/gold.patch",
+    "hidden_test_patch": "artifacts/hidden_test.patch"
+  },
+  "metadata": {
+    "difficulty": "medium",
+    "curation_status": "draft",
+    "deterministic": true,
+    "estimated_runtime_min": 15,
+    "layer": "A",
+    "admission_status": "draft"
+  }
+}

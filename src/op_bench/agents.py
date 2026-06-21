@@ -154,6 +154,21 @@ class CodexActionBridgeAgent:
         issue_text = ""
         if task.issue_markdown_path.exists():
             issue_text = task.issue_markdown_path.read_text(encoding="utf-8")
+
+        scope_section = ""
+        if task.patch_scope_paths:
+            scope_section = (
+                f"\nAllowed modification paths (patch scope): {task.patch_scope_paths}\n"
+                "Only changes to these files will be evaluated. Changes outside scope will be rejected.\n"
+            )
+
+        public_tests_section = ""
+        if task.public_tests:
+            public_tests_section = (
+                f"\nPublic tests you can run during repair: {task.public_tests}\n"
+                "These are visible sanity tests. Final scoring uses additional hidden tests.\n"
+            )
+
         return (
             "You are solving an op_bench task. The target repository is not in your current directory, "
             "and you must not try to locate it on the host filesystem.\n"
@@ -165,6 +180,8 @@ class CodexActionBridgeAgent:
             "the benchmark will apply hidden tests during scoring.\n\n"
             "For PyTorch Python probes, prefer run_test. If you use run_command with python -c, run it from /tmp "
             "inside a shell command so Python does not import the unbuilt source checkout from the repository root.\n\n"
+            f"{scope_section}"
+            f"{public_tests_section}"
             "Action CLI examples:\n"
             f"  ./{action_cli_name} read_file torch/nn/modules/linear.py\n"
             f"  ./{action_cli_name} run_test 'TestLazyModules.test_linear_state'\n"
@@ -175,9 +192,8 @@ class CodexActionBridgeAgent:
             "  PATCH\n"
             f"  ./{action_cli_name} git_diff\n\n"
             f"Task id: {task.task_id}\n"
-            "Hidden fail-to-pass tests are not present in your repair workspace. "
-            "Do not try to run hidden benchmark test names directly; use the issue text and source inspection to repair the behavior. "
-            f"Visible regression tests you may run: {task.pass_to_pass_tests}\n"
+            "Hidden fail-to-pass tests are not visible in your repair workspace. "
+            "Do not try to run hidden benchmark test names directly; use the issue text and source inspection to repair the behavior.\n"
             f"Allowed test command templates: {task.data.get('agent_visible', {}).get('allowed_test_commands', [])}\n"
             f"Known constraints: {task.data.get('agent_visible', {}).get('known_constraints', [])}\n\n"
             f"Issue:\n{issue_text or task.data['statement']['body']}\n"

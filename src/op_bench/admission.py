@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Callable
 
 from op_bench.evaluator import EvaluationResult, Evaluator
+from op_bench.patch_scope import validate_patch_scope
 from op_bench.progress import Progress, noop_progress
 from op_bench.task import TaskManifest
 
@@ -81,12 +82,20 @@ class AdmissionRunner:
         self.progress(f"admission baseline done: task={task.task_id}, status={baseline.status}")
 
         decision, failure = self._baseline_decision(baseline.status)
+        if decision == "continue":
+            decision, failure = self._check_hidden_test_execution(baseline)
+
         gold: EvaluationResult | None = None
         if decision == "continue":
             self.progress(f"admission gold start: task={task.task_id}")
             gold = self.evaluator.evaluate_gold(task)
             self.progress(f"admission gold done: task={task.task_id}, status={gold.status}")
             decision, failure = self._gold_decision(gold.status)
+
+        if decision == "verified" and task.patch_scope_paths:
+            scope_failure = self._check_gold_patch_scope(task)
+            if scope_failure is not None:
+                decision, failure = "gold_failed", scope_failure
 
         source = {
             "id": task.source_ref,
@@ -156,6 +165,28 @@ class AdmissionRunner:
         if status in {"environment_unavailable", "environment_error"}:
             return "blocked_environment", status
         return "gold_failed", status
+
+    def _check_hidden_test_execution(self, baseline: EvaluationResult) -> tuple[str, str | None]:
+        for cmd in baseline.to_dict().get("commands", []):
+            if not isinstance(cmd, dict):
+                continue
+            stdout = cmd.get("stdout", "")
+            if "Ran 0 tests" in stdout:
+                self.progress("admission blocked: hidden tests ran 0 test cases")
+                return "blocked_test", "hidden_test_ran_zero"
+        return "continue", None
+
+    def _check_gold_patch_scope(self, task: TaskManifest) -> str | None:
+        if not task.gold_patch_path.exists():
+            return None
+        patch_text = task.gold_patch_path.read_text(encoding="utf-8")
+        if not patch_text.strip():
+            return None
+        result = validate_patch_scope(patch_text, task.patch_scope_paths, "enforced")
+        if result.status == "out_of_scope":
+            self.progress(f"admission: gold patch out of scope: {result.out_of_scope_paths}")
+            return f"gold_patch_out_of_scope:{','.join(result.out_of_scope_paths)}"
+        return None
 
     def _format_timestamp(self, value: datetime) -> str:
         normalized = value.astimezone(timezone.utc)

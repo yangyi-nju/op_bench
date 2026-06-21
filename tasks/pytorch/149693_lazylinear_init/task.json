@@ -7,7 +7,13 @@
   "admission": {
     "status": "verified",
     "evidence": "admission/evidence.json",
-    "verified_at": "2026-06-04T17:45:53Z"
+    "verified_at": "2026-06-20T18:26:35Z"
+  },
+  "patch_scope": {
+    "allowed_paths": [
+      "torch/nn/modules/linear.py"
+    ],
+    "mode": "enforced"
   },
   "source": {
     "pr_url": "https://github.com/pytorch/pytorch/pull/149693",

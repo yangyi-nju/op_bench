@@ -1,0 +1,99 @@
+{
+  "task_id": "pytorch__149312__lr_scheduler_last_epoch",
+  "version": "v1",
+  "environment_ref": "pytorch-cpu-torch2.6.0-py311",
+  "runtime_tier": "cpu_python_overlay",
+  "source_ref": "pytorch-423fc67-python-overlay",
+  "admission": {
+    "status": "draft"
+  },
+  "patch_scope": {
+    "allowed_paths": [
+      "torch/optim/lr_scheduler.py"
+    ],
+    "mode": "enforced"
+  },
+  "source": {
+    "pr_url": "https://github.com/pytorch/pytorch/pull/149312",
+    "issue_url": "https://github.com/pytorch/pytorch/issues/102261",
+    "repo": "pytorch/pytorch",
+    "repo_url": "https://github.com/pytorch/pytorch.git",
+    "issue_number": 102261,
+    "pr_number": 149312,
+    "base_commit": "423fc671e9914f6a0ee567bbe47d56afb8cbe82b",
+    "merge_commit": "TODO",
+    "checkout_mode": "git",
+    "snapshot_path": "../../../.op_bench_cache/sources/pytorch/pytorch/423fc671e9914f6a0ee567bbe47d56afb8cbe82b/source"
+  },
+  "statement": {
+    "title": "lr_scheduler unexpectedly calls step() when last_epoch > -1",
+    "body": "When initializing a learning rate scheduler with last_epoch greater than -1 (e.g., for checkpoint resumption), the scheduler incorrectly calls step() during __init__, causing the learning rate to advance one step beyond expected.",
+    "labels": [
+      "module: nn",
+      "bug"
+    ]
+  },
+  "operator": {
+    "framework": "pytorch",
+    "component": "torch.optim",
+    "operator_name": "torch.optim.lr_scheduler",
+    "problem_type": "state-management",
+    "tags": [
+      "optim",
+      "scheduler",
+      "checkpoint",
+      "cpu-deterministic"
+    ]
+  },
+  "environment": {
+    "backend": "docker",
+    "tier": "cpu_python_overlay",
+    "source_loading": {
+      "mode": "python_overlay",
+      "installed_package": "torch",
+      "overlay_paths": [
+        "torch/optim/lr_scheduler.py",
+        "torch/optim/optimizer.py"
+      ],
+      "runtime_site_packages": "/tmp/op_bench_runtime/site-packages",
+      "sync_before_tests": true
+    },
+    "preflight_commands": [
+      "{python} --version",
+      "{python} -c \"import torch; print(torch.__version__); print(torch.__file__)\""
+    ]
+  },
+  "agent_visible": {
+    "repo_setup_commands": [],
+    "known_constraints": [
+      "Full PyTorch source checkout task.",
+      "Do not assume CUDA availability."
+    ],
+    "allowed_test_commands": [
+      "{python} test/optim/test_lrscheduler.py -k {test}"
+    ]
+  },
+  "evaluation": {
+    "setup_commands": [],
+    "fail_to_pass": [
+      "TestLRScheduler.test_lr_scheduler_checkpoint"
+    ],
+    "pass_to_pass": [
+      "TestLRScheduler.test_lr_scheduler_checkpoint_on_plateau"
+    ],
+    "test_command": "{python} test/optim/test_lrscheduler.py {test}",
+    "timeout_sec": 900
+  },
+  "artifacts": {
+    "gold_patch": "artifacts/gold.patch",
+    "hidden_test_patch": "artifacts/hidden_test.patch"
+  },
+  "metadata": {
+    "difficulty": "medium",
+    "curation_status": "draft",
+    "deterministic": true,
+    "estimated_runtime_min": 15,
+    "layer": "A",
+    "admission_status": "draft"
+  }
+}

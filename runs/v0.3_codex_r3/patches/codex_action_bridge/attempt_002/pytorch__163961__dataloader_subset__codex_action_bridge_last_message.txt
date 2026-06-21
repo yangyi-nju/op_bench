@@ -1,0 +1,9 @@
+Implemented the minimal source fix in `torch/utils/data/dataset.py`.
+
+`Subset.__getitems__` now detects when a `Subset` subclass overrides `__getitem__` and routes batched DataLoader access through `self[idx]`, preserving subclass transformations. Plain `Subset` keeps the existing optimized parent-dataset `__getitems__` path.
+
+Verified with:
+- `TestDatasetRandomSplit.test_splits_indexing_type` passed
+- A runtime probe confirmed `DataLoader(MySubset(...), batch_size=2)` returns transformed values: `[[10, 20], [30, 40]]`
+
+Final diff only touches the allowed file.

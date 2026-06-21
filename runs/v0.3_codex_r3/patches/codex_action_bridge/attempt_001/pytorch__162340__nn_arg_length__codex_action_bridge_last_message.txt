@@ -1,0 +1,7 @@
+Implemented the minimal source fix in `torch/nn/modules/utils.py`: `_ntuple` now converts iterable args to a tuple and raises `ValueError` when the iterable length does not match the expected arity.
+
+Verification:
+- Passed: `python test/nn/test_pooling.py -k test_MaxUnpool_zero_batch_dim`
+- Passed: `python test/nn/test_pooling.py -k TestPoolingNNDeviceTypeCPU.test_fractional_max_pool2d_cpu`
+
+One broader fractional pooling selector also matched an unrelated existing backward error-message test and failed on that pre-existing mismatch, so I reran the narrower forward test successfully.

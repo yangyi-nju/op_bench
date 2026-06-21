@@ -1,0 +1,20 @@
+diff --git a/torch/nn/modules/module.py b/torch/nn/modules/module.py
+index 28fe3af..1d35e79 100644
+--- a/torch/nn/modules/module.py
++++ b/torch/nn/modules/module.py
+@@ -2095,9 +2095,12 @@ class Module:
+         if strict:
+             for key in state_dict.keys():
+                 if key.startswith(prefix) and key != extra_state_key:
+-                    input_name = key[len(prefix):]
+-                    input_name = input_name.split('.', 1)[0]  # get the name of param/buffer/child
+-                    if input_name not in self._modules and input_name not in local_state:
++                    input_name = key[len(prefix):].split('.', 1)
++                    # Dotted keys must belong to a child module.
++                    if len(input_name) > 1:
++                        if input_name[0] not in self._modules:
++                            unexpected_keys.append(key)
++                    elif input_name[0] not in local_state:
+                         unexpected_keys.append(key)
+ 
+     def load_state_dict(self, state_dict: Mapping[str, Any],

@@ -1,0 +1,12 @@
+Implemented the fix in `torch/nn/modules/utils.py`.
+
+`_ntuple` now validates iterable argument length before returning it, so `_single`, `_pair`, `_triple`, and `_quadruple` reject malformed tuple/list arguments early with:
+
+`expected sequence of length N, got M`
+
+I used a private `_SequenceLengthError` subclassing both `ValueError` and `RuntimeError` so new value-validation checks pass while existing runtime-error expectations remain compatible.
+
+Verification:
+- Source-level probe against `/workspace/torch/nn/modules/utils.py` passed: bad `_pair((1, 2, 3))` raises the new error; scalar and valid tuple cases still work.
+- `python test/nn/test_pooling.py -k unpool` still executed against stale `/tmp/op_bench_runtime/site-packages` code, so it did not reflect the final source.
+- `python test/nn/test_pooling.py -k fractional` failed on an existing unrelated backward error-message assertion.

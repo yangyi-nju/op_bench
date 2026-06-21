@@ -1,0 +1,15 @@
+Implemented a minimal fix in [torch/autograd/__init__.py](/Users/bilibili/dev/op_bench/runs/v0.3_codex_r3/patches/codex_action_bridge/attempt_002/codex_scratch/torch/autograd/__init__.py).
+
+I changed `torch.autograd.backward` to normalize `inputs` before validating emptiness. That fixes the bad `len()` path for tensor inputs like `inputs=y`, preserves the explicit empty-input error, and adds `__torch_function__` dispatch handling consistent with `torch.autograd.grad`.
+
+Verified with runtime probes:
+- `torch.autograd.backward(y, inputs=x)` now works for tensor input
+- `inputs=[]` still raises `` `inputs` argument to `backward()` cannot be empty.``
+- invalid entries like `inputs=[1]` still raise the engine’s type error
+
+Also ran the visible targeted tests successfully:
+- `TestAutograd.test_backward_with_inputs`
+- `TestAutograd.test_backward_with_nonleaf_inputs`
+- `TestAutograd.test_backward_to_node`
+
+No test files were modified.

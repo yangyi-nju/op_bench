@@ -1,0 +1,9 @@
+Implemented the fix in `torch/nn/modules/utils.py`: `_ntuple` now materializes iterable arguments and raises `ValueError` when their length does not match the expected arity. Scalar inputs still broadcast as before.
+
+Verified with:
+
+```bash
+./opbench_action.py run_command 'python test/nn/test_pooling.py -k test_max_pool'
+```
+
+Result: 20 tests passed, 2 skipped. Final diff is scoped to the allowed `torch/nn/modules/utils.py` file.

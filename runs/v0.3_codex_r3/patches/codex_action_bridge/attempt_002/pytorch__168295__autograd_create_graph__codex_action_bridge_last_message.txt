@@ -1,0 +1,8 @@
+Implemented the minimal fix in `torch/autograd/__init__.py`: materialized unused gradients now use `requires_grad=create_graph` instead of always `True`.
+
+Verified with:
+- Direct CPU probe for `create_graph=False` and `create_graph=True`
+- Higher-order unused-gradient probe
+- `./opbench_action.py run_test 'TestAutograd.test_materialize_grads'`
+
+Final diff is limited to the allowed file and the one-line source fix.

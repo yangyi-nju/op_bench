@@ -1,0 +1,104 @@
+diff --git a/test/nn/test_pooling.py b/test/nn/test_pooling.py
+index a8f77df22d..2e85f2da22 100644
+--- a/test/nn/test_pooling.py
++++ b/test/nn/test_pooling.py
+@@ -481,7 +481,7 @@ class TestPoolingNN(NNTestCase):
+ 
+     def test_max_unpool3d_input_check(self):
+         x = torch.ones(1, 3, 1, 1, 1)
+-        with self.assertRaises(RuntimeError):
++        with self.assertRaises(AssertionError):
+             F.max_unpool3d(x, torch.zeros(x.shape, dtype=int), [1, 1])
+ 
+     def test_quantized_max_pool1d_empty_kernel(self):
+diff --git a/test/quantization/core/test_quantized_op.py b/test/quantization/core/test_quantized_op.py
+index b6df2089e8..6b362bef36 100644
+--- a/test/quantization/core/test_quantized_op.py
++++ b/test/quantization/core/test_quantized_op.py
+@@ -15,7 +15,7 @@ import torch
+ from torch import _VF
+ import torch.jit
+ import torch.nn.functional as F
+-from torch.nn.modules.utils import _single, _pair
++from torch.nn.modules.utils import _ntuple, _pair, _single
+ 
+ from hypothesis import settings, HealthCheck
+ from hypothesis import assume, given, note
+@@ -5311,10 +5311,11 @@ class TestQuantizedConv(TestCase):
+         input_channels = input_channels_per_group * groups
+         output_channels = output_channels_per_group * groups
+         # Padded input size should be at least as big as dilated kernel
+-        kernels = _single(kernels)
+-        strides = _single(strides)
+-        pads = _single(pads)
+-        dilations = _single(dilations)
++        input_dimension_function = _ntuple(len(input_feature_map_shape))
++        kernels = input_dimension_function(kernels)
++        strides = input_dimension_function(strides)
++        pads = input_dimension_function(pads)
++        dilations = input_dimension_function(dilations)
+         for i in range(len(kernels)):
+             assume(input_feature_map_shape[i] + 2 * pads[i]
+                    >= dilations[i] * (kernels[i] - 1) + 1)
+@@ -7846,10 +7847,11 @@ class TestQuantizedConv(TestCase):
+         input_channels = input_channels_per_group * groups
+         output_channels = output_channels_per_group * groups
+         # Padded input size should be at least as big as dilated kernel
+-        kernels = _single(kernels)
+-        strides = _single(strides)
+-        pads = _single(pads)
+-        dilations = _single(dilations)
++        input_dimension_function = _ntuple(len(input_feature_map_shape))
++        kernels = input_dimension_function(kernels)
++        strides = input_dimension_function(strides)
++        pads = input_dimension_function(pads)
++        dilations = input_dimension_function(dilations)
+         for i in range(len(kernels)):
+             assume(input_feature_map_shape[i] + 2 * pads[i]
+                    >= dilations[i] * (kernels[i] - 1) + 1)
+diff --git a/test/test_mps.py b/test/test_mps.py
+index 756b2cd205..c172c8c119 100644
+--- a/test/test_mps.py
++++ b/test/test_mps.py
+@@ -8957,9 +8957,9 @@ class TestPad(TestCaseMPS):
+         # pad dims == input dims
+         helper((1, 3), (0, 2, 0, 1), nn.ConstantPad2d)
+         # input.numel() == 0 but output.numel() > 0
+-        helper((0, 3, 3), (1, 1, 1, 1, 1, 1), nn.ConstantPad2d)
++        helper((0, 3, 3), 1, nn.ConstantPad2d)
+         # pad dims < input dims - 2
+-        helper((1, 2, 3, 4), (1, 2), nn.ConstantPad2d)
++        helper((1, 2, 3, 4, 5), (1, 2, 0, 0), nn.ConstantPad2d)
+ 
+         # 3D Padding
+         helper((2, 4, 6, 8, 4), (1, 3, 3, 5, 3, 4), nn.ReflectionPad3d)
+@@ -8972,7 +8972,7 @@ class TestPad(TestCaseMPS):
+         # input size < pad size
+         helper((2, 4, 6), (1, 3, 3, 5, 3, 4), nn.ConstantPad3d)
+         # check the workaround for the right padding bug in Monterey
+-        helper((1, 2, 2, 2, 2), (0, 1), nn.ConstantPad3d)
++        helper((1, 2, 2, 2, 2), (0, 1, 0, 1, 0, 1), nn.ConstantPad3d)
+ 
+     def test_constant_pad_nd_preserves_memory_format(self):
+         nchw_tensor = torch.rand((1, 2, 5, 3))
+diff --git a/test/test_nn.py b/test/test_nn.py
+index c17f7cb668..13ee5c2e2a 100644
+--- a/test/test_nn.py
++++ b/test/test_nn.py
+@@ -7466,14 +7466,8 @@ tensor(..., device='meta', size=(1,), requires_grad=True)""")
+     def test_fractional_max_pool2d_invalid_output_ratio(self):
+         arg_1 = [2, 1]
+         arg_2 = [0.5, 0.5, 0.6]
+-        arg_class = torch.nn.FractionalMaxPool2d(kernel_size=arg_1, output_ratio=arg_2,)
+-        arg_3_0_tensor = torch.rand([20, 16, 50, 32], dtype=torch.float32)
+-        arg_3_0 = arg_3_0_tensor.clone()
+-        arg_3 = [arg_3_0,]
+-
+-        with self.assertRaisesRegex(ValueError,
+-                                    "fractional_max_pool2d requires output_ratio to either be a single Int or tuple of Ints."):
+-            res = arg_class(*arg_3)
++        with self.assertRaisesRegex(AssertionError, "Expected an iterable of length 2, but got length 3"):
++            arg_class = torch.nn.FractionalMaxPool2d(kernel_size=arg_1, output_ratio=arg_2,)
+ 
+     def test_max_pool1d_invalid_output_size(self):
+         arg_1 = 3

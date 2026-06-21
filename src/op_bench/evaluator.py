@@ -8,6 +8,7 @@ from pathlib import Path
 
 from op_bench.environment import EnvironmentManager
 from op_bench.executor import CommandExecutor, CommandResult, LocalExecutor
+from op_bench.patch_scope import validate_patch_scope
 from op_bench.progress import Progress, format_command, format_duration, noop_progress
 from op_bench.source_loading import build_source_loading_command
 from op_bench.task import TaskManifest
@@ -104,15 +105,39 @@ class Evaluator:
                 if result.exit_code != 0:
                     return finish("setup_failed")
 
-            test_patch_result = self._apply_patch(task.test_patch_path, workspace)
+            test_patch_result = self._apply_patch(task.hidden_test_patch_path, workspace)
             command_log.append(test_patch_result)
             if test_patch_result.timed_out:
                 return finish("timeout")
             if test_patch_result.exit_code != 0:
                 return finish("runner_error")
 
+            if task.public_test_patch_path is not None and task.public_test_patch_path.exists():
+                public_patch_result = self._apply_patch(task.public_test_patch_path, workspace)
+                command_log.append(public_patch_result)
+                if public_patch_result.timed_out:
+                    return finish("timeout")
+                if public_patch_result.exit_code != 0:
+                    return finish("runner_error")
+
             if patch_path is not None and patch_path.read_text(encoding="utf-8").strip():
-                patch_result = self._apply_patch(patch_path, workspace)
+                patch_text = patch_path.read_text(encoding="utf-8")
+                if task.patch_scope_paths and mode.startswith("agent:"):
+                    scope_result = validate_patch_scope(patch_text, task.patch_scope_paths, task.patch_scope_mode or "enforced")
+                    if scope_result.status == "out_of_scope":
+                        self.progress(f"{mode} patch out of scope: {scope_result.out_of_scope_paths}")
+                        return finish("patch_out_of_scope")
+                    if scope_result.status == "filtered":
+                        self.progress(f"{mode} patch filtered, removed: {scope_result.out_of_scope_paths}")
+                        patch_text = scope_result.filtered_patch
+                        if not patch_text.strip():
+                            return finish("patch_out_of_scope")
+                    filtered_patch_path = workspace / ".op_bench_filtered.patch"
+                    filtered_patch_path.write_text(patch_text, encoding="utf-8")
+                    patch_result = self._apply_patch(filtered_patch_path, workspace)
+                    filtered_patch_path.unlink(missing_ok=True)
+                else:
+                    patch_result = self._apply_patch(patch_path, workspace)
                 command_log.append(patch_result)
                 if patch_result.timed_out:
                     return finish("timeout")

@@ -1,0 +1,7 @@
+Implemented the focused fix in `torch/nn/modules/linear.py`.
+
+Changed `Bilinear` so the `in1_features <= 0` validation no longer happens in `__init__`; it now happens in `reset_parameters()` immediately before the `1 / sqrt(in1_features)` calculation. This preserves the regular zero-size failure while allowing lazy subclasses to construct with placeholder zero dimensions and defer initialization.
+
+Verification:
+- Confirmed final diff is limited to `torch/nn/modules/linear.py`.
+- Tried `run_test 'TestLazyModules.test_linear'`, but the harness-visible command maps to `test/nn/test_bilinear_lazy_op_bench.py`, which is not present in this workspace, so no benchmark test could be executed here.

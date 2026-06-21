@@ -1,0 +1,9 @@
+Implemented the minimal source fix in `torch/utils/data/dataset.py`.
+
+`Subset.__getitems__` now detects when a `Subset` subclass overrides `__getitem__` and routes batched DataLoader access through `self[idx]`, so custom subclass behavior is preserved. Plain `Subset` keeps the existing batched fast path.
+
+Verification:
+- `TestDatasetRandomSplit.test_slicing_of_subset_of_dataset` passed
+- `TestDatasetRandomSplit.test_slicing_of_subset_of_subset` passed
+
+Final diff only touches `torch/utils/data/dataset.py`.

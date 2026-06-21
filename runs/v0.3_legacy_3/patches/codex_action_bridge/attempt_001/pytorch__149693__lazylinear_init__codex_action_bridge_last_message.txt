@@ -1,0 +1,8 @@
+Fixed `LazyLinear.initialize_parameters` in `torch/nn/modules/linear.py`.
+
+The change sets `self.in_features` from `input.shape[-1]` before materializing and resetting parameters, so `reset_parameters()` no longer sees `in_features == 0`. The existing already-materialized/state-dict consistency path is preserved via `elif`.
+
+Verified:
+- `TestLazyModules.test_linear_state` passes.
+- Reproducer from `/tmp` shows `in_features 4`, weight/bias nonzero, and output nonzero.
+- Final diff only touches the allowed file.

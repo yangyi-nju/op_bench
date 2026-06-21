@@ -1,0 +1,7 @@
+Implemented the minimal source fix in `torch/nn/modules/module.py`.
+
+The strict unexpected-key check now distinguishes exact parameter/buffer keys from dotted descendant keys, so `fc1.weight.bad_key` is rejected instead of being treated as valid just because `fc1.weight` exists.
+
+Verified:
+- Direct reproduction now raises and includes `fc1.weight.bad_key`.
+- `python test/nn/test_load_state_dict.py -k test_load_state_dict` passes: 23 tests OK.

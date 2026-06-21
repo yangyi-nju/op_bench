@@ -75,6 +75,25 @@
         }
       }
     },
+    "patch_scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allowed_paths", "mode"],
+      "properties": {
+        "allowed_paths": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["enforced", "filtered"]
+        }
+      }
+    },
     "version": {
       "type": "string",
       "pattern": "^v[0-9]+$"
@@ -427,6 +446,12 @@
             "type": "string"
           }
         },
+        "public_tests": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "test_command": {
           "type": "string"
         },
@@ -440,14 +465,19 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "gold_patch",
-        "test_patch"
+        "gold_patch"
       ],
       "properties": {
         "gold_patch": {
           "type": "string"
         },
         "test_patch": {
+          "type": "string"
+        },
+        "hidden_test_patch": {
+          "type": "string"
+        },
+        "public_test_patch": {
           "type": "string"
         }
       }

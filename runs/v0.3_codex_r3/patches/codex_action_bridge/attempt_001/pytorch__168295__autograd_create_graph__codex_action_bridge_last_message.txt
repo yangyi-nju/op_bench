@@ -1,0 +1,5 @@
+Implemented the minimal source fix in `torch/autograd/__init__.py`: unused materialized grads now use `requires_grad=create_graph` instead of always forcing `requires_grad=True`.
+
+Verification:
+- `python test/test_autograd.py TestAutograd.test_materialize_grads` passed.
+- `python test/test_autograd.py -k materialize_grads` passed, 3 tests.

@@ -1,0 +1,14 @@
+diff --git a/torch/utils/data/dataset.py b/torch/utils/data/dataset.py
+index 19ec449..cb438ff 100644
+--- a/torch/utils/data/dataset.py
++++ b/torch/utils/data/dataset.py
+@@ -407,6 +407,9 @@ class Subset(Dataset[_T_co]):
+     def __getitems__(self, indices: list[int]) -> list[_T_co]:
+         # add batched sampling support when parent dataset supports it.
+         # see torch.utils.data._utils.fetch._MapDatasetFetcher
++        if type(self).__getitem__ is not Subset.__getitem__:
++            return [self[idx] for idx in indices]
++
+         if callable(getattr(self.dataset, "__getitems__", None)):
+             return self.dataset.__getitems__([self.indices[idx] for idx in indices])  # type: ignore[attr-defined]
+         else:

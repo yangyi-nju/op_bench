@@ -1,0 +1,7 @@
+Implemented the minimal source fix in `torch/autograd/__init__.py`.
+
+The `backward(inputs=...)` empty-input validation now runs after `inputs` is normalized into a tuple, so a single Tensor or `GradientEdge` no longer hits an invalid `len(inputs)` path.
+
+Verification:
+- `python test/test_autograd.py -k test_backward_with_inputs` passed.
+- Direct probe from `/tmp` confirmed `torch.autograd.backward(tensors=y, inputs=x)` works for a scalar Tensor input and `inputs=[]` still raises the expected empty-input error.

@@ -1,0 +1,105 @@
+{
+  "task_id": "pytorch__162340__nn_arg_length",
+  "version": "v1",
+  "environment_ref": "pytorch-cpu-torch2.6.0-py311",
+  "runtime_tier": "cpu_python_overlay",
+  "source_ref": "pytorch-fefc406-python-overlay",
+  "admission": {
+    "status": "verified",
+    "evidence": "admission/evidence.json",
+    "verified_at": "2026-06-20T18:26:35Z"
+  },
+  "patch_scope": {
+    "allowed_paths": [
+      "torch/nn/modules/conv.py",
+      "torch/nn/modules/utils.py"
+    ],
+    "mode": "enforced"
+  },
+  "source": {
+    "pr_url": "https://github.com/pytorch/pytorch/pull/162340",
+    "issue_url": "https://github.com/pytorch/pytorch/issues/162327",
+    "repo": "pytorch/pytorch",
+    "repo_url": "https://github.com/pytorch/pytorch.git",
+    "issue_number": 162327,
+    "pr_number": 162340,
+    "base_commit": "fefc406a3d0d90db0f808419fb88045f90b213cd",
+    "merge_commit": "TODO",
+    "checkout_mode": "git",
+    "snapshot_path": "../../../.op_bench_cache/sources/pytorch/pytorch/fefc406a3d0d90db0f808419fb88045f90b213cd/source"
+  },
+  "statement": {
+    "title": "nn module rejects iterable arguments of incorrect length",
+    "body": "torch.nn.modules.conv and pooling modules accept tuple/list arguments for kernel_size, stride, padding etc. but do not validate that the iterable length matches the expected dimension count, leading to silent incorrect behavior or confusing errors downstream.",
+    "labels": [
+      "module: nn",
+      "bug"
+    ]
+  },
+  "operator": {
+    "framework": "pytorch",
+    "component": "torch.nn.modules.conv",
+    "operator_name": "torch.nn.Conv2d",
+    "problem_type": "parameter-validation",
+    "tags": [
+      "nn",
+      "conv",
+      "validation",
+      "cpu-deterministic",
+      "multi-file"
+    ]
+  },
+  "environment": {
+    "backend": "docker",
+    "tier": "cpu_python_overlay",
+    "source_loading": {
+      "mode": "python_overlay",
+      "installed_package": "torch",
+      "overlay_paths": [
+        "torch/nn/modules/conv.py",
+        "torch/nn/modules/utils.py",
+        "torch/testing/_internal/common_nn.py",
+        "torch/testing/_internal/common_mkldnn.py"
+      ],
+      "runtime_site_packages": "/tmp/op_bench_runtime/site-packages",
+      "sync_before_tests": true
+    },
+    "preflight_commands": [
+      "{python} --version",
+      "{python} -c \"import torch; print(torch.__version__); print(torch.__file__)\""
+    ]
+  },
+  "agent_visible": {
+    "repo_setup_commands": [],
+    "known_constraints": [
+      "Full PyTorch source checkout task.",
+      "Do not assume CUDA availability."
+    ],
+    "allowed_test_commands": [
+      "{python} test/nn/test_pooling.py -k {test}"
+    ]
+  },
+  "evaluation": {
+    "setup_commands": [],
+    "fail_to_pass": [
+      "TestPoolingNN.test_max_unpool3d_input_check"
+    ],
+    "pass_to_pass": [
+      "TestPoolingNN.test_adaptive_pooling_size_none"
+    ],
+    "test_command": "{python} test/nn/test_pooling.py {test}",
+    "timeout_sec": 900
+  },
+  "artifacts": {
+    "gold_patch": "artifacts/gold.patch",
+    "hidden_test_patch": "artifacts/hidden_test.patch"
+  },
+  "metadata": {
+    "difficulty": "medium",
+    "curation_status": "verified",
+    "deterministic": true,
+    "estimated_runtime_min": 15,
+    "layer": "A",
+    "admission_status": "verified"
+  }
+}

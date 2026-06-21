@@ -1,0 +1,7 @@
+Implemented the minimal source fix in `torch/nn/modules/module.py`.
+
+The strict unexpected-key check now treats dotted keys like `weight.bad_key` as unexpected unless the first component is an actual child module. This preserves valid recursive child-module keys while rejecting bogus parameter/buffer prefix matches.
+
+Verification:
+- `python test/nn/test_load_state_dict.py -k test_load_state_dict` passed: 23 tests OK.
+- Direct `/tmp` probe confirmed `weight.bad_key` raises under `strict=True` and appears in `unexpected_keys` under `strict=False`.

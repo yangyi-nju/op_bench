@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 import tempfile
 import textwrap
 import unittest
@@ -24,7 +25,7 @@ class RunExperimentTests(unittest.TestCase):
 
             completed = subprocess.run(
                 [
-                    "python",
+                    sys.executable,
                     "scripts/run_experiment.py",
                     "--task",
                     str(task_dir),
@@ -51,7 +52,7 @@ class RunExperimentTests(unittest.TestCase):
 
             completed = subprocess.run(
                 [
-                    "python",
+                    sys.executable,
                     "scripts/run_experiment.py",
                     "--task",
                     str(task_dir),
@@ -89,7 +90,7 @@ class RunExperimentTests(unittest.TestCase):
 
             completed = subprocess.run(
                 [
-                    "python",
+                    sys.executable,
                     "scripts/run_experiment.py",
                     "--task",
                     str(task_dir),
@@ -145,7 +146,7 @@ class RunExperimentTests(unittest.TestCase):
 
             completed = subprocess.run(
                 [
-                    "python",
+                    sys.executable,
                     "scripts/run_experiment.py",
                     "--dataset",
                     str(dataset_path),
@@ -209,7 +210,7 @@ class RunExperimentTests(unittest.TestCase):
 
             completed = subprocess.run(
                 [
-                    "python",
+                    sys.executable,
                     "scripts/run_experiment.py",
                     "--dataset",
                     str(dataset_path),

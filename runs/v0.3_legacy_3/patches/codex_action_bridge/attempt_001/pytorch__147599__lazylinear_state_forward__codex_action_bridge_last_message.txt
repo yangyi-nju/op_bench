@@ -1,0 +1,5 @@
+Implemented the focused source fix in [linear.py](/Users/bilibili/dev/op_bench/runs/v0.3_legacy_3/patches/codex_action_bridge/attempt_001/codex_scratch/torch/nn/modules/linear.py:290): when `LazyLinear` has already had initialized parameters loaded before first forward, it now sets `in_features` from `weight.shape[1]`.
+
+Verification:
+- `run_test 'TestLazyModules.test_linear_state'` could not run because `test/nn/test_lazylinear_state_op_bench.py` is missing in this checkout.
+- Ran a `/tmp` Python probe via `opbench_action.py run_command`; it passed and showed `LazyLinear 0 (3, 5)` before forward, then `Linear 5 (2, 3)` after forward.

@@ -91,7 +91,39 @@ class TaskManifest:
 
     @property
     def test_patch_path(self) -> Path:
-        return self.task_dir / self.data["artifacts"]["test_patch"]
+        return self.hidden_test_patch_path
+
+    @property
+    def hidden_test_patch_path(self) -> Path:
+        artifacts = self.data["artifacts"]
+        if "hidden_test_patch" in artifacts:
+            return self.task_dir / artifacts["hidden_test_patch"]
+        return self.task_dir / artifacts["test_patch"]
+
+    @property
+    def public_test_patch_path(self) -> Path | None:
+        value = self.data["artifacts"].get("public_test_patch")
+        if not value:
+            return None
+        return self.task_dir / value
+
+    @property
+    def public_tests(self) -> list[str]:
+        return list(self.data["evaluation"].get("public_tests", []))
+
+    @property
+    def patch_scope_paths(self) -> list[str]:
+        scope = self.data.get("patch_scope")
+        if not isinstance(scope, dict):
+            return []
+        return [str(p) for p in scope.get("allowed_paths", [])]
+
+    @property
+    def patch_scope_mode(self) -> str | None:
+        scope = self.data.get("patch_scope")
+        if not isinstance(scope, dict):
+            return None
+        return str(scope.get("mode", "enforced"))
 
     @property
     def fail_to_pass_tests(self) -> list[str]:

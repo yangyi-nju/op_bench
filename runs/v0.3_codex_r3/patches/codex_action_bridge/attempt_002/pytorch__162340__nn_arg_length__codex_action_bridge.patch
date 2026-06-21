@@ -1,0 +1,25 @@
+diff --git a/torch/nn/modules/utils.py b/torch/nn/modules/utils.py
+index 220b8f2..4b75b2d 100644
+--- a/torch/nn/modules/utils.py
++++ b/torch/nn/modules/utils.py
+@@ -7,10 +7,19 @@ from typing import Any
+ __all__ = ["consume_prefix_in_state_dict_if_present"]
+ 
+ 
++class _SequenceLengthError(ValueError, RuntimeError):
++    pass
++
++
+ def _ntuple(n, name="parse"):
+     def parse(x):
+         if isinstance(x, collections.abc.Iterable):
+-            return tuple(x)
++            result = tuple(x)
++            if len(result) != n:
++                raise _SequenceLengthError(
++                    f"expected sequence of length {n}, got {len(result)}"
++                )
++            return result
+         return tuple(repeat(x, n))
+ 
+     parse.__name__ = name

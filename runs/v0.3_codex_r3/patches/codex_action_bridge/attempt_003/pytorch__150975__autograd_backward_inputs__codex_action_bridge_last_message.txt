@@ -1,0 +1,14 @@
+Implemented the fix in `torch/autograd/__init__.py`.
+
+What changed:
+- Normalizes `inputs` before checking emptiness, so scalar tensor inputs work correctly.
+- Preserves normal `inputs=None` behavior.
+- Adds Python-side validation so invalid `inputs` entries fail with clear errors before reaching downstream engine behavior.
+
+Verified with:
+- Manual probes for default backward, scalar tensor `inputs`, non-grad tensor inputs, and invalid input types.
+- `TestAutograd.test_backward_with_inputs`
+- `TestAutograd.test_backward_with_nonleaf_inputs`
+- `TestAutograd.test_backward_to_node`
+
+Only the allowed file was changed.

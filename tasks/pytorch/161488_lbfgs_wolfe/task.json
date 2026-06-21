@@ -1,0 +1,101 @@
+{
+  "task_id": "pytorch__161488__lbfgs_wolfe",
+  "version": "v1",
+  "environment_ref": "pytorch-cpu-torch2.6.0-py311",
+  "runtime_tier": "cpu_python_overlay",
+  "source_ref": "pytorch-6926710-python-overlay",
+  "admission": {
+    "status": "verified",
+    "evidence": "admission/evidence.json",
+    "verified_at": "2026-06-20T18:26:35Z"
+  },
+  "patch_scope": {
+    "allowed_paths": [
+      "torch/optim/lbfgs.py"
+    ],
+    "mode": "enforced"
+  },
+  "source": {
+    "pr_url": "https://github.com/pytorch/pytorch/pull/161488",
+    "issue_url": "https://github.com/pytorch/pytorch/issues/91581",
+    "repo": "pytorch/pytorch",
+    "repo_url": "https://github.com/pytorch/pytorch.git",
+    "issue_number": 91581,
+    "pr_number": 161488,
+    "base_commit": "6926710adf697e9d2160d43c4a96212dd27ceae0",
+    "merge_commit": "TODO",
+    "checkout_mode": "git",
+    "snapshot_path": "../../../.op_bench_cache/sources/pytorch/pytorch/6926710adf697e9d2160d43c4a96212dd27ceae0/source"
+  },
+  "statement": {
+    "title": "LBFGS optimizer wolfe line search max iteration is incorrect",
+    "body": "The LBFGS optimizer strong_wolfe line search uses an incorrect max iteration count, causing it to terminate too early and produce suboptimal step sizes.",
+    "labels": [
+      "module: nn",
+      "bug"
+    ]
+  },
+  "operator": {
+    "framework": "pytorch",
+    "component": "torch.optim",
+    "operator_name": "torch.optim.LBFGS",
+    "problem_type": "optimizer-control-flow",
+    "tags": [
+      "optim",
+      "lbfgs",
+      "line-search",
+      "cpu-deterministic"
+    ]
+  },
+  "environment": {
+    "backend": "docker",
+    "tier": "cpu_python_overlay",
+    "source_loading": {
+      "mode": "python_overlay",
+      "installed_package": "torch",
+      "overlay_paths": [
+        "torch/optim/lbfgs.py",
+        "torch/optim/optimizer.py"
+      ],
+      "runtime_site_packages": "/tmp/op_bench_runtime/site-packages",
+      "sync_before_tests": true
+    },
+    "preflight_commands": [
+      "{python} --version",
+      "{python} -c \"import torch; print(torch.__version__); print(torch.__file__)\""
+    ]
+  },
+  "agent_visible": {
+    "repo_setup_commands": [],
+    "known_constraints": [
+      "Full PyTorch source checkout task.",
+      "Do not assume CUDA availability."
+    ],
+    "allowed_test_commands": [
+      "{python} test/test_optim.py -k {test}"
+    ]
+  },
+  "evaluation": {
+    "setup_commands": [],
+    "fail_to_pass": [
+      "TestOptimRenewedCPU.test_step_iteration_float32_cpu_float32"
+    ],
+    "pass_to_pass": [
+      "TestOptimRenewedCPU.test_non_empty_state_LBFGS_cpu_float32"
+    ],
+    "test_command": "{python} test/test_optim.py {test}",
+    "timeout_sec": 900
+  },
+  "artifacts": {
+    "gold_patch": "artifacts/gold.patch",
+    "hidden_test_patch": "artifacts/hidden_test.patch"
+  },
+  "metadata": {
+    "difficulty": "medium",
+    "curation_status": "verified",
+    "deterministic": true,
+    "estimated_runtime_min": 15,
+    "layer": "A",
+    "admission_status": "verified"
+  }
+}

@@ -1,0 +1,11 @@
+Implemented the minimal source fix in `torch/nn/modules/module.py`.
+
+`nn.Module.set_submodule` now:
+- handles non-dotted targets like `"child"` by setting directly on `self`
+- resolves dotted targets through the parent module with `get_submodule`
+- validates the replacement is an `nn.Module`
+- supports `strict=True` to require the target submodule already exists
+
+Verification passed:
+- `./opbench_action.py run_test 'TestNN.test_set_submodule'`
+- targeted `/tmp` probe for direct child, nested child, `strict=True`, non-module existing attr, and non-module replacement value.

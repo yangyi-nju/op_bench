@@ -1,0 +1,11 @@
+Implemented the scoped source fix in `torch/nn/modules/linear.py`.
+
+Change made:
+- Removed the eager `in1_features <= 0` validation from `Bilinear.__init__`.
+- Added the same validation inside `Bilinear.reset_parameters()` immediately before `1 / math.sqrt(in1_features)`.
+
+This keeps regular `nn.Bilinear(0, ...)` invalid, but lets a lazy subclass call `Bilinear.__init__(0, 0, ..., False)` and defer materialization.
+
+Verification:
+- Confirmed final diff is limited to `torch/nn/modules/linear.py`.
+- Attempted the provided benchmark path, but `test/nn/test_bilinear_lazy_op_bench.py` is not present in this workspace/runtime, so it could not be run.

@@ -49,8 +49,9 @@ class WorkspaceActions:
 
     def git_diff(self) -> str:
         command = ["git", "diff", "--binary"]
-        if self.task.source_loading_overlay_paths:
-            command.extend(["--", *self.task.source_loading_overlay_paths])
+        scope_paths = self.task.patch_scope_paths or self.task.source_loading_overlay_paths
+        if scope_paths:
+            command.extend(["--", *scope_paths])
         result = self.file_executor.run(command, self.workspace, timeout_sec=30)
         return result.stdout
 

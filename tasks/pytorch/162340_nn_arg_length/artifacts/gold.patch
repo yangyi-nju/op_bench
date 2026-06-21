@@ -1,0 +1,44 @@
+diff --git a/torch/nn/modules/conv.py b/torch/nn/modules/conv.py
+index 2f15c3d488..ffb6f21e67 100644
+--- a/torch/nn/modules/conv.py
++++ b/torch/nn/modules/conv.py
+@@ -768,7 +768,7 @@ class _ConvTransposeNd(_ConvNd):
+         dilation: Optional[list[int]] = None,
+     ) -> list[int]:
+         if output_size is None:
+-            ret = _single(self.output_padding)  # converting to list if was not already
++            ret = list(self.output_padding)  # converting to list if was not already
+         else:
+             has_batch_dim = input.dim() == num_spatial_dims + 2
+             num_non_spatial_dims = 2 if has_batch_dim else 1
+diff --git a/torch/nn/modules/utils.py b/torch/nn/modules/utils.py
+index 220b8f206b..492556dab0 100644
+--- a/torch/nn/modules/utils.py
++++ b/torch/nn/modules/utils.py
+@@ -1,5 +1,5 @@
+ # mypy: allow-untyped-defs
+-import collections
++import collections.abc
+ from itertools import repeat
+ from typing import Any
+ 
+@@ -10,7 +10,18 @@ __all__ = ["consume_prefix_in_state_dict_if_present"]
+ def _ntuple(n, name="parse"):
+     def parse(x):
+         if isinstance(x, collections.abc.Iterable):
+-            return tuple(x)
++            ret = tuple(x)
++
++            # If the iterable is length 1, automatically expand to fill.  This
++            # matches the behavior of expand_param_if_needed.
++            if len(ret) == 1:
++                return tuple(repeat(ret[0], n))
++
++            # Otherwise assert the correct length.
++            assert len(ret) == n, (
++                f"Expected an iterable of length {n}, but got length {len(ret)}"
++            )
++            return ret
+         return tuple(repeat(x, n))
+ 
+     parse.__name__ = name

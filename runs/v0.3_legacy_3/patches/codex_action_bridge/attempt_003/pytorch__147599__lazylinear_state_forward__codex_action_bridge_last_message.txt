@@ -1,0 +1,6 @@
+Implemented the minimal fix in `torch/nn/modules/linear.py`: when `LazyLinear.initialize_parameters()` is called after an initialized state dict has already materialized `weight`, it now sets `in_features` from `self.weight.shape[1]`.
+
+Verification:
+- Confirmed final diff only touches `torch/nn/modules/linear.py`.
+- Attempted `TestLazyModules.test_linear_state`, but the op-bench test file is not present in this runtime.
+- A direct `/tmp` Python probe imported `/tmp/op_bench_runtime/site-packages/torch`, not the patched checkout, so it could not validate the source edit behavior directly.

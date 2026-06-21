@@ -1,0 +1,15 @@
+Implemented the `nn.Module.set_submodule` fix in `torch/nn/modules/module.py`.
+
+Changed behavior:
+- Added `strict: bool = False`.
+- Resolves the parent module explicitly, including single-component targets like `"0"`.
+- Replaces existing direct submodules correctly.
+- Allows creation when `strict=False` and parent exists.
+- Raises `AttributeError` for missing targets when `strict=True`.
+- Validates replacement is an `nn.Module`.
+
+Validation passed:
+- Focused source-checkout probe with `PYTHONPATH=/workspace`.
+- `./opbench_action.py run_test 'TestNN.test_set_submodule'`
+
+Final diff only touches the allowed file.

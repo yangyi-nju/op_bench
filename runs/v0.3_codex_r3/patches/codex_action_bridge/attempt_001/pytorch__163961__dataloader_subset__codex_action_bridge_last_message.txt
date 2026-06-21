@@ -1,0 +1,11 @@
+Implemented the source fix in `torch/utils/data/dataset.py`.
+
+`Subset.__getitems__` now detects when a `Subset` subclass overrides `__getitem__` and routes batched DataLoader fetches through `self[idx]`, preserving subclass transformations instead of bypassing them via the parent `Subset` batching path.
+
+Verification passed:
+
+```bash
+./opbench_action.py run_command 'python test/test_dataloader.py -k subset'
+```
+
+Result: `Ran 2 tests ... OK`.

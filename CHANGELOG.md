@@ -4,22 +4,42 @@ This file records user-visible OpBench version milestones. Detailed design,
 implementation, and experiment evidence remain in the versioned documents
 under `docs/`.
 
-## v0.3 - Planned
+## v0.4 - Planned
 
-Planning started on 2026-06-05.
+Planning started on 2026-06-21.
 
 Planned scope:
 
-- Expand the PyTorch verified dataset to 10 tasks.
-- Add public/hidden test separation.
-- Add multi-file Python overlay support.
-- Add patch scope validation.
-- Standardize CPU Docker tooling for real agents.
-- Attempt one CUDA task as a preview slice if the environment is tractable.
+- Add Claude Code as second agent for multi-agent comparison.
+- Support remote GPU/CUDA Docker execution via SSH.
+- Expand dataset to 15-20 tasks with CUDA precision/device dispatch bugs.
+- Run public test ablation experiment; simplify if no impact.
+
+Documents:
+
+- `docs/v0.4/design.md`
+
+## v0.3 - Completed
+
+Development started on 2026-06-05.
+
+Implemented milestones:
+
+- Expanded PyTorch verified dataset from 3 to 10 tasks across 5 subsystems.
+- Added patch scope validation with `enforced` mode (`src/op_bench/patch_scope.py`).
+- Added public/hidden test separation (`hidden_test_patch` + `public_test_patch`).
+- Added multi-file Python overlay support (verified with conv.py + utils.py task).
+- Added `--filter-tasks` for incremental experiment runs on task subsets.
+- Added batch admission runner (`scripts/run_admission_batch.py`).
+- Upgraded agent prompt to communicate patch scope and public test visibility.
+- Upgraded evaluator to check patch scope before scoring.
+- Ran 3-repeat Codex CLI evaluation on all 10 tasks: 76.7% resolved (23/30).
 
 Documents:
 
 - `docs/v0.3/design.md`
+- `docs/v0.3/experiment_report.md`
+- `docs/v0.3/candidate_tasks.md`
 
 ## v0.2 - Completed
 

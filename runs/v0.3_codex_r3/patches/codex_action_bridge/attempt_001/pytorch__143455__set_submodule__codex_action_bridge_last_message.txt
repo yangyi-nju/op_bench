@@ -1,0 +1,9 @@
+Implemented the minimal fix in `torch/nn/modules/module.py`.
+
+`Module.set_submodule()` now handles non-dotted targets as direct child module names via `add_module()`, so names like `"n"` or `"n@1"` are registered as single submodules instead of being misinterpreted by dotted traversal. Dotted paths still traverse parent modules and replace the final child as before.
+
+Verified with:
+- Direct probe for `"plain"`, `"plain@1"`, `"plain.inner"`, and missing dotted parent behavior
+- `./opbench_action.py run_test 'TestNN.test_set_submodule'`
+
+Final diff only touches the allowed file.

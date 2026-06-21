@@ -1,0 +1,10 @@
+Implemented the source-only fix in `torch/nn/modules/module.py`.
+
+The strict unexpected-key check now distinguishes exact local parameter/buffer names from dotted child-module keys, so keys like `weight.bad_suffix` or `0.weight.bad_suffix` are reported as unexpected instead of being accepted because their prefix matches a valid key.
+
+Verification:
+- `python test/nn/test_load_state_dict.py -k test_load_state_dict` passed: 23 tests OK.
+- Direct `/tmp` probes passed for both top-level and nested prefixed unexpected keys.
+- Final diff only touches `torch/nn/modules/module.py`.
+
+Note: `opbench_action.py run_test 'test_load_state_dict'` and the direct class selector failed because this harness invoked unittest by attribute name instead of using the advertised `-k` selector, so I ran the exact allowed `-k` command via `run_command`.

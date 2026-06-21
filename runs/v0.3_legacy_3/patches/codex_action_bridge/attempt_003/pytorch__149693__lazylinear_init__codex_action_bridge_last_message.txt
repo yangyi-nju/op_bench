@@ -1,0 +1,5 @@
+Implemented the focused fix in `torch/nn/modules/linear.py`: `LazyLinear.initialize_parameters()` now sets `self.in_features` from `input.shape[-1]` before materializing weights and calling `reset_parameters()`. That lets the normal `Linear.reset_parameters()` path initialize weight and bias instead of skipping due to `in_features == 0`.
+
+Validation passed:
+- `TestLazyModules.test_linear_state`
+- Runtime probe showed `in_features 5` with non-zero weight, bias, and output sums.

@@ -1,0 +1,18 @@
+diff --git a/torch/nn/modules/utils.py b/torch/nn/modules/utils.py
+index 220b8f2..d5de6be 100644
+--- a/torch/nn/modules/utils.py
++++ b/torch/nn/modules/utils.py
+@@ -10,7 +10,12 @@ __all__ = ["consume_prefix_in_state_dict_if_present"]
+ def _ntuple(n, name="parse"):
+     def parse(x):
+         if isinstance(x, collections.abc.Iterable):
+-            return tuple(x)
++            x = tuple(x)
++            if len(x) != n:
++                raise ValueError(
++                    f"expected sequence of length {n}, got {len(x)}"
++                )
++            return x
+         return tuple(repeat(x, n))
+ 
+     parse.__name__ = name

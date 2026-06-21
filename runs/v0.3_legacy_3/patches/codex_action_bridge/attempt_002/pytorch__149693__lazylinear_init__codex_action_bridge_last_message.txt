@@ -1,0 +1,9 @@
+Implemented the focused fix in `torch/nn/modules/linear.py`.
+
+`LazyLinear.initialize_parameters()` now sets `self.in_features` from `input.shape[-1]` before calling `reset_parameters()`, so the new reset guard no longer skips lazy initialization. The follow-up consistency path is now `elif` so it only handles already-materialized zero-`in_features` cases.
+
+Verified with:
+- Focused reproducer from `/tmp`: `in_features == 5`, weight/bias/output all non-zero
+- `TestLazyModules.test_linear_state`: passed
+
+Final diff only touches the allowed file.

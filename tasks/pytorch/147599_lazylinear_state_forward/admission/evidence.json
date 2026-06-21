@@ -44,5 +44,5 @@
     "snapshot_method": null
   },
   "task_id": "pytorch__147599__lazylinear_state_forward",
-  "task_manifest_hash": "sha256:eeb6e93f9cdfaefae334367d4a8bc9d192b635672403a481e620a4f3d400b1ff"
+  "task_manifest_hash": "sha256:ef69cbe04203d26c4826316a5cf74bacbf564a8865c1fdccecbe0b4fc475ce92"
 }

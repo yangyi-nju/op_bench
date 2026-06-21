@@ -1,0 +1,5 @@
+Implemented the LBFGS fix in `torch/optim/lbfgs.py`: `LBFGS.step` now passes the remaining `max_eval` budget into `_strong_wolfe` via `max_ls=max_eval - current_evals`, instead of letting line search use its fixed default cap.
+
+Validation:
+- Runtime probe confirmed `_strong_wolfe` receives remaining budgets, e.g. `[39, 38]` for `max_eval=40`.
+- `./opbench_action.py run_test '-k LBFGS'` passed: 45 tests, 6 skipped.

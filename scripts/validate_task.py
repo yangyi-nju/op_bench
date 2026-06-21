@@ -73,6 +73,7 @@ ALLOWED_ADMISSION_STATUSES = {
     "gold_failed",
     "deprecated",
 }
+ALLOWED_PATCH_SCOPE_MODES = {"enforced", "filtered"}
 ALLOW_EMPTY_REQUIRED_PATHS = {
     ("agent_visible", "repo_setup_commands"),
 }
@@ -92,6 +93,8 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
 
     for path in REQUIRED_PATHS:
         if data.get("environment_ref") and path[:1] == ("environment",):
+            continue
+        if path == ("artifacts", "test_patch") and data.get("artifacts", {}).get("hidden_test_patch"):
             continue
         try:
             value = lookup(data, path)
@@ -135,7 +138,7 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
             "invalid environment.backend: "
             f"{backend!r}; expected one of {sorted(ALLOWED_ENVIRONMENT_BACKENDS)}"
         )
-    if backend == "docker":
+    if backend == "docker" and not data.get("environment_ref"):
         environment = data.get("environment", {})
         if not environment.get("image"):
             errors.append("environment.image is required when environment.backend is 'docker'")
@@ -250,6 +253,28 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
             errors.append("evaluation.pass_to_pass contains unresolved draft test entries")
     except KeyError:
         pass
+
+    patch_scope = data.get("patch_scope")
+    if patch_scope is not None:
+        if not isinstance(patch_scope, dict):
+            errors.append("patch_scope must be an object")
+        else:
+            mode = patch_scope.get("mode", "enforced")
+            if mode not in ALLOWED_PATCH_SCOPE_MODES:
+                errors.append(f"invalid patch_scope.mode: {mode!r}; expected one of {sorted(ALLOWED_PATCH_SCOPE_MODES)}")
+            allowed_paths = patch_scope.get("allowed_paths")
+            if not isinstance(allowed_paths, list) or not allowed_paths:
+                errors.append("patch_scope.allowed_paths must be a non-empty list")
+            else:
+                for p in allowed_paths:
+                    p_path = Path(str(p))
+                    if p_path.is_absolute() or ".." in p_path.parts:
+                        errors.append(f"patch_scope.allowed_paths entries must be relative without '..': {p!r}")
+
+    public_tests = data.get("evaluation", {}).get("public_tests")
+    if public_tests is not None:
+        if not isinstance(public_tests, list):
+            errors.append("evaluation.public_tests must be a list when provided")
 
     return errors
 

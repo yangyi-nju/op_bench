@@ -1,0 +1,100 @@
+{
+  "task_id": "pytorch__163961__dataloader_subset",
+  "version": "v1",
+  "environment_ref": "pytorch-cpu-torch2.6.0-py311",
+  "runtime_tier": "cpu_python_overlay",
+  "source_ref": "pytorch-618efe8-python-overlay",
+  "admission": {
+    "status": "verified",
+    "evidence": "admission/evidence.json",
+    "verified_at": "2026-06-20T18:26:35Z"
+  },
+  "patch_scope": {
+    "allowed_paths": [
+      "torch/utils/data/dataset.py"
+    ],
+    "mode": "enforced"
+  },
+  "source": {
+    "pr_url": "https://github.com/pytorch/pytorch/pull/163961",
+    "issue_url": "https://github.com/pytorch/pytorch/issues/163184",
+    "repo": "pytorch/pytorch",
+    "repo_url": "https://github.com/pytorch/pytorch.git",
+    "issue_number": 163184,
+    "pr_number": 163961,
+    "base_commit": "618efe837d71c179a96dc851ca08ebd9b10cae1f",
+    "merge_commit": "TODO",
+    "checkout_mode": "git",
+    "snapshot_path": "../../../.op_bench_cache/sources/pytorch/pytorch/618efe837d71c179a96dc851ca08ebd9b10cae1f/source"
+  },
+  "statement": {
+    "title": "DataLoader does not respect overridden __getitem__ in Subset subclasses",
+    "body": "When subclassing torch.utils.data.Subset and overriding __getitem__, the DataLoader ignores the overridden method and uses the parent Subset implementation, bypassing custom data transformations.",
+    "labels": [
+      "module: nn",
+      "bug"
+    ]
+  },
+  "operator": {
+    "framework": "pytorch",
+    "component": "torch.utils.data",
+    "operator_name": "torch.utils.data.Subset",
+    "problem_type": "dispatch-logic",
+    "tags": [
+      "utils",
+      "data",
+      "dataset",
+      "cpu-deterministic"
+    ]
+  },
+  "environment": {
+    "backend": "docker",
+    "tier": "cpu_python_overlay",
+    "source_loading": {
+      "mode": "python_overlay",
+      "installed_package": "torch",
+      "overlay_paths": [
+        "torch/utils/data/dataset.py"
+      ],
+      "runtime_site_packages": "/tmp/op_bench_runtime/site-packages",
+      "sync_before_tests": true
+    },
+    "preflight_commands": [
+      "{python} --version",
+      "{python} -c \"import torch; print(torch.__version__); print(torch.__file__)\""
+    ]
+  },
+  "agent_visible": {
+    "repo_setup_commands": [],
+    "known_constraints": [
+      "Full PyTorch source checkout task.",
+      "Do not assume CUDA availability."
+    ],
+    "allowed_test_commands": [
+      "{python} test/test_dataloader.py -k {test}"
+    ]
+  },
+  "evaluation": {
+    "setup_commands": [],
+    "fail_to_pass": [
+      "TestDataLoader.test_subset_override_getitem_requires_getitems"
+    ],
+    "pass_to_pass": [
+      "TestDataLoader.test_subset_custom_getitem"
+    ],
+    "test_command": "{python} test/test_dataloader.py {test}",
+    "timeout_sec": 900
+  },
+  "artifacts": {
+    "gold_patch": "artifacts/gold.patch",
+    "hidden_test_patch": "artifacts/hidden_test.patch"
+  },
+  "metadata": {
+    "difficulty": "medium",
+    "curation_status": "verified",
+    "deterministic": true,
+    "estimated_runtime_min": 15,
+    "layer": "A",
+    "admission_status": "verified"
+  }
+}

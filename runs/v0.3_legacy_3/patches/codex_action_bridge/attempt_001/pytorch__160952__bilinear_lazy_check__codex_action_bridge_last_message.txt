@@ -1,0 +1,9 @@
+Implemented the minimal source fix in `torch/nn/modules/linear.py`.
+
+Changed `Bilinear` so the `in1_features <= 0` check no longer runs in `__init__`; it now runs in `reset_parameters()` immediately before the `1 / sqrt(in1_features)` calculation. This allows lazy subclasses to call `super().__init__(0, 0, ...)` and defer materialization, while plain `nn.Bilinear(0, ...)` still raises.
+
+Verification:
+- The provided benchmark test path was not present in the runtime, so `run_test` could not open it.
+- A direct `/tmp` PyTorch probe passed: a `LazyBilinear` subclass materialized from real inputs and produced output shape `(2, 4)`.
+- Confirmed `nn.Bilinear(0, 2, 3)` still raises `ValueError: in1_features must be > 0, but got 0`.
+- Final diff touches only `torch/nn/modules/linear.py`.
