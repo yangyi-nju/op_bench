@@ -101,15 +101,33 @@ PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/curate_dataset.py \
   --version v0.2
 ```
 
-运行真实隔离 Codex CLI 评测：
+运行真实隔离 agent 评测（Codex 或 Claude Code）：
 
 ```bash
+# Codex CLI
 PATH=.venv/bin:$PATH PYTHONPATH=src OP_BENCH_CODEX_TIMEOUT_SEC=1200 python scripts/run_experiment.py \
   --dataset datasets/pytorch_v0.3/dataset.json \
   --verified-only \
   --agent codex_action_bridge \
   --agent-repeat 3 \
   --output-dir runs/v0.3_codex_r3
+
+# Claude Code CLI
+PATH=.venv/bin:$PATH PYTHONPATH=src OP_BENCH_CLAUDE_TIMEOUT_SEC=1200 python scripts/run_experiment.py \
+  --dataset datasets/pytorch_v0.3/dataset.json \
+  --verified-only \
+  --agent claude_code_action_bridge \
+  --agent-repeat 3 \
+  --output-dir runs/v0.3_claude_r3
+
+# 多 agent 对比
+PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/run_experiment.py \
+  --dataset datasets/pytorch_v0.3/dataset.json \
+  --verified-only \
+  --agent codex_action_bridge \
+  --agent claude_code_action_bridge \
+  --agent-repeat 3 \
+  --output-dir runs/v0.3_multi_agent
 ```
 
 只运行指定 task：
