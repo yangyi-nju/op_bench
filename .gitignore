@@ -3,6 +3,7 @@
 .op_bench_cache/
 runs/*/workspaces/
 runs/**/codex_scratch/
+runs/**/claude_scratch/
 runs/admission/
 __pycache__/
 *.pyc
