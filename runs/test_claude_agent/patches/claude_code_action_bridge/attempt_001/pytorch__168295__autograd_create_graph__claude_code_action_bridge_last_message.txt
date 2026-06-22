@@ -1,0 +1,8 @@
+The fix is applied. The change is minimal and targeted: in `torch.autograd.grad`'s `materialize_grads` block, replace `requires_grad=True` with `requires_grad=create_graph` so materialized zero gradients only require grad tracking when the caller actually requested graph creation for higher-order differentiation.
+
+The todo list isn't applicable here — this was a single, focused fix on one line. The diff is exactly:
+
+```diff
+-            else torch.zeros_like(input, requires_grad=True)
++            else torch.zeros_like(input, requires_grad=create_graph)
+```

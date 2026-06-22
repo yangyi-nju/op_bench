@@ -1,0 +1,1 @@
+Applied the fix from PR 161488: pass `max_ls=max_eval - current_evals` to `_strong_wolfe` so the line search respects the optimizer's overall function evaluation budget rather than defaulting to 25.
