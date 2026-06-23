@@ -70,6 +70,14 @@ def build_parser() -> argparse.ArgumentParser:
         default=1,
         help="Number of independent attempts to run for each agent on each reproduced task.",
     )
+    parser.add_argument(
+        "--no-public-tests",
+        action="store_true",
+        help=(
+            "Hide public tests from the agent (skip applying public_test.patch in the agent workspace "
+            "and omit public_tests from the agent prompt). Used for ablation experiments."
+        ),
+    )
     parser.add_argument("--output-dir", required=True, help="Directory for result artifacts.")
     parser.add_argument("--quiet", action="store_true", help="Suppress terminal progress logs.")
     return parser
@@ -123,7 +131,7 @@ def main(argv: list[str] | None = None) -> int:
 
         for agent_name in args.agent:
             for attempt in range(1, args.agent_repeat + 1):
-                agent = agent_by_name(agent_name, progress=progress)
+                agent = agent_by_name(agent_name, progress=progress, hide_public_tests=args.no_public_tests)
                 agent_label = str(getattr(agent, "agent_id", getattr(agent, "name", agent_name)))
                 attempt_label = f"attempt_{attempt:03d}"
                 progress(f"agent start: task={task.task_id}, agent={agent_label}, attempt={attempt}/{args.agent_repeat}")
@@ -157,7 +165,7 @@ def main(argv: list[str] | None = None) -> int:
                             }
                         )
                         continue
-                    if task.public_test_patch_path is not None and task.public_test_patch_path.exists():
+                    if task.public_test_patch_path is not None and task.public_test_patch_path.exists() and not args.no_public_tests:
                         import subprocess
                         patch_result = subprocess.run(
                             ["git", "apply", str(task.public_test_patch_path)],

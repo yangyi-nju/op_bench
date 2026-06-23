@@ -111,8 +111,9 @@ class CodexActionBridgeAgent:
     requires_actions = True
     runtime_boundary = "op_bench_action_interface_file_cli"
 
-    def __init__(self, progress: Progress | None = None) -> None:
+    def __init__(self, progress: Progress | None = None, hide_public_tests: bool = False) -> None:
         self.progress = progress or noop_progress
+        self.hide_public_tests = hide_public_tests
 
     def produce_patch(
         self,
@@ -194,7 +195,7 @@ class CodexActionBridgeAgent:
             )
 
         public_tests_section = ""
-        if task.public_tests:
+        if task.public_tests and not self.hide_public_tests:
             public_tests_section = (
                 f"\nPublic tests you can run during repair: {task.public_tests}\n"
                 "These are visible sanity tests. Final scoring uses additional hidden tests.\n"
@@ -237,8 +238,9 @@ class ClaudeCodeActionBridgeAgent:
     requires_actions = True
     runtime_boundary = "op_bench_action_interface_file_cli"
 
-    def __init__(self, progress: Progress | None = None) -> None:
+    def __init__(self, progress: Progress | None = None, hide_public_tests: bool = False) -> None:
         self.progress = progress or noop_progress
+        self.hide_public_tests = hide_public_tests
 
     def produce_patch(
         self,
@@ -311,7 +313,7 @@ class ClaudeCodeActionBridgeAgent:
             )
 
         public_tests_section = ""
-        if task.public_tests:
+        if task.public_tests and not self.hide_public_tests:
             public_tests_section = (
                 f"\nPublic tests you can run during repair: {task.public_tests}\n"
                 "These are visible sanity tests. Final scoring uses additional hidden tests.\n"
@@ -351,11 +353,12 @@ class ClaudeCodeActionBridgeAgent:
 def agent_by_name(
     name: str,
     progress: Progress | None = None,
+    hide_public_tests: bool = False,
 ) -> GoldAgent | CodexActionBridgeAgent | ClaudeCodeActionBridgeAgent:
     if name == "gold":
         return GoldAgent()
     if name == "codex_action_bridge":
-        return CodexActionBridgeAgent(progress=progress)
+        return CodexActionBridgeAgent(progress=progress, hide_public_tests=hide_public_tests)
     if name == "claude_code_action_bridge":
-        return ClaudeCodeActionBridgeAgent(progress=progress)
+        return ClaudeCodeActionBridgeAgent(progress=progress, hide_public_tests=hide_public_tests)
     raise ValueError(f"unknown agent: {name}")

@@ -34,6 +34,8 @@
         "cpu_package_runtime",
         "cpu_source_snapshot_fuller",
         "cuda_declared",
+        "cuda_python_overlay",
+        "cuda_kernel_build",
         "hardware_specific"
       ]
     },
@@ -229,7 +231,8 @@
           "type": "string",
           "enum": [
             "local",
-            "docker"
+            "docker",
+            "remote_docker"
           ]
         },
         "tier": {
@@ -242,6 +245,8 @@
             "cpu_package_runtime",
             "cpu_source_snapshot_fuller",
             "cuda_declared",
+            "cuda_python_overlay",
+            "cuda_kernel_build",
             "hardware_specific"
           ]
         },
@@ -249,6 +254,14 @@
           "type": "string"
         },
         "image_digest": {
+          "type": "string",
+          "minLength": 1
+        },
+        "host": {
+          "type": "string",
+          "minLength": 1
+        },
+        "gpus": {
           "type": "string",
           "minLength": 1
         },
@@ -301,7 +314,8 @@
               "enum": [
                 "python_overlay",
                 "prebuilt_source_image",
-                "full_source_build"
+                "full_source_build",
+                "inplace_build"
               ]
             },
             "installed_package": {

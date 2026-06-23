@@ -309,7 +309,23 @@ class Evaluator:
         return None
 
     def _apply_patch(self, patch_path: Path, workspace: Path) -> CommandResult:
-        return self._run_logged(self.executor, ["git", "apply", str(patch_path)], workspace, timeout_sec=30, label="apply patch")
+        result = self._run_logged(
+            self.executor, ["git", "apply", str(patch_path)], workspace,
+            timeout_sec=30, label="apply patch",
+        )
+        if result.exit_code != 0 and not result.timed_out:
+            # Fallback to GNU patch with fuzz tolerance for line number drift between
+            # the upstream PR base and our snapshot base commit.
+            self.progress("git apply failed, retrying with patch -F 3")
+            fallback = self._run_logged(
+                self.executor,
+                ["bash", "-lc", f"patch -p1 -F 3 -i {str(patch_path)!s}"],
+                workspace, timeout_sec=30, label="apply patch (fuzz)",
+            )
+            if fallback.exit_code == 0:
+                return fallback
+            return result
+        return result
 
     def _run_tests(
         self,

@@ -1,0 +1,93 @@
+{
+  "task_id": "pytorch__141820__lerp_cuda_cpu_scalar",
+  "version": "v1",
+  "environment_ref": "pytorch-cuda-devel-torch2.6.0-py311-cu124",
+  "runtime_tier": "cuda_kernel_build",
+  "source_ref": "pytorch-d99c9c2-kernel-build",
+  "admission": {
+    "status": "draft"
+  },
+  "patch_scope": {
+    "allowed_paths": [
+      "aten/src/ATen/native/Lerp.cpp",
+      "aten/src/ATen/native/cuda/Lerp.cu"
+    ],
+    "mode": "enforced"
+  },
+  "source": {
+    "pr_url": "https://github.com/pytorch/pytorch/pull/141820",
+    "issue_url": "https://github.com/pytorch/pytorch/pull/141820",
+    "repo": "pytorch/pytorch",
+    "repo_url": "https://github.com/pytorch/pytorch.git",
+    "issue_number": 141820,
+    "pr_number": 141820,
+    "base_commit": "d99c9c2acb0fd24e68a71603fc8edc6c11379104",
+    "merge_commit": "a52d9f6f4c9c839b0312fbe02925b38cd1f40758",
+    "checkout_mode": "git",
+    "snapshot_path": "../../../.op_bench_cache/sources/pytorch/pytorch/d99c9c2acb0fd24e68a71603fc8edc6c11379104/source"
+  },
+  "statement": {
+    "title": "torch.lerp raises RuntimeError when weight is CPU scalar and input/end are CUDA",
+    "body": "`torch.lerp(input, end, weight)` should accept a CPU scalar tensor as weight when `input` and `end` are on CUDA, matching the behavior of other binary operators. Currently it raises a RuntimeError because the device check rejects the mixed case. The fix relaxes the check in the CPU dispatch path and adds proper CUDA kernel handling for CPU scalar weight.",
+    "labels": [
+      "module: cuda",
+      "bug"
+    ]
+  },
+  "operator": {
+    "framework": "pytorch",
+    "component": "aten.native.cuda.lerp",
+    "operator_name": "torch.lerp",
+    "problem_type": "device-consistency",
+    "tags": [
+      "cuda-kernel",
+      "lerp",
+      "cpu-scalar"
+    ]
+  },
+  "environment": {
+    "backend": "remote_docker",
+    "tier": "cuda_kernel_build",
+    "source_loading": {
+      "mode": "inplace_build",
+      "sync_before_tests": true
+    },
+    "preflight_commands": [
+      "{python} --version",
+      "{python} -c \"import torch; print(torch.__version__); print(torch.cuda.is_available())\""
+    ]
+  },
+  "agent_visible": {
+    "repo_setup_commands": [],
+    "known_constraints": [
+      "Full PyTorch source checkout task.",
+      "Full PyTorch source build task with CUDA toolchain. Use ccache for incremental builds."
+    ],
+    "allowed_test_commands": [
+      "{python} test/test_binary_ufuncs.py {test_name}"
+    ]
+  },
+  "evaluation": {
+    "setup_commands": [],
+    "fail_to_pass": [
+      "TestBinaryUfuncs.test_lerp"
+    ],
+    "pass_to_pass": [
+      "TestBinaryUfuncs.test_add"
+    ],
+    "test_command": "{python} test/test_binary_ufuncs.py {test}",
+    "timeout_sec": 1800
+  },
+  "artifacts": {
+    "gold_patch": "artifacts/gold.patch",
+    "hidden_test_patch": "artifacts/hidden_test.patch"
+  },
+  "metadata": {
+    "difficulty": "hard",
+    "curation_status": "draft",
+    "deterministic": true,
+    "estimated_runtime_min": 30,
+    "layer": "A",
+    "admission_status": "draft"
+  }
+}

@@ -1,0 +1,74 @@
+diff --git a/torch/_utils.py b/torch/_utils.py
+index 6346d024c79f0..449075adb23f7 100644
+--- a/torch/_utils.py
++++ b/torch/_utils.py
+@@ -203,6 +203,16 @@ def set_tensor_metadata(tensor, metadata):
+     torch._C._set_tensor_metadata(tensor, metadata)  # type: ignore[attr-defined]
+ 
+ 
++def _restore_device_fake_mode(tensor):
++    if torch._guards.detect_fake_mode(None) is not None:
++        if tensor.untyped_storage()._fake_device is not None:
++            device = _get_restore_location(tensor.untyped_storage()._fake_device)
++            if not isinstance(device, torch.device):
++                device = torch.device(device)
++            tensor.fake_device = torch.device(device)
++    return tensor
++
++
+ def _rebuild_tensor_v2(
+     storage,
+     storage_offset,
+@@ -221,6 +231,8 @@ def _rebuild_tensor_v2(
+     # general expectation is that backward_hooks is an empty
+     # OrderedDict.  See Note [Don't serialize hooks]
+     tensor._backward_hooks = backward_hooks
++
++    tensor = _restore_device_fake_mode(tensor)
+     return tensor
+ 
+ 
+@@ -244,6 +256,7 @@ def _rebuild_tensor_v3(
+     if metadata:
+         set_tensor_metadata(t, metadata)
+     t._backward_hooks = backward_hooks
++    t = _restore_device_fake_mode(t)
+     return t
+ 
+ 
+diff --git a/torch/serialization.py b/torch/serialization.py
+index 523a753f86606..1a5a085e589b2 100644
+--- a/torch/serialization.py
++++ b/torch/serialization.py
+@@ -2000,8 +2000,15 @@ def load_tensor(dtype, numel, key, location):
+ 
+         # TODO: Once we decide to break serialization FC, we can
+         # stop wrapping with TypedStorage
++
++        if torch._guards.detect_fake_mode(None) is None:
++            wrap_storage = restore_location(storage, location)
++        else:
++            storage._fake_device = location
++            wrap_storage = storage
++
+         typed_storage = torch.storage.TypedStorage(
+-            wrap_storage=restore_location(storage, location),
++            wrap_storage=wrap_storage,
+             dtype=dtype,
+             _internal=True,
+         )
+diff --git a/torch/storage.py b/torch/storage.py
+index aebab0d5e6bbe..6a55d86914682 100644
+--- a/torch/storage.py
++++ b/torch/storage.py
+@@ -43,7 +43,9 @@ class _StorageBase:
+     is_sparse: _bool = False
+     is_sparse_csr: _bool = False
+     device: torch.device
+-    # Used when stashing FakeTensor device onto storage in torch.save(metadata_only=True)
++    # Used when
++    # (1) stashing FakeTensor device onto storage in torch.serialization.skip_data
++    # (2) stashing device onto storage to propagate to FakeTensor when torch.load under FakeTensorMode
+     _fake_device: _Optional[torch.device] = None
+ 
+     def __init__(self, *args, **kwargs):

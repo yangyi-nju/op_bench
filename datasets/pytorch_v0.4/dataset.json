@@ -1,0 +1,165 @@
+{
+  "dataset_id": "pytorch_v0.4",
+  "version": "v0.4",
+  "status": "draft",
+  "target_task_count": 17,
+  "policy": {
+    "backend": "mixed",
+    "preflight_required": true,
+    "admission_required": true,
+    "patch_scope_required": true,
+    "supports_remote_docker": true
+  },
+  "tasks": [
+    {
+      "task_id": "pytorch__149693__lazylinear_init",
+      "task_path": "../../tasks/pytorch/149693_lazylinear_init",
+      "admission_status": "verified",
+      "environment_status": "ready",
+      "source_status": "ready",
+      "replay_status": "verified",
+      "admission_evidence": "tasks/pytorch/149693_lazylinear_init/admission/evidence.json"
+    },
+    {
+      "task_id": "pytorch__147599__lazylinear_state_forward",
+      "task_path": "../../tasks/pytorch/147599_lazylinear_state_forward",
+      "admission_status": "verified",
+      "environment_status": "ready",
+      "source_status": "ready",
+      "replay_status": "verified",
+      "admission_evidence": "tasks/pytorch/147599_lazylinear_state_forward/admission/evidence.json"
+    },
+    {
+      "task_id": "pytorch__160952__bilinear_lazy_check",
+      "task_path": "../../tasks/pytorch/160952_bilinear_lazy_check",
+      "admission_status": "verified",
+      "environment_status": "ready",
+      "source_status": "ready",
+      "replay_status": "verified",
+      "admission_evidence": "tasks/pytorch/160952_bilinear_lazy_check/admission/evidence.json"
+    },
+    {
+      "task_id": "pytorch__162340__nn_arg_length",
+      "task_path": "../../tasks/pytorch/162340_nn_arg_length",
+      "admission_status": "verified",
+      "environment_status": "ready",
+      "source_status": "ready",
+      "replay_status": "verified",
+      "admission_evidence": "tasks/pytorch/162340_nn_arg_length/admission/evidence.json"
+    },
+    {
+      "task_id": "pytorch__163961__dataloader_subset",
+      "task_path": "../../tasks/pytorch/163961_dataloader_subset",
+      "admission_status": "verified",
+      "environment_status": "ready",
+      "source_status": "ready",
+      "replay_status": "verified",
+      "admission_evidence": "tasks/pytorch/163961_dataloader_subset/admission/evidence.json"
+    },
+    {
+      "task_id": "pytorch__168295__autograd_create_graph",
+      "task_path": "../../tasks/pytorch/168295_autograd_create_graph",
+      "admission_status": "verified",
+      "environment_status": "ready",
+      "source_status": "ready",
+      "replay_status": "verified",
+      "admission_evidence": "tasks/pytorch/168295_autograd_create_graph/admission/evidence.json"
+    },
+    {
+      "task_id": "pytorch__161488__lbfgs_wolfe",
+      "task_path": "../../tasks/pytorch/161488_lbfgs_wolfe",
+      "admission_status": "verified",
+      "environment_status": "ready",
+      "source_status": "ready",
+      "replay_status": "verified",
+      "admission_evidence": "tasks/pytorch/161488_lbfgs_wolfe/admission/evidence.json"
+    },
+    {
+      "task_id": "pytorch__150975__autograd_backward_inputs",
+      "task_path": "../../tasks/pytorch/150975_autograd_backward_inputs",
+      "admission_status": "verified",
+      "environment_status": "ready",
+      "source_status": "ready",
+      "replay_status": "verified",
+      "admission_evidence": "tasks/pytorch/150975_autograd_backward_inputs/admission/evidence.json"
+    },
+    {
+      "task_id": "pytorch__124385__load_state_dict_prefix",
+      "task_path": "../../tasks/pytorch/124385_load_state_dict_prefix",
+      "admission_status": "verified",
+      "environment_status": "ready",
+      "source_status": "ready",
+      "replay_status": "verified",
+      "admission_evidence": "tasks/pytorch/124385_load_state_dict_prefix/admission/evidence.json"
+    },
+    {
+      "task_id": "pytorch__143455__set_submodule",
+      "task_path": "../../tasks/pytorch/143455_set_submodule",
+      "admission_status": "verified",
+      "environment_status": "ready",
+      "source_status": "ready",
+      "replay_status": "verified",
+      "admission_evidence": "tasks/pytorch/143455_set_submodule/admission/evidence.json"
+    },
+    {
+      "task_id": "pytorch__132835__njt_sdpa_autocast",
+      "task_path": "../../tasks/pytorch/132835_njt_sdpa_autocast",
+      "admission_status": "draft",
+      "environment_status": "pending",
+      "source_status": "pending",
+      "replay_status": "pending"
+    },
+    {
+      "task_id": "pytorch__147786__faketensor_load_device",
+      "task_path": "../../tasks/pytorch/147786_faketensor_load_device",
+      "admission_status": "draft",
+      "environment_status": "pending",
+      "source_status": "pending",
+      "replay_status": "pending"
+    },
+    {
+      "task_id": "pytorch__131858__pin_memory_device",
+      "task_path": "../../tasks/pytorch/131858_pin_memory_device",
+      "admission_status": "draft",
+      "environment_status": "pending",
+      "source_status": "pending",
+      "replay_status": "pending"
+    },
+    {
+      "task_id": "pytorch__133729__device_context_bug",
+      "task_path": "../../tasks/pytorch/133729_device_context_bug",
+      "admission_status": "draft",
+      "environment_status": "pending",
+      "source_status": "pending",
+      "replay_status": "pending"
+    },
+    {
+      "task_id": "pytorch__132616__cuda_mem_get_info",
+      "task_path": "../../tasks/pytorch/132616_cuda_mem_get_info",
+      "admission_status": "draft",
+      "environment_status": "pending",
+      "source_status": "pending",
+      "replay_status": "pending"
+    },
+    {
+      "task_id": "pytorch__141820__lerp_cuda_cpu_scalar",
+      "task_path": "../../tasks/pytorch/141820_lerp_cuda_cpu_scalar",
+      "admission_status": "draft",
+      "environment_status": "pending",
+      "source_status": "pending",
+      "replay_status": "pending"
+    },
+    {
+      "task_id": "pytorch__143264__addcmul_cpu_scalar",
+      "task_path": "../../tasks/pytorch/143264_addcmul_cpu_scalar",
+      "admission_status": "draft",
+      "environment_status": "pending",
+      "source_status": "pending",
+      "replay_status": "pending"
+    }
+  ],
+  "registries": {
+    "environments": "environments/registry.json",
+    "sources": "sources/registry.json"
+  }
+}

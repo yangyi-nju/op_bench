@@ -250,6 +250,139 @@
       "related_tasks": [
         "pytorch__124385__load_state_dict_prefix"
       ]
+    },
+    {
+      "id": "pytorch-bbf568a-cuda-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "bbf568aac8ec06bcbfc00cac84747256ac021c5d",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/bbf568aac8ec06bcbfc00cac84747256ac021c5d/source",
+      "checksum": null,
+      "snapshot_git_commit": "fe0fbd0e01caa23c36243d6bb45501ffc24a3b1a",
+      "tracked_file_count": 15924,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__132835__njt_sdpa_autocast"
+      ]
+    },
+    {
+      "id": "pytorch-79aa174-cuda-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "79aa17489c3fc5ed6d5e972e9ffddf73e6dd0a5c",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/79aa17489c3fc5ed6d5e972e9ffddf73e6dd0a5c/source",
+      "checksum": null,
+      "snapshot_git_commit": "11735a9f48f33778b5b47bcb19ff45475af485d5",
+      "tracked_file_count": 16541,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__147786__faketensor_load_device"
+      ]
+    },
+    {
+      "id": "pytorch-0dca756-cuda-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "0dca756832084a65603b7ce4683928bc7a5e3e1b",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/0dca756832084a65603b7ce4683928bc7a5e3e1b/source",
+      "checksum": null,
+      "snapshot_git_commit": "c8ccf1e4be2479cbb7f83054dc6c3a7734535b55",
+      "tracked_file_count": 17941,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__131858__pin_memory_device"
+      ]
+    },
+    {
+      "id": "pytorch-09e366c-cuda-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "09e366cb5761a5a6262b26dd93e8a5bd7ce238d4",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/09e366cb5761a5a6262b26dd93e8a5bd7ce238d4/source",
+      "checksum": null,
+      "snapshot_git_commit": "6026539400cdd0ac314689dff359129eff20ca72",
+      "tracked_file_count": 15967,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__133729__device_context_bug"
+      ]
+    },
+    {
+      "id": "pytorch-7100c36-cuda-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "7100c36c8a170db3b73e0c293d5366cfe6318c4d",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/7100c36c8a170db3b73e0c293d5366cfe6318c4d/source",
+      "checksum": null,
+      "snapshot_git_commit": "d0dcc8aea2509c959a112fd68739db2629b7fc13",
+      "tracked_file_count": 15925,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__132616__cuda_mem_get_info"
+      ]
+    },
+    {
+      "id": "pytorch-d99c9c2-kernel-build",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "d99c9c2acb0fd24e68a71603fc8edc6c11379104",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/d99c9c2acb0fd24e68a71603fc8edc6c11379104/source",
+      "checksum": null,
+      "snapshot_git_commit": "4350ee632bd94298358c6357881eb43f2f188a77",
+      "tracked_file_count": 16105,
+      "submodules": {
+        "policy": "partial",
+        "status": "initialized"
+      },
+      "source_loading_modes": [
+        "inplace_build"
+      ],
+      "related_tasks": [
+        "pytorch__141820__lerp_cuda_cpu_scalar"
+      ]
+    },
+    {
+      "id": "pytorch-859be14-kernel-build",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "859be14c4e9942cf73456a48ef697a37c3ad22f9",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/859be14c4e9942cf73456a48ef697a37c3ad22f9/source",
+      "checksum": null,
+      "snapshot_git_commit": "7af64597a28de653363933323ba326929412d2f8",
+      "tracked_file_count": 16168,
+      "submodules": {
+        "policy": "partial",
+        "status": "initialized"
+      },
+      "source_loading_modes": [
+        "inplace_build"
+      ],
+      "related_tasks": [
+        "pytorch__143264__addcmul_cpu_scalar"
+      ]
     }
   ]
 }

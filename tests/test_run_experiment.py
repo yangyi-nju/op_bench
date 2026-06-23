@@ -308,7 +308,7 @@ class RunExperimentTests(unittest.TestCase):
 
                     raise AgentRuntimeUnsupported("unsupported test agent")
 
-            def fake_agent_by_name(name, progress=None):
+            def fake_agent_by_name(name, progress=None, hide_public_tests=False):
                 return UnsupportedAgent()
 
             task_dir = self._fixable_git_task(root)

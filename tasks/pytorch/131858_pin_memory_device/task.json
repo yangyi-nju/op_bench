@@ -1,0 +1,111 @@
+{
+  "task_id": "pytorch__131858__pin_memory_device",
+  "version": "v1",
+  "environment_ref": "pytorch-cuda-torch2.6.0-py311-cu124",
+  "runtime_tier": "cuda_python_overlay",
+  "source_ref": "pytorch-0dca756-cuda-overlay",
+  "admission": {
+    "status": "draft"
+  },
+  "patch_scope": {
+    "allowed_paths": [
+      "torch/_tensor_docs.py",
+      "torch/distributed/fsdp/_flat_param.py",
+      "torch/distributed/fsdp/_runtime_utils.py",
+      "torch/storage.py",
+      "torch/utils/data/_utils/pin_memory.py",
+      "torch/utils/data/dataloader.py"
+    ],
+    "mode": "enforced"
+  },
+  "source": {
+    "pr_url": "https://github.com/pytorch/pytorch/pull/131858",
+    "issue_url": "https://github.com/pytorch/pytorch/pull/131858",
+    "repo": "pytorch/pytorch",
+    "repo_url": "https://github.com/pytorch/pytorch.git",
+    "issue_number": 131858,
+    "pr_number": 131858,
+    "base_commit": "0dca756832084a65603b7ce4683928bc7a5e3e1b",
+    "merge_commit": "c07dc64017de9866df84c705d18b3d04749ede8f",
+    "checkout_mode": "git",
+    "snapshot_path": "../../../.op_bench_cache/sources/pytorch/pytorch/0dca756832084a65603b7ce4683928bc7a5e3e1b/source"
+  },
+  "statement": {
+    "title": "pin_memory APIs incorrectly pass device argument breaking custom backends",
+    "body": "Several pin-memory related APIs (Tensor.pin_memory, Storage.pin_memory, DataLoader pin_memory) pass a `device` argument that does not respect the privateuse1 / custom backend conventions. The fix updates these APIs to not pass `device` explicitly, deferring to the default backend.",
+    "labels": [
+      "module: cuda",
+      "bug"
+    ]
+  },
+  "operator": {
+    "framework": "pytorch",
+    "component": "torch.utils.data",
+    "operator_name": "torch.utils.data.DataLoader",
+    "problem_type": "device-dispatch",
+    "tags": [
+      "data-loader",
+      "pin-memory",
+      "device",
+      "cuda"
+    ]
+  },
+  "environment": {
+    "backend": "remote_docker",
+    "tier": "cuda_python_overlay",
+    "source_loading": {
+      "mode": "python_overlay",
+      "installed_package": "torch",
+      "overlay_paths": [
+        "torch/_tensor_docs.py",
+        "torch/distributed/fsdp/_flat_param.py",
+        "torch/distributed/fsdp/_runtime_utils.py",
+        "torch/storage.py",
+        "torch/utils/data/_utils/pin_memory.py",
+        "torch/utils/data/dataloader.py"
+      ],
+      "runtime_site_packages": "/tmp/op_bench_runtime/site-packages",
+      "sync_before_tests": true
+    },
+    "preflight_commands": [
+      "{python} --version",
+      "{python} -c \"import torch; print(torch.__version__); print(torch.cuda.is_available())\""
+    ]
+  },
+  "agent_visible": {
+    "repo_setup_commands": [],
+    "known_constraints": [
+      "Full PyTorch source checkout task.",
+      "CUDA GPU is available; tests must run with CUDA tensors."
+    ],
+    "allowed_test_commands": [
+      "{python} test/test_dataloader.py {test_name}"
+    ]
+  },
+  "evaluation": {
+    "setup_commands": [],
+    "fail_to_pass": [
+      "TestCppExtensionOpenRgistration.test_open_device_storage_pin_memory",
+      "TestDictDataLoader.test_pin_memory_device",
+      "TestDictDataLoader.test_pin_memory_with_only_device",
+      "TestNestedTensorSubclass.test_pin_memory"
+    ],
+    "pass_to_pass": [
+      "TestDictDataLoader.test_sequential"
+    ],
+    "test_command": "{python} test/test_dataloader.py {test}",
+    "timeout_sec": 900
+  },
+  "artifacts": {
+    "gold_patch": "artifacts/gold.patch",
+    "hidden_test_patch": "artifacts/hidden_test.patch"
+  },
+  "metadata": {
+    "difficulty": "medium",
+    "curation_status": "draft",
+    "deterministic": true,
+    "estimated_runtime_min": 10,
+    "layer": "A",
+    "admission_status": "draft"
+  }
+}

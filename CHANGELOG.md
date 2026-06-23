@@ -4,7 +4,7 @@ This file records user-visible OpBench version milestones. Detailed design,
 implementation, and experiment evidence remain in the versioned documents
 under `docs/`.
 
-## v0.4 - Planned
+## v0.4 - In Progress
 
 Planning started on 2026-06-21.
 
@@ -13,11 +13,15 @@ Planned scope:
 - Add Claude Code as second agent for multi-agent comparison.
 - Support remote GPU/CUDA Docker execution via SSH.
 - Expand dataset to 15-20 tasks with CUDA precision/device dispatch bugs.
+- Add `cuda_kernel_build` runtime tier for C++/CUDA kernel-level bugs (2 tasks).
+- Add `inplace_build` source loading mode for in-place PyTorch source rebuild.
 - Run public test ablation experiment; simplify if no impact.
 
 Documents:
 
 - `docs/v0.4/design.md`
+- `docs/v0.4/candidate_tasks_cuda.md`
+- `docs/v0.4/public_test_ablation.md`
 
 ## v0.3 - Completed
 

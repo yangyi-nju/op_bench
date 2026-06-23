@@ -1,0 +1,99 @@
+{
+  "task_id": "pytorch__133729__device_context_bug",
+  "version": "v1",
+  "environment_ref": "pytorch-cuda-torch2.6.0-py311-cu124",
+  "runtime_tier": "cuda_python_overlay",
+  "source_ref": "pytorch-09e366c-cuda-overlay",
+  "admission": {
+    "status": "draft"
+  },
+  "patch_scope": {
+    "allowed_paths": [
+      "torch/_dynamo/variables/user_defined.py",
+      "torch/utils/_device.py"
+    ],
+    "mode": "enforced"
+  },
+  "source": {
+    "pr_url": "https://github.com/pytorch/pytorch/pull/133729",
+    "issue_url": "https://github.com/pytorch/pytorch/pull/133729",
+    "repo": "pytorch/pytorch",
+    "repo_url": "https://github.com/pytorch/pytorch.git",
+    "issue_number": 133729,
+    "pr_number": 133729,
+    "base_commit": "09e366cb5761a5a6262b26dd93e8a5bd7ce238d4",
+    "merge_commit": "f147349568945698424cf3b519ab9989e77945dd",
+    "checkout_mode": "git",
+    "snapshot_path": "../../../.op_bench_cache/sources/pytorch/pytorch/09e366cb5761a5a6262b26dd93e8a5bd7ce238d4/source"
+  },
+  "statement": {
+    "title": "DeviceContext does not properly track default device under nested usage",
+    "body": "The `torch.utils._device.DeviceContext` (used by `torch.set_default_device`) has a state tracking bug that causes incorrect device propagation when nested or used with Dynamo. The fix corrects the context state machine to properly restore the previous default device.",
+    "labels": [
+      "module: cuda",
+      "bug"
+    ]
+  },
+  "operator": {
+    "framework": "pytorch",
+    "component": "torch.utils._device",
+    "operator_name": "torch.set_default_device",
+    "problem_type": "device-dispatch",
+    "tags": [
+      "default-device",
+      "context",
+      "cuda"
+    ]
+  },
+  "environment": {
+    "backend": "remote_docker",
+    "tier": "cuda_python_overlay",
+    "source_loading": {
+      "mode": "python_overlay",
+      "installed_package": "torch",
+      "overlay_paths": [
+        "torch/_dynamo/variables/user_defined.py",
+        "torch/utils/_device.py"
+      ],
+      "runtime_site_packages": "/tmp/op_bench_runtime/site-packages",
+      "sync_before_tests": true
+    },
+    "preflight_commands": [
+      "{python} --version",
+      "{python} -c \"import torch; print(torch.__version__); print(torch.cuda.is_available())\""
+    ]
+  },
+  "agent_visible": {
+    "repo_setup_commands": [],
+    "known_constraints": [
+      "Full PyTorch source checkout task.",
+      "CUDA GPU is available; tests must run with CUDA tensors."
+    ],
+    "allowed_test_commands": [
+      "{python} test/test_overrides.py {test_name}"
+    ]
+  },
+  "evaluation": {
+    "setup_commands": [],
+    "fail_to_pass": [
+      "TestTorchFunctionMode.test_device_context_semantics"
+    ],
+    "pass_to_pass": [
+      "TestTorchFunctionMode.test_custom_device_context"
+    ],
+    "test_command": "{python} test/test_overrides.py {test}",
+    "timeout_sec": 900
+  },
+  "artifacts": {
+    "gold_patch": "artifacts/gold.patch",
+    "hidden_test_patch": "artifacts/hidden_test.patch"
+  },
+  "metadata": {
+    "difficulty": "medium",
+    "curation_status": "draft",
+    "deterministic": true,
+    "estimated_runtime_min": 10,
+    "layer": "A",
+    "admission_status": "draft"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "hosts": {
+    "gpu-a10-aws": {
+      "user": "ubuntu",
+      "hostname": "ec2-x-x-x-x.compute.amazonaws.com",
+      "port": 22,
+      "identity_file": "~/.ssh/aws-gpu-key.pem",
+      "remote_workspace_root": "/data/op_bench_workspaces"
+    },
+    "gpu-a100-lambda": {
+      "user": "ubuntu",
+      "hostname": "lambda-instance.example.com",
+      "port": 22,
+      "identity_file": "~/.ssh/lambda-key",
+      "remote_workspace_root": "/home/ubuntu/op_bench_workspaces"
+    }
+  }
+}

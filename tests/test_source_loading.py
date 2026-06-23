@@ -88,6 +88,155 @@ class SourceLoadingTests(unittest.TestCase):
             self.assertEqual(config["installed_package"], "torch")
             self.assertEqual(config["overlay_paths"], ["torch/nn/modules/linear.py"])
 
+    def test_builds_inplace_build_command_with_default(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            task_path = root / "task.json"
+            task_path.write_text(
+                json.dumps(
+                    {
+                        "task_id": "kernel_task",
+                        "version": "v1",
+                        "source": {
+                            "repo": "local/repo",
+                            "local_path": str(root),
+                            "base_commit": "localbase",
+                            "merge_commit": "localmerge",
+                            "checkout_mode": "local-copy",
+                        },
+                        "statement": {"title": "kernel", "body": "body", "labels": []},
+                        "operator": {
+                            "framework": "pytorch",
+                            "component": "aten",
+                            "operator_name": "aten::add",
+                            "problem_type": "cuda-kernel",
+                            "tags": [],
+                        },
+                        "environment": {
+                            "backend": "remote_docker",
+                            "tier": "cuda_kernel_build",
+                            "image": "example/cuda-devel:tag",
+                            "workspace_dir": "/workspace",
+                            "python_executable": "python",
+                            "python_version": "3.11",
+                            "os": "linux",
+                            "build_mode": "source-build",
+                            "hardware": {"device": "cuda", "min_memory_gb": 24, "requires_gpu": True},
+                            "dependencies": [],
+                            "preflight_commands": ["{python} --version"],
+                            "source_loading": {
+                                "mode": "inplace_build",
+                                "sync_before_tests": True,
+                            },
+                        },
+                        "agent_visible": {
+                            "repo_setup_commands": [],
+                            "known_constraints": [],
+                            "allowed_test_commands": ["{python} -m unittest {test}"],
+                        },
+                        "evaluation": {
+                            "setup_commands": [],
+                            "fail_to_pass": ["test_case"],
+                            "pass_to_pass": ["test_case"],
+                            "test_command": "{python} -m unittest {test}",
+                            "timeout_sec": 30,
+                        },
+                        "artifacts": {"gold_patch": "gold.patch", "test_patch": "test.patch"},
+                        "metadata": {
+                            "difficulty": "hard",
+                            "curation_status": "draft",
+                            "deterministic": True,
+                            "estimated_runtime_min": 60,
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            command = build_source_loading_command(TaskManifest.load(task_path))
+
+            self.assertIsNotNone(command)
+            assert command is not None
+            self.assertEqual(command[0], "bash")
+            self.assertEqual(command[1], "-lc")
+            self.assertIn("setup.py develop", command[2])
+            self.assertIn("/workspace", command[2])
+
+    def test_builds_inplace_build_command_with_override(self) -> None:
+        from op_bench.task import TaskManifest as TM
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            task_path = root / "task.json"
+            task_path.write_text(
+                json.dumps(
+                    {
+                        "task_id": "kernel_task",
+                        "version": "v1",
+                        "source": {
+                            "repo": "local/repo",
+                            "local_path": str(root),
+                            "base_commit": "localbase",
+                            "merge_commit": "localmerge",
+                            "checkout_mode": "local-copy",
+                        },
+                        "statement": {"title": "kernel", "body": "body", "labels": []},
+                        "operator": {
+                            "framework": "pytorch",
+                            "component": "aten",
+                            "operator_name": "aten::add",
+                            "problem_type": "cuda-kernel",
+                            "tags": [],
+                        },
+                        "environment": {
+                            "backend": "remote_docker",
+                            "tier": "cuda_kernel_build",
+                            "image": "example/cuda-devel:tag",
+                            "workspace_dir": "/workspace",
+                            "python_executable": "python",
+                            "python_version": "3.11",
+                            "os": "linux",
+                            "build_mode": "source-build",
+                            "hardware": {"device": "cuda", "min_memory_gb": 24, "requires_gpu": True},
+                            "dependencies": [],
+                            "preflight_commands": ["{python} --version"],
+                            "source_loading": {
+                                "mode": "inplace_build",
+                                "build_command": "cd {workspace_dir} && BUILD_TEST=0 {python} setup.py develop --no-deps",
+                            },
+                        },
+                        "agent_visible": {
+                            "repo_setup_commands": [],
+                            "known_constraints": [],
+                            "allowed_test_commands": ["{python} -m unittest {test}"],
+                        },
+                        "evaluation": {
+                            "setup_commands": [],
+                            "fail_to_pass": ["test_case"],
+                            "pass_to_pass": ["test_case"],
+                            "test_command": "{python} -m unittest {test}",
+                            "timeout_sec": 30,
+                        },
+                        "artifacts": {"gold_patch": "gold.patch", "test_patch": "test.patch"},
+                        "metadata": {
+                            "difficulty": "hard",
+                            "curation_status": "draft",
+                            "deterministic": True,
+                            "estimated_runtime_min": 60,
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            command = build_source_loading_command(TM.load(task_path))
+
+            self.assertIsNotNone(command)
+            assert command is not None
+            self.assertEqual(command[0], "bash")
+            self.assertIn("BUILD_TEST=0", command[2])
+            self.assertIn("setup.py develop --no-deps", command[2])
+
 
 if __name__ == "__main__":
     unittest.main()

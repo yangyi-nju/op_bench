@@ -10,6 +10,7 @@ from pathlib import Path
 
 from op_bench.executor import CommandExecutor, CommandResult, DockerExecutor, LocalExecutor, ensure_text
 from op_bench.progress import Progress, format_command, format_duration, noop_progress
+from op_bench.remote import RemoteDockerExecutor, RemoteHost, check_remote_available, load_hosts_config
 from op_bench.task import TaskManifest
 
 
@@ -30,11 +31,24 @@ class EnvironmentPreparation:
 
 
 class EnvironmentManager:
-    def __init__(self, host_executor: LocalExecutor | None = None, progress: Progress | None = None) -> None:
+    def __init__(
+        self,
+        host_executor: LocalExecutor | None = None,
+        progress: Progress | None = None,
+        hosts_config: dict[str, RemoteHost] | None = None,
+    ) -> None:
         self.host_executor = host_executor or LocalExecutor()
         self.progress = progress or noop_progress
+        self._hosts_config = hosts_config
+
+    def _resolve_host(self, host_name: str) -> RemoteHost | None:
+        if self._hosts_config is None:
+            self._hosts_config = load_hosts_config()
+        return self._hosts_config.get(host_name)
 
     def prepare(self, task: TaskManifest, workspace: Path) -> EnvironmentPreparation:
+        if task.environment_backend == "remote_docker":
+            return self._prepare_remote_docker(task, workspace)
         if task.environment_backend == "docker":
             return self._prepare_docker(task, workspace)
         evidence = self.host_executor.collect_environment().to_dict()
@@ -47,6 +61,21 @@ class EnvironmentManager:
         )
 
     def precheck(self, task: TaskManifest) -> EnvironmentPreparation | None:
+        if task.environment_backend == "remote_docker":
+            if not check_remote_available():
+                return EnvironmentPreparation(
+                    status="environment_unavailable",
+                    executor=self.host_executor,
+                    evidence={
+                        "executor": "remote_docker",
+                        "image": task.environment_image,
+                        "remote_available": False,
+                        **self._asset_evidence(task),
+                    },
+                    commands=[],
+                    error="ssh or rsync command not found on local host",
+                )
+            return None
         if task.environment_backend != "docker" or shutil.which("docker") is not None:
             return None
         return EnvironmentPreparation(
@@ -185,6 +214,125 @@ class EnvironmentManager:
             executor=executor,
             evidence=evidence,
             commands=commands,
+        )
+
+    def _prepare_remote_docker(self, task: TaskManifest, workspace: Path) -> EnvironmentPreparation:
+        commands: list[CommandResult] = []
+        host_name = task.environment_host
+        if not host_name:
+            return self._unavailable_remote(task, commands, "task does not specify environment.host")
+        host = self._resolve_host(host_name)
+        if host is None:
+            return self._unavailable_remote(
+                task, commands,
+                f"remote host '{host_name}' not found in OP_BENCH_REMOTE_HOSTS_PATH config",
+            )
+        if not check_remote_available():
+            return self._unavailable_remote(task, commands, "ssh or rsync command not found on local host")
+
+        container_name = self._container_name(task)
+        executor = RemoteDockerExecutor(
+            host=host,
+            image=task.environment_image,
+            workspace_dir=task.environment_workspace_dir,
+            container_name=container_name,
+            gpus=task.environment_gpus,
+            labels={
+                "op-bench.managed": "true",
+                "op-bench.task-id": task.task_id,
+                "op-bench.environment-id": task.environment_ref or "inline",
+                "op-bench.runtime-tier": task.runtime_tier or "unspecified",
+            },
+        )
+
+        # Sync workspace to remote
+        self.progress(f"sync workspace to remote: {host.ssh_target()}:{executor.remote_workspace}")
+        sync_result = executor.sync_to_remote(workspace, timeout_sec=task.timeout_sec)
+        commands.append(sync_result)
+        if sync_result.exit_code != 0:
+            return self._unavailable_remote(task, commands, f"rsync to remote failed: {sync_result.stderr.strip()[:200]}")
+
+        # Optional preflight: nvidia-smi on remote
+        if task.requires_gpu:
+            nvidia_check = executor._ssh(["nvidia-smi"], timeout_sec=30)
+            commands.append(nvidia_check)
+            if nvidia_check.exit_code != 0:
+                return self._unavailable_remote(task, commands, "nvidia-smi failed on remote host")
+
+        # Inspect remote docker image; build if missing and dockerfile available
+        inspect_result = executor._ssh(["docker", "image", "inspect", task.environment_image], timeout_sec=60)
+        commands.append(inspect_result)
+        if inspect_result.exit_code != 0:
+            return self._unavailable_remote(
+                task, commands,
+                f"remote docker image '{task.environment_image}' not available; build it on the remote host first",
+            )
+
+        # Start the container
+        self.progress(f"start remote docker container: {container_name}")
+        start_result = executor.start(timeout_sec=120)
+        commands.append(start_result)
+        if start_result.exit_code != 0:
+            cleanup_result = executor.close()
+            if cleanup_result is not None:
+                commands.append(cleanup_result)
+            return self._unavailable_remote(
+                task, commands,
+                f"remote docker run failed: {start_result.stderr.strip()[:200]}",
+            )
+
+        # Run preflight commands inside container
+        for command in task.environment_preflight_commands:
+            rendered = task.render_command(command, python_executable=task.environment_python_executable)
+            preflight_executor = RemoteDockerExecutor(
+                host=host,
+                image=task.environment_image,
+                workspace_dir=task.environment_workspace_dir,
+                container_name=container_name,
+                command_workdir=task.environment_preflight_workdir,
+                gpus=task.environment_gpus,
+                labels=executor.labels,
+                remote_workspace=executor.remote_workspace,
+            )
+            result = preflight_executor.run(rendered, workspace, task.timeout_sec)
+            commands.append(result)
+            if result.exit_code != 0:
+                cleanup_result = executor.close()
+                if cleanup_result is not None:
+                    commands.append(cleanup_result)
+                return self._unavailable_remote(task, commands, "remote environment preflight failed")
+
+        evidence = executor.collect_environment()
+        evidence["preflight_passed"] = True
+        evidence["preflight_command_count"] = len(task.environment_preflight_commands)
+        evidence["preflight_workdir"] = task.environment_preflight_workdir
+        evidence.update(self._asset_evidence(task))
+        return EnvironmentPreparation(
+            status="ready",
+            executor=executor,
+            evidence=evidence,
+            commands=commands,
+        )
+
+    def _unavailable_remote(
+        self,
+        task: TaskManifest,
+        commands: list[CommandResult],
+        error: str,
+    ) -> EnvironmentPreparation:
+        return EnvironmentPreparation(
+            status="environment_unavailable",
+            executor=self.host_executor,
+            evidence={
+                "executor": "remote_docker",
+                "image": task.environment_image,
+                "workspace_dir": task.environment_workspace_dir,
+                "remote_host": task.environment_host,
+                "preflight_passed": False,
+                **self._asset_evidence(task),
+            },
+            commands=commands,
+            error=error,
         )
 
     def _container_name(self, task: TaskManifest) -> str:

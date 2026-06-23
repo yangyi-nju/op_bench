@@ -1,0 +1,196 @@
+diff --git a/torch/_tensor_docs.py b/torch/_tensor_docs.py
+index 6baa959e18957..351a2886bd9a2 100644
+--- a/torch/_tensor_docs.py
++++ b/torch/_tensor_docs.py
+@@ -2749,6 +2749,7 @@ def add_docstr_all(method, docstr):
+     "is_pinned",
+     r"""
+ Returns true if this tensor resides in pinned memory.
++By default, the device pinned memory on will be the current :ref:`accelerator<accelerators>`.
+ """,
+ )
+ 
+@@ -6465,6 +6466,7 @@ def callable(a, b) -> number
+ pin_memory() -> Tensor
+ 
+ Copies the tensor to pinned memory, if it's not already pinned.
++By default, the device pinned memory on will be the current :ref:`accelerator<accelerators>`.
+ """,
+ )
+ 
+diff --git a/torch/distributed/fsdp/_flat_param.py b/torch/distributed/fsdp/_flat_param.py
+index e283fb5b06f43..98a2fc3cd822c 100644
+--- a/torch/distributed/fsdp/_flat_param.py
++++ b/torch/distributed/fsdp/_flat_param.py
+@@ -1229,14 +1229,12 @@ def init_flat_param_attributes(self) -> None:
+         flat_param._local_shard = flat_param.data
+         if self._offload_params:
+             # Pin the memory for faster H2D transfer
+-            flat_param._local_shard = flat_param._local_shard.pin_memory(
+-                device=self.device
+-            )
++            flat_param._local_shard = flat_param._local_shard.pin_memory()
+             # Pre-allocate the sharded gradient on CPU to enable non-blocking
+             # D2H transfer during the backward pass
+             flat_param._cpu_grad = torch.zeros_like(
+                 flat_param._local_shard, device=cpu_device
+-            ).pin_memory(device=self.device)
++            ).pin_memory()
+         if self._uses_param_mixed_precision:
+             # For parameter mixed precision, we maintain a low precision
+             # sharded tensor on the compute device to be all-gathered (for
+diff --git a/torch/distributed/fsdp/_runtime_utils.py b/torch/distributed/fsdp/_runtime_utils.py
+index 8859ff0c3e608..2f3c9bb0c0033 100644
+--- a/torch/distributed/fsdp/_runtime_utils.py
++++ b/torch/distributed/fsdp/_runtime_utils.py
+@@ -389,7 +389,7 @@ def _pre_forward(
+         if handle and handle._offload_params and handle.flat_param._cpu_grad is None:
+             handle.flat_param._cpu_grad = torch.zeros_like(
+                 handle.flat_param._local_shard, device=torch.device("cpu")
+-            ).pin_memory(device=state.compute_device)
++            ).pin_memory()
+ 
+         should_cast_forward_inputs = (
+             state._handle and not state._handle._force_full_precision
+diff --git a/torch/storage.py b/torch/storage.py
+index c6efb4a7c5095..3f4192e9023e4 100644
+--- a/torch/storage.py
++++ b/torch/storage.py
+@@ -359,7 +359,8 @@ def is_pinned(self, device: Union[str, torch.device] = "cuda"):
+         r"""Determine whether the CPU storage is already pinned on device.
+ 
+         Args:
+-            device (str or torch.device): The device to pin memory on. Default: ``'cuda'``.
++            device (str or torch.device): The device to pin memory on (default: ``'cuda'``).
++                This argument is discouraged and subject to deprecated.
+ 
+         Returns:
+             A boolean variable.
+@@ -374,7 +375,8 @@ def pin_memory(self, device: Union[str, torch.device] = "cuda"):
+         r"""Copy the CPU storage to pinned memory, if it's not already pinned.
+ 
+         Args:
+-            device (str or torch.device): The device to pin memory on. Default: ``'cuda'``.
++            device (str or torch.device): The device to pin memory on (default: ``'cuda'``).
++                This argument is discouraged and subject to deprecated.
+ 
+         Returns:
+             A pinned CPU storage.
+@@ -1158,7 +1160,8 @@ def is_pinned(self, device: Union[str, torch.device] = "cuda"):
+         r"""Determine whether the CPU TypedStorage is already pinned on device.
+ 
+         Args:
+-            device (str or torch.device): The device to pin memory on. Default: ``'cuda'``
++            device (str or torch.device): The device to pin memory on (default: ``'cuda'``).
++                This argument is discouraged and subject to deprecated.
+ 
+         Returns:
+             A boolean variable.
+@@ -1170,7 +1173,8 @@ def pin_memory(self, device: Union[str, torch.device] = "cuda"):
+         r"""Copy the CPU TypedStorage to pinned memory, if it's not already pinned.
+ 
+         Args:
+-            device (str or torch.device): The device to pin memory on. Default: ``'cuda'``.
++            device (str or torch.device): The device to pin memory on (default: ``'cuda'``).
++                This argument is discouraged and subject to deprecated.
+ 
+         Returns:
+             A pinned CPU storage.
+diff --git a/torch/utils/data/_utils/pin_memory.py b/torch/utils/data/_utils/pin_memory.py
+index 89ec288e03bb9..0efe39854fb0a 100644
+--- a/torch/utils/data/_utils/pin_memory.py
++++ b/torch/utils/data/_utils/pin_memory.py
+@@ -29,6 +29,8 @@ def _pin_memory_loop(in_queue, out_queue, device_id, done_event, device):
+     elif device == torch._C._get_privateuse1_backend_name():
+         custom_device_mod = getattr(torch, torch._C._get_privateuse1_backend_name())
+         custom_device_mod.set_device(device_id)
++    elif device is None:
++        torch.accelerator.set_device_index(device_id)
+ 
+     def do_one_step():
+         try:
+diff --git a/torch/utils/data/dataloader.py b/torch/utils/data/dataloader.py
+index 8ad436080dfdf..13e5c85c8e725 100644
+--- a/torch/utils/data/dataloader.py
++++ b/torch/utils/data/dataloader.py
+@@ -183,8 +183,9 @@ class DataLoader(Generic[_T_co]):
+         persistent_workers (bool, optional): If ``True``, the data loader will not shut down
+             the worker processes after a dataset has been consumed once. This allows to
+             maintain the workers `Dataset` instances alive. (default: ``False``)
+-        pin_memory_device (str, optional): the device to :attr:`pin_memory` to if ``pin_memory`` is
+-            ``True``.
++        pin_memory_device (str, optional): the device to :attr:`pin_memory` on if ``pin_memory`` is
++            ``True``. If not given, the current :ref:`accelerator<accelerators>` will be the
++            default. This argument is discouraged and subject to deprecated.
+         in_order (bool, optional): If ``False``, the data loader will not enforce that batches
+             are returned in a first-in, first-out order. Only applies when ``num_workers > 0``. (default: ``True``)
+ 
+@@ -651,17 +652,39 @@ def __init__(self, loader: DataLoader) -> None:
+         ws, rank = _get_distributed_settings()
+         self._world_size = ws
+         self._rank = rank
+-        # for other backends, pin_memory_device need to set. if not set
+-        # default behaviour is CUDA device. if pin_memory_device is selected
+-        # and pin_memory is not set, the default behaviour false.
++        # If pin_memory_device not set, default behaviour is current accelerator.
++        # If pin_memory_device is set but pin_memory is not set, the default
++        # behaviour false.
+         if len(loader.pin_memory_device) == 0:
+-            self._pin_memory = loader.pin_memory and torch.cuda.is_available()
++            if loader.pin_memory and not torch.accelerator.is_available():
++                warn_msg = (
++                    "'pin_memory' argument is set as true but no accelerator is found, "
++                    "then device pinned memory won't be used."
++                )
++                warnings.warn(warn_msg)
++
++            self._pin_memory = loader.pin_memory and torch.accelerator.is_available()
+             self._pin_memory_device = None
++            # Currently, pin_memory would raise error on the MPS backend (see
++            # https://github.com/pytorch/pytorch/issues/86060), so forcibly
++            # disable pin_memory on MPS. Remove this restriction once pinned
++            # memory allocation for MPS is fixed.
++            if (
++                self._pin_memory
++                and torch.accelerator.current_accelerator().type == "mps"
++            ):
++                self._pin_memory = False
++                warn_msg = (
++                    "'pin_memory' argument is set as true but not supported on MPS now, "
++                    "then device pinned memory won't be used."
++                )
++                warnings.warn(warn_msg)
+         else:
+             if not loader.pin_memory:
+                 warn_msg = (
+-                    "pin memory device is set and pin_memory flag is not used then device pinned memory won't be used"
+-                    "please set pin_memory to true, if you need to use the device pin memory"
++                    "'pin_memory_device' is set but 'pin_memory' argument is not set, "
++                    "then device pinned memory won't be used."
++                    "please set 'pin_memory' to true, if you need to use the device pin memory"
+                 )
+                 warnings.warn(warn_msg)
+ 
+@@ -1152,15 +1175,18 @@ def __init__(self, loader):
+ 
+             # Queue is not type-annotated
+             self._data_queue = queue.Queue()  # type: ignore[var-annotated]
+-            if self._pin_memory_device == "xpu":
+-                current_device = torch.xpu.current_device()  # type: ignore[attr-defined]
++            current_device = -1
++            if self._pin_memory_device == "cuda":
++                current_device = torch.cuda.current_device()
++            elif self._pin_memory_device == "xpu":
++                current_device = torch.xpu.current_device()
+             elif self._pin_memory_device == torch._C._get_privateuse1_backend_name():
+                 custom_device_mod = getattr(
+                     torch, torch._C._get_privateuse1_backend_name()
+                 )
+                 current_device = custom_device_mod.current_device()
+-            else:
+-                current_device = torch.cuda.current_device()  # choose cuda for default
++            elif self._pin_memory_device is None:
++                current_device = torch.accelerator.current_device_index()
+             pin_memory_thread = threading.Thread(
+                 target=_utils.pin_memory._pin_memory_loop,
+                 args=(

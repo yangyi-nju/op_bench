@@ -146,6 +146,25 @@ class TaskManifest:
         return str(self.data["environment"].get("backend", "local"))
 
     @property
+    def environment_host(self) -> str | None:
+        value = self.data["environment"].get("host")
+        return str(value) if value else None
+
+    @property
+    def environment_gpus(self) -> str | None:
+        env = self.data["environment"]
+        gpus = env.get("gpus")
+        if gpus:
+            return str(gpus)
+        if env.get("hardware", {}).get("requires_gpu"):
+            return "all"
+        return None
+
+    @property
+    def requires_gpu(self) -> bool:
+        return bool(self.data["environment"].get("hardware", {}).get("requires_gpu", False))
+
+    @property
     def environment_ref(self) -> str | None:
         value = self.data.get("environment_ref")
         return str(value) if value else None

@@ -46,16 +46,18 @@ ALLOWED_TIERS = {
     "cpu_package_runtime",
     "cpu_source_snapshot_fuller",
     "cuda_declared",
+    "cuda_python_overlay",
+    "cuda_kernel_build",
     "hardware_specific",
 }
 ALLOWED_BUILD_MODES = {"editable-python", "source-build", "prebuilt-wheel"}
-ALLOWED_ENVIRONMENT_BACKENDS = {"local", "docker"}
+ALLOWED_ENVIRONMENT_BACKENDS = {"local", "docker", "remote_docker"}
 ALLOWED_DIFFICULTIES = {"easy", "medium", "hard"}
 ALLOWED_CURATION_STATUSES = {"draft", "verified"}
 ALLOWED_CHECKOUT_MODES = {"git", "local-copy"}
 ALLOWED_SNAPSHOT_METHODS = {"from_local_repo", "github_archive", "git_fetch"}
 ALLOWED_DIGEST_KINDS = {"repo_digest", "local_image_id", "build_hash"}
-ALLOWED_SOURCE_LOADING_MODES = {"python_overlay", "prebuilt_source_image", "full_source_build"}
+ALLOWED_SOURCE_LOADING_MODES = {"python_overlay", "prebuilt_source_image", "full_source_build", "inplace_build"}
 ALLOWED_LAYERS = {"A", "B"}
 ALLOWED_ADMISSION_STATUSES = {
     "candidate",
@@ -157,6 +159,10 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
             )
         if digest_kind is not None and not environment.get("image_digest"):
             errors.append("environment.image_digest is required when environment.digest_kind is provided")
+    if backend == "remote_docker":
+        environment = data.get("environment", {})
+        if not environment.get("host") and not data.get("environment_ref"):
+            errors.append("environment.host is required when environment.backend is 'remote_docker' (or set via environment_ref)")
 
     source_loading = data.get("environment", {}).get("source_loading")
     if source_loading is not None:
@@ -307,6 +313,13 @@ def validate_source_loading(source_loading: Any) -> list[str]:
                     )
         if not isinstance(source_loading.get("sync_before_tests"), bool):
             errors.append("environment.source_loading.sync_before_tests must be a boolean for python_overlay")
+    if mode == "inplace_build":
+        # build_command is optional (default provided); installed_package recommended for diagnostics
+        build_command = source_loading.get("build_command")
+        if build_command is not None and not isinstance(build_command, str):
+            errors.append("environment.source_loading.build_command must be a string when provided")
+        if not isinstance(source_loading.get("sync_before_tests", True), bool):
+            errors.append("environment.source_loading.sync_before_tests must be a boolean for inplace_build")
     return errors
 
 

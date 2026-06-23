@@ -1,0 +1,57 @@
+diff --git a/test/test_cpp_extensions_open_device_registration.py b/test/test_cpp_extensions_open_device_registration.py
+index b6f89c9441c49..5d1f0c34ee2e9 100644
+--- a/test/test_cpp_extensions_open_device_registration.py
++++ b/test/test_cpp_extensions_open_device_registration.py
+@@ -326,10 +326,10 @@ def test_open_device_storage_pin_memory(self):
+         # Check if the pin_memory is functioning properly on custom device
+         cpu_tensor = torch.empty(3)
+         self.assertFalse(cpu_tensor.is_openreg)
+-        self.assertFalse(cpu_tensor.is_pinned("openreg"))
++        self.assertFalse(cpu_tensor.is_pinned())
+ 
+-        cpu_tensor_pin = cpu_tensor.pin_memory("openreg")
+-        self.assertTrue(cpu_tensor_pin.is_pinned("openreg"))
++        cpu_tensor_pin = cpu_tensor.pin_memory()
++        self.assertTrue(cpu_tensor_pin.is_pinned())
+ 
+         # Test storage pin_memory and is_pin
+         cpu_storage = cpu_tensor.storage()
+diff --git a/test/test_dataloader.py b/test/test_dataloader.py
+index f1396cbda2cd4..e1142626cb34d 100644
+--- a/test/test_dataloader.py
++++ b/test/test_dataloader.py
+@@ -3092,17 +3092,15 @@ def test_pin_memory_device(self):
+             self.dataset, batch_size=2, pin_memory=True, pin_memory_device="cuda"
+         )
+         for sample in loader:
+-            self.assertTrue(sample["a_tensor"].is_pinned(device="cuda"))
+-            self.assertTrue(sample["another_dict"]["a_number"].is_pinned(device="cuda"))
++            self.assertTrue(sample["a_tensor"].is_pinned())
++            self.assertTrue(sample["another_dict"]["a_number"].is_pinned())
+ 
+     @unittest.skipIf(not TEST_CUDA, "CUDA unavailable")
+     def test_pin_memory_with_only_device(self):
+         loader = DataLoader(self.dataset, batch_size=2, pin_memory_device="cuda")
+         for sample in loader:
+-            self.assertFalse(sample["a_tensor"].is_pinned(device="cuda"))
+-            self.assertFalse(
+-                sample["another_dict"]["a_number"].is_pinned(device="cuda")
+-            )
++            self.assertFalse(sample["a_tensor"].is_pinned())
++            self.assertFalse(sample["another_dict"]["a_number"].is_pinned())
+ 
+ 
+ class DummyDataset(torch.utils.data.Dataset):
+diff --git a/test/test_nestedtensor.py b/test/test_nestedtensor.py
+index 31cc006e305f9..ad491c83e63ac 100644
+--- a/test/test_nestedtensor.py
++++ b/test/test_nestedtensor.py
+@@ -5262,7 +5262,7 @@ def test_pin_memory(self, device):
+         nt_contiguous, nt_noncontiguous = random_nt_noncontiguous_pair((2, 3, 6, 7))
+         for nt in [nt_contiguous, nt_noncontiguous]:
+             self.assertFalse(nt.is_pinned())
+-            pinned = nt.pin_memory(device)
++            pinned = nt.pin_memory()
+             self.assertTrue(pinned.is_pinned())
+             self.assertEqual(nt, pinned)
+             self.assertNotEqual(nt.data_ptr(), pinned.data_ptr())

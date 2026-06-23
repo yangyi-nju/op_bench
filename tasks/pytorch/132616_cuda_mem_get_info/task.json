@@ -1,0 +1,96 @@
+{
+  "task_id": "pytorch__132616__cuda_mem_get_info",
+  "version": "v1",
+  "environment_ref": "pytorch-cuda-torch2.6.0-py311-cu124",
+  "runtime_tier": "cuda_python_overlay",
+  "source_ref": "pytorch-7100c36-cuda-overlay",
+  "admission": {
+    "status": "draft"
+  },
+  "patch_scope": {
+    "allowed_paths": [
+      "torch/cuda/memory.py"
+    ],
+    "mode": "enforced"
+  },
+  "source": {
+    "pr_url": "https://github.com/pytorch/pytorch/pull/132616",
+    "issue_url": "https://github.com/pytorch/pytorch/pull/132616",
+    "repo": "pytorch/pytorch",
+    "repo_url": "https://github.com/pytorch/pytorch.git",
+    "issue_number": 132616,
+    "pr_number": 132616,
+    "base_commit": "7100c36c8a170db3b73e0c293d5366cfe6318c4d",
+    "merge_commit": "6753ee127cc8a46f081d64fb6c71ee56260ab51b",
+    "checkout_mode": "git",
+    "snapshot_path": "../../../.op_bench_cache/sources/pytorch/pytorch/7100c36c8a170db3b73e0c293d5366cfe6318c4d/source"
+  },
+  "statement": {
+    "title": "torch.cuda.memory.mem_get_info rejects device str without explicit index",
+    "body": "`torch.cuda.memory.mem_get_info` raises an error when called with a device string like `\"cuda\"` (no explicit index), but should default to the current device, similar to other torch.cuda APIs.",
+    "labels": [
+      "module: cuda",
+      "bug"
+    ]
+  },
+  "operator": {
+    "framework": "pytorch",
+    "component": "torch.cuda.memory",
+    "operator_name": "torch.cuda.memory.mem_get_info",
+    "problem_type": "parameter-validation",
+    "tags": [
+      "cuda-memory",
+      "parameter-validation"
+    ]
+  },
+  "environment": {
+    "backend": "remote_docker",
+    "tier": "cuda_python_overlay",
+    "source_loading": {
+      "mode": "python_overlay",
+      "installed_package": "torch",
+      "overlay_paths": [
+        "torch/cuda/memory.py"
+      ],
+      "runtime_site_packages": "/tmp/op_bench_runtime/site-packages",
+      "sync_before_tests": true
+    },
+    "preflight_commands": [
+      "{python} --version",
+      "{python} -c \"import torch; print(torch.__version__); print(torch.cuda.is_available())\""
+    ]
+  },
+  "agent_visible": {
+    "repo_setup_commands": [],
+    "known_constraints": [
+      "Full PyTorch source checkout task.",
+      "CUDA GPU is available; tests must run with CUDA tensors."
+    ],
+    "allowed_test_commands": [
+      "{python} test/test_cuda_multigpu.py {test_name}"
+    ]
+  },
+  "evaluation": {
+    "setup_commands": [],
+    "fail_to_pass": [
+      "TestCudaMultiGPU.test_mem_get_info"
+    ],
+    "pass_to_pass": [
+      "TestCudaMultiGPU.test_rng_state_offset"
+    ],
+    "test_command": "{python} test/test_cuda_multigpu.py {test}",
+    "timeout_sec": 900
+  },
+  "artifacts": {
+    "gold_patch": "artifacts/gold.patch",
+    "hidden_test_patch": "artifacts/hidden_test.patch"
+  },
+  "metadata": {
+    "difficulty": "medium",
+    "curation_status": "draft",
+    "deterministic": true,
+    "estimated_runtime_min": 10,
+    "layer": "A",
+    "admission_status": "draft"
+  }
+}

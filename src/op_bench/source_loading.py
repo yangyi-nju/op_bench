@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shlex
 
 from op_bench.task import TaskManifest
 
@@ -57,13 +58,26 @@ print(json.dumps({"mode": "python_overlay", "package": package, "overlay_files":
 """.strip()
 
 
+# Default build command for inplace_build mode (PyTorch-style develop install).
+# Tasks can override via source_loading.build_command in task.json.
+DEFAULT_INPLACE_BUILD_COMMAND = (
+    "cd {workspace_dir} && python setup.py develop --no-deps 2>&1 | tail -50"
+)
+
+
 def build_source_loading_command(task: TaskManifest) -> list[str] | None:
     source_loading = task.source_loading
     if not source_loading:
         return None
     mode = source_loading.get("mode")
-    if mode != "python_overlay":
-        return None
+    if mode == "python_overlay":
+        return _build_python_overlay_command(task, source_loading)
+    if mode == "inplace_build":
+        return _build_inplace_build_command(task, source_loading)
+    return None
+
+
+def _build_python_overlay_command(task: TaskManifest, source_loading: dict) -> list[str]:
     config = {
         "workspace_dir": task.environment_workspace_dir,
         "installed_package": str(source_loading["installed_package"]),
@@ -76,3 +90,21 @@ def build_source_loading_command(task: TaskManifest) -> list[str] | None:
         PYTHON_OVERLAY_SYNC_CODE,
         json.dumps(config, sort_keys=True),
     ]
+
+
+def _build_inplace_build_command(task: TaskManifest, source_loading: dict) -> list[str]:
+    """Build command for inplace_build mode.
+
+    The agent's modifications to the source tree (including .cpp/.cu kernels) are
+    re-compiled in place via setup.py develop. The build command runs from the
+    workspace directory so the resulting binaries replace the installed ones.
+
+    Tasks can override via source_loading.build_command (string with {workspace_dir}
+    and {python} placeholders). Default does a no-deps incremental rebuild.
+    """
+    template = source_loading.get("build_command", DEFAULT_INPLACE_BUILD_COMMAND)
+    rendered = template.format(
+        workspace_dir=task.environment_workspace_dir,
+        python=shlex.quote(task.environment_python_executable),
+    )
+    return ["bash", "-lc", rendered]

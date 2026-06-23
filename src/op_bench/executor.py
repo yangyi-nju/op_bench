@@ -114,12 +114,14 @@ class DockerExecutor:
         container_name: str | None = None,
         command_workdir: str | None = None,
         labels: dict[str, str] | None = None,
+        gpus: str | None = None,
     ) -> None:
         self.image = image
         self.workspace_dir = workspace_dir
         self.container_name = container_name
         self.command_workdir = command_workdir or workspace_dir
         self.labels = dict(labels or {})
+        self.gpus = gpus
 
     def run(self, command: list[str], cwd: Path, timeout_sec: int) -> CommandResult:
         docker_command = self.command_for_run(command, cwd)
@@ -163,17 +165,22 @@ class DockerExecutor:
                 *command,
             ]
         host_workspace = cwd.resolve()
-        return [
+        run_command = [
             "docker",
             "run",
             "--rm",
+        ]
+        if self.gpus:
+            run_command.extend(["--gpus", self.gpus])
+        run_command.extend([
             "--volume",
             f"{host_workspace}:{self.workspace_dir}",
             "--workdir",
             self.command_workdir,
             self.image,
             *command,
-        ]
+        ])
+        return run_command
 
     def start(self, cwd: Path, timeout_sec: int = 60) -> CommandResult:
         if not self.container_name:
@@ -219,6 +226,8 @@ class DockerExecutor:
             "--name",
             self.container_name,
         ]
+        if self.gpus:
+            command.extend(["--gpus", self.gpus])
         for key, value in sorted(self.labels.items()):
             command.extend(["--label", f"{key}={value}"])
         command.extend([
@@ -273,6 +282,7 @@ class DockerExecutor:
             "workspace_dir": self.workspace_dir,
             "command_workdir": self.command_workdir,
             "container_name": self.container_name,
+            "gpus": self.gpus,
             "docker_available": shutil.which("docker") is not None,
             "host_platform": platform.platform(),
             "host_machine": platform.machine(),

@@ -72,7 +72,7 @@ class EnvironmentAsset:
         docker = self.data["docker"]
         runtime = self.data.get("runtime", {})
         defaults: dict[str, Any] = {
-            "backend": "docker",
+            "backend": self.data.get("backend", "docker"),
             "tier": self.runtime_tier,
             "image": self.image,
             "preflight_workdir": self.preflight_workdir,
@@ -91,7 +91,10 @@ class EnvironmentAsset:
             defaults["dockerfile"] = str(self.dockerfile_path)
         if self.build_context_path:
             defaults["build_context"] = str(self.build_context_path)
-        for field in ("python_version", "os", "build_mode", "hardware", "dependencies", "resource_requirements"):
+        for field in (
+            "python_version", "os", "build_mode", "hardware",
+            "dependencies", "resource_requirements", "gpus", "host",
+        ):
             if field in self.data:
                 defaults[field] = deepcopy(self.data[field])
         return defaults

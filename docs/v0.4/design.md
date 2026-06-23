@@ -164,19 +164,46 @@ RUN pip install --no-cache-dir pytest hypothesis expecttest
 }
 ```
 
-### 4.4 CUDA Task 类型
+### 4.4 CUDA Task 类型与 Runtime Tier
 
-目标 5-10 条 Python-level CUDA bug（gold patch 50-150 行）：
+v0.4 引入两个新 runtime tier：
 
-| 类型 | 示例 |
-| --- | --- |
-| 精度累积 | float16 EmbeddingBag sum 精度丢失 |
-| Device dispatch | 某 functional 漏转 intermediate tensor 到 CUDA |
-| dtype 推断 | autocast 场景下 output dtype 不一致 |
-| CUDA-specific autograd | create_graph 在 CUDA 上行为与 CPU 不同 |
-| Index 操作 | scatter/gather 的 device 检查缺失 |
+**`cuda_python_overlay`** — Python-only CUDA bug（约 70% 数据）
+- 修复仅涉及 Python 文件
+- gold patch 50-150 行
+- 复用 `python_overlay` source loading 模式
+- 示例：dtype 精度、device dispatch、CUDA autograd 行为差异
 
-这些 bug 的复现需要 GPU，但修复仍是 Python 代码（不涉及 CUDA C++ kernel）。
+**`cuda_kernel_build`** — C++/CUDA kernel 级 bug（约 20-30% 数据）
+- 允许修改 `.cpp` / `.cu` / `.h` 文件
+- 需要在远程 GPU 实例上做 PyTorch in-place rebuild
+- 使用新增的 `inplace_build` source loading 模式
+- gold patch 可以包含 kernel 代码
+- 单次评测时间 5-60 分钟（首次 build 慢，ccache 后增量编译 2-5 分钟）
+
+| 类型 | Tier | 示例 |
+| --- | --- | --- |
+| 精度累积 | cuda_python_overlay | float16 EmbeddingBag sum 精度丢失 |
+| Device dispatch | cuda_python_overlay | 某 functional 漏转 intermediate tensor 到 CUDA |
+| dtype 推断 | cuda_python_overlay | autocast 场景下 output dtype 不一致 |
+| CUDA-specific autograd | cuda_python_overlay | create_graph 在 CUDA 上行为与 CPU 不同 |
+| Kernel 边界条件 | cuda_kernel_build | scatter_add CUDA kernel 越界 |
+| Kernel 算法错误 | cuda_kernel_build | reduction kernel 精度损失 |
+
+**inplace_build 实现**：
+
+```python
+# source_loading.build_command 默认值
+"cd {workspace_dir} && python setup.py develop --no-deps 2>&1 | tail -50"
+```
+
+- 在 cuda-devel image 内运行（含 nvcc + build toolchain）
+- 用 ccache 加速增量编译（首次构建后 cache 在 /workspace/.ccache）
+- 每个 task 可在 `source_loading.build_command` 覆盖默认命令
+
+**Docker 镜像**：
+- `op-bench/pytorch-cuda:torch2.6.0-cu124-py311` — for cuda_python_overlay
+- `op-bench/pytorch-cuda-devel:torch2.6.0-cu124-py311` — for cuda_kernel_build（含 nvcc/cmake/ccache，~12GB）
 
 ### 4.5 Public Test Ablation
 

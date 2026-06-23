@@ -1,0 +1,102 @@
+{
+  "task_id": "pytorch__147786__faketensor_load_device",
+  "version": "v1",
+  "environment_ref": "pytorch-cuda-torch2.6.0-py311-cu124",
+  "runtime_tier": "cuda_python_overlay",
+  "source_ref": "pytorch-79aa174-cuda-overlay",
+  "admission": {
+    "status": "draft"
+  },
+  "patch_scope": {
+    "allowed_paths": [
+      "torch/_utils.py",
+      "torch/serialization.py",
+      "torch/storage.py"
+    ],
+    "mode": "enforced"
+  },
+  "source": {
+    "pr_url": "https://github.com/pytorch/pytorch/pull/147786",
+    "issue_url": "https://github.com/pytorch/pytorch/pull/147786",
+    "repo": "pytorch/pytorch",
+    "repo_url": "https://github.com/pytorch/pytorch.git",
+    "issue_number": 147786,
+    "pr_number": 147786,
+    "base_commit": "79aa17489c3fc5ed6d5e972e9ffddf73e6dd0a5c",
+    "merge_commit": "bdcc1b579b0c9962653e01d713ccbe06b455419a",
+    "checkout_mode": "git",
+    "snapshot_path": "../../../.op_bench_cache/sources/pytorch/pytorch/79aa17489c3fc5ed6d5e972e9ffddf73e6dd0a5c/source"
+  },
+  "statement": {
+    "title": "torch.load under FakeTensorMode does not preserve original device for plain Tensors",
+    "body": "When `torch.load` is called inside a `FakeTensorMode` context, plain (non-storage-attached) tensors lose their original device (e.g., loaded as CPU when the saved tensor was CUDA). The fix preserves the device metadata through serialization unpickling so FakeTensors carry the correct device.",
+    "labels": [
+      "module: cuda",
+      "bug"
+    ]
+  },
+  "operator": {
+    "framework": "pytorch",
+    "component": "torch.serialization",
+    "operator_name": "torch.load",
+    "problem_type": "device-dispatch",
+    "tags": [
+      "serialization",
+      "fake-tensor",
+      "device",
+      "cuda"
+    ]
+  },
+  "environment": {
+    "backend": "remote_docker",
+    "tier": "cuda_python_overlay",
+    "source_loading": {
+      "mode": "python_overlay",
+      "installed_package": "torch",
+      "overlay_paths": [
+        "torch/_utils.py",
+        "torch/serialization.py",
+        "torch/storage.py"
+      ],
+      "runtime_site_packages": "/tmp/op_bench_runtime/site-packages",
+      "sync_before_tests": true
+    },
+    "preflight_commands": [
+      "{python} --version",
+      "{python} -c \"import torch; print(torch.__version__); print(torch.cuda.is_available())\""
+    ]
+  },
+  "agent_visible": {
+    "repo_setup_commands": [],
+    "known_constraints": [
+      "Full PyTorch source checkout task.",
+      "CUDA GPU is available; tests must run with CUDA tensors."
+    ],
+    "allowed_test_commands": [
+      "{python} test/test_fake_tensor.py {test_name}"
+    ]
+  },
+  "evaluation": {
+    "setup_commands": [],
+    "fail_to_pass": [
+      "FakeTensorPropTest.test_torch_load_with_fake_mode"
+    ],
+    "pass_to_pass": [
+      "FakeTensorPropTest.test_nonzero_stride"
+    ],
+    "test_command": "{python} test/test_fake_tensor.py {test}",
+    "timeout_sec": 900
+  },
+  "artifacts": {
+    "gold_patch": "artifacts/gold.patch",
+    "hidden_test_patch": "artifacts/hidden_test.patch"
+  },
+  "metadata": {
+    "difficulty": "medium",
+    "curation_status": "draft",
+    "deterministic": true,
+    "estimated_runtime_min": 10,
+    "layer": "A",
+    "admission_status": "draft"
+  }
+}

@@ -1,0 +1,99 @@
+{
+  "task_id": "pytorch__132835__njt_sdpa_autocast",
+  "version": "v1",
+  "environment_ref": "pytorch-cuda-torch2.6.0-py311-cu124",
+  "runtime_tier": "cuda_python_overlay",
+  "source_ref": "pytorch-bbf568a-cuda-overlay",
+  "admission": {
+    "status": "draft"
+  },
+  "patch_scope": {
+    "allowed_paths": [
+      "torch/nested/_internal/sdpa.py"
+    ],
+    "mode": "enforced"
+  },
+  "source": {
+    "pr_url": "https://github.com/pytorch/pytorch/pull/132835",
+    "issue_url": "https://github.com/pytorch/pytorch/pull/132835",
+    "repo": "pytorch/pytorch",
+    "repo_url": "https://github.com/pytorch/pytorch.git",
+    "issue_number": 132835,
+    "pr_number": 132835,
+    "base_commit": "bbf568aac8ec06bcbfc00cac84747256ac021c5d",
+    "merge_commit": "59f4725b49a59bc328bd55744e44369a0113ec95",
+    "checkout_mode": "git",
+    "snapshot_path": "../../../.op_bench_cache/sources/pytorch/pytorch/bbf568aac8ec06bcbfc00cac84747256ac021c5d/source"
+  },
+  "statement": {
+    "title": "NJT SDPA missing manual autocast for nested tensor inputs",
+    "body": "When using `scaled_dot_product_attention` (SDPA) with nested tensors under autocast, the dtype is not correctly propagated, causing precision/dtype mismatches between the autocast cast and the operator inputs. The fix manually casts the nested tensor inputs to the autocast dtype.",
+    "labels": [
+      "module: cuda",
+      "bug"
+    ]
+  },
+  "operator": {
+    "framework": "pytorch",
+    "component": "torch.nested._internal.sdpa",
+    "operator_name": "torch.nn.functional.scaled_dot_product_attention",
+    "problem_type": "dtype-precision",
+    "tags": [
+      "nested-tensor",
+      "sdpa",
+      "autocast",
+      "cuda",
+      "dtype-precision"
+    ]
+  },
+  "environment": {
+    "backend": "remote_docker",
+    "tier": "cuda_python_overlay",
+    "source_loading": {
+      "mode": "python_overlay",
+      "installed_package": "torch",
+      "overlay_paths": [
+        "torch/nested/_internal/sdpa.py"
+      ],
+      "runtime_site_packages": "/tmp/op_bench_runtime/site-packages",
+      "sync_before_tests": true
+    },
+    "preflight_commands": [
+      "{python} --version",
+      "{python} -c \"import torch; print(torch.__version__); print(torch.cuda.is_available())\""
+    ]
+  },
+  "agent_visible": {
+    "repo_setup_commands": [],
+    "known_constraints": [
+      "Full PyTorch source checkout task.",
+      "CUDA GPU is available; tests must run with CUDA tensors."
+    ],
+    "allowed_test_commands": [
+      "{python} test/test_nestedtensor.py {test_name}"
+    ]
+  },
+  "evaluation": {
+    "setup_commands": [],
+    "fail_to_pass": [
+      "TestNestedTensorSubclass.test_sdpa_autocast"
+    ],
+    "pass_to_pass": [
+      "TestNestedTensorSubclass.test_nested_tensor_activation_checkpoint"
+    ],
+    "test_command": "{python} test/test_nestedtensor.py {test}",
+    "timeout_sec": 900
+  },
+  "artifacts": {
+    "gold_patch": "artifacts/gold.patch",
+    "hidden_test_patch": "artifacts/hidden_test.patch"
+  },
+  "metadata": {
+    "difficulty": "medium",
+    "curation_status": "draft",
+    "deterministic": true,
+    "estimated_runtime_min": 10,
+    "layer": "A",
+    "admission_status": "draft"
+  }
+}

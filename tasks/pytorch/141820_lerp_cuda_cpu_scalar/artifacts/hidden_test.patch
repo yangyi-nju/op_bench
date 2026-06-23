@@ -1,0 +1,12 @@
+diff --git a/test/test_binary_ufuncs.py b/test/test_binary_ufuncs.py
+index e6962193f4990..ee9fb490356fb 100644
+--- a/test/test_binary_ufuncs.py
++++ b/test/test_binary_ufuncs.py
+@@ -3470,6 +3470,7 @@ def test_lerp(self, device, dtype):
+             weights = [
+                 torch.randn(shapes[2], device=device, dtype=dtype),
+                 random.random(),
++                torch.randn([], device="cpu", dtype=dtype),
+             ]
+             if dtype.is_complex:
+                 weights += [complex(0, 1), complex(0.4, 1.2)]

@@ -31,6 +31,80 @@
         "python_overlay"
       ],
       "cache_policy": "local_build"
+    },
+    {
+      "id": "pytorch-cuda-torch2.6.0-py311-cu124",
+      "framework": "pytorch",
+      "runtime_tier": "cuda_python_overlay",
+      "backend": "remote_docker",
+      "docker": {
+        "image": "op-bench/pytorch-cuda:torch2.6.0-cu124-py311",
+        "dockerfile": "pytorch-cuda/Dockerfile",
+        "build_context": "pytorch-cuda"
+      },
+      "python": "3.11",
+      "packages": {
+        "torch": "2.6.0",
+        "cuda": "12.4"
+      },
+      "hardware": {
+        "requires_gpu": true,
+        "cuda": "12.4",
+        "device": "cuda",
+        "min_memory_gb": 16,
+        "min_compute_capability": "8.0"
+      },
+      "gpus": "all",
+      "preflight": {
+        "workdir": "/tmp",
+        "commands": [
+          "python --version",
+          "python -c \"import torch; print(torch.__version__); print(torch.cuda.is_available()); print(torch.cuda.get_device_name(0))\""
+        ]
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "cache_policy": "remote_build"
+    },
+    {
+      "id": "pytorch-cuda-devel-torch2.6.0-py311-cu124",
+      "framework": "pytorch",
+      "runtime_tier": "cuda_kernel_build",
+      "backend": "remote_docker",
+      "docker": {
+        "image": "op-bench/pytorch-cuda-devel:torch2.6.0-cu124-py311",
+        "dockerfile": "pytorch-cuda-devel/Dockerfile",
+        "build_context": "pytorch-cuda-devel"
+      },
+      "python": "3.11",
+      "packages": {
+        "torch": "2.6.0",
+        "cuda": "12.4",
+        "cudnn": "9"
+      },
+      "hardware": {
+        "requires_gpu": true,
+        "cuda": "12.4",
+        "device": "cuda",
+        "min_memory_gb": 24,
+        "min_compute_capability": "8.0"
+      },
+      "gpus": "all",
+      "preflight": {
+        "workdir": "/tmp",
+        "commands": [
+          "nvcc --version",
+          "python --version",
+          "python -c \"import torch; print(torch.__version__); print(torch.cuda.is_available())\""
+        ]
+      },
+      "source_loading_modes": [
+        "inplace_build"
+      ],
+      "cache_policy": "remote_build"
     }
   ]
 }
+
+
