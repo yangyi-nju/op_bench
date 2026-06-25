@@ -52,7 +52,7 @@
         "cuda": "12.4",
         "device": "cuda",
         "min_memory_gb": 16,
-        "min_compute_capability": "8.0"
+        "min_compute_capability": "7.0"
       },
       "gpus": "all",
       "preflight": {
@@ -88,7 +88,7 @@
         "cuda": "12.4",
         "device": "cuda",
         "min_memory_gb": 24,
-        "min_compute_capability": "8.0"
+        "min_compute_capability": "7.0"
       },
       "gpus": "all",
       "preflight": {
