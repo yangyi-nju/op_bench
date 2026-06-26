@@ -76,10 +76,10 @@
   "evaluation": {
     "setup_commands": [],
     "fail_to_pass": [
-      "TestNestedTensorSubclass.test_sdpa_autocast"
+      "TestNestedTensorSubclassCUDA.test_sdpa_autocast_cuda"
     ],
     "pass_to_pass": [
-      "TestNestedTensorSubclass.test_nested_tensor_activation_checkpoint"
+      "TestNestedTensorSubclassCUDA.test_nested_tensor_activation_checkpoint_cuda"
     ],
     "test_command": "{python} test/test_nestedtensor.py {test}",
     "timeout_sec": 900
