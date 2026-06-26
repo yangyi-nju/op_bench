@@ -79,7 +79,7 @@
       "TestTorchFunctionMode.test_device_context_semantics"
     ],
     "pass_to_pass": [
-      "TestTorchFunctionMode.test_custom_device_context"
+      "TestTorchFunctionMode.test_basic"
     ],
     "test_command": "{python} test/test_overrides.py {test}",
     "timeout_sec": 900

@@ -70,10 +70,10 @@
   "evaluation": {
     "setup_commands": [],
     "fail_to_pass": [
-      "TestBinaryUfuncs.test_lerp"
+      "TestBinaryUfuncsCUDA.test_lerp_cuda"
     ],
     "pass_to_pass": [
-      "TestBinaryUfuncs.test_add"
+      "TestBinaryUfuncsCUDA.test_add_cuda"
     ],
     "test_command": "{python} test/test_binary_ufuncs.py {test}",
     "timeout_sec": 1800

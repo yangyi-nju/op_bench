@@ -71,11 +71,11 @@
   "evaluation": {
     "setup_commands": [],
     "fail_to_pass": [
-      "TestTorchDeviceType.test_addcmul",
-      "TestTorchDeviceType.test_addcmul_cuda_errors_with_cpu_scalars"
+      "TestTorchDeviceTypeCUDA.test_addcmul_cuda",
+      "TestTorchDeviceTypeCUDA.test_addcmul_cuda_errors_with_cpu_scalars_cuda"
     ],
     "pass_to_pass": [
-      "TestTorchDeviceType.test_narrow_empty"
+      "TestTorchDeviceTypeCUDA.test_narrow_empty_cuda"
     ],
     "test_command": "{python} test/test_torch.py {test}",
     "timeout_sec": 1800
