@@ -2,7 +2,7 @@
   "dataset_id": "pytorch_v0.4",
   "version": "v0.4",
   "status": "draft",
-  "target_task_count": 17,
+  "target_task_count": 16,
   "policy": {
     "backend": "mixed",
     "preflight_required": true,
@@ -104,14 +104,6 @@
     {
       "task_id": "pytorch__132835__njt_sdpa_autocast",
       "task_path": "../../tasks/pytorch/132835_njt_sdpa_autocast",
-      "admission_status": "draft",
-      "environment_status": "pending",
-      "source_status": "pending",
-      "replay_status": "pending"
-    },
-    {
-      "task_id": "pytorch__131858__pin_memory_device",
-      "task_path": "../../tasks/pytorch/131858_pin_memory_device",
       "admission_status": "draft",
       "environment_status": "pending",
       "source_status": "pending",

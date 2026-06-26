@@ -5,7 +5,7 @@
   "runtime_tier": "cuda_python_overlay",
   "source_ref": "pytorch-0dca756-cuda-overlay",
   "admission": {
-    "status": "draft"
+    "status": "deprecated"
   },
   "patch_scope": {
     "allowed_paths": [
@@ -104,6 +104,7 @@
     "deterministic": true,
     "estimated_runtime_min": 10,
     "layer": "A",
-    "admission_status": "draft"
+    "admission_status": "deprecated",
+    "notes": "Dropped from v0.4: PR fix is semantic (deprecate pin_memory_device argument). Baseline + hidden test do not produce a fail-then-pass pattern - assertions still hold without the patch because pin_memory_device='cuda' still produces cuda-pinned memory."
   }
 }
