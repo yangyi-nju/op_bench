@@ -56,7 +56,8 @@
       "overlay_paths": [
         "torch/_utils.py",
         "torch/serialization.py",
-        "torch/storage.py"
+        "torch/storage.py",
+        "torch/types.py"
       ],
       "runtime_site_packages": "/tmp/op_bench_runtime/site-packages",
       "sync_before_tests": true
