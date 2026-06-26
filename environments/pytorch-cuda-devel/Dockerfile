@@ -52,9 +52,10 @@ RUN python -m pip install --no-cache-dir \
 
 ENV LD_LIBRARY_PATH=/usr/local/lib/python3.11/dist-packages/cusparselt/lib:/usr/local/lib/python3.11/dist-packages/nvidia/cublas/lib:/usr/local/lib/python3.11/dist-packages/nvidia/cuda_cupti/lib:/usr/local/lib/python3.11/dist-packages/nvidia/cuda_nvrtc/lib:/usr/local/lib/python3.11/dist-packages/nvidia/cuda_runtime/lib:/usr/local/lib/python3.11/dist-packages/nvidia/cudnn/lib:/usr/local/lib/python3.11/dist-packages/nvidia/cufft/lib:/usr/local/lib/python3.11/dist-packages/nvidia/curand/lib:/usr/local/lib/python3.11/dist-packages/nvidia/cusolver/lib:/usr/local/lib/python3.11/dist-packages/nvidia/cusparse/lib:/usr/local/lib/python3.11/dist-packages/nvidia/nccl/lib:/usr/local/lib/python3.11/dist-packages/nvidia/nvjitlink/lib:/usr/local/lib/python3.11/dist-packages/nvidia/nvtx/lib:${LD_LIBRARY_PATH}
 
-# Make ccache effective for incremental builds
-ENV CC="ccache gcc"
-ENV CXX="ccache g++"
+# Use ccache via the standard symlink dir (/usr/lib/ccache/gcc -> ccache).
+# Do NOT set CC="ccache gcc" — CMake may misparse the compound value and pass
+# the source file as the compiler binary, causing "Permission denied" errors.
+ENV PATH=/usr/lib/ccache:${PATH}
 ENV CCACHE_DIR=/workspace/.ccache
 ENV CCACHE_MAXSIZE=10G
 
