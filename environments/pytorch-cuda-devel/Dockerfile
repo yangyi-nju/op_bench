@@ -5,11 +5,12 @@ ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 
 # System build dependencies
+# Note: cmake is installed via pip below (pinned to 3.x) so we skip apt's cmake
+# to avoid PATH conflicts between /usr/bin/cmake and /usr/local/bin/cmake.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential \
         ca-certificates \
         ccache \
-        cmake \
         curl \
         git \
         ninja-build \
@@ -23,9 +24,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 100
 
 # PyTorch build dependencies
+# Pin cmake to 3.31.x (last CMake 3 series). PyTorch 2.6 third_party (protobuf)
+# uses cmake_minimum_required < 3.5, which CMake 4.0 removed. Pinning to 3.x
+# plus CMAKE_POLICY_VERSION_MINIMUM=3.5 below covers both new and old projects.
 RUN python -m pip install --no-cache-dir \
         astunparse \
-        cmake \
+        "cmake<4" \
         cffi \
         expecttest \
         future \
@@ -58,6 +62,10 @@ ENV LD_LIBRARY_PATH=/usr/local/lib/python3.11/dist-packages/cusparselt/lib:/usr/
 ENV PATH=/usr/lib/ccache:${PATH}
 ENV CCACHE_DIR=/workspace/.ccache
 ENV CCACHE_MAXSIZE=10G
+
+# Allow building third-party CMake projects (e.g. protobuf) that declare
+# cmake_minimum_required < 3.5. CMake 4.0+ removed that compatibility band.
+ENV CMAKE_POLICY_VERSION_MINIMUM=3.5
 
 # PyTorch build env
 ENV USE_CUDA=1
