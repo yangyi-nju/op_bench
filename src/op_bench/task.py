@@ -207,7 +207,7 @@ class TaskManifest:
 
     @property
     def environment_python_executable(self) -> str:
-        if self.environment_backend == "docker":
+        if self.environment_backend in {"docker", "remote_docker"}:
             return str(self.data["environment"].get("python_executable", "python"))
         return sys.executable
 

@@ -6,8 +6,69 @@ import tempfile
 import textwrap
 from pathlib import Path
 
+from op_bench.environment import EnvironmentPreparation
+from op_bench.executor import CommandResult
 from op_bench.evaluator import Evaluator
 from op_bench.task import TaskManifest
+
+
+class _FakeRemoteExecutor:
+    name = "remote_docker"
+
+    def __init__(self) -> None:
+        self.sync_count = 0
+
+    def sync_to_remote(self, workspace: Path, timeout_sec: int = 600) -> CommandResult:
+        self.sync_count += 1
+        return CommandResult(
+            command=["sync_to_remote", str(workspace)],
+            cwd=str(workspace),
+            exit_code=0,
+            stdout="",
+            stderr="",
+            duration_sec=0,
+        )
+
+    def run(self, command: list[str], cwd: Path, timeout_sec: int) -> CommandResult:
+        command_text = " ".join(command)
+        if "test_failing" in command_text:
+            exit_code = 1 if self.sync_count >= 2 else 0
+        else:
+            exit_code = 0
+        return CommandResult(
+            command=command,
+            cwd=str(cwd),
+            exit_code=exit_code,
+            stdout="",
+            stderr="",
+            duration_sec=0,
+        )
+
+    def collect_environment(self) -> dict[str, object]:
+        return {"executor": "remote_docker"}
+
+    def close(self, timeout_sec: int = 30) -> CommandResult | None:
+        return None
+
+
+class _FakeRemoteEnvironmentManager:
+    def __init__(self, executor: _FakeRemoteExecutor) -> None:
+        self.executor = executor
+
+    def precheck(self, task: TaskManifest) -> None:
+        return None
+
+    def prepare(self, task: TaskManifest, workspace: Path) -> EnvironmentPreparation:
+        initial_sync = self.executor.sync_to_remote(workspace, timeout_sec=task.timeout_sec)
+        return EnvironmentPreparation(
+            status="ready",
+            executor=self.executor,
+            evidence={"executor": "remote_docker"},
+            commands=[initial_sync],
+        )
+
+    def cleanup(self, preparation: EnvironmentPreparation) -> CommandResult | None:
+        return None
 
 
 class EvaluatorTests(unittest.TestCase):
@@ -99,6 +160,20 @@ class EvaluatorTests(unittest.TestCase):
 
             self.assertEqual(result.status, "environment_error")
 
+    def test_remote_workspace_is_resynced_after_local_patches(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            task_dir = self._remote_patch_sync_task(root)
+            executor = _FakeRemoteExecutor()
+            environment_manager = _FakeRemoteEnvironmentManager(executor)
+
+            result = Evaluator(environment_manager=environment_manager).evaluate_baseline(
+                TaskManifest.load(task_dir / "task.json")
+            )
+
+            self.assertEqual(executor.sync_count, 2)
+            self.assertEqual(result.status, "baseline_reproduced")
+
     def _fixable_task(self, root: Path) -> Path:
         source = root / "source"
         source.mkdir()
@@ -189,6 +264,67 @@ class EvaluatorTests(unittest.TestCase):
                 "setup_commands": [],
                 "fail_to_pass": ["test_special.TestSpecialExpit.test_nan_is_preserved"],
                 "pass_to_pass": ["test_special.TestSpecialExpit.test_regular_value"],
+                "test_command": "{python} -m unittest {test}",
+                "timeout_sec": 30,
+            },
+            "artifacts": {"gold_patch": "artifacts/gold.patch", "test_patch": "artifacts/test.patch"},
+            "metadata": {"curation_status": "draft"},
+        }
+        (task_dir / "task.json").write_text(json.dumps(manifest), encoding="utf-8")
+        return task_dir
+
+    def _remote_patch_sync_task(self, root: Path) -> Path:
+        source = root / "source"
+        source.mkdir()
+        (source / "test_remote.py").write_text("VALUE = 'old'\n", encoding="utf-8")
+
+        task_dir = root / "task"
+        artifacts = task_dir / "artifacts"
+        artifacts.mkdir(parents=True)
+        (artifacts / "test.patch").write_text(
+            textwrap.dedent(
+                """\
+                diff --git a/test_remote.py b/test_remote.py
+                index 7234b7e..8f0df4c 100644
+                --- a/test_remote.py
+                +++ b/test_remote.py
+                @@ -1 +1 @@
+                -VALUE = 'old'
+                +VALUE = 'patched'
+                """
+            ),
+            encoding="utf-8",
+        )
+        (artifacts / "gold.patch").write_text("", encoding="utf-8")
+        manifest = {
+            "task_id": "remote__patch_sync",
+            "version": "v1",
+            "source": {
+                "repo": "local/repo",
+                "local_path": str(source),
+                "base_commit": "local",
+                "checkout_mode": "local-copy",
+            },
+            "statement": {"title": "remote sync", "body": "body", "labels": []},
+            "operator": {
+                "framework": "pytorch",
+                "component": "test",
+                "operator_name": "sync",
+                "problem_type": "runner",
+                "tags": [],
+            },
+            "environment": {
+                "backend": "remote_docker",
+                "host": "gpu-a10",
+                "tier": "cuda_python_overlay",
+                "image": "op-bench/pytorch-cuda:torch2.6.0-cu124-py311",
+                "python_executable": "python",
+                "hardware": {"requires_gpu": True},
+            },
+            "evaluation": {
+                "setup_commands": [],
+                "fail_to_pass": ["test_failing"],
+                "pass_to_pass": ["test_passing"],
                 "test_command": "{python} -m unittest {test}",
                 "timeout_sec": 30,
             },

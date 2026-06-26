@@ -10,6 +10,20 @@ from op_bench.task import TaskManifest
 
 
 class TaskManifestTests(unittest.TestCase):
+    def test_remote_docker_uses_container_python(self) -> None:
+        task = TaskManifest(
+            task_dir=Path("/tmp/task"),
+            data={
+                "task_id": "remote",
+                "environment": {
+                    "backend": "remote_docker",
+                    "python_executable": "python",
+                },
+            },
+        )
+
+        self.assertEqual(task.environment_python_executable, "python")
+
     def test_load_resolves_artifact_paths(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp).resolve()

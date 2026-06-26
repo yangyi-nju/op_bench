@@ -1,0 +1,39 @@
+{
+  "admission": {
+    "decision": "not_reproduced",
+    "failure_classification": "baseline_not_reproduced",
+    "verified": false
+  },
+  "baseline": {
+    "duration_sec": 71.584426792,
+    "fail_to_pass_passed": 0,
+    "fail_to_pass_total": 1,
+    "mode": "baseline",
+    "pass_to_pass_passed": 0,
+    "pass_to_pass_total": 1,
+    "status": "baseline_not_reproduced",
+    "task_id": "pytorch__132835__njt_sdpa_autocast"
+  },
+  "created_at": "2026-06-26T08:04:56Z",
+  "environment": {
+    "backend": "remote_docker",
+    "digest_kind": null,
+    "id": "pytorch-cuda-torch2.6.0-py311-cu124",
+    "image": "op-bench/pytorch-cuda:torch2.6.0-cu124-py311",
+    "image_digest": null,
+    "platform": null,
+    "runtime_tier": "cuda_python_overlay"
+  },
+  "evidence_id": "pytorch__132835__njt_sdpa_autocast:2e2760c6c53a:2026-06-26T08:04:56Z",
+  "gold": null,
+  "schema_version": "v1",
+  "source": {
+    "base_commit": "bbf568aac8ec06bcbfc00cac84747256ac021c5d",
+    "id": "pytorch-bbf568a-cuda-overlay",
+    "repo_url": "https://github.com/pytorch/pytorch.git",
+    "snapshot_hash": null,
+    "snapshot_method": null
+  },
+  "task_id": "pytorch__132835__njt_sdpa_autocast",
+  "task_manifest_hash": "sha256:2e2760c6c53a9823245ab27e872b0b625596c29735d7060a2a678447e1639f00"
+}

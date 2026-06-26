@@ -144,6 +144,16 @@ class Evaluator:
                 if patch_result.exit_code != 0:
                     return finish("patch_apply_failed")
 
+            sync_to_remote = getattr(runtime_executor, "sync_to_remote", None)
+            if callable(sync_to_remote):
+                self.progress(f"{mode}: sync patched workspace to remote")
+                sync_result = sync_to_remote(workspace, timeout_sec=task.timeout_sec)
+                command_log.append(sync_result)
+                if sync_result.timed_out:
+                    return finish("timeout")
+                if sync_result.exit_code != 0:
+                    return finish("environment_unavailable")
+
             fail_commands, fail_results = self._run_tests(task.fail_to_pass_tests, task, workspace, runtime_executor)
             command_log.extend(fail_commands)
             if any(result.timed_out for result in fail_results):

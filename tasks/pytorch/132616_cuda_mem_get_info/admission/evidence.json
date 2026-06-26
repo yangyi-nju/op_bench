@@ -1,0 +1,48 @@
+{
+  "admission": {
+    "decision": "verified",
+    "failure_classification": null,
+    "verified": true
+  },
+  "baseline": {
+    "duration_sec": 69.100753459,
+    "fail_to_pass_passed": 0,
+    "fail_to_pass_total": 1,
+    "mode": "baseline",
+    "pass_to_pass_passed": 1,
+    "pass_to_pass_total": 1,
+    "status": "baseline_reproduced",
+    "task_id": "pytorch__132616__cuda_mem_get_info"
+  },
+  "created_at": "2026-06-26T08:02:19Z",
+  "environment": {
+    "backend": "remote_docker",
+    "digest_kind": null,
+    "id": "pytorch-cuda-torch2.6.0-py311-cu124",
+    "image": "op-bench/pytorch-cuda:torch2.6.0-cu124-py311",
+    "image_digest": null,
+    "platform": null,
+    "runtime_tier": "cuda_python_overlay"
+  },
+  "evidence_id": "pytorch__132616__cuda_mem_get_info:07845e85049f:2026-06-26T08:02:19Z",
+  "gold": {
+    "duration_sec": 68.569373542,
+    "fail_to_pass_passed": 1,
+    "fail_to_pass_total": 1,
+    "mode": "gold",
+    "pass_to_pass_passed": 1,
+    "pass_to_pass_total": 1,
+    "status": "resolved",
+    "task_id": "pytorch__132616__cuda_mem_get_info"
+  },
+  "schema_version": "v1",
+  "source": {
+    "base_commit": "7100c36c8a170db3b73e0c293d5366cfe6318c4d",
+    "id": "pytorch-7100c36-cuda-overlay",
+    "repo_url": "https://github.com/pytorch/pytorch.git",
+    "snapshot_hash": null,
+    "snapshot_method": null
+  },
+  "task_id": "pytorch__132616__cuda_mem_get_info",
+  "task_manifest_hash": "sha256:07845e85049f5a313c0ab6cdd3bb3bfde11213a3c51168340e5d9fbc3c36760d"
+}

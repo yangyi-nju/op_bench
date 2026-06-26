@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import os
 import platform
+import shlex
 import shutil
 import subprocess
 import time
@@ -131,8 +132,12 @@ class RemoteDockerExecutor:
         return f"{self.host.remote_workspace_root}/default"
 
     def _ssh(self, remote_command: list[str], timeout_sec: int) -> CommandResult:
-        full_command = self.host.ssh_command_prefix() + remote_command
+        full_command = self._ssh_command(remote_command)
         return _run_local(full_command, timeout_sec)
+
+    def _ssh_command(self, remote_command: list[str]) -> list[str]:
+        quoted_remote_command = " ".join(shlex.quote(part) for part in remote_command)
+        return self.host.ssh_command_prefix() + [quoted_remote_command]
 
     def sync_to_remote(self, local_workspace: Path, timeout_sec: int = 600) -> CommandResult:
         """rsync local workspace to remote host."""
@@ -188,7 +193,7 @@ class RemoteDockerExecutor:
             self.image,
             "tail", "-f", "/dev/null",
         ])
-        return self.host.ssh_command_prefix() + remote_command
+        return self._ssh_command(remote_command)
 
     def command_for_run(self, command: list[str]) -> list[str]:
         """Build the remote `docker exec` command."""
@@ -200,7 +205,7 @@ class RemoteDockerExecutor:
             self.container_name,
             *command,
         ]
-        return self.host.ssh_command_prefix() + remote_command
+        return self._ssh_command(remote_command)
 
     def start(self, cwd: Path | None = None, timeout_sec: int = 60) -> CommandResult:
         return _run_local(self.command_for_start(), timeout_sec)
@@ -212,7 +217,7 @@ class RemoteDockerExecutor:
     def close(self, timeout_sec: int = 30) -> CommandResult | None:
         if not self.container_name:
             return None
-        rm_command = self.host.ssh_command_prefix() + ["docker", "rm", "-f", self.container_name]
+        rm_command = self._ssh_command(["docker", "rm", "-f", self.container_name])
         result = _run_local(rm_command, timeout_sec)
         # Best-effort remote workspace cleanup; ignore failures
         if self._remote_workspace is None:

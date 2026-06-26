@@ -117,35 +117,36 @@ class RemoteDockerExecutorTests(unittest.TestCase):
         # ssh prefix
         self.assertEqual(cmd[0], "ssh")
         self.assertIn("ubuntu@10.0.0.42", cmd)
+        remote_command = cmd[-1]
         # docker portion
-        self.assertIn("docker", cmd)
-        self.assertIn("run", cmd)
-        self.assertIn("--detach", cmd)
-        self.assertIn("--gpus", cmd)
-        gpus_idx = cmd.index("--gpus")
-        self.assertEqual(cmd[gpus_idx + 1], "all")
+        self.assertIn("docker run --detach", remote_command)
+        self.assertIn("--gpus all", remote_command)
         # labels
-        self.assertIn("--label", cmd)
-        self.assertIn("op-bench.managed=true", cmd)
+        self.assertIn("--label op-bench.managed=true", remote_command)
         # volume points to remote workspace
-        self.assertIn("--volume", cmd)
-        vol_idx = cmd.index("--volume")
-        self.assertEqual(
-            cmd[vol_idx + 1],
+        self.assertIn(
             "/tmp/op_bench_workspaces/op-bench-test-abc123:/workspace",
+            remote_command,
         )
         # image and tail at the end
-        self.assertIn("op-bench/pytorch-cuda:torch2.6.0-cu124-py311", cmd)
-        self.assertEqual(cmd[-3:], ["tail", "-f", "/dev/null"])
+        self.assertIn("op-bench/pytorch-cuda:torch2.6.0-cu124-py311", remote_command)
+        self.assertTrue(remote_command.endswith("tail -f /dev/null"))
 
     def test_command_for_run_uses_docker_exec(self):
         cmd = self.executor.command_for_run(["python", "test/foo.py"])
         self.assertEqual(cmd[0], "ssh")
-        self.assertIn("docker", cmd)
-        self.assertIn("exec", cmd)
-        self.assertIn("op-bench-test-abc123", cmd)
-        self.assertIn("python", cmd)
-        self.assertIn("test/foo.py", cmd)
+        self.assertIn("docker exec", cmd[-1])
+        self.assertIn("op-bench-test-abc123", cmd[-1])
+        self.assertIn("python test/foo.py", cmd[-1])
+
+    def test_command_for_run_quotes_shell_sensitive_arguments(self):
+        cmd = self.executor.command_for_run([
+            "python",
+            "-c",
+            "import torch; print(torch.__version__)",
+        ])
+
+        self.assertIn("python -c 'import torch; print(torch.__version__)'", cmd[-1])
 
     def test_command_for_start_without_gpus(self):
         executor = RemoteDockerExecutor(
@@ -155,7 +156,7 @@ class RemoteDockerExecutorTests(unittest.TestCase):
             gpus=None,
         )
         cmd = executor.command_for_start()
-        self.assertNotIn("--gpus", cmd)
+        self.assertNotIn("--gpus", cmd[-1])
 
     def test_collect_environment_records_remote_host(self):
         evidence = self.executor.collect_environment()
@@ -175,7 +176,7 @@ class RemoteDockerExecutorTests(unittest.TestCase):
         self.assertEqual(mock_run.call_count, 2)
         first_call_cmd = mock_run.call_args_list[0][0][0]
         second_call_cmd = mock_run.call_args_list[1][0][0]
-        self.assertIn("mkdir", first_call_cmd)
+        self.assertIn("mkdir -p", first_call_cmd[-1])
         self.assertEqual(second_call_cmd[0], "rsync")
         self.assertIn("-az", second_call_cmd)
         self.assertIn("--delete", second_call_cmd)
@@ -187,10 +188,7 @@ class RemoteDockerExecutorTests(unittest.TestCase):
         self.assertIsNotNone(result)
         # First call: docker rm -f
         first_call_cmd = mock_run.call_args_list[0][0][0]
-        self.assertIn("docker", first_call_cmd)
-        self.assertIn("rm", first_call_cmd)
-        self.assertIn("-f", first_call_cmd)
-        self.assertIn("op-bench-test-abc123", first_call_cmd)
+        self.assertIn("docker rm -f op-bench-test-abc123", first_call_cmd[-1])
 
 
 if __name__ == "__main__":

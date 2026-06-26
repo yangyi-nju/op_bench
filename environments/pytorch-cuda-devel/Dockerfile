@@ -50,6 +50,8 @@ RUN python -m pip install --no-cache-dir \
         --extra-index-url https://download.pytorch.org/whl/cu124 \
         torch==2.6.0
 
+ENV LD_LIBRARY_PATH=/usr/local/lib/python3.11/dist-packages/cusparselt/lib:/usr/local/lib/python3.11/dist-packages/nvidia/cublas/lib:/usr/local/lib/python3.11/dist-packages/nvidia/cuda_cupti/lib:/usr/local/lib/python3.11/dist-packages/nvidia/cuda_nvrtc/lib:/usr/local/lib/python3.11/dist-packages/nvidia/cuda_runtime/lib:/usr/local/lib/python3.11/dist-packages/nvidia/cudnn/lib:/usr/local/lib/python3.11/dist-packages/nvidia/cufft/lib:/usr/local/lib/python3.11/dist-packages/nvidia/curand/lib:/usr/local/lib/python3.11/dist-packages/nvidia/cusolver/lib:/usr/local/lib/python3.11/dist-packages/nvidia/cusparse/lib:/usr/local/lib/python3.11/dist-packages/nvidia/nccl/lib:/usr/local/lib/python3.11/dist-packages/nvidia/nvjitlink/lib:/usr/local/lib/python3.11/dist-packages/nvidia/nvtx/lib:${LD_LIBRARY_PATH}
+
 # Make ccache effective for incremental builds
 ENV CC="ccache gcc"
 ENV CXX="ccache g++"
