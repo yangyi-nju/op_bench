@@ -71,7 +71,7 @@
   "evaluation": {
     "setup_commands": [],
     "fail_to_pass": [
-      "TestTorchDeviceTypeCUDA.test_addcmul_cuda",
+      "TestTorchDeviceTypeCUDA.test_addcmul_cuda_float32",
       "TestTorchDeviceTypeCUDA.test_addcmul_cuda_errors_with_cpu_scalars_cuda"
     ],
     "pass_to_pass": [

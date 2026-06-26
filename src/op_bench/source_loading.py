@@ -60,8 +60,13 @@ print(json.dumps({"mode": "python_overlay", "package": package, "overlay_files":
 
 # Default build command for inplace_build mode (PyTorch-style develop install).
 # Tasks can override via source_loading.build_command in task.json.
+# Use `set -o pipefail` so the build's exit code is not masked by `tail`.
+# Use `test -f setup.py` upfront so a missing/broken workspace fails fast and clearly.
 DEFAULT_INPLACE_BUILD_COMMAND = (
-    "cd {workspace_dir} && python setup.py develop --no-deps 2>&1 | tail -50"
+    "set -o pipefail; "
+    "cd {workspace_dir} && "
+    "test -f setup.py || { echo 'ERROR: setup.py missing in workspace' >&2; exit 2; } && "
+    "python setup.py develop --no-deps 2>&1 | tail -100"
 )
 
 
@@ -103,8 +108,10 @@ def _build_inplace_build_command(task: TaskManifest, source_loading: dict) -> li
     and {python} placeholders). Default does a no-deps incremental rebuild.
     """
     template = source_loading.get("build_command", DEFAULT_INPLACE_BUILD_COMMAND)
-    rendered = template.format(
-        workspace_dir=task.environment_workspace_dir,
-        python=shlex.quote(task.environment_python_executable),
+    # Use str.replace instead of .format() to avoid colliding with literal `{...}` in shell
+    rendered = (
+        template
+        .replace("{workspace_dir}", task.environment_workspace_dir)
+        .replace("{python}", shlex.quote(task.environment_python_executable))
     )
     return ["bash", "-lc", rendered]
