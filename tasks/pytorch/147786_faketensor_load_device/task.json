@@ -5,7 +5,7 @@
   "runtime_tier": "cuda_python_overlay",
   "source_ref": "pytorch-79aa174-cuda-overlay",
   "admission": {
-    "status": "draft"
+    "status": "deprecated"
   },
   "patch_scope": {
     "allowed_paths": [
@@ -100,6 +100,7 @@
     "deterministic": true,
     "estimated_runtime_min": 10,
     "layer": "A",
-    "admission_status": "draft"
+    "admission_status": "deprecated",
+    "notes": "Dropped from v0.4: base commit (post-2.6.0 nightly) depends on torch.float8_e8m0fnu and other symbols not available in 2.6.0 stable wheel. Would require nightly Docker image."
   }
 }

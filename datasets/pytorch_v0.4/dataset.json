@@ -110,14 +110,6 @@
       "replay_status": "pending"
     },
     {
-      "task_id": "pytorch__147786__faketensor_load_device",
-      "task_path": "../../tasks/pytorch/147786_faketensor_load_device",
-      "admission_status": "draft",
-      "environment_status": "pending",
-      "source_status": "pending",
-      "replay_status": "pending"
-    },
-    {
       "task_id": "pytorch__131858__pin_memory_device",
       "task_path": "../../tasks/pytorch/131858_pin_memory_device",
       "admission_status": "draft",
@@ -152,6 +144,14 @@
     {
       "task_id": "pytorch__143264__addcmul_cpu_scalar",
       "task_path": "../../tasks/pytorch/143264_addcmul_cpu_scalar",
+      "admission_status": "draft",
+      "environment_status": "pending",
+      "source_status": "pending",
+      "replay_status": "pending"
+    },
+    {
+      "task_id": "pytorch__139409__bool_sort_cuda",
+      "task_path": "../../tasks/pytorch/139409_bool_sort_cuda",
       "admission_status": "draft",
       "environment_status": "pending",
       "source_status": "pending",
