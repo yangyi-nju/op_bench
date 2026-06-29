@@ -292,8 +292,46 @@ Phase 4（依赖全部）:
 ## 8. 验证方式
 
 1. `PYTHONPATH=src python -m unittest discover tests -v` — 全部通过
-2. Claude Code 在现有 CPU task 上跑通评测闭环
-3. Remote executor preflight: `ssh gpu-host nvidia-smi` + `docker run --gpus all`
-4. CUDA task admission: baseline fail + gold pass
-5. 多 agent 对比实验产出 summary.json
-6. Ablation 对比：with/without public tests 的 resolved rate
+2. `PYTHONPATH=src python scripts/preflight_task.py --all` — 所有 task 离线预检通过
+3. Claude Code 在现有 CPU task 上跑通评测闭环
+4. Remote executor preflight: `ssh gpu-host nvidia-smi` + `docker run --gpus all`
+5. CUDA task admission: baseline fail + gold pass
+6. 多 agent 对比实验产出 summary.json
+7. Ablation 对比：with/without public tests 的 resolved rate
+
+## 9. 运维注意事项 (Operational Gotchas)
+
+实际跑实验时遇到并解决了以下问题，记录下来避免后续踩坑。
+
+### 9.1 PyTorch 版本与 wheel 兼容性
+
+Python overlay 模式下，base commit 必须是 PyTorch 2.6.0 release 附近的 commit。**post-2.6.0 nightly commit 不可用**，因为它们会依赖 wheel 里不存在的符号（如 `torch.float8_e8m0fnu`、`FileLike`、`torch.utils.serialization`、`torch._dynamo` 内部重组）。一旦 overlay 后触发 import 错误，往往要追加越来越多文件到 overlay_paths 才能解决，最终放弃更划算。
+
+放弃判断标准：如果连续 2 次补 overlay 后还是新的 ImportError，直接 deprecate 这条 task。
+
+### 9.2 `instantiate_device_type_tests` 测试命名约定
+
+PyTorch 用 `instantiate_device_type_tests(MyTest, globals())` 装饰的测试类会在 import 时被重命名：
+
+- 类名加 device 后缀：`TestFoo` → `TestFooCPU` / `TestFooCUDA` / `TestFooXPU`
+- 方法名加 device 后缀：`test_bar(self, device)` → `test_bar_cpu` / `test_bar_cuda`
+- 如果还有 `@dtypes(...)` 装饰：`test_bar(self, device, dtype)` → `test_bar_cuda_float32` / `test_bar_cuda_complex64`
+
+`fail_to_pass` 和 `pass_to_pass` 必须用 **重命名后** 的名字。preflight 脚本会本地验证名字解析。
+
+### 9.3 inplace_build 工程坑
+
+- **CC=\"ccache gcc\" 会导致 CMake CheckAbi 失败**：CMake 在某些路径上把复合 CC 错误展开，导致用源文件名当 compiler 执行。改用 `/usr/lib/ccache` symlink 方式（已在 Dockerfile 修复）。
+- **CMake 4.0+ 移除了对 `cmake_minimum_required < 3.5` 的兼容**：PyTorch 2.6 vendored protobuf 还是用 < 3.5 的语法。已通过 pin `cmake<4` + `CMAKE_POLICY_VERSION_MINIMUM=3.5` 解决。
+- **`/workspace/.ccache` 必须在 rsync 时 exclude**：否则每次 workspace 同步都会清掉 build cache，每条 task 都要 30-60 分钟冷编译。已在 `_rsync_command` 加入 `--exclude=.ccache/ --exclude=build/`。
+
+### 9.4 Source snapshot 完整性
+
+- **python_overlay snapshot**：只需 sparse-checkout `torch/` + `test/`
+- **kernel_build snapshot**：必须 sparse-checkout `torch/` + `aten/` + `c10/` + `caffe2/` + `tools/` + `cmake/` + `setup.py` + `CMakeLists.txt` + `version.txt` + `requirements.txt` + `.gitmodules`，并 init 必要的 third_party submodules（cutlass, eigen, fmt, pybind11, onnx）
+
+如果 inplace_build 跑出 `setup.py not found`，第一时间检查 snapshot 完整性（preflight 脚本会查 setup.py 但 kernel_build 模式专属字段尚未单独校验）。
+
+### 9.5 SSH 长连接
+
+cuda_kernel_build 单条 task 可能跑 30-60 分钟。SSH 配置已包含 `ServerAliveInterval=30`，`_run_local` 现在会在 SSH exit 255 时自动重试一次。如果仍频繁断开，考虑用 `tmux` 在远程跑 admission/experiment 命令本身。

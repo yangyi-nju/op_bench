@@ -166,10 +166,17 @@ class RemoteDockerExecutor:
             ssh_parts.extend(["-i", os.path.expanduser(self.host.identity_file)])
         ssh_parts.extend(["-o", "StrictHostKeyChecking=accept-new"])
         ssh_command = " ".join(ssh_parts)
+        # Preserve build artefacts and ccache between syncs. Without these
+        # excludes, --delete wipes the remote build/ and .ccache/ on every
+        # workspace re-sync, forcing a cold rebuild each time.
         return [
             "rsync",
             "-az",
             "--delete",
+            "--exclude=.ccache/",
+            "--exclude=build/",
+            "--exclude=torch.egg-info/",
+            "--exclude=__pycache__/",
             "-e", ssh_command,
             source,
             destination,
@@ -241,6 +248,31 @@ class RemoteDockerExecutor:
 
 
 def _run_local(command: list[str], timeout_sec: int) -> CommandResult:
+    """Run a command locally. For SSH-prefixed commands, retry once on a
+    transient connection-class failure (exit 255 typically means the SSH
+    layer itself failed, not the remote command)."""
+    is_ssh = command and command[0] in ("ssh", "rsync")
+    result = _run_local_once(command, timeout_sec)
+    if is_ssh and result.exit_code == 255 and not result.timed_out:
+        # SSH connection error — retry once with a short delay
+        time.sleep(2)
+        retry = _run_local_once(command, timeout_sec)
+        if retry.exit_code != 255 or retry.timed_out:
+            return retry
+        # Both attempts failed — return the second one with stderr concatenated
+        return CommandResult(
+            command=retry.command,
+            cwd=retry.cwd,
+            exit_code=retry.exit_code,
+            stdout=retry.stdout,
+            stderr=f"[first attempt also failed with 255]\n{result.stderr}\n---\n{retry.stderr}",
+            duration_sec=result.duration_sec + retry.duration_sec,
+            timed_out=retry.timed_out,
+        )
+    return result
+
+
+def _run_local_once(command: list[str], timeout_sec: int) -> CommandResult:
     start = time.monotonic()
     try:
         completed = subprocess.run(

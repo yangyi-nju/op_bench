@@ -13,6 +13,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         ccache \
         curl \
         git \
+        libomp-dev \
+        libopenblas-dev \
         ninja-build \
         python3.11 \
         python3.11-dev \

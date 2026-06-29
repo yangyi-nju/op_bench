@@ -6,16 +6,25 @@ under `docs/`.
 
 ## v0.4 - In Progress
 
-Planning started on 2026-06-21.
+Development started on 2026-06-21.
 
-Planned scope:
+Implemented:
 
-- Add Claude Code as second agent for multi-agent comparison.
-- Support remote GPU/CUDA Docker execution via SSH.
-- Expand dataset to 15-20 tasks with CUDA precision/device dispatch bugs.
-- Add `cuda_kernel_build` runtime tier for C++/CUDA kernel-level bugs (2 tasks).
-- Add `inplace_build` source loading mode for in-place PyTorch source rebuild.
-- Run public test ablation experiment; simplify if no impact.
+- Claude Code agent (`claude_code_action_bridge`) — validated 3/3 on v0.3 tasks.
+- Remote GPU Docker executor via SSH (`src/op_bench/remote.py`) with rsync workspace sync and `--gpus all` flag injection.
+- Two new runtime tiers: `cuda_python_overlay`, `cuda_kernel_build`.
+- `inplace_build` source loading mode for full PyTorch source rebuilds (cuda_kernel_build tier).
+- CUDA Docker images: `pytorch-cuda` (overlay) and `pytorch-cuda-devel` (with nvcc + ccache + cmake<4 + CMAKE_POLICY_VERSION_MINIMUM=3.5).
+- Patch apply fuzz fallback (`patch -F 3`) for minor base-commit drift.
+- `--no-public-tests` ablation flag.
+- Preflight script (`scripts/preflight_task.py`) to verify task admission readiness offline: snapshot exists, patches apply, test names resolve.
+
+v0.4 dataset (`datasets/pytorch_v0.4/dataset.json`):
+
+- Verified (from v0.3): 10 tasks
+- New CUDA candidates: 5 (132616, 132835, 141820, 143264, 139409) — 2 verified, 3 pending remote build
+- Deprecated (incompatible with 2.6.0 stable wheel or non-admissible pattern): 147786, 131858, 133729
+- Target task count: 15
 
 Documents:
 

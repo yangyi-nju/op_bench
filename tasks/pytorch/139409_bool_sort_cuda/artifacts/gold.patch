@@ -1,1 +1,84 @@
-# TODO
+diff --git a/aten/src/ATen/native/cuda/Sort.cpp b/aten/src/ATen/native/cuda/Sort.cpp
+index 4605be8cdf187..39581cef25c20 100644
+--- a/aten/src/ATen/native/cuda/Sort.cpp
++++ b/aten/src/ATen/native/cuda/Sort.cpp
+@@ -63,9 +63,6 @@ void sort_cuda_kernel(
+     "The dimension being sorted can not have more than INT_MAX elements.");
+ 
+   const auto self_dtype = self.dtype();
+-  // FIXME: remove this check once cub sort supports bool
+-  TORCH_CHECK(self_dtype != ScalarType::Bool,
+-    "Sort currently does not support bool dtype on CUDA.");
+   TORCH_CHECK(self_dtype != ScalarType::ComplexFloat && self_dtype != ScalarType::ComplexDouble,
+     "Sort currently does not support complex dtypes on CUDA.");
+ 
+diff --git a/torch/testing/_internal/common_methods_invocations.py b/torch/testing/_internal/common_methods_invocations.py
+index b9ec84b8cd9cf..d52a647497741 100644
+--- a/torch/testing/_internal/common_methods_invocations.py
++++ b/torch/testing/_internal/common_methods_invocations.py
+@@ -3320,7 +3320,10 @@ def large_1d_unique():
+     flag = [True, False]
+     for dim, descending, stable in product(dims, flag, flag):
+         # default schema without stable sort
+-        yield SampleInput(small_3d_unique(), dim, descending)
++        if not (dtype == torch.bool and torch.device(device).type == 'cuda'):
++            # bool and cuda requires stable sort for stable results, at least
++            # for the return index
++            yield SampleInput(small_3d_unique(), dim, descending)
+         # schema with stable sort, no CUDA support yet
+         if torch.device(device).type == 'cpu':
+             yield SampleInput(
+@@ -18477,11 +18480,13 @@ def sample_inputs_alias_copy(op_info, device, dtype, requires_grad, **kwargs):
+            )),
+     OpInfo('sort',
+            dtypes=all_types_and(torch.bool, torch.float16, torch.bfloat16),
+-           dtypesIfCUDA=all_types_and(torch.float16, torch.bfloat16),
++           dtypesIfCUDA=all_types_and(torch.bool, torch.float16, torch.bfloat16),
+            sample_inputs_func=sample_inputs_sort,
+            supports_forward_ad=True,
+            supports_fwgrad_bwgrad=True,
+            skips=(
++               DecorateInfo(unittest.expectedFailure, 'TestCommon', 'test_non_standard_bool_values',
++                            dtypes=[torch.bool], device_type='cuda'),
+            )),
+     OpInfo('unique',
+            dtypes=all_types_and(torch.bool, torch.float16, torch.bfloat16, torch.uint16, torch.uint32, torch.uint64),
+@@ -19506,12 +19511,14 @@ def sample_inputs_alias_copy(op_info, device, dtype, requires_grad, **kwargs):
+            sample_inputs_func=sample_inputs_unfold),
+     OpInfo('msort',
+            dtypes=all_types_and(torch.bool, torch.float16, torch.bfloat16),
+-           dtypesIfCUDA=all_types_and(torch.float16, torch.bfloat16),
++           dtypesIfCUDA=all_types_and(torch.bool, torch.float16, torch.bfloat16),
+            check_batched_gradgrad=False,
+            supports_forward_ad=True,
+            supports_fwgrad_bwgrad=True,
+            sample_inputs_func=sample_inputs_msort,
+            skips=(
++               DecorateInfo(unittest.expectedFailure, 'TestCommon', 'test_non_standard_bool_values',
++                            dtypes=[torch.bool], device_type='cuda'),
+            )),
+     OpInfo('movedim',
+            aliases=('moveaxis',),
+@@ -21324,7 +21331,7 @@ def sample_inputs_alias_copy(op_info, device, dtype, requires_grad, **kwargs):
+     OpInfo(
+         "argsort",
+         dtypes=all_types_and(torch.bool, torch.float16, torch.bfloat16),
+-        dtypesIfCUDA=all_types_and(torch.float16, torch.bfloat16),
++        dtypesIfCUDA=all_types_and(torch.bool, torch.float16, torch.bfloat16),
+         sample_inputs_func=sample_inputs_sort,
+         supports_out=False,
+         supports_autograd=False,
+@@ -21335,6 +21342,13 @@ def sample_inputs_alias_copy(op_info, device, dtype, requires_grad, **kwargs):
+                 "test_variant_consistency_jit",
+                 dtypes=(torch.float32,),
+             ),
++            DecorateInfo(
++                unittest.expectedFailure,
++                "TestCommon",
++                "test_non_standard_bool_values",
++                dtypes=[torch.bool],
++                device_type='cuda',
++            ),
+         ),
+     ),
+     OpInfo(
