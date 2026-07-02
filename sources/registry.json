@@ -19,7 +19,8 @@
       "related_tasks": [
         "pytorch__149693__lazylinear_init"
       ],
-      "notes": "The task only overlays torch/nn/modules/linear.py into an installed wheel. PyTorch third-party submodules are intentionally not initialized."
+      "notes": "The task only overlays torch/nn/modules/linear.py into an installed wheel. PyTorch third-party submodules are intentionally not initialized.",
+      "snapshot_mode": "overlay"
     },
     {
       "id": "pytorch-df607364-python-overlay",
@@ -39,7 +40,8 @@
       "related_tasks": [
         "pytorch__160952__bilinear_lazy_check"
       ],
-      "notes": "The task only overlays torch/nn/modules/linear.py into an installed wheel. PyTorch third-party submodules are intentionally not initialized."
+      "notes": "The task only overlays torch/nn/modules/linear.py into an installed wheel. PyTorch third-party submodules are intentionally not initialized.",
+      "snapshot_mode": "overlay"
     },
     {
       "id": "pytorch-8bf3f3f-python-overlay",
@@ -59,7 +61,8 @@
       "related_tasks": [
         "pytorch__147599__lazylinear_state_forward"
       ],
-      "notes": "The task only overlays torch/nn/modules/linear.py into an installed wheel. PyTorch third-party submodules are intentionally not initialized."
+      "notes": "The task only overlays torch/nn/modules/linear.py into an installed wheel. PyTorch third-party submodules are intentionally not initialized.",
+      "snapshot_mode": "overlay"
     },
     {
       "id": "pytorch-6707dc8-python-overlay",
@@ -78,7 +81,8 @@
       ],
       "related_tasks": [
         "pytorch__168159__embeddingbag_2d_offset"
-      ]
+      ],
+      "snapshot_mode": "overlay"
     },
     {
       "id": "pytorch-fefc406-python-overlay",
@@ -97,7 +101,8 @@
       ],
       "related_tasks": [
         "pytorch__162340__nn_arg_length"
-      ]
+      ],
+      "snapshot_mode": "overlay"
     },
     {
       "id": "pytorch-d8d0bf2-python-overlay",
@@ -116,7 +121,8 @@
       ],
       "related_tasks": [
         "pytorch__127190__lr_scheduler_deepcopy"
-      ]
+      ],
+      "snapshot_mode": "overlay"
     },
     {
       "id": "pytorch-618efe8-python-overlay",
@@ -135,7 +141,8 @@
       ],
       "related_tasks": [
         "pytorch__163961__dataloader_subset"
-      ]
+      ],
+      "snapshot_mode": "overlay"
     },
     {
       "id": "pytorch-d4de871-python-overlay",
@@ -154,7 +161,8 @@
       ],
       "related_tasks": [
         "pytorch__168295__autograd_create_graph"
-      ]
+      ],
+      "snapshot_mode": "overlay"
     },
     {
       "id": "pytorch-6926710-python-overlay",
@@ -173,7 +181,8 @@
       ],
       "related_tasks": [
         "pytorch__161488__lbfgs_wolfe"
-      ]
+      ],
+      "snapshot_mode": "overlay"
     },
     {
       "id": "pytorch-423fc67-python-overlay",
@@ -192,7 +201,8 @@
       ],
       "related_tasks": [
         "pytorch__149312__lr_scheduler_last_epoch"
-      ]
+      ],
+      "snapshot_mode": "overlay"
     },
     {
       "id": "pytorch-6f9ffaa-python-overlay",
@@ -211,7 +221,8 @@
       ],
       "related_tasks": [
         "pytorch__150975__autograd_backward_inputs"
-      ]
+      ],
+      "snapshot_mode": "overlay"
     },
     {
       "id": "pytorch-e3c4d1b-python-overlay",
@@ -230,7 +241,8 @@
       ],
       "related_tasks": [
         "pytorch__143455__set_submodule"
-      ]
+      ],
+      "snapshot_mode": "overlay"
     },
     {
       "id": "pytorch-afa78ad-python-overlay",
@@ -249,7 +261,8 @@
       ],
       "related_tasks": [
         "pytorch__124385__load_state_dict_prefix"
-      ]
+      ],
+      "snapshot_mode": "overlay"
     },
     {
       "id": "pytorch-bbf568a-cuda-overlay",
@@ -268,7 +281,8 @@
       ],
       "related_tasks": [
         "pytorch__132835__njt_sdpa_autocast"
-      ]
+      ],
+      "snapshot_mode": "overlay"
     },
     {
       "id": "pytorch-79aa174-cuda-overlay",
@@ -287,7 +301,8 @@
       ],
       "related_tasks": [
         "pytorch__147786__faketensor_load_device"
-      ]
+      ],
+      "snapshot_mode": "overlay"
     },
     {
       "id": "pytorch-0dca756-cuda-overlay",
@@ -306,7 +321,8 @@
       ],
       "related_tasks": [
         "pytorch__131858__pin_memory_device"
-      ]
+      ],
+      "snapshot_mode": "overlay"
     },
     {
       "id": "pytorch-09e366c-cuda-overlay",
@@ -325,7 +341,8 @@
       ],
       "related_tasks": [
         "pytorch__133729__device_context_bug"
-      ]
+      ],
+      "snapshot_mode": "overlay"
     },
     {
       "id": "pytorch-7100c36-cuda-overlay",
@@ -344,7 +361,8 @@
       ],
       "related_tasks": [
         "pytorch__132616__cuda_mem_get_info"
-      ]
+      ],
+      "snapshot_mode": "overlay"
     },
     {
       "id": "pytorch-d99c9c2-kernel-build",
@@ -355,7 +373,7 @@
       "snapshot_git_commit": "4350ee632bd94298358c6357881eb43f2f188a77",
       "tracked_file_count": 16105,
       "submodules": {
-        "policy": "partial",
+        "policy": "required_for_build",
         "status": "initialized"
       },
       "source_loading_modes": [
@@ -363,7 +381,8 @@
       ],
       "related_tasks": [
         "pytorch__141820__lerp_cuda_cpu_scalar"
-      ]
+      ],
+      "snapshot_mode": "kernel_full"
     },
     {
       "id": "pytorch-859be14-kernel-build",
@@ -374,7 +393,7 @@
       "snapshot_git_commit": "7af64597a28de653363933323ba326929412d2f8",
       "tracked_file_count": 16168,
       "submodules": {
-        "policy": "partial",
+        "policy": "required_for_build",
         "status": "initialized"
       },
       "source_loading_modes": [
@@ -382,6 +401,27 @@
       ],
       "related_tasks": [
         "pytorch__143264__addcmul_cpu_scalar"
+      ],
+      "snapshot_mode": "kernel_full"
+    },
+    {
+      "id": "pytorch-06f619d-kernel-build",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "06f619d999ac396bd83e32d36a64360bd24dacca",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/06f619d999ac396bd83e32d36a64360bd24dacca/source",
+      "checksum": null,
+      "snapshot_git_commit": null,
+      "tracked_file_count": null,
+      "submodules": {
+        "policy": "required_for_build",
+        "status": "initialized"
+      },
+      "source_loading_modes": [
+        "inplace_build"
+      ],
+      "snapshot_mode": "kernel_full",
+      "related_tasks": [
+        "pytorch__139409__bool_sort_cuda"
       ]
     }
   ]

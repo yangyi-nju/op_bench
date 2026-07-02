@@ -3,7 +3,7 @@
   "version": "v1",
   "environment_ref": "pytorch-cuda-devel-torch2.6.0-py311-cu124",
   "runtime_tier": "cuda_kernel_build",
-  "source_ref": null,
+  "source_ref": "pytorch-06f619d-kernel-build",
   "admission": {
     "status": "draft"
   },
