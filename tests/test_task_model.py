@@ -47,9 +47,9 @@ class TaskManifestTests(unittest.TestCase):
                 "evaluation": {"timeout_sec": 1800},
             },
         )
-        # kernel_build should raise build timeout to at least 10800s (3 hours)
+        # kernel_build should raise build timeout to at least 21600s (6 hours)
         self.assertEqual(task.timeout_sec, 1800)
-        self.assertEqual(task.build_timeout_sec, 10800)
+        self.assertEqual(task.build_timeout_sec, 21600)
 
     def test_build_timeout_explicit_override_wins(self) -> None:
         task = TaskManifest(

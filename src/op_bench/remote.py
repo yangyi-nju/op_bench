@@ -58,6 +58,7 @@ class RemoteHost:
             cmd.extend(["-i", os.path.expanduser(self.identity_file)])
         cmd.extend(["-o", "StrictHostKeyChecking=accept-new"])
         cmd.extend(["-o", "ServerAliveInterval=30"])
+        cmd.extend(["-o", "ServerAliveCountMax=3"])
         for opt in self.extra_ssh_options:
             cmd.extend(["-o", opt])
         cmd.append(self.ssh_target())
@@ -219,7 +220,29 @@ class RemoteDockerExecutor:
 
     def run(self, command: list[str], cwd: Path, timeout_sec: int) -> CommandResult:
         full_command = self.command_for_run(command)
-        return _run_local(full_command, timeout_sec)
+        result = _run_local(full_command, timeout_sec)
+        # Local subprocess.run(timeout=...) kills the local ssh, but the remote
+        # `docker exec` and its child processes keep running. Follow up with an
+        # explicit `docker kill` on the container so build processes stop
+        # burning remote CPU past our budget.
+        if result.timed_out and self.container_name:
+            self._kill_remote_container_processes()
+        return result
+
+    def _kill_remote_container_processes(self) -> None:
+        """Send SIGTERM to all processes inside the container, then a SIGKILL
+        fallback after a short grace period. Best-effort — errors are swallowed
+        because this only fires after an already-timing-out command."""
+        try:
+            _run_local(
+                self.host.ssh_command_prefix() + [
+                    "docker", "exec", self.container_name,
+                    "bash", "-c", "kill -TERM -1 2>/dev/null; sleep 2; kill -KILL -1 2>/dev/null; true",
+                ],
+                timeout_sec=15,
+            )
+        except Exception:
+            pass
 
     def close(self, timeout_sec: int = 30) -> CommandResult | None:
         if not self.container_name:
