@@ -33,34 +33,14 @@ REGISTRY_PATH = ROOT / "sources" / "registry.json"
 # how EnvironmentAsset in src/op_bench/registry.py resolves them.
 REGISTRY_DIR = REGISTRY_PATH.parent
 
-# Submodules needed for a kernel_build PyTorch source compile.
-# Kept explicit (not `--init --recursive`) to keep the checkout small.
-KERNEL_BUILD_SUBMODULES = [
-    "third_party/cutlass",
-    "third_party/cudnn_frontend",
-    "third_party/eigen",
-    "third_party/fbgemm",
-    "third_party/flatbuffers",
-    "third_party/fmt",
-    "third_party/gloo",
-    "third_party/googletest",
-    "third_party/ideep",
-    "third_party/kineto",
-    "third_party/nlohmann",
-    "third_party/onnx",
-    "third_party/opentelemetry-cpp",
-    "third_party/pocketfft",
-    "third_party/protobuf",
-    "third_party/pthreadpool",
-    "third_party/pybind11",
-    "third_party/sleef",
-    "third_party/tensorpipe",
-    "third_party/XNNPACK",
-    "third_party/FP16",
-    "third_party/FXdiv",
-    "third_party/psimd",
-    "third_party/cpuinfo",
-]
+# Submodule paths to always skip for kernel_full snapshots. These are large
+# and unused by CPU/CUDA python-level builds. If future tasks need them,
+# either add a per-task override or drop from this exclude list.
+KERNEL_BUILD_SUBMODULE_EXCLUDES = frozenset({
+    # Android/mobile — PyTorch check_submodules validates their presence but
+    # setup.py only requires the *directory* to be non-empty, which submodule
+    # init accomplishes. Keep them in for safety.
+})
 
 
 def _run(cmd: list[str], cwd: Path, timeout: int = 300) -> subprocess.CompletedProcess:
@@ -96,8 +76,73 @@ def _setup_overlay(local_path: Path, repo_url: str, commit: str) -> tuple[bool, 
     return True, "overlay OK"
 
 
+def _parse_gitmodules_paths(gitmodules_path: Path) -> list[str]:
+    """Read paths from a .gitmodules file. Return list of `path = ...` values."""
+    if not gitmodules_path.exists():
+        return []
+    paths: list[str] = []
+    for line in gitmodules_path.read_text(encoding="utf-8", errors="replace").splitlines():
+        line = line.strip()
+        if line.startswith("path"):
+            _, _, val = line.partition("=")
+            val = val.strip()
+            if val:
+                paths.append(val)
+    return paths
+
+
+def _find_uninitialized_submodules(local_path: Path) -> list[str]:
+    """Return submodule paths declared in .gitmodules whose directory is empty."""
+    submodule_paths = _parse_gitmodules_paths(local_path / ".gitmodules")
+    missing = []
+    for sub in submodule_paths:
+        if sub in KERNEL_BUILD_SUBMODULE_EXCLUDES:
+            continue
+        sub_dir = local_path / sub
+        # An initialized submodule has .git (file or dir) inside, or at least
+        # non-empty contents. PyTorch check_submodules only needs the dir
+        # to have known files (CMakeLists.txt, LICENSE, etc.) — safest test
+        # is whether it's non-empty.
+        if not sub_dir.exists() or not any(sub_dir.iterdir()):
+            missing.append(sub)
+    return missing
+
+
+def _init_missing_submodules(local_path: Path, submodule_paths: list[str]) -> tuple[bool, str]:
+    """Initialize the listed submodules at depth 1. Used as a repair path."""
+    ok_subs, failed_subs = 0, []
+    for sub in submodule_paths:
+        r = _run(
+            ["git", "submodule", "update", "--init", "--depth=1", "--", sub],
+            local_path,
+            timeout=600,
+        )
+        if r.returncode != 0:
+            # Retry once
+            r = _run(
+                ["git", "submodule", "update", "--init", "--depth=1", "--", sub],
+                local_path,
+                timeout=600,
+            )
+        if r.returncode != 0:
+            failed_subs.append(f"{sub}: {r.stderr.strip()[:80]}")
+        else:
+            ok_subs += 1
+
+    if failed_subs:
+        return False, f"repair: {ok_subs}/{len(submodule_paths)} initialized, {len(failed_subs)} failed: {failed_subs[:3]}"
+    return True, f"repair: {ok_subs}/{len(submodule_paths)} submodules initialized ✓"
+
+
 def _setup_kernel_full(local_path: Path, repo_url: str, commit: str) -> tuple[bool, str]:
-    """Full clone (no sparse) + init submodules at depth 1. cuda_kernel_build use."""
+    """Full clone (no sparse) + init ALL submodules declared in .gitmodules at depth 1.
+
+    PyTorch's setup.py runs check_submodules() which walks .gitmodules and errors
+    on any submodule whose directory is empty. So we can't cherry-pick — we must
+    init every path .gitmodules mentions (minus any explicit excludes).
+
+    depth=1 keeps each submodule small (no history).
+    """
     local_path.mkdir(parents=True, exist_ok=True)
     for cmd in [
         ["git", "init"],
@@ -116,23 +161,34 @@ def _setup_kernel_full(local_path: Path, repo_url: str, commit: str) -> tuple[bo
     if r.returncode != 0:
         return False, f"git checkout: {r.stderr.strip()[:200]}"
 
-    # Init the submodules PyTorch build needs.
-    # Use `git submodule update --init` per-path so a missing/optional
-    # submodule doesn't abort the whole init.
+    # Now read the committed .gitmodules and init every declared submodule.
+    submodule_paths = _parse_gitmodules_paths(local_path / ".gitmodules")
+    if not submodule_paths:
+        return False, ".gitmodules missing or empty after checkout"
+
     ok_subs, failed_subs = 0, []
-    for sub in KERNEL_BUILD_SUBMODULES:
+    for sub in submodule_paths:
+        if sub in KERNEL_BUILD_SUBMODULE_EXCLUDES:
+            continue
         gitmod_check = local_path / sub / ".git"
         # Skip if already initialized
         if gitmod_check.exists():
             ok_subs += 1
             continue
+        # `git submodule update --init --depth=1` for a single path.
+        # Retry once — submodule fetches sometimes fail transiently on slow networks.
         r = _run(
             ["git", "submodule", "update", "--init", "--depth=1", "--", sub],
             local_path,
             timeout=600,
         )
         if r.returncode != 0:
-            # Some submodules may not exist on old base commits — record but continue
+            r = _run(
+                ["git", "submodule", "update", "--init", "--depth=1", "--", sub],
+                local_path,
+                timeout=600,
+            )
+        if r.returncode != 0:
             failed_subs.append(f"{sub}: {r.stderr.strip()[:80]}")
         else:
             ok_subs += 1
@@ -140,9 +196,12 @@ def _setup_kernel_full(local_path: Path, repo_url: str, commit: str) -> tuple[bo
     _run(["git", "add", "-A"], local_path)
     _run(["git", "commit", "-m", f"kernel_full snapshot at {commit}", "--allow-empty"], local_path)
 
-    msg = f"kernel_full OK ({ok_subs}/{len(KERNEL_BUILD_SUBMODULES)} submodules)"
+    total = len(submodule_paths) - len(KERNEL_BUILD_SUBMODULE_EXCLUDES)
+    msg = f"kernel_full OK ({ok_subs}/{total} submodules from .gitmodules)"
     if failed_subs:
-        msg += f", {len(failed_subs)} skipped: {failed_subs[:3]}"
+        msg += f", {len(failed_subs)} failed: {failed_subs[:3]}"
+        # If a critical submodule fails, don't hide it — return False
+        return False, msg
     return True, msg
 
 
@@ -160,6 +219,18 @@ def setup_source(entry: dict) -> bool:
             print(f"  {commit[:7]}: exists but no setup.py (mode changed to kernel_full?), will re-create")
             import shutil
             shutil.rmtree(local_path)
+        elif mode == "kernel_full":
+            # kernel_full exists — verify all submodules from .gitmodules are initialized.
+            # This is cheap (just directory checks) and fixes the case where a previous
+            # setup ran with a narrower whitelist.
+            missing = _find_uninitialized_submodules(local_path)
+            if missing:
+                print(f"  {commit[:7]}: kernel_full needs {len(missing)} submodule(s) initialized")
+                ok, msg = _init_missing_submodules(local_path, missing)
+                print(f"    {msg}")
+                return ok
+            print(f"  skip (exists): {commit[:7]} [{mode}]")
+            return True
         else:
             print(f"  skip (exists): {commit[:7]} [{mode}]")
             return True
