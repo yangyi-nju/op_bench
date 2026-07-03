@@ -92,42 +92,45 @@ def _parse_gitmodules_paths(gitmodules_path: Path) -> list[str]:
 
 
 def _find_uninitialized_submodules(local_path: Path) -> list[str]:
-    """Return submodule paths declared in .gitmodules whose directory is empty."""
+    """Return top-level submodule paths that need (re-)initialization.
+
+    A submodule needs init if either:
+    - its own directory is empty (not initialized at all), OR
+    - it has a .gitmodules of its own and any of its nested submodule
+      directories is empty (nested submodules not initialized).
+
+    We only return the *top-level* path — `git submodule update --init
+    --recursive -- <path>` fixes both cases.
+    """
     submodule_paths = _parse_gitmodules_paths(local_path / ".gitmodules")
     missing = []
     for sub in submodule_paths:
         if sub in KERNEL_BUILD_SUBMODULE_EXCLUDES:
             continue
         sub_dir = local_path / sub
-        # An initialized submodule has .git (file or dir) inside, or at least
-        # non-empty contents. PyTorch check_submodules only needs the dir
-        # to have known files (CMakeLists.txt, LICENSE, etc.) — safest test
-        # is whether it's non-empty.
         if not sub_dir.exists() or not any(sub_dir.iterdir()):
             missing.append(sub)
+            continue
+        # Check nested submodules if this one has its own .gitmodules
+        nested_gitmodules = sub_dir / ".gitmodules"
+        if nested_gitmodules.exists():
+            for nested_sub in _parse_gitmodules_paths(nested_gitmodules):
+                nested_dir = sub_dir / nested_sub
+                if not nested_dir.exists() or not any(nested_dir.iterdir()):
+                    missing.append(sub)  # top-level parent
+                    break
     return missing
 
 
 def _init_missing_submodules(local_path: Path, submodule_paths: list[str]) -> tuple[bool, str]:
-    """Initialize the listed submodules at depth 1. Used as a repair path."""
+    """Initialize the listed submodules recursively at depth 1. Used as a repair path."""
     ok_subs, failed_subs = 0, []
     for sub in submodule_paths:
-        r = _run(
-            ["git", "submodule", "update", "--init", "--depth=1", "--", sub],
-            local_path,
-            timeout=600,
-        )
-        if r.returncode != 0:
-            # Retry once
-            r = _run(
-                ["git", "submodule", "update", "--init", "--depth=1", "--", sub],
-                local_path,
-                timeout=600,
-            )
-        if r.returncode != 0:
-            failed_subs.append(f"{sub}: {r.stderr.strip()[:80]}")
-        else:
+        err = _init_submodule_recursive(local_path, sub)
+        if err is None:
             ok_subs += 1
+        else:
+            failed_subs.append(f"{sub}: {err[:80]}")
 
     if failed_subs:
         return False, f"repair: {ok_subs}/{len(submodule_paths)} initialized, {len(failed_subs)} failed: {failed_subs[:3]}"
@@ -170,39 +173,39 @@ def _setup_kernel_full(local_path: Path, repo_url: str, commit: str) -> tuple[bo
     for sub in submodule_paths:
         if sub in KERNEL_BUILD_SUBMODULE_EXCLUDES:
             continue
-        gitmod_check = local_path / sub / ".git"
-        # Skip if already initialized
-        if gitmod_check.exists():
-            ok_subs += 1
-            continue
-        # `git submodule update --init --depth=1` for a single path.
+        # `git submodule update --init --depth=1 --recursive` for a single path.
+        # --recursive is needed because PyTorch's setup.py check_submodules() also
+        # verifies nested submodule paths like fbgemm/third_party/asmjit.
         # Retry once — submodule fetches sometimes fail transiently on slow networks.
-        r = _run(
-            ["git", "submodule", "update", "--init", "--depth=1", "--", sub],
-            local_path,
-            timeout=600,
-        )
-        if r.returncode != 0:
-            r = _run(
-                ["git", "submodule", "update", "--init", "--depth=1", "--", sub],
-                local_path,
-                timeout=600,
-            )
-        if r.returncode != 0:
-            failed_subs.append(f"{sub}: {r.stderr.strip()[:80]}")
-        else:
+        r = _init_submodule_recursive(local_path, sub)
+        if r is None:
             ok_subs += 1
+        else:
+            failed_subs.append(f"{sub}: {r[:80]}")
 
     _run(["git", "add", "-A"], local_path)
     _run(["git", "commit", "-m", f"kernel_full snapshot at {commit}", "--allow-empty"], local_path)
 
     total = len(submodule_paths) - len(KERNEL_BUILD_SUBMODULE_EXCLUDES)
-    msg = f"kernel_full OK ({ok_subs}/{total} submodules from .gitmodules)"
+    msg = f"kernel_full OK ({ok_subs}/{total} submodules from .gitmodules, recursive)"
     if failed_subs:
         msg += f", {len(failed_subs)} failed: {failed_subs[:3]}"
-        # If a critical submodule fails, don't hide it — return False
         return False, msg
     return True, msg
+
+
+def _init_submodule_recursive(local_path: Path, sub: str) -> str | None:
+    """Init a submodule and its nested submodules at depth=1. Returns None on success,
+    or the last stderr on failure. Retries once."""
+    for _ in range(2):
+        r = _run(
+            ["git", "submodule", "update", "--init", "--depth=1", "--recursive", "--", sub],
+            local_path,
+            timeout=900,
+        )
+        if r.returncode == 0:
+            return None
+    return r.stderr.strip()
 
 
 def setup_source(entry: dict) -> bool:
