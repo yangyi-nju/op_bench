@@ -472,6 +472,11 @@
         "timeout_sec": {
           "type": "integer",
           "minimum": 1
+        },
+        "build_timeout_sec": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Timeout for the source_loading build step (python_overlay sync or inplace_build compile). Defaults to timeout_sec for overlay tiers, 5400s for cuda_kernel_build."
         }
       }
     },

@@ -142,6 +142,19 @@ class TaskManifest:
         return int(self.data["evaluation"]["timeout_sec"])
 
     @property
+    def build_timeout_sec(self) -> int:
+        """Timeout for the source_loading build step (python_overlay sync or
+        inplace_build compile). Falls back to `evaluation.build_timeout_sec`,
+        then a tier-aware default: kernel_build gets 90 minutes for the first
+        full PyTorch CUDA compile, other tiers use timeout_sec unchanged."""
+        explicit = self.data.get("evaluation", {}).get("build_timeout_sec")
+        if explicit is not None:
+            return int(explicit)
+        if self.runtime_tier == "cuda_kernel_build" or self.source_loading_mode == "inplace_build":
+            return max(self.timeout_sec, 5400)  # 90 minutes
+        return self.timeout_sec
+
+    @property
     def environment_backend(self) -> str:
         return str(self.data["environment"].get("backend", "local"))
 

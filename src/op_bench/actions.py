@@ -39,7 +39,7 @@ class WorkspaceActions:
     def run_test(self, test_name: str) -> CommandResult:
         source_loading_command = build_source_loading_command(self.task)
         if source_loading_command is not None:
-            source_result = self.run_command(source_loading_command, timeout_sec=self.task.timeout_sec)
+            source_result = self.run_command(source_loading_command, timeout_sec=self.task.build_timeout_sec)
             if source_result.exit_code != 0 or source_result.timed_out:
                 return source_result
         return self.run_command(

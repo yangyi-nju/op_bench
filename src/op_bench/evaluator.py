@@ -353,7 +353,7 @@ class Evaluator:
                     executor,
                     source_loading_command,
                     workspace,
-                    task.timeout_sec,
+                    task.build_timeout_sec,
                     label=f"sync source overlay for {test_name}",
                 )
                 command_results.append(source_result)

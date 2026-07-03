@@ -24,6 +24,45 @@ class TaskManifestTests(unittest.TestCase):
 
         self.assertEqual(task.environment_python_executable, "python")
 
+    def test_build_timeout_defaults_to_task_timeout_for_overlay(self) -> None:
+        task = TaskManifest(
+            task_dir=Path("/tmp/task"),
+            data={
+                "task_id": "overlay",
+                "runtime_tier": "cpu_python_overlay",
+                "environment": {"source_loading": {"mode": "python_overlay"}},
+                "evaluation": {"timeout_sec": 900},
+            },
+        )
+        self.assertEqual(task.timeout_sec, 900)
+        self.assertEqual(task.build_timeout_sec, 900)
+
+    def test_build_timeout_bumps_for_cuda_kernel_build(self) -> None:
+        task = TaskManifest(
+            task_dir=Path("/tmp/task"),
+            data={
+                "task_id": "kernel",
+                "runtime_tier": "cuda_kernel_build",
+                "environment": {"source_loading": {"mode": "inplace_build"}},
+                "evaluation": {"timeout_sec": 1800},
+            },
+        )
+        # kernel_build should raise build timeout to at least 5400s (90 min)
+        self.assertEqual(task.timeout_sec, 1800)
+        self.assertEqual(task.build_timeout_sec, 5400)
+
+    def test_build_timeout_explicit_override_wins(self) -> None:
+        task = TaskManifest(
+            task_dir=Path("/tmp/task"),
+            data={
+                "task_id": "kernel-custom",
+                "runtime_tier": "cuda_kernel_build",
+                "environment": {"source_loading": {"mode": "inplace_build"}},
+                "evaluation": {"timeout_sec": 1800, "build_timeout_sec": 7200},
+            },
+        )
+        self.assertEqual(task.build_timeout_sec, 7200)
+
     def test_load_resolves_artifact_paths(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp).resolve()
