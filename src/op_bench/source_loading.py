@@ -60,13 +60,25 @@ print(json.dumps({"mode": "python_overlay", "package": package, "overlay_files":
 
 # Default build command for inplace_build mode (PyTorch-style develop install).
 # Tasks can override via source_loading.build_command in task.json.
-# Use `set -o pipefail` so the build's exit code is not masked by `tail`.
-# Use `test -f setup.py` upfront so a missing/broken workspace fails fast and clearly.
+#
+# The build is streamed to /workspace/.op_bench_build.log (visible on the host
+# via the mounted workspace) *and* to a limited tail on stdout. This way:
+#   - operator can `tail -f /path/to/workspace/.op_bench_build.log` in real time
+#   - if the outer timeout kills the command, the log file is still present
+#     with everything up to the moment of kill (unlike the previous `| tail -100`
+#     which buffered indefinitely and produced empty stdout on timeout)
+#   - the last 200 lines are still printed to stdout at the end for evidence
 DEFAULT_INPLACE_BUILD_COMMAND = (
     "set -o pipefail; "
     "cd {workspace_dir} && "
     "test -f setup.py || { echo 'ERROR: setup.py missing in workspace' >&2; exit 2; } && "
-    "python setup.py develop --no-deps 2>&1 | tail -100"
+    # Tee to a log file inside the workspace so progress is visible on the host
+    # (workspace is bind-mounted) and survives a timeout kill.
+    # stdbuf -oL/-eL forces line-buffered output so the outer subprocess.PIPE
+    # captures progress as it happens (previously `| tail -100` waited for
+    # end-of-stream and produced empty output on timeout).
+    "stdbuf -oL -eL python setup.py develop --no-deps 2>&1 | "
+    "stdbuf -oL -eL tee .op_bench_build.log"
 )
 
 
