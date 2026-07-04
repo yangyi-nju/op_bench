@@ -2,7 +2,7 @@
   "dataset_id": "pytorch_v0.4",
   "version": "v0.4",
   "status": "draft",
-  "target_task_count": 15,
+  "target_task_count": 14,
   "policy": {
     "backend": "mixed",
     "preflight_required": true,
@@ -112,14 +112,6 @@
     {
       "task_id": "pytorch__132616__cuda_mem_get_info",
       "task_path": "../../tasks/pytorch/132616_cuda_mem_get_info",
-      "admission_status": "draft",
-      "environment_status": "pending",
-      "source_status": "pending",
-      "replay_status": "pending"
-    },
-    {
-      "task_id": "pytorch__141820__lerp_cuda_cpu_scalar",
-      "task_path": "../../tasks/pytorch/141820_lerp_cuda_cpu_scalar",
       "admission_status": "draft",
       "environment_status": "pending",
       "source_status": "pending",
