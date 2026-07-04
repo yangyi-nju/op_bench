@@ -72,10 +72,11 @@
   "evaluation": {
     "setup_commands": [],
     "fail_to_pass": [
-      "TestSortAndSelectCUDA.test_sort_bool_cuda"
+      "TestSortAndSelectCUDA.test_stable_sort_cuda_bool",
+      "TestSortAndSelectCUDA.test_stable_sort_against_numpy_cuda_bool"
     ],
     "pass_to_pass": [
-      "TestSortAndSelectCUDA.test_sort_cuda"
+      "TestSortAndSelectCUDA.test_stable_sort_cuda_float32"
     ],
     "test_command": "{python} test/test_sort_and_select.py {test}",
     "timeout_sec": 1800
