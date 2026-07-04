@@ -72,6 +72,10 @@ DEFAULT_INPLACE_BUILD_COMMAND = (
     "set -o pipefail; "
     "cd {workspace_dir} && "
     "test -f setup.py || { echo 'ERROR: setup.py missing in workspace' >&2; exit 2; } && "
+    # If MAX_JOBS isn't already set (e.g. old container image), default to nproc
+    # so we saturate the host CPU. `command -v nproc` guards against BusyBox etc.
+    "export MAX_JOBS=${MAX_JOBS:-$(command -v nproc >/dev/null && nproc || echo 8)}; "
+    "echo \"MAX_JOBS=$MAX_JOBS\"; "
     # Tee to a log file inside the workspace so progress is visible on the host
     # (workspace is bind-mounted) and survives a timeout kill.
     # stdbuf -oL/-eL forces line-buffered output so the outer subprocess.PIPE

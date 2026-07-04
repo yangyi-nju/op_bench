@@ -72,7 +72,12 @@ ENV CMAKE_POLICY_VERSION_MINIMUM=3.5
 # PyTorch build env
 ENV USE_CUDA=1
 ENV TORCH_CUDA_ARCH_LIST="7.0;7.5;8.0;8.6;8.9;9.0"
-ENV MAX_JOBS=8
+# MAX_JOBS controls both setup.py's parallel compile and cmake ninja concurrency.
+# Default to the container's visible CPU count so we saturate whatever host the
+# operator has provisioned (V100 machine: 20 cores). Override at build/run time
+# via `--build-arg MAX_JOBS=N` or `docker run -e MAX_JOBS=N`.
+ARG MAX_JOBS
+ENV MAX_JOBS=${MAX_JOBS:-20}
 ENV PYTORCH_BUILD_VERSION=2.6.0
 ENV PYTORCH_BUILD_NUMBER=0
 
