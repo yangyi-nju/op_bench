@@ -105,12 +105,16 @@ class Evaluator:
                 if result.exit_code != 0:
                     return finish("setup_failed")
 
-            test_patch_result = self._apply_patch(task.hidden_test_patch_path, workspace)
-            command_log.append(test_patch_result)
-            if test_patch_result.timed_out:
-                return finish("timeout")
-            if test_patch_result.exit_code != 0:
-                return finish("runner_error")
+            # hidden_test.patch may be empty when the PR fixes a pre-existing test
+            # (no test changes in the PR itself). Skip apply in that case.
+            hidden_test_path = task.hidden_test_patch_path
+            if hidden_test_path.exists() and hidden_test_path.read_text(encoding="utf-8").strip():
+                test_patch_result = self._apply_patch(hidden_test_path, workspace)
+                command_log.append(test_patch_result)
+                if test_patch_result.timed_out:
+                    return finish("timeout")
+                if test_patch_result.exit_code != 0:
+                    return finish("runner_error")
 
             if task.public_test_patch_path is not None and task.public_test_patch_path.exists():
                 public_patch_result = self._apply_patch(task.public_test_patch_path, workspace)

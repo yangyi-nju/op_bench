@@ -1,0 +1,97 @@
+{
+  "task_id": "pytorch__182082__nll_loss2d_zero_total_weight",
+  "version": "v1",
+  "environment_ref": "pytorch-cuda-devel-torch2.6.0-py311-cu124",
+  "runtime_tier": "cuda_kernel_build",
+  "source_ref": "pytorch-3b8db6d-kernel-build",
+  "admission": {
+    "status": "draft"
+  },
+  "patch_scope": {
+    "allowed_paths": [
+      "aten/src/ATen/native/cuda/NLLLoss2d.cu"
+    ],
+    "mode": "enforced"
+  },
+  "source": {
+    "pr_url": "https://github.com/pytorch/pytorch/pull/182082",
+    "issue_url": "https://github.com/pytorch/pytorch/pull/182082",
+    "repo": "pytorch/pytorch",
+    "repo_url": "https://github.com/pytorch/pytorch.git",
+    "issue_number": 182082,
+    "pr_number": 182082,
+    "base_commit": "3b8db6de6a23a4d310d54b117b106cc42d903463",
+    "merge_commit": "TODO",
+    "checkout_mode": "git",
+    "snapshot_path": "../../../.op_bench_cache/sources/pytorch/pytorch/3b8db6de6a23a4d310d54b117b106cc42d903463/source"
+  },
+  "statement": {
+    "title": "nll_loss2d on CUDA accumulates into uninitialized total_weight buffer",
+    "body": "The CUDA implementation of nll_loss2d_forward, on the reduction=None code path, resizes total_weight to a scalar without zeroing it, then accumulates into it. Because the buffer contains uninitialized GPU memory, the accumulated result is nondeterministic and typically wrong. The fix is a single total_weight.zero_() before the accumulation loop.\n\nReference: https://github.com/pytorch/pytorch/pull/182082",
+    "labels": [
+      "module: cuda",
+      "module: loss",
+      "module: correctness (silent)",
+      "bug"
+    ]
+  },
+  "operator": {
+    "framework": "pytorch",
+    "component": "aten.native.cuda.nll_loss2d",
+    "operator_name": "torch.nn.functional.nll_loss",
+    "problem_type": "uninitialized-buffer-accumulation",
+    "tags": [
+      "cuda-kernel",
+      "nll-loss",
+      "correctness",
+      "silent-bug"
+    ]
+  },
+  "environment": {
+    "backend": "remote_docker",
+    "tier": "cuda_kernel_build",
+    "host": "gpu-a10",
+    "source_loading": {
+      "mode": "inplace_build",
+      "sync_before_tests": true
+    },
+    "preflight_commands": [
+      "{python} --version",
+      "{python} -c \"import torch; print(torch.__version__); print(torch.cuda.is_available())\""
+    ]
+  },
+  "agent_visible": {
+    "repo_setup_commands": [],
+    "known_constraints": [
+      "Full PyTorch source build task with CUDA toolchain.",
+      "CUDA GPU is available; tests must run with CUDA tensors.",
+      "The bug is in aten/src/ATen/native/cuda/NLLLoss2d.cu, reduction=None branch of nll_loss2d_forward_out_cuda_template."
+    ],
+    "allowed_test_commands": [
+      "{python} test/test_decomp.py -k {test_name}"
+    ]
+  },
+  "evaluation": {
+    "setup_commands": [],
+    "fail_to_pass": [
+      "TestDecompCUDA.test_comprehensive_nn_functional_nll_loss_cuda_float32"
+    ],
+    "pass_to_pass": [
+      "TestDecompCUDA.test_comprehensive_nn_functional_nll_loss_cuda_float64"
+    ],
+    "test_command": "{python} test/test_decomp.py {test}",
+    "timeout_sec": 1800
+  },
+  "artifacts": {
+    "gold_patch": "artifacts/gold.patch",
+    "hidden_test_patch": "artifacts/hidden_test.patch"
+  },
+  "metadata": {
+    "difficulty": "hard",
+    "curation_status": "draft",
+    "deterministic": true,
+    "estimated_runtime_min": 90,
+    "layer": "A",
+    "admission_status": "draft"
+  }
+}

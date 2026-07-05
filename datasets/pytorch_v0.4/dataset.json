@@ -2,7 +2,7 @@
   "dataset_id": "pytorch_v0.4",
   "version": "v0.4",
   "status": "draft",
-  "target_task_count": 12,
+  "target_task_count": 13,
   "policy": {
     "backend": "mixed",
     "preflight_required": true,
@@ -112,6 +112,14 @@
     {
       "task_id": "pytorch__132616__cuda_mem_get_info",
       "task_path": "../../tasks/pytorch/132616_cuda_mem_get_info",
+      "admission_status": "draft",
+      "environment_status": "pending",
+      "source_status": "pending",
+      "replay_status": "pending"
+    },
+    {
+      "task_id": "pytorch__182082__nll_loss2d_zero_total_weight",
+      "task_path": "../../tasks/pytorch/182082_nll_loss2d_zero_total_weight",
       "admission_status": "draft",
       "environment_status": "pending",
       "source_status": "pending",

@@ -169,11 +169,13 @@ def preflight_task(task_dir: Path) -> tuple[bool, list[str]]:
         shutil.copytree(snapshot, ws, symlinks=True)
 
         hidden = task.hidden_test_patch_path
-        if hidden.exists():
+        if hidden.exists() and hidden.read_text(encoding="utf-8").strip():
             ok, msg = _apply_patch(ws, hidden)
             if not ok:
                 return False, messages + [f"FAIL: hidden_test.patch does not apply: {msg[:200]}"]
             messages.append(f"hidden_test.patch: {msg} ✓")
+        else:
+            messages.append("hidden_test.patch: empty (PR fixes pre-existing test) ✓")
 
         # Resolve test names AFTER hidden patch (so newly-added tests are visible)
         test_command = task.data["evaluation"]["test_command"]
