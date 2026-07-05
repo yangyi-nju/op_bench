@@ -44,10 +44,11 @@ RUN python -m pip install --no-cache-dir \
         pytest-xdist \
         pyyaml \
         requests \
-        setuptools \
+        "setuptools>=70,<81" \
         six \
         types-dataclasses \
-        typing-extensions
+        typing-extensions \
+        "wheel>=0.42"
 
 # Install a pre-built PyTorch matching the development branch (fallback runtime)
 # The agent will rebuild from source via inplace_build; this provides a baseline
