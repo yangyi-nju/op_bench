@@ -1,7 +1,7 @@
 {
   "dataset_id": "pytorch_v0.4",
   "version": "v0.4",
-  "status": "draft",
+  "status": "verified",
   "target_task_count": 13,
   "policy": {
     "backend": "mixed",
@@ -104,26 +104,29 @@
     {
       "task_id": "pytorch__132835__njt_sdpa_autocast",
       "task_path": "../../tasks/pytorch/132835_njt_sdpa_autocast",
-      "admission_status": "draft",
-      "environment_status": "pending",
-      "source_status": "pending",
-      "replay_status": "pending"
+      "admission_status": "verified",
+      "environment_status": "ready",
+      "source_status": "ready",
+      "replay_status": "verified",
+      "admission_evidence": "tasks/pytorch/132835_njt_sdpa_autocast/admission/evidence.json"
     },
     {
       "task_id": "pytorch__132616__cuda_mem_get_info",
       "task_path": "../../tasks/pytorch/132616_cuda_mem_get_info",
-      "admission_status": "draft",
-      "environment_status": "pending",
-      "source_status": "pending",
-      "replay_status": "pending"
+      "admission_status": "verified",
+      "environment_status": "ready",
+      "source_status": "ready",
+      "replay_status": "verified",
+      "admission_evidence": "tasks/pytorch/132616_cuda_mem_get_info/admission/evidence.json"
     },
     {
       "task_id": "pytorch__144009__softmax_ilpreduce_size",
       "task_path": "../../tasks/pytorch/144009_softmax_ilpreduce_size",
-      "admission_status": "draft",
-      "environment_status": "pending",
-      "source_status": "pending",
-      "replay_status": "pending"
+      "admission_status": "verified",
+      "environment_status": "ready",
+      "source_status": "ready",
+      "replay_status": "verified",
+      "admission_evidence": "tasks/pytorch/144009_softmax_ilpreduce_size/admission/evidence.json"
     }
   ],
   "registries": {

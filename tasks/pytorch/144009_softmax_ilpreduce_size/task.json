@@ -5,7 +5,9 @@
   "runtime_tier": "cuda_kernel_build",
   "source_ref": "pytorch-2409b49-kernel-build",
   "admission": {
-    "status": "draft"
+    "status": "verified",
+    "evidence": "admission/evidence.json",
+    "verified_at": "2026-07-06T09:41:33Z"
   },
   "patch_scope": {
     "allowed_paths": [
@@ -85,10 +87,10 @@
   },
   "metadata": {
     "difficulty": "hard",
-    "curation_status": "draft",
+    "curation_status": "verified",
     "deterministic": true,
     "estimated_runtime_min": 90,
     "layer": "A",
-    "admission_status": "draft"
+    "admission_status": "verified"
   }
 }

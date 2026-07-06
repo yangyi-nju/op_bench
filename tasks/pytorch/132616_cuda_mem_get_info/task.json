@@ -5,7 +5,9 @@
   "runtime_tier": "cuda_python_overlay",
   "source_ref": "pytorch-7100c36-cuda-overlay",
   "admission": {
-    "status": "draft"
+    "status": "verified",
+    "evidence": "admission/evidence.json",
+    "verified_at": "2026-07-06T09:41:33Z"
   },
   "patch_scope": {
     "allowed_paths": [
@@ -87,10 +89,10 @@
   },
   "metadata": {
     "difficulty": "medium",
-    "curation_status": "draft",
+    "curation_status": "verified",
     "deterministic": true,
     "estimated_runtime_min": 10,
     "layer": "A",
-    "admission_status": "draft"
+    "admission_status": "verified"
   }
 }

@@ -44,5 +44,5 @@
     "snapshot_method": null
   },
   "task_id": "pytorch__132616__cuda_mem_get_info",
-  "task_manifest_hash": "sha256:07845e85049f5a313c0ab6cdd3bb3bfde11213a3c51168340e5d9fbc3c36760d"
+  "task_manifest_hash": "sha256:24b6690df3ded8968587a70f8680be34862998fb0d69f1ed6c5e9f762abf7782"
 }
