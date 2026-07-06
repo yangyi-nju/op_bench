@@ -1,0 +1,18 @@
+diff --git a/test/test_nn.py b/test/test_nn.py
+index b97744ccb70c2..44c70f8785fe0 100644
+--- a/test/test_nn.py
++++ b/test/test_nn.py
+@@ -10326,6 +10326,13 @@ def run_test(*shape):
+         run_test(1100000000, 2)  # Illegal memory access https://github.com/pytorch/pytorch/issues/52715
+         run_test(2200000000, 1)  # invalid configuration argument https://github.com/pytorch/pytorch/issues/52716
+ 
++    @onlyCUDA
++    @dtypes(torch.double)
++    def test_softmax_double(self, device, dtype):
++        logits = torch.randn(5, 513, dtype=dtype, device=device)
++        expected_ones = F.log_softmax(logits, dim=1).exp().sum(dim=1)
++        self.assertEqual(expected_ones, torch.ones_like(expected_ones))
++
+     @onlyCUDA
+     @dtypes(torch.half)
+     @largeTensorTest("20GB")

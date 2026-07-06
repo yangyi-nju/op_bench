@@ -118,8 +118,8 @@
       "replay_status": "pending"
     },
     {
-      "task_id": "pytorch__182082__nll_loss2d_zero_total_weight",
-      "task_path": "../../tasks/pytorch/182082_nll_loss2d_zero_total_weight",
+      "task_id": "pytorch__144009__softmax_ilpreduce_size",
+      "task_path": "../../tasks/pytorch/144009_softmax_ilpreduce_size",
       "admission_status": "draft",
       "environment_status": "pending",
       "source_status": "pending",

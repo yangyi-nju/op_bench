@@ -443,6 +443,26 @@
       "related_tasks": [
         "pytorch__182082__nll_loss2d_zero_total_weight"
       ]
+    },
+    {
+      "id": "pytorch-2409b49-kernel-build",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "2409b49a33c0ef594d89f9f477d56abad47e65bf",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/2409b49a33c0ef594d89f9f477d56abad47e65bf/source",
+      "checksum": null,
+      "snapshot_git_commit": null,
+      "tracked_file_count": null,
+      "submodules": {
+        "policy": "required_for_build",
+        "status": "initialized"
+      },
+      "source_loading_modes": [
+        "inplace_build"
+      ],
+      "snapshot_mode": "kernel_full",
+      "related_tasks": [
+        "pytorch__144009__softmax_ilpreduce_size"
+      ]
     }
   ]
 }

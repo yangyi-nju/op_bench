@@ -5,7 +5,7 @@
   "runtime_tier": "cuda_kernel_build",
   "source_ref": "pytorch-3b8db6d-kernel-build",
   "admission": {
-    "status": "draft"
+    "status": "deprecated"
   },
   "patch_scope": {
     "allowed_paths": [
@@ -92,6 +92,7 @@
     "deterministic": true,
     "estimated_runtime_min": 90,
     "layer": "A",
-    "admission_status": "draft"
+    "admission_status": "deprecated",
+    "notes": "Dropped: base commit 3b8db6de (post-2.6 nightly) fails to compile torch/csrc/stable/stableivalue_conversions.h due to internal template instantiation with T=std::string (guarded by static_assert !is_same_v<T, std::string>). This is a PyTorch internal state that only stable releases would have fixed. Not a platform issue."
   }
 }
