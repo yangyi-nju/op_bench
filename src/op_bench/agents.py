@@ -33,7 +33,38 @@ def _claude_timeout_sec() -> int:
     return int(os.environ.get("OP_BENCH_CLAUDE_TIMEOUT_SEC", "1200"))
 
 
-def _run_codex(command: list[str], cwd: Path) -> tuple[subprocess.CompletedProcess[str], bool]:
+def _codex_rate_limit_wait_sec() -> int:
+    # Codex quota rolls every 5h. We wait 5h5min by default to be safely past
+    # the reset boundary; override via env for testing.
+    return int(os.environ.get("OP_BENCH_CODEX_RATE_LIMIT_WAIT_SEC", str(5 * 3600 + 300)))
+
+
+def _codex_rate_limit_max_retries() -> int:
+    return int(os.environ.get("OP_BENCH_CODEX_RATE_LIMIT_MAX_RETRIES", "3"))
+
+
+_RATE_LIMIT_PATTERNS = (
+    "rate limit",
+    "rate_limit",
+    "usage limit",
+    "quota exceeded",
+    "exceeded your quota",
+    "exceeded your rate",
+    "too many requests",
+    " 429 ",
+    "status: 429",
+    "insufficient_quota",
+)
+
+
+def _looks_like_rate_limit(text: str) -> bool:
+    if not text:
+        return False
+    lowered = text.lower()
+    return any(p in lowered for p in _RATE_LIMIT_PATTERNS)
+
+
+def _run_codex_once(command: list[str], cwd: Path) -> tuple[subprocess.CompletedProcess[str], bool]:
     timeout_sec = _codex_timeout_sec()
     try:
         return (
@@ -58,6 +89,33 @@ def _run_codex(command: list[str], cwd: Path) -> tuple[subprocess.CompletedProce
             ),
             True,
         )
+
+
+def _run_codex(command: list[str], cwd: Path) -> tuple[subprocess.CompletedProcess[str], bool]:
+    """Run codex with automatic rate-limit-aware retry.
+
+    Codex quota rolls every 5h. If a run finishes with a rate-limit signature
+    in stdout/stderr (and did not time out normally), sleep until past the next
+    reset boundary and try again, up to OP_BENCH_CODEX_RATE_LIMIT_MAX_RETRIES.
+    """
+    max_retries = _codex_rate_limit_max_retries()
+    wait_sec = _codex_rate_limit_wait_sec()
+    for attempt in range(max_retries + 1):
+        completed, timed_out = _run_codex_once(command, cwd)
+        if timed_out or completed.returncode == 0:
+            return completed, timed_out
+        combined = (completed.stderr or "") + "\n" + (completed.stdout or "")
+        if not _looks_like_rate_limit(combined):
+            return completed, timed_out
+        if attempt >= max_retries:
+            return completed, timed_out
+        sys.stderr.write(
+            f"[codex] rate limit detected (attempt {attempt+1}/{max_retries+1}); "
+            f"sleeping {wait_sec}s for quota reset\n"
+        )
+        sys.stderr.flush()
+        time.sleep(wait_sec)
+    return completed, timed_out
 
 
 def _run_claude(command: list[str], cwd: Path) -> tuple[subprocess.CompletedProcess[str], bool]:
