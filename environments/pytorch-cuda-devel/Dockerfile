@@ -79,6 +79,15 @@ ENV TORCH_CUDA_ARCH_LIST="7.0;7.5;8.0;8.6;8.9;9.0"
 # via `--build-arg MAX_JOBS=N` or `docker run -e MAX_JOBS=N`.
 ARG MAX_JOBS
 ENV MAX_JOBS=${MAX_JOBS:-20}
+# Disable optional components that require network access during CMake FetchContent
+# (post-2.6 nightlies pull NCCL / gloo / tensorpipe sources on the fly). The
+# benchmark tasks are single-GPU CUDA kernel bugs — none need distributed backends.
+ENV USE_NCCL=0
+ENV USE_DISTRIBUTED=0
+ENV USE_TENSORPIPE=0
+ENV USE_GLOO=0
+ENV USE_MPI=0
+ENV USE_KINETO=0
 ENV PYTORCH_BUILD_VERSION=2.6.0
 ENV PYTORCH_BUILD_NUMBER=0
 
