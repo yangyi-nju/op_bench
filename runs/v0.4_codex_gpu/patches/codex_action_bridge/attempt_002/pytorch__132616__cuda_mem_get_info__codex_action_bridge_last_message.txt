@@ -1,0 +1,8 @@
+Implemented the minimal source fix in `torch/cuda/memory.py`.
+
+`mem_get_info` now calls `_get_device_index(device, optional=True)`, so bare CUDA devices like `"cuda"` or `torch.device("cuda")` resolve to the current CUDA device instead of requiring an explicit index. I also updated the docstring to reflect string support and unspecified-index behavior.
+
+Verification run:
+`./opbench_action.py run_test 'TestCudaMultiGPU.test_mem_get_info'` passed with `Ran 1 test ... OK`.
+
+Final diff only touches the allowed file.

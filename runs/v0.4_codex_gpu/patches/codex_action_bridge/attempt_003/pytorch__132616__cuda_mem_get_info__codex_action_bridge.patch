@@ -1,0 +1,15 @@
+diff --git a/torch/cuda/memory.py b/torch/cuda/memory.py
+index 236a7bc..9f3b7e2 100644
+--- a/torch/cuda/memory.py
++++ b/torch/cuda/memory.py
+@@ -692,9 +692,7 @@ def mem_get_info(device: Union[Device, int] = None) -> Tuple[int, int]:
+         See :ref:`cuda-memory-management` for more
+         details about GPU memory management.
+     """
+-    if device is None:
+-        device = torch.cuda.current_device()
+-    device = _get_device_index(device)
++    device = _get_device_index(device, optional=True)
+     return torch.cuda.cudart().cudaMemGetInfo(device)
+ 
+ 

@@ -1,0 +1,14 @@
+Implemented the minimal source fix in `aten/src/ATen/native/cuda/SoftMax.cu`.
+
+Changed the two forward-path tail decrements to clamp by the remaining `size`:
+
+- `ilpReduce`
+- `WriteFpropResultsVectorized`
+
+Pre-fix CUDA probe reproduced the issue: `float64` `(5, 513)` had row sums like `0.7082` and `0.6764` after `exp(log_softmax)`. After patching, I attempted verification with:
+
+- `./opbench_action.py run_test 'TestNNDeviceTypeCUDA.test_softmax_results_cuda_float64'`
+- the focused CUDA reproduction probe again
+- a final `git_diff`
+
+All three post-patch action calls timed out at the `opbench_action.py` response layer, so I cannot honestly claim a passing test result. The earlier `git_diff` before the backend started timing out confirmed the intended two-line diff was applied.

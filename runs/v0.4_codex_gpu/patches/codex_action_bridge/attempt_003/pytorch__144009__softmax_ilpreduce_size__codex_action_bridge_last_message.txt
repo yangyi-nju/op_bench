@@ -1,0 +1,14 @@
+Implemented the minimal source fix in `aten/src/ATen/native/cuda/SoftMax.cu`.
+
+Changed both unsafe tail decrements from unconditional `size -= blockDim.x` to clamped decrements:
+
+```cpp
+size -= std::min(static_cast<index_t>(blockDim.x), size);
+size -= std::min(static_cast<int>(blockDim.x), size);
+```
+
+Verification:
+- Reproduced the reported pre-fix CUDA failure for `(5, 513)` `float64`: max abs error from 1 was about `0.314`.
+- Applied patch successfully through `./opbench_action.py apply_patch`.
+- Attempted targeted CUDA test `TestNNDeviceTypeCUDA.test_softmax_results_cuda_float32`, but the action bridge timed out after 300s while waiting for the response.
+- A follow-up `git_diff` action also timed out, likely because the backend was still occupied by the compile/test action.

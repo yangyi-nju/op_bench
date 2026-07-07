@@ -1,0 +1,11 @@
+Implemented the minimal source fix in `torch/nested/_internal/sdpa.py`.
+
+What changed:
+- Added `_autocast_sdpa_nested_inputs(...)`.
+- `jagged_scaled_dot_product_attention(...)` now manually casts autocast-eligible nested q/k/v inputs before dtype validation and backend selection.
+- Float64 is left unchanged, matching dense SDPA autocast behavior.
+
+Verification:
+- `./opbench_action.py run_command 'python test/test_nestedtensor.py -k test_sdpa -v'`
+- Result: 22 SDPA-related tests ran, all passed, 6 skipped.
+- Also reproduced the original mixed nested dtype autocast failure in the unpatched runtime: validation rejects `float32`/`float16`/`bfloat16` q/k/v before manual casting.

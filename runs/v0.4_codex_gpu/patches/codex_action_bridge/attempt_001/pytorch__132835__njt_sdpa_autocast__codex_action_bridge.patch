@@ -1,0 +1,38 @@
+diff --git a/torch/nested/_internal/sdpa.py b/torch/nested/_internal/sdpa.py
+index b8c0174..459446e 100644
+--- a/torch/nested/_internal/sdpa.py
++++ b/torch/nested/_internal/sdpa.py
+@@ -615,6 +615,25 @@ def _post_process_flash_output(out: torch.Tensor, og_size):
+     return out
+ 
+ 
++def _autocast_sdpa_nested_inputs(query, key, value):
++    device_type = query.device.type
++    if key.device.type != device_type or value.device.type != device_type:
++        return query, key, value
++    if not torch.is_autocast_enabled(device_type):
++        return query, key, value
++
++    target_dtype = torch.get_autocast_dtype(device_type)
++
++    def maybe_to_autocast_dtype(tensor):
++        # Autocast SDPA casts fp16/bf16/fp32 inputs to the autocast dtype, but
++        # leaves fp64 inputs alone.
++        if tensor.is_floating_point() and tensor.dtype != torch.float64:
++            return tensor.to(target_dtype)
++        return tensor
++
++    return tuple(maybe_to_autocast_dtype(t) for t in (query, key, value))
++
++
+ def jagged_scaled_dot_product_attention(
+     query: torch.Tensor,
+     key: torch.Tensor,
+@@ -625,6 +644,7 @@ def jagged_scaled_dot_product_attention(
+     scale=None,
+     enable_gqa=False,
+ ):
++    query, key, value = _autocast_sdpa_nested_inputs(query, key, value)
+     _validate_sdpa_input(query, key, value, attn_mask, dropout_p, is_causal, scale)
+     # for mypy, ugh
+     assert (

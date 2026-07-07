@@ -1,0 +1,8 @@
+Implemented the minimal source fix in `torch/nested/_internal/sdpa.py`.
+
+The change manually casts nested `query`, `key`, and `value` to the active autocast dtype before SDPA validation/backend selection, while preserving `float64` behavior.
+
+Verification:
+- `./opbench_action.py run_test '-k sdpa'` passed: 22 tests, 6 skipped.
+- Syntax compile of patched `torch/nested/_internal/sdpa.py` passed.
+- Final diff only touches the allowed file.

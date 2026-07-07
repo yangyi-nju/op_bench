@@ -1,0 +1,57 @@
+diff --git a/torch/nested/_internal/sdpa.py b/torch/nested/_internal/sdpa.py
+index b8c0174..6bd6097 100644
+--- a/torch/nested/_internal/sdpa.py
++++ b/torch/nested/_internal/sdpa.py
+@@ -609,6 +609,44 @@ def _calculate_scale(query, scale):
+     return softmax_scale
+ 
+ 
++def _is_computing_meta_flops(x):
++    if not torch.jit.is_scripting() and x.device.type == "meta":
++        torch_dispatch_mode_stack = (
++            torch.utils._python_dispatch._get_current_dispatch_mode_stack()
++        )
++        return any(
++            type(x) == torch.utils.flop_counter.FlopCounterMode
++            for x in torch_dispatch_mode_stack
++        )
++    return False
++
++
++def _autocast(
++    query: torch.Tensor,
++    key: torch.Tensor,
++    value: torch.Tensor,
++    attn_mask: Optional[torch.Tensor],
++) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, Optional[torch.Tensor]]:
++    device_type = query.device.type
++    if _is_computing_meta_flops(query) or not torch.is_autocast_enabled(device_type):
++        return query, key, value, attn_mask
++
++    target_dtype = torch.get_autocast_dtype(device_type)
++
++    def cvt(x):
++        if x is None:
++            return x
++        if (
++            (not x.dtype.is_floating_point)
++            or x.dtype == target_dtype
++            or x.dtype == torch.float64
++        ):
++            return x
++        return x.to(target_dtype)
++
++    return cvt(query), cvt(key), cvt(value), cvt(attn_mask)
++
++
+ def _post_process_flash_output(out: torch.Tensor, og_size):
+     if not out.is_nested and out.size(-1) != og_size:
+         out = out[..., 0:og_size]
+@@ -625,6 +663,7 @@ def jagged_scaled_dot_product_attention(
+     scale=None,
+     enable_gqa=False,
+ ):
++    query, key, value, attn_mask = _autocast(query, key, value, attn_mask)
+     _validate_sdpa_input(query, key, value, attn_mask, dropout_p, is_causal, scale)
+     # for mypy, ugh
+     assert (

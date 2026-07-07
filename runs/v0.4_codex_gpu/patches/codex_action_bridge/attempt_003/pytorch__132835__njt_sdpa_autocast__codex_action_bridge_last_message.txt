@@ -1,0 +1,9 @@
+Implemented the minimal source fix in `torch/nested/_internal/sdpa.py`.
+
+The nested SDPA path now manually autocasts `query`, `key`, `value`, and `attn_mask` to the active device autocast dtype before validation and backend selection, while preserving non-floating tensors and `float64`.
+
+Verification:
+- `./opbench_action.py run_test '-k sdpa'`
+- Result: `Ran 22 tests ... OK (skipped=6)`
+
+I also confirmed the final diff only touches the allowed file. The CLI does not expose a separate benchmark-test command beyond `run_test`.

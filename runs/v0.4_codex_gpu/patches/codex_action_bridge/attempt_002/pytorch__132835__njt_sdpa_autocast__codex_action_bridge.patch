@@ -1,0 +1,40 @@
+diff --git a/torch/nested/_internal/sdpa.py b/torch/nested/_internal/sdpa.py
+index b8c0174..4db7136 100644
+--- a/torch/nested/_internal/sdpa.py
++++ b/torch/nested/_internal/sdpa.py
+@@ -21,6 +21,27 @@ from .nested_tensor import NestedTensor
+ log = logging.getLogger(__name__)
+ 
+ 
++def _autocast_sdpa_inputs(
++    query: torch.Tensor, key: torch.Tensor, value: torch.Tensor
++) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
++    device_type = query.device.type
++    if not torch.is_autocast_enabled(device_type):
++        return query, key, value
++
++    autocast_dtype = torch.get_autocast_dtype(device_type)
++
++    def maybe_cast(tensor: torch.Tensor) -> torch.Tensor:
++        if tensor.dtype.is_floating_point and tensor.dtype != torch.float64:
++            return tensor.to(autocast_dtype)
++        return tensor
++
++    return (
++        maybe_cast(query),
++        maybe_cast(key),
++        maybe_cast(value),
++    )
++
++
+ def _validate_sdpa_input(
+     query: torch.Tensor,
+     key: torch.Tensor,
+@@ -625,6 +646,7 @@ def jagged_scaled_dot_product_attention(
+     scale=None,
+     enable_gqa=False,
+ ):
++    query, key, value = _autocast_sdpa_inputs(query, key, value)
+     _validate_sdpa_input(query, key, value, attn_mask, dropout_p, is_causal, scale)
+     # for mypy, ugh
+     assert (
