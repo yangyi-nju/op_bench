@@ -2,21 +2,75 @@
 
 本文档给外部 agent 用于筛选精度维度 PR 候选池。目标：每个子类（P1–P5）产出 3-5 条候选 PR，最终 6-8 条 admissible。
 
+## ⚠️ 重要：PyTorch 使用 ghstack merge（不走 GitHub 原生 merge）
+
+PyTorch 绝大多数 PR 通过 **ghstack** 工具 land：contributor 把 commit 栈 push 到 `gh/<user>/<N>/head`，reviewer 在 GitHub 上 approve 后 ghstack 直接把 commit 加到 main 并 close PR。
+
+结果：**GitHub API 里这些 PR 的 `state=CLOSED`, `mergedAt=null`, `mergeCommit=null`**。用 `gh pr list --state merged` 会漏掉绝大部分真实 land 的 PR。
+
+真实 merge 判据：main branch 上存在一个 commit，其 message 里带 `Pull Request resolved: https://github.com/pytorch/pytorch/pull/<N>`。
+
+## 检索的两条路径
+
+### 路径 A（首选）：git log 反查 + PR 号
+
+```bash
+# 1. 浅 clone pytorch/pytorch main
+git clone --filter=blob:none --no-checkout --single-branch --branch main \
+  --shallow-since=2023-12-01 \
+  https://github.com/pytorch/pytorch.git /tmp/pytorch-mirror
+
+# 2. 按关键词 grep commit message
+cd /tmp/pytorch-mirror
+git log --since=2024-01-01 --until=2025-04-30 \
+  --grep='<keyword>' -i --format='%H|%ai|%s|%b' | \
+  awk -F'|' '/Pull Request resolved/ { print }'
+
+# 3. 从 body 里抽 PR 编号，用 gh pr view 拉细节
+gh pr view <N> --repo pytorch/pytorch \
+  --json number,title,url,mergedAt,body,files,baseRefOid
+```
+
+**关键**：即使 `mergedAt` 是 null，只要 main branch 上有对应 commit 且 commit date 在 2024-01-01 到 2025-04-30 之间，就算作 "merged"。把 commit date 作为 `mergedAt` 字段填入喂给 screen_candidates.py（脚本的规则 2 仍会通过）。
+
+### 路径 B（备用）：`gh pr list --state merged`
+
+只有少数 PR（外部 contributor 直接走 GitHub merge button 的）会命中这条。作为补充池，不作主渠道。
+
+```bash
+gh pr list --repo pytorch/pytorch --state merged --limit 300 \
+  --search '<关键词> is:merged merged:2024-01-01..2025-04-30' \
+  --json number,title,url,mergedAt,body,files
+```
+
 ## 5 个子类的检索脚本
 
 所有检索都限定：
 - 仓库：`pytorch/pytorch`
-- 状态：`is:merged`
-- base commit 时间窗：**merged in 2024-01-01 到 2025-04-30**（避免 post-2.6 nightly wheel 不兼容，v0.4 已验证的坑）
+- **有效性判据**：main branch 上有对应 "Pull Request resolved" commit（无论 GitHub 显示 MERGED 还是 CLOSED）
+- **时间窗**：**commit date 在 2024-01-01 到 2025-04-30**（避免 post-2.6 nightly wheel 不兼容，v0.4 已验证的坑）
 
 ### P1 数值累积误差
 
 reduction 类（sum/mean/norm/logsumexp）在长序列或低精度下累积浮点误差。修复常见形式：改 accumulator dtype、加 Kahan 求和、切 log-space。
 
+**首选路径 A**：
+
+```bash
+cd /tmp/pytorch-mirror
+for kw in accumulator "sum precision" "lower precision" "fp16 reduce" "bf16 reduce" logsumexp Kahan; do
+  git log --since=2024-01-01 --until=2025-04-30 \
+    --grep="$kw" -i --format='%H|%ai|%s' | head -30
+done
+# 对每个命中 commit 做 `git log -1 <hash> --format=%B` 找 "Pull Request resolved: .../pull/<N>"
+```
+
+**备用路径 B**：
+
 ```bash
 gh pr list --repo pytorch/pytorch --state merged --limit 200 \
   --search '(accumulator OR "Kahan" OR "logsumexp" OR "log_sum_exp" OR "sum precision") is:merged merged:2024-01-01..2025-04-30' \
-  --json number,title,url,mergedAt,labels,files
+  --json number,title,url,mergedAt,body,files
 ```
 
 关键词：`accumulator`, `Kahan`, `pairwise sum`, `logsumexp`, `numerical stability`, `precision loss`, `float16 sum`, `bfloat16 mean`, `long reduction`.
@@ -25,10 +79,22 @@ gh pr list --repo pytorch/pytorch --state merged --limit 200 \
 
 隐式 cast（half↔float / int↔float）在中间步骤丢失精度。修复：修 upcast 逻辑、修 `dtype=` 参数传递、修 output dtype 推断。
 
+**首选路径 A**：
+
+```bash
+cd /tmp/pytorch-mirror
+for kw in upcast downcast "output dtype" "dtype promotion" "intermediate dtype" type_as promote_types; do
+  git log --since=2024-01-01 --until=2025-04-30 \
+    --grep="$kw" -i --format='%H|%ai|%s' | head -30
+done
+```
+
+**备用路径 B**：
+
 ```bash
 gh pr list --repo pytorch/pytorch --state merged --limit 200 \
   --search '(upcast OR downcast OR "output dtype" OR "dtype promotion" OR "intermediate dtype") is:merged merged:2024-01-01..2025-04-30' \
-  --json number,title,url,mergedAt,labels,files
+  --json number,title,url,mergedAt,body,files
 ```
 
 关键词：`upcast`, `downcast`, `promotion`, `intermediate dtype`, `output dtype`, `type_as`, `to(dtype=)`, `promote_types`.
@@ -37,10 +103,22 @@ gh pr list --repo pytorch/pytorch --state merged --limit 200 \
 
 `torch.autocast` 场景下某算子 output dtype 与 reference 不一致。修复：autocast wrap list 或 `@autocast_custom_fwd` 装饰。
 
+**首选路径 A**：
+
+```bash
+cd /tmp/pytorch-mirror
+for kw in autocast "mixed precision" custom_fwd custom_bwd autocast_dtype; do
+  git log --since=2024-01-01 --until=2025-04-30 \
+    --grep="$kw" -i --format='%H|%ai|%s' | head -30
+done
+```
+
+**备用路径 B**：
+
 ```bash
 gh pr list --repo pytorch/pytorch --state merged --limit 200 \
   --search '(autocast OR "mixed precision" OR autocast_custom_fwd) is:merged merged:2024-01-01..2025-04-30' \
-  --json number,title,url,mergedAt,labels,files
+  --json number,title,url,mergedAt,body,files
 ```
 
 关键词：`autocast`, `mixed precision`, `amp`, `custom_fwd`, `custom_bwd`, `autocast_dtype`.
@@ -49,10 +127,22 @@ gh pr list --repo pytorch/pytorch --state merged --limit 200 \
 
 log/exp/softmax/sigmoid 在极端输入下 NaN/Inf。修复：log-sum-exp trick、clamp、stable variant。
 
+**首选路径 A**：
+
+```bash
+cd /tmp/pytorch-mirror
+for kw in NaN Inf overflow underflow "numerical instability" "log-sum-exp" stable clamp; do
+  git log --since=2024-01-01 --until=2025-04-30 \
+    --grep="$kw" -i --format='%H|%ai|%s' | head -30
+done
+```
+
+**备用路径 B**：
+
 ```bash
 gh pr list --repo pytorch/pytorch --state merged --limit 200 \
   --search '(NaN OR Inf OR "log_softmax" OR sigmoid OR "numerical instability" OR "log-sum-exp") is:merged merged:2024-01-01..2025-04-30' \
-  --json number,title,url,mergedAt,labels,files
+  --json number,title,url,mergedAt,body,files
 ```
 
 关键词：`NaN`, `Inf`, `overflow`, `underflow`, `numerical instability`, `log-sum-exp`, `stable`, `clamp`.
@@ -61,13 +151,25 @@ gh pr list --repo pytorch/pytorch --state merged --limit 200 \
 
 CUDA kernel 里的 shared memory 累加、warp reduce、tail loop 处理精度问题。修改 `.cu` / `.cuh` 文件。**注意：仅在 sm_70/sm_80 可复现**，避免 H100/FP8 专属特性。
 
+**首选路径 A**（在 kernel 目录限定路径下搜关键词）：
+
+```bash
+cd /tmp/pytorch-mirror
+for kw in "warp reduce" "shared memory" "tail loop" ilpReduce warpReduce "kernel precision"; do
+  git log --since=2024-01-01 --until=2025-04-30 \
+    --grep="$kw" -i --format='%H|%ai|%s' -- aten/src/ATen/native/cuda | head -30
+done
+```
+
+**备用路径 B**：
+
 ```bash
 gh pr list --repo pytorch/pytorch --state merged --limit 200 \
   --search '(numerical OR precision OR "warp reduce" OR "tail loop") path:aten/src/ATen/native/cuda is:merged merged:2024-01-01..2025-04-30' \
-  --json number,title,url,mergedAt,labels,files
+  --json number,title,url,mergedAt,body,files
 ```
 
-补充搜索：`shared memory` + `float`、`reduce` + `precision`、`ilpReduce` / `warpReduce`。
+补充关键词：`shared memory` + `float`、`reduce` + `precision`、`ilpReduce` / `warpReduce`。
 
 ### 通用 label 搜索
 
@@ -85,8 +187,8 @@ gh pr list --repo pytorch/pytorch --state merged --limit 300 \
 
 候选 PR 进入 admission 前必须通过全部 6 条：
 
-1. **状态**：`state=merged`，且**不能是 revert 或 reland**（PR title 含 `revert` / `reland` 直接排除）。
-2. **base commit 时间**：merged 在 2024-01-01 到 2025-04-30（对应 torch 2.6 前后可稳定 checkout 的窗口）。
+1. **状态**：main 上存在 "Pull Request resolved: .../pull/<N>" commit（ghstack land 视为 merged），且 PR title 不含 `revert` / `reland`。
+2. **时间**：对应 commit 的 author date 在 2024-01-01 到 2025-04-30（对应 torch 2.6 前后可稳定 checkout 的窗口）。
 3. **修改文件数 ≤ 3**：agent 单次修复能力上限。可以是 1 py + 1 test，或 1 cu + 1 test。
 4. **修改行数 20–200**：太短语义不明确，太长是重构不是 fix。计非空非注释行。
 5. **测试改动必须存在**且是以下形式之一：
@@ -94,6 +196,27 @@ gh pr list --repo pytorch/pytorch --state merged --limit 300 \
    - 已有测试中 tolerance 变化（`rtol=` / `atol=` / `assertClose` 参数改变）
    - 已有测试 assert 类型变化（例如 `assertEqual` → `assertAlmostEqual`）
 6. **PR 描述判断**：**排除** "Add support for X" / "Enable X on Y" 这类 feature-add PR；**保留** "Fix X" / "Correct X" / "Handle X" 这类 correctness fix。v0.4 已验证 add-support 类 PR 的 baseline 通常已通过（走隐式 fallback），无法产生 fail_to_pass。
+
+### 喂给 screen_candidates.py 的候选 JSON 构造
+
+`scripts/screen_candidates.py` 要求每条候选带 `number, title, url, mergedAt, body, files`。走路径 A 时 GitHub `mergedAt` 通常是 null，需要用 commit date 合成：
+
+```python
+# 伪代码：把 git log 反查结果转成 screener 输入
+{
+  "number": <从 commit body 里抽的 Pull Request resolved 编号>,
+  "title": <commit subject>,
+  "url": f"https://github.com/pytorch/pytorch/pull/{number}",
+  "mergedAt": <commit author date 转 ISO8601, 带 Z 或 +00:00>,  # 关键：不能留 null
+  "body": <commit body>,
+  "files": [
+    {"path": <path>, "additions": <int>, "deletions": <int>}
+    for f in git show --numstat <commit>
+  ]
+}
+```
+
+`gh pr view <N> --json baseRefOid,files,body` 可以拉最终字段填 `base_commit` / patch 详情，但入 screener 前的 `mergedAt` 必须用 commit date 顶上。
 
 ## 输出格式（给下游 admission）
 
