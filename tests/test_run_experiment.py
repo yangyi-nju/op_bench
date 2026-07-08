@@ -545,5 +545,104 @@ class RunExperimentTests(unittest.TestCase):
         subprocess.run(["git", *args], cwd=cwd, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
 
 
+class ResumeIntegrationTests(unittest.TestCase):
+    """End-to-end resume: run the CLI once, then again on the same output dir."""
+
+    def test_second_run_skips_completed_attempts(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output_dir = root / "out"
+            task_dir = RunExperimentTests()._fixable_git_task(root)
+
+            def invoke(extra_args: list[str] | None = None) -> subprocess.CompletedProcess:
+                cmd = [
+                    sys.executable, "scripts/run_experiment.py",
+                    "--task", str(task_dir),
+                    "--agent", "gold",
+                    "--agent-repeat", "2",
+                    "--output-dir", str(output_dir),
+                    "--no-baseline-cache",
+                ]
+                if extra_args:
+                    cmd.extend(extra_args)
+                return subprocess.run(
+                    cmd, cwd=ROOT, text=True,
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+                )
+
+            first = invoke()
+            self.assertEqual(first.returncode, 0, first.stderr)
+            first_lines = (output_dir / "results.jsonl").read_text().splitlines()
+            # 1 baseline + 2 agent attempts
+            self.assertEqual(len(first_lines), 3)
+
+            second = invoke()
+            self.assertEqual(second.returncode, 0, second.stderr)
+            second_lines = (output_dir / "results.jsonl").read_text().splitlines()
+            # Should be identical: nothing appended on the second run.
+            self.assertEqual(len(second_lines), 3)
+            self.assertIn("resume", second.stderr)
+            self.assertIn("skip", second.stderr)
+
+    def test_fresh_wipes_prior_run(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output_dir = root / "out"
+            task_dir = RunExperimentTests()._fixable_git_task(root)
+
+            for _ in range(2):
+                completed = subprocess.run(
+                    [
+                        sys.executable, "scripts/run_experiment.py",
+                        "--task", str(task_dir),
+                        "--agent", "gold",
+                        "--output-dir", str(output_dir),
+                        "--fresh",
+                        "--no-baseline-cache",
+                    ],
+                    cwd=ROOT, text=True,
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+                )
+                self.assertEqual(completed.returncode, 0, completed.stderr)
+                lines = (output_dir / "results.jsonl").read_text().splitlines()
+                # 1 baseline + 1 agent attempt (agent-repeat defaults to 1)
+                self.assertEqual(len(lines), 2)
+
+    def test_resume_rejects_agent_repeat_mismatch(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output_dir = root / "out"
+            task_dir = RunExperimentTests()._fixable_git_task(root)
+
+            first = subprocess.run(
+                [
+                    sys.executable, "scripts/run_experiment.py",
+                    "--task", str(task_dir),
+                    "--agent", "gold",
+                    "--agent-repeat", "2",
+                    "--output-dir", str(output_dir),
+                    "--no-baseline-cache",
+                ],
+                cwd=ROOT, text=True,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+            )
+            self.assertEqual(first.returncode, 0, first.stderr)
+
+            second = subprocess.run(
+                [
+                    sys.executable, "scripts/run_experiment.py",
+                    "--task", str(task_dir),
+                    "--agent", "gold",
+                    "--agent-repeat", "3",  # <-- changed
+                    "--output-dir", str(output_dir),
+                    "--no-baseline-cache",
+                ],
+                cwd=ROOT, text=True,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+            )
+            self.assertEqual(second.returncode, 3, second.stderr)
+            self.assertIn("agent_repeat", second.stderr)
+
+
 if __name__ == "__main__":
     unittest.main()

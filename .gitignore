@@ -5,6 +5,7 @@ runs/*/workspaces/
 runs/**/codex_scratch/
 runs/**/claude_scratch/
 runs/admission/
+runs/_baseline_cache/
 __pycache__/
 *.pyc
 .DS_Store
