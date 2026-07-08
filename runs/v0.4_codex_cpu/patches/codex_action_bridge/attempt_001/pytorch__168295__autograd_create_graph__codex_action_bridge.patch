@@ -1,0 +1,17 @@
+diff --git a/torch/autograd/__init__.py b/torch/autograd/__init__.py
+index 5c8d266..2cd0de7 100644
+--- a/torch/autograd/__init__.py
++++ b/torch/autograd/__init__.py
+@@ -532,7 +532,11 @@ def grad(
+         result = tuple(
+             output
+             if output is not None
+-            else torch.zeros_like(input, requires_grad=True)
++            else (
++                input * 0
++                if create_graph
++                else torch.zeros_like(input)
++            )
+             for (output, input) in zip(result, inputs)
+         )
+     return result

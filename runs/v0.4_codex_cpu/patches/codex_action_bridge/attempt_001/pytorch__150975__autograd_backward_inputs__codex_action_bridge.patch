@@ -1,0 +1,49 @@
+diff --git a/torch/autograd/__init__.py b/torch/autograd/__init__.py
+index c370a03..699b8a7 100644
+--- a/torch/autograd/__init__.py
++++ b/torch/autograd/__init__.py
+@@ -325,22 +325,34 @@ def backward(
+                 "arguments both passed to `backward()`. Please only "
+                 "use `grad_tensors`."
+             )
+-    if inputs is not None and len(inputs) == 0:
+-        raise RuntimeError("`inputs` argument to `backward()` cannot be empty.")
+-
+     if is_tensor_like(tensors) or isinstance(tensors, graph.GradientEdge):
+         tensors = cast(
+             Union[tuple[torch.Tensor], tuple[graph.GradientEdge]], (tensors,)
+         )
+     else:
+         tensors = tuple(tensors)
+-    inputs = (
+-        (inputs,)
+-        if isinstance(inputs, (torch.Tensor, graph.GradientEdge))
+-        else tuple(inputs)
+-        if inputs is not None
+-        else ()
+-    )
++    if inputs is not None:
++        if isinstance(inputs, (torch.Tensor, graph.GradientEdge)):
++            inputs = (inputs,)
++        else:
++            try:
++                inputs = tuple(inputs)
++            except TypeError:
++                raise TypeError(
++                    "inputs must be a Tensor or GradientEdge, or a sequence of "
++                    "Tensor or GradientEdge"
++                ) from None
++        if len(inputs) == 0:
++            raise RuntimeError("`inputs` argument to `backward()` cannot be empty.")
++        if not all(
++            isinstance(input, (torch.Tensor, graph.GradientEdge)) for input in inputs
++        ):
++            raise TypeError(
++                "inputs must be a Tensor or GradientEdge, or a sequence of "
++                "Tensor or GradientEdge"
++            )
++    else:
++        inputs = ()
+ 
+     grad_tensors_ = _tensor_or_tensors_to_tuple(grad_tensors, len(tensors))
+     grad_tensors_ = _make_grads(tensors, grad_tensors_, is_grads_batched=False)

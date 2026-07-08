@@ -1,0 +1,11 @@
+Implemented the minimal source fix in `torch/utils/data/dataset.py`.
+
+`Subset.__getitems__` now detects when a `Subset` subclass overrides `__getitem__` and falls back to `[self[idx] for idx in indices]`, so DataLoader’s batched fetch path respects subclass transformations. Plain `Subset` still keeps the existing optimized parent-dataset `__getitems__` path.
+
+Verification passed:
+
+- Regression probe against patched source: returned `[10, 11]`
+- `python test/test_dataloader.py -k subset`: OK, 2 tests
+- `python test/test_dataloader.py -k getitems`: OK, 3 tests
+
+Final diff only touches the allowed file.

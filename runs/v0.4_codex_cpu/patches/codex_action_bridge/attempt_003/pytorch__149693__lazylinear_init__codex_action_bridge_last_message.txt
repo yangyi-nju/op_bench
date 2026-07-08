@@ -1,0 +1,10 @@
+Fixed `LazyLinear.initialize_parameters()` in `torch/nn/modules/linear.py` so `in_features` is inferred before `reset_parameters()` runs during lazy materialization.
+
+Verified through `./opbench_action.py`:
+
+- `TestLazyModules.test_linear` passed
+- `TestLazyModules.test_lazy_linear_state_and_forward` passed
+- `TestLazyModules.test_linear_state` passed
+- `TestLazyModules.test_chained_initialization` passed
+
+Final diff is limited to the allowed file.

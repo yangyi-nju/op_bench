@@ -1,0 +1,9 @@
+Implemented the minimal fix in `torch/autograd/__init__.py`: materialized unused gradients now use `requires_grad=create_graph` instead of always enabling grad tracking.
+
+Verified with:
+
+- `./opbench_action.py run_test 'TestAutograd.test_grad_materialize_grads'`
+- `./opbench_action.py run_test 'TestAutograd.test_grad_to_node_materialize'`
+- `./opbench_action.py run_test 'TestAutograd.test_grad_unreachable'`
+
+All three passed.

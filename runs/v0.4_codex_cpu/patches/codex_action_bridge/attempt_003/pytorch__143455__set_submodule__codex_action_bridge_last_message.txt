@@ -1,0 +1,12 @@
+Implemented the fix in `torch/nn/modules/module.py`.
+
+What changed:
+- Added `strict: bool = False` to `nn.Module.set_submodule`.
+- Preserved default add-or-replace behavior for existing parent modules.
+- Made `strict=True` require the leaf submodule to already exist, including no-dot targets like `"0"`.
+- Added validation for non-`nn.Module` replacement values and existing non-module leaf attributes.
+
+Verification:
+- `python -m py_compile torch/nn/modules/module.py` passed.
+- `./opbench_action.py run_test 'TestNN.test_set_submodule'` passed.
+- No tests were modified.

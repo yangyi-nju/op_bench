@@ -1,0 +1,11 @@
+Implemented the scoped fix in `torch/autograd/__init__.py`.
+
+Change made:
+`backward()` now normalizes `inputs` into a tuple before checking for an explicitly empty input sequence. This avoids treating a single scalar tensor or zero-length tensor as a Python sequence while preserving the existing `inputs=[]` error.
+
+Verified with:
+- `./opbench_action.py run_test 'TestAutograd.test_backward_with_inputs'`
+- `./opbench_action.py run_test 'TestAutograd.test_backward_with_nonleaf_inputs'`
+- `./opbench_action.py run_test 'TestAutograd.test_backward'`
+
+All three passed. Final diff only touches the allowed file.

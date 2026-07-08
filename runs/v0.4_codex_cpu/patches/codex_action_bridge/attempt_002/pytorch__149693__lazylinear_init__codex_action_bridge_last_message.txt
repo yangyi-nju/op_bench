@@ -1,0 +1,9 @@
+Implemented the minimal source fix in `torch/nn/modules/linear.py`: `LazyLinear.initialize_parameters()` now sets `self.in_features` from the input before materializing and calling `reset_parameters()`, so lazy initialization uses the inferred feature size.
+
+Verified with:
+
+- `./opbench_action.py run_test 'TestLazyModules.test_linear'`
+- `./opbench_action.py run_test 'TestLazyModules.test_linear_state'`
+- `./opbench_action.py run_test 'TestLazyModules.test_lazy_linear_state_and_forward'`
+
+All three passed with exit code 0. Final diff only touches the allowed file.

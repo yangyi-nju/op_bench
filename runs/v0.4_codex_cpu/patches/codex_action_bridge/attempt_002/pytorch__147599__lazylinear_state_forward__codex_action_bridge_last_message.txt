@@ -1,0 +1,9 @@
+Implemented the minimal fix in `torch/nn/modules/linear.py`.
+
+Change: `LazyLinear.initialize_parameters()` now handles the case where `load_state_dict()` has already materialized `weight`: if `in_features` is still `0`, it copies `self.weight.shape[1]` into `self.in_features` before the lazy hook converts the module to `Linear`.
+
+Verification:
+- Reproduced the original bug before patch: `Linear 0 (2, 5) (5, 3)`.
+- Verified patched source for loaded initialized state: `Linear 3 (2, 5) (5, 3)`.
+- Verified normal lazy first-forward initialization still works: `Linear 3 (2, 5) (5, 3)`.
+- `run_test 'TestLazyModules.test_linear_state'` could not run because `/workspace/test/nn/test_lazylinear_state_op_bench.py` is missing in this runtime.

@@ -1,0 +1,7 @@
+Implemented the minimal source fix in `torch/optim/lbfgs.py`: LBFGS now passes the remaining evaluation budget into `_strong_wolfe` via `max_ls=max_eval - current_evals`.
+
+Verification run:
+- `python test/test_optim.py -k non_empty_state -v` passed: 14 tests OK, including LBFGS.
+- `./opbench_action.py run_test 'TestOptimRenewedCPU.test_non_empty_state_LBFGS_cpu_float32'` passed.
+
+No tests were modified.

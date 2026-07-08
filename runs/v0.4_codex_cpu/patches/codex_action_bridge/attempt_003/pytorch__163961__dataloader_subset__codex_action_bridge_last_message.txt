@@ -1,0 +1,8 @@
+Implemented the minimal source fix in `torch/utils/data/dataset.py`.
+
+`Subset.__getitems__` now detects when a `Subset` subclass overrides `__getitem__` and routes batched access through that override, instead of using the base `Subset` batching implementation.
+
+Verification run:
+`./opbench_action.py run_test 'TestDatasetRandomSplit'`
+
+Result: 9 tests passed. Final diff only touches `torch/utils/data/dataset.py`.

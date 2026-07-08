@@ -1,0 +1,10 @@
+Implemented the minimal source fix in `torch/nn/modules/linear.py`.
+
+Change made:
+- In `LazyLinear.initialize_parameters`, when parameters are already materialized before first forward, set `self.in_features` from `self.weight.shape[-1]`.
+
+Verification:
+- Reproduced the original symptom: loaded `LazyLinear` kept `in_features=0` after forward.
+- `python -m py_compile torch/nn/modules/linear.py` passed.
+- `opbench_action.py git_diff` shows only the allowed file changed.
+- The visible `run_test 'TestLazyModules.test_linear_state'` could not run because `/workspace/test/nn/test_lazylinear_state_op_bench.py` is not present in this runtime.

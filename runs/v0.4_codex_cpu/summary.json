@@ -1,0 +1,2287 @@
+{
+  "agents": {
+    "codex_action_bridge": {
+      "failure_reasons": {
+        "fail_to_pass_failed": 6,
+        "resolved": 24
+      },
+      "median_runtime_sec": 45.90223035450026,
+      "resolved": 24,
+      "resolved_rate": 0.8,
+      "total": 30
+    }
+  },
+  "baselines": [
+    {
+      "agent": "baseline",
+      "commands": [
+        {
+          "command": [
+            "op_bench",
+            "copy-source-snapshot",
+            "/Users/yy/dev/graduate/op_bench/.op_bench_cache/sources/pytorch/pytorch/362b40939dd6faeebf0569beac563afa51e81dcd/source",
+            "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__149693__lazylinear_init-93p6mhzu/workspace"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__149693__lazylinear_init-93p6mhzu",
+          "duration_sec": 3.926633125,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "copied source snapshot from /Users/yy/dev/graduate/op_bench/.op_bench_cache/sources/pytorch/pytorch/362b40939dd6faeebf0569beac563afa51e81dcd/source\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "image",
+            "inspect",
+            "op-bench/pytorch-cpu:torch2.6.0-py311"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__149693__lazylinear_init-93p6mhzu/workspace",
+          "duration_sec": 0.02406712500000019,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "[\n    {\n        \"Architecture\": \"amd64\",\n        \"Config\": {\n            \"Cmd\": [\n                \"/bin/bash\"\n            ],\n            \"Env\": [\n                \"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\",\n                \"DEBIAN_FRONTEND=noninteractive\",\n                \"LANG=C.UTF-8\",\n                \"PYTHONUNBUFFERED=1\",\n                \"PYTHONDONTWRITEBYTECODE=1\"\n            ],\n            \"Labels\": {\n                \"com.docker.compose.project\": \"pytorch\",\n                \"com.docker.compose.service\": \"ipex-base\",\n                \"com.docker.compose.version\": \"2.26.1\",\n                \"dependency.apt.wget\": \"true\",\n                \"dependency.python\": \"3.11\",\n                \"dependency.python.pip\": \"requirements.txt\",\n                \"docs\": \"pytorch\",\n                \"org.opencontainers.base.name\": \"intel/python:3.11-full\",\n                \"org.opencontainers.image.name\": \"intel/intel-optimized-pytorch\",\n                \"org.opencontainers.image.ref.name\": \"ubuntu\",\n                \"org.opencontainers.image.title\": \"Intel\u00ae Extension for PyTorch Base Image\",\n                \"org.opencontainers.image.version\": \"2.6.0-pip-base\"\n            },\n            \"Shell\": [\n                \"/bin/bash\",\n                \"-c\"\n            ],\n            \"WorkingDir\": \"/workspace\"\n        },\n        \"Created\": \"2026-07-06T17:50:18.306039527+08:00\",\n        \"Descriptor\": {\n            \"digest\": \"sha256:6986cc95a36f26d91335b9e57bd5af6acbcdf63f39dacdd3967ce3556935be3d\",\n            \"mediaType\": \"application/vnd.oci.image.manifest.v1+json\",\n            \"size\": 2974\n        },\n        \"Id\": \"sha256:6986cc95a36f26d91335b9e57bd5af6acbcdf63f39dacdd3967ce3556935be3d\",\n        \"Metadata\": {\n            \"LastTagTime\": \"2026-07-06T09:50:18.422551132Z\"\n        },\n        \"Os\": \"linux\",\n        \"Parent\": \"sha256:4862aafe6afea5d1544978870c416af7d9ad511bdd547787e8382e4b993feef0\",\n        \"RepoDigests\": [\n            \"op-bench/pytorch-cpu@sha256:6986cc95a36f26d91335b9e57bd5af6acbcdf63f39dacdd3967ce3556935be3d\"\n        ],\n        \"RepoTags\": [\n            \"op-bench/pytorch-cpu:torch2.6.0-py311\"\n        ],\n        \"RootFS\": {\n            \"Layers\": [\n                \"sha256:270a1170e7e398434ff1b31e17e233f7d7b71aa99a40473615860068e86720af\",\n                \"sha256:1c3a41a316e74f3573300283e7e01e6a1daf878ec7695fb8a78ff7fd70a44b70\",\n                \"sha256:12c3e171d22282ddfb12a1da96d90e15a74b2273ca5b44f2ac7d812d89c7e59a\",\n                \"sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef\",\n                \"sha256:7b3d48b71cc96c955e06fd0925f836c256573c8f88246546d67a4cd3b8189e53\",\n                \"sha256:a6e85488ac83608d843b4bd6b499fa00429d3b5c6e468781c67ed6e3e356962d\",\n                \"sha256:5fcd6e37f0e2f7882fd49c3cd9484c01a94e2317c5dcfa5969e5380a7cb71138\",\n                \"sha256:35f95c256a0c96d24901c9133e92325c8054da0494440d3fe8351c0f7e155cdf\",\n                \"sha256:b414dedeb164c6b5251cc6afcf83356148e3f0da3eb0acc1d53746747f60fd6a\",\n                \"sha256:75e3822f49725e642fa2b10c3858618a225ed5d5756061cac34d5b855c168348\",\n                \"sha256:eb7d260c96044542eaf1086be37933977b7a406d35efb26149e10bd807e51d6a\",\n                \"sha256:2b5afb2f22aa02d49fd8fffc3487519dc378baf7b55215ae4ad1cbb6e9c8fa40\"\n            ],\n            \"Type\": \"layers\"\n        },\n        \"Size\": 734073131\n    }\n]\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "run",
+            "--detach",
+            "--name",
+            "op-bench-pytorch__149693__lazylinear_init-823a75e3096f",
+            "--label",
+            "op-bench.environment-id=pytorch-cpu-torch2.6.0-py311",
+            "--label",
+            "op-bench.managed=true",
+            "--label",
+            "op-bench.runtime-tier=cpu_python_overlay",
+            "--label",
+            "op-bench.task-id=pytorch__149693__lazylinear_init",
+            "--volume",
+            "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__149693__lazylinear_init-93p6mhzu/workspace:/workspace",
+            "--workdir",
+            "/workspace",
+            "op-bench/pytorch-cpu:torch2.6.0-py311",
+            "tail",
+            "-f",
+            "/dev/null"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__149693__lazylinear_init-93p6mhzu/workspace",
+          "duration_sec": 0.09239683399999965,
+          "exit_code": 0,
+          "stderr": "WARNING: The requested image's platform (linux/amd64) does not match the detected host platform (linux/arm64/v8) and no specific platform was requested\n",
+          "stdout": "9ab18cf78f2cffcf06c5923fd10eb3d9999f906ab5ce1818c7dc415fad82f7a7\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/tmp",
+            "op-bench-pytorch__149693__lazylinear_init-823a75e3096f",
+            "python",
+            "--version"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__149693__lazylinear_init-93p6mhzu/workspace",
+          "duration_sec": 0.03876091700000028,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "Python 3.11.0rc1\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/tmp",
+            "op-bench-pytorch__149693__lazylinear_init-823a75e3096f",
+            "python",
+            "-c",
+            "import torch; print(torch.__version__); print(torch.__file__)"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__149693__lazylinear_init-93p6mhzu/workspace",
+          "duration_sec": 6.431524833,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "2.6.0+cpu\n/usr/local/lib/python3.11/dist-packages/torch/__init__.py\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "git",
+            "apply",
+            "/Users/yy/dev/graduate/op_bench/tasks/pytorch/149693_lazylinear_init/artifacts/test.patch"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__149693__lazylinear_init-93p6mhzu/workspace",
+          "duration_sec": 0.01741312499999914,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/workspace",
+            "op-bench-pytorch__149693__lazylinear_init-823a75e3096f",
+            "python",
+            "-c",
+            "import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('.')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))",
+            "{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/nn/modules/linear.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__149693__lazylinear_init-93p6mhzu/workspace",
+          "duration_sec": 8.323077833000001,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "{\"mode\": \"python_overlay\", \"overlay_files\": [{\"runtime\": \"/tmp/op_bench_runtime/site-packages/torch/nn/modules/linear.py\", \"sha256\": \"sha256:2a8ff9d1f6aa498be26cb7a4187d3b06accf6e8ed4295edf65be41ab860a8ee8\", \"workspace\": \"/workspace/torch/nn/modules/linear.py\"}], \"package\": \"torch\"}\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/workspace",
+            "op-bench-pytorch__149693__lazylinear_init-823a75e3096f",
+            "python",
+            "test/nn/test_lazy_modules.py",
+            "TestLazyModules.test_lazy_linear_reset_uses_inferred_in_features"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__149693__lazylinear_init-93p6mhzu/workspace",
+          "duration_sec": 10.747888750000001,
+          "exit_code": 1,
+          "stderr": "F\n======================================================================\nFAIL: test_lazy_linear_reset_uses_inferred_in_features (__main__.TestLazyModules.test_lazy_linear_reset_uses_inferred_in_features)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/tmp/op_bench_runtime/site-packages/torch/testing/_internal/common_utils.py\", line 3108, in wrapper\n    method(*args, **kwargs)\n  File \"/tmp/op_bench_runtime/site-packages/torch/testing/_internal/common_utils.py\", line 2250, in wrapper\n    fn(*args, **kwargs)\n  File \"/workspace/test/nn/test_lazy_modules.py\", line 139, in test_lazy_linear_reset_uses_inferred_in_features\n    self.assertEqual(reset_parameters.call_count, 1)\n  File \"/tmp/op_bench_runtime/site-packages/torch/testing/_internal/common_utils.py\", line 4016, in assertEqual\n    raise error_metas.pop()[0].to_error(\nAssertionError: Scalars are not equal!\n\nExpected 1 but got 0.\nAbsolute difference: 1\nRelative difference: 1.0\n\nTo execute this test, run the following from the base repo dir:\n    python test/nn/test_lazy_modules.py TestLazyModules.test_lazy_linear_reset_uses_inferred_in_features\n\nThis message can be suppressed by setting PYTORCH_PRINT_REPRO_ON_FAILURE=0\n\n----------------------------------------------------------------------\nRan 1 test in 0.056s\n\nFAILED (failures=1)\n",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/workspace",
+            "op-bench-pytorch__149693__lazylinear_init-823a75e3096f",
+            "python",
+            "-c",
+            "import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('.')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))",
+            "{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/nn/modules/linear.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__149693__lazylinear_init-93p6mhzu/workspace",
+          "duration_sec": 6.026350833999999,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "{\"mode\": \"python_overlay\", \"overlay_files\": [{\"runtime\": \"/tmp/op_bench_runtime/site-packages/torch/nn/modules/linear.py\", \"sha256\": \"sha256:2a8ff9d1f6aa498be26cb7a4187d3b06accf6e8ed4295edf65be41ab860a8ee8\", \"workspace\": \"/workspace/torch/nn/modules/linear.py\"}], \"package\": \"torch\"}\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/workspace",
+            "op-bench-pytorch__149693__lazylinear_init-823a75e3096f",
+            "python",
+            "test/nn/test_lazy_modules.py",
+            "TestLazyModules.test_linear_state"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__149693__lazylinear_init-93p6mhzu/workspace",
+          "duration_sec": 10.769688834,
+          "exit_code": 0,
+          "stderr": ".\n----------------------------------------------------------------------\nRan 1 test in 0.051s\n\nOK\n",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "rm",
+            "-f",
+            "op-bench-pytorch__149693__lazylinear_init-823a75e3096f"
+          ],
+          "cwd": "",
+          "duration_sec": 0.19698416700000365,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "op-bench-pytorch__149693__lazylinear_init-823a75e3096f\n",
+          "timed_out": false
+        }
+      ],
+      "duration_sec": 46.616030584,
+      "environment": {
+        "command_workdir": "/workspace",
+        "container_name": "op-bench-pytorch__149693__lazylinear_init-823a75e3096f",
+        "digest_kind": "local_image_id",
+        "docker_available": true,
+        "environment_id": "pytorch-cpu-torch2.6.0-py311",
+        "executor": "docker",
+        "gpus": null,
+        "host_machine": "arm64",
+        "host_platform": "macOS-26.5.1-arm64-arm-64bit",
+        "image": "op-bench/pytorch-cpu:torch2.6.0-py311",
+        "image_digest": "sha256:9507757065fd73fa7a958cd13f01de163a3fa46d826c09142f9522eda0f1e400",
+        "platform": "linux/amd64",
+        "preflight_command_count": 2,
+        "preflight_passed": true,
+        "preflight_workdir": "/tmp",
+        "runtime_tier": "cpu_python_overlay",
+        "workspace_dir": "/workspace"
+      },
+      "fail_to_pass_passed": 0,
+      "fail_to_pass_total": 1,
+      "mode": "baseline",
+      "pass_to_pass_passed": 1,
+      "pass_to_pass_total": 1,
+      "status": "baseline_reproduced",
+      "task_id": "pytorch__149693__lazylinear_init"
+    },
+    {
+      "agent": "baseline",
+      "commands": [
+        {
+          "command": [
+            "op_bench",
+            "copy-source-snapshot",
+            "/Users/yy/dev/graduate/op_bench/.op_bench_cache/sources/pytorch/pytorch/8bf3f3fc43bd8c6a35f7dc92e1dfe21623b648bb/source",
+            "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__147599__lazylinear_state_forward-g1c5nea4/workspace"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__147599__lazylinear_state_forward-g1c5nea4",
+          "duration_sec": 3.933874249999917,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "copied source snapshot from /Users/yy/dev/graduate/op_bench/.op_bench_cache/sources/pytorch/pytorch/8bf3f3fc43bd8c6a35f7dc92e1dfe21623b648bb/source\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "image",
+            "inspect",
+            "op-bench/pytorch-cpu:torch2.6.0-py311"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__147599__lazylinear_state_forward-g1c5nea4/workspace",
+          "duration_sec": 0.0653093749999698,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "[\n    {\n        \"Architecture\": \"amd64\",\n        \"Config\": {\n            \"Cmd\": [\n                \"/bin/bash\"\n            ],\n            \"Env\": [\n                \"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\",\n                \"DEBIAN_FRONTEND=noninteractive\",\n                \"LANG=C.UTF-8\",\n                \"PYTHONUNBUFFERED=1\",\n                \"PYTHONDONTWRITEBYTECODE=1\"\n            ],\n            \"Labels\": {\n                \"com.docker.compose.project\": \"pytorch\",\n                \"com.docker.compose.service\": \"ipex-base\",\n                \"com.docker.compose.version\": \"2.26.1\",\n                \"dependency.apt.wget\": \"true\",\n                \"dependency.python\": \"3.11\",\n                \"dependency.python.pip\": \"requirements.txt\",\n                \"docs\": \"pytorch\",\n                \"org.opencontainers.base.name\": \"intel/python:3.11-full\",\n                \"org.opencontainers.image.name\": \"intel/intel-optimized-pytorch\",\n                \"org.opencontainers.image.ref.name\": \"ubuntu\",\n                \"org.opencontainers.image.title\": \"Intel\u00ae Extension for PyTorch Base Image\",\n                \"org.opencontainers.image.version\": \"2.6.0-pip-base\"\n            },\n            \"Shell\": [\n                \"/bin/bash\",\n                \"-c\"\n            ],\n            \"WorkingDir\": \"/workspace\"\n        },\n        \"Created\": \"2026-07-06T17:50:18.306039527+08:00\",\n        \"Descriptor\": {\n            \"digest\": \"sha256:6986cc95a36f26d91335b9e57bd5af6acbcdf63f39dacdd3967ce3556935be3d\",\n            \"mediaType\": \"application/vnd.oci.image.manifest.v1+json\",\n            \"size\": 2974\n        },\n        \"Id\": \"sha256:6986cc95a36f26d91335b9e57bd5af6acbcdf63f39dacdd3967ce3556935be3d\",\n        \"Metadata\": {\n            \"LastTagTime\": \"2026-07-06T09:50:18.422551132Z\"\n        },\n        \"Os\": \"linux\",\n        \"Parent\": \"sha256:4862aafe6afea5d1544978870c416af7d9ad511bdd547787e8382e4b993feef0\",\n        \"RepoDigests\": [\n            \"op-bench/pytorch-cpu@sha256:6986cc95a36f26d91335b9e57bd5af6acbcdf63f39dacdd3967ce3556935be3d\"\n        ],\n        \"RepoTags\": [\n            \"op-bench/pytorch-cpu:torch2.6.0-py311\"\n        ],\n        \"RootFS\": {\n            \"Layers\": [\n                \"sha256:270a1170e7e398434ff1b31e17e233f7d7b71aa99a40473615860068e86720af\",\n                \"sha256:1c3a41a316e74f3573300283e7e01e6a1daf878ec7695fb8a78ff7fd70a44b70\",\n                \"sha256:12c3e171d22282ddfb12a1da96d90e15a74b2273ca5b44f2ac7d812d89c7e59a\",\n                \"sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef\",\n                \"sha256:7b3d48b71cc96c955e06fd0925f836c256573c8f88246546d67a4cd3b8189e53\",\n                \"sha256:a6e85488ac83608d843b4bd6b499fa00429d3b5c6e468781c67ed6e3e356962d\",\n                \"sha256:5fcd6e37f0e2f7882fd49c3cd9484c01a94e2317c5dcfa5969e5380a7cb71138\",\n                \"sha256:35f95c256a0c96d24901c9133e92325c8054da0494440d3fe8351c0f7e155cdf\",\n                \"sha256:b414dedeb164c6b5251cc6afcf83356148e3f0da3eb0acc1d53746747f60fd6a\",\n                \"sha256:75e3822f49725e642fa2b10c3858618a225ed5d5756061cac34d5b855c168348\",\n                \"sha256:eb7d260c96044542eaf1086be37933977b7a406d35efb26149e10bd807e51d6a\",\n                \"sha256:2b5afb2f22aa02d49fd8fffc3487519dc378baf7b55215ae4ad1cbb6e9c8fa40\"\n            ],\n            \"Type\": \"layers\"\n        },\n        \"Size\": 734073131\n    }\n]\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "run",
+            "--detach",
+            "--name",
+            "op-bench-pytorch__147599__lazylinear_state_forward-774d4a5fa3bc",
+            "--label",
+            "op-bench.environment-id=pytorch-cpu-torch2.6.0-py311",
+            "--label",
+            "op-bench.managed=true",
+            "--label",
+            "op-bench.runtime-tier=cpu_python_overlay",
+            "--label",
+            "op-bench.task-id=pytorch__147599__lazylinear_state_forward",
+            "--volume",
+            "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__147599__lazylinear_state_forward-g1c5nea4/workspace:/workspace",
+            "--workdir",
+            "/workspace",
+            "op-bench/pytorch-cpu:torch2.6.0-py311",
+            "tail",
+            "-f",
+            "/dev/null"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__147599__lazylinear_state_forward-g1c5nea4/workspace",
+          "duration_sec": 0.08442958400019052,
+          "exit_code": 0,
+          "stderr": "WARNING: The requested image's platform (linux/amd64) does not match the detected host platform (linux/arm64/v8) and no specific platform was requested\n",
+          "stdout": "b957b1a90669e91755a8b4f407148553545ab63ba664ce4a275a428eb0d73c23\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/tmp",
+            "op-bench-pytorch__147599__lazylinear_state_forward-774d4a5fa3bc",
+            "python",
+            "--version"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__147599__lazylinear_state_forward-g1c5nea4/workspace",
+          "duration_sec": 0.04304075000004559,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "Python 3.11.0rc1\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/tmp",
+            "op-bench-pytorch__147599__lazylinear_state_forward-774d4a5fa3bc",
+            "python",
+            "-c",
+            "import torch; print(torch.__version__); print(torch.__file__)"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__147599__lazylinear_state_forward-g1c5nea4/workspace",
+          "duration_sec": 6.750817374999997,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "2.6.0+cpu\n/usr/local/lib/python3.11/dist-packages/torch/__init__.py\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "git",
+            "apply",
+            "/Users/yy/dev/graduate/op_bench/tasks/pytorch/147599_lazylinear_state_forward/artifacts/test.patch"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__147599__lazylinear_state_forward-g1c5nea4/workspace",
+          "duration_sec": 0.015810583000074985,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/workspace",
+            "op-bench-pytorch__147599__lazylinear_state_forward-774d4a5fa3bc",
+            "python",
+            "-c",
+            "import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('.')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))",
+            "{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/nn/modules/linear.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__147599__lazylinear_state_forward-g1c5nea4/workspace",
+          "duration_sec": 8.401058791999958,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "{\"mode\": \"python_overlay\", \"overlay_files\": [{\"runtime\": \"/tmp/op_bench_runtime/site-packages/torch/nn/modules/linear.py\", \"sha256\": \"sha256:a26a3fa47880c4b923498359e555c4703d9a4469e04bfd3f25f2e6578338c334\", \"workspace\": \"/workspace/torch/nn/modules/linear.py\"}], \"package\": \"torch\"}\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/workspace",
+            "op-bench-pytorch__147599__lazylinear_state_forward-774d4a5fa3bc",
+            "python",
+            "test/nn/test_lazylinear_state_op_bench.py",
+            "TestLazyLinearStateOpBench.test_lazy_linear_load_state_forward_sets_in_features"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__147599__lazylinear_state_forward-g1c5nea4/workspace",
+          "duration_sec": 6.039666874999966,
+          "exit_code": 1,
+          "stderr": "F\n======================================================================\nFAIL: test_lazy_linear_load_state_forward_sets_in_features (__main__.TestLazyLinearStateOpBench.test_lazy_linear_load_state_forward_sets_in_features)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/workspace/test/nn/test_lazylinear_state_op_bench.py\", line 21, in test_lazy_linear_load_state_forward_sets_in_features\n    self.assertEqual(lazy.in_features, 5)\nAssertionError: 0 != 5\n\n----------------------------------------------------------------------\nRan 1 test in 0.021s\n\nFAILED (failures=1)\n",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/workspace",
+            "op-bench-pytorch__147599__lazylinear_state_forward-774d4a5fa3bc",
+            "python",
+            "-c",
+            "import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('.')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))",
+            "{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/nn/modules/linear.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__147599__lazylinear_state_forward-g1c5nea4/workspace",
+          "duration_sec": 6.0119742499998665,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "{\"mode\": \"python_overlay\", \"overlay_files\": [{\"runtime\": \"/tmp/op_bench_runtime/site-packages/torch/nn/modules/linear.py\", \"sha256\": \"sha256:a26a3fa47880c4b923498359e555c4703d9a4469e04bfd3f25f2e6578338c334\", \"workspace\": \"/workspace/torch/nn/modules/linear.py\"}], \"package\": \"torch\"}\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/workspace",
+            "op-bench-pytorch__147599__lazylinear_state_forward-774d4a5fa3bc",
+            "python",
+            "test/nn/test_lazylinear_state_op_bench.py",
+            "TestLazyLinearStateOpBench.test_lazy_linear_regular_forward_still_initializes"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__147599__lazylinear_state_forward-g1c5nea4/workspace",
+          "duration_sec": 5.975533000000041,
+          "exit_code": 0,
+          "stderr": ".\n----------------------------------------------------------------------\nRan 1 test in 0.018s\n\nOK\n",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "rm",
+            "-f",
+            "op-bench-pytorch__147599__lazylinear_state_forward-774d4a5fa3bc"
+          ],
+          "cwd": "",
+          "duration_sec": 0.20235966600012034,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "op-bench-pytorch__147599__lazylinear_state_forward-774d4a5fa3bc\n",
+          "timed_out": false
+        }
+      ],
+      "duration_sec": 37.52970166699993,
+      "environment": {
+        "command_workdir": "/workspace",
+        "container_name": "op-bench-pytorch__147599__lazylinear_state_forward-774d4a5fa3bc",
+        "digest_kind": "local_image_id",
+        "docker_available": true,
+        "environment_id": "pytorch-cpu-torch2.6.0-py311",
+        "executor": "docker",
+        "gpus": null,
+        "host_machine": "arm64",
+        "host_platform": "macOS-26.5.1-arm64-arm-64bit",
+        "image": "op-bench/pytorch-cpu:torch2.6.0-py311",
+        "image_digest": "sha256:9507757065fd73fa7a958cd13f01de163a3fa46d826c09142f9522eda0f1e400",
+        "platform": "linux/amd64",
+        "preflight_command_count": 2,
+        "preflight_passed": true,
+        "preflight_workdir": "/tmp",
+        "runtime_tier": "cpu_python_overlay",
+        "workspace_dir": "/workspace"
+      },
+      "fail_to_pass_passed": 0,
+      "fail_to_pass_total": 1,
+      "mode": "baseline",
+      "pass_to_pass_passed": 1,
+      "pass_to_pass_total": 1,
+      "status": "baseline_reproduced",
+      "task_id": "pytorch__147599__lazylinear_state_forward"
+    },
+    {
+      "agent": "baseline",
+      "commands": [
+        {
+          "command": [
+            "op_bench",
+            "copy-source-snapshot",
+            "/Users/yy/dev/graduate/op_bench/.op_bench_cache/sources/pytorch/pytorch/df6073641079c781e66a905e4f15ee49ac257eb2/source",
+            "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__160952__bilinear_lazy_check-idi39ur2/workspace"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__160952__bilinear_lazy_check-idi39ur2",
+          "duration_sec": 4.536739125000167,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "copied source snapshot from /Users/yy/dev/graduate/op_bench/.op_bench_cache/sources/pytorch/pytorch/df6073641079c781e66a905e4f15ee49ac257eb2/source\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "image",
+            "inspect",
+            "op-bench/pytorch-cpu:torch2.6.0-py311"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__160952__bilinear_lazy_check-idi39ur2/workspace",
+          "duration_sec": 0.04312945900028353,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "[\n    {\n        \"Architecture\": \"amd64\",\n        \"Config\": {\n            \"Cmd\": [\n                \"/bin/bash\"\n            ],\n            \"Env\": [\n                \"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\",\n                \"DEBIAN_FRONTEND=noninteractive\",\n                \"LANG=C.UTF-8\",\n                \"PYTHONUNBUFFERED=1\",\n                \"PYTHONDONTWRITEBYTECODE=1\"\n            ],\n            \"Labels\": {\n                \"com.docker.compose.project\": \"pytorch\",\n                \"com.docker.compose.service\": \"ipex-base\",\n                \"com.docker.compose.version\": \"2.26.1\",\n                \"dependency.apt.wget\": \"true\",\n                \"dependency.python\": \"3.11\",\n                \"dependency.python.pip\": \"requirements.txt\",\n                \"docs\": \"pytorch\",\n                \"org.opencontainers.base.name\": \"intel/python:3.11-full\",\n                \"org.opencontainers.image.name\": \"intel/intel-optimized-pytorch\",\n                \"org.opencontainers.image.ref.name\": \"ubuntu\",\n                \"org.opencontainers.image.title\": \"Intel\u00ae Extension for PyTorch Base Image\",\n                \"org.opencontainers.image.version\": \"2.6.0-pip-base\"\n            },\n            \"Shell\": [\n                \"/bin/bash\",\n                \"-c\"\n            ],\n            \"WorkingDir\": \"/workspace\"\n        },\n        \"Created\": \"2026-07-06T17:50:18.306039527+08:00\",\n        \"Descriptor\": {\n            \"digest\": \"sha256:6986cc95a36f26d91335b9e57bd5af6acbcdf63f39dacdd3967ce3556935be3d\",\n            \"mediaType\": \"application/vnd.oci.image.manifest.v1+json\",\n            \"size\": 2974\n        },\n        \"Id\": \"sha256:6986cc95a36f26d91335b9e57bd5af6acbcdf63f39dacdd3967ce3556935be3d\",\n        \"Metadata\": {\n            \"LastTagTime\": \"2026-07-06T09:50:18.422551132Z\"\n        },\n        \"Os\": \"linux\",\n        \"Parent\": \"sha256:4862aafe6afea5d1544978870c416af7d9ad511bdd547787e8382e4b993feef0\",\n        \"RepoDigests\": [\n            \"op-bench/pytorch-cpu@sha256:6986cc95a36f26d91335b9e57bd5af6acbcdf63f39dacdd3967ce3556935be3d\"\n        ],\n        \"RepoTags\": [\n            \"op-bench/pytorch-cpu:torch2.6.0-py311\"\n        ],\n        \"RootFS\": {\n            \"Layers\": [\n                \"sha256:270a1170e7e398434ff1b31e17e233f7d7b71aa99a40473615860068e86720af\",\n                \"sha256:1c3a41a316e74f3573300283e7e01e6a1daf878ec7695fb8a78ff7fd70a44b70\",\n                \"sha256:12c3e171d22282ddfb12a1da96d90e15a74b2273ca5b44f2ac7d812d89c7e59a\",\n                \"sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef\",\n                \"sha256:7b3d48b71cc96c955e06fd0925f836c256573c8f88246546d67a4cd3b8189e53\",\n                \"sha256:a6e85488ac83608d843b4bd6b499fa00429d3b5c6e468781c67ed6e3e356962d\",\n                \"sha256:5fcd6e37f0e2f7882fd49c3cd9484c01a94e2317c5dcfa5969e5380a7cb71138\",\n                \"sha256:35f95c256a0c96d24901c9133e92325c8054da0494440d3fe8351c0f7e155cdf\",\n                \"sha256:b414dedeb164c6b5251cc6afcf83356148e3f0da3eb0acc1d53746747f60fd6a\",\n                \"sha256:75e3822f49725e642fa2b10c3858618a225ed5d5756061cac34d5b855c168348\",\n                \"sha256:eb7d260c96044542eaf1086be37933977b7a406d35efb26149e10bd807e51d6a\",\n                \"sha256:2b5afb2f22aa02d49fd8fffc3487519dc378baf7b55215ae4ad1cbb6e9c8fa40\"\n            ],\n            \"Type\": \"layers\"\n        },\n        \"Size\": 734073131\n    }\n]\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "run",
+            "--detach",
+            "--name",
+            "op-bench-pytorch__160952__bilinear_lazy_check-74f1e9380001",
+            "--label",
+            "op-bench.environment-id=pytorch-cpu-torch2.6.0-py311",
+            "--label",
+            "op-bench.managed=true",
+            "--label",
+            "op-bench.runtime-tier=cpu_python_overlay",
+            "--label",
+            "op-bench.task-id=pytorch__160952__bilinear_lazy_check",
+            "--volume",
+            "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__160952__bilinear_lazy_check-idi39ur2/workspace:/workspace",
+            "--workdir",
+            "/workspace",
+            "op-bench/pytorch-cpu:torch2.6.0-py311",
+            "tail",
+            "-f",
+            "/dev/null"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__160952__bilinear_lazy_check-idi39ur2/workspace",
+          "duration_sec": 0.0930916669999533,
+          "exit_code": 0,
+          "stderr": "WARNING: The requested image's platform (linux/amd64) does not match the detected host platform (linux/arm64/v8) and no specific platform was requested\n",
+          "stdout": "60d57ee2707c730acaa63ee37053ce01bcb571e8d34f633574890797a1949787\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/tmp",
+            "op-bench-pytorch__160952__bilinear_lazy_check-74f1e9380001",
+            "python",
+            "--version"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__160952__bilinear_lazy_check-idi39ur2/workspace",
+          "duration_sec": 0.0422579159999259,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "Python 3.11.0rc1\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/tmp",
+            "op-bench-pytorch__160952__bilinear_lazy_check-74f1e9380001",
+            "python",
+            "-c",
+            "import torch; print(torch.__version__); print(torch.__file__)"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__160952__bilinear_lazy_check-idi39ur2/workspace",
+          "duration_sec": 6.698867457999768,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "2.6.0+cpu\n/usr/local/lib/python3.11/dist-packages/torch/__init__.py\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "git",
+            "apply",
+            "/Users/yy/dev/graduate/op_bench/tasks/pytorch/160952_bilinear_lazy_check/artifacts/test.patch"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__160952__bilinear_lazy_check-idi39ur2/workspace",
+          "duration_sec": 0.01734787499981394,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/workspace",
+            "op-bench-pytorch__160952__bilinear_lazy_check-74f1e9380001",
+            "python",
+            "-c",
+            "import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('.')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))",
+            "{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/nn/modules/linear.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__160952__bilinear_lazy_check-idi39ur2/workspace",
+          "duration_sec": 8.613913582999885,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "{\"mode\": \"python_overlay\", \"overlay_files\": [{\"runtime\": \"/tmp/op_bench_runtime/site-packages/torch/nn/modules/linear.py\", \"sha256\": \"sha256:63fb3cae2a1561fec5e183e45c171d177080113a3996f1046eea35530cd33247\", \"workspace\": \"/workspace/torch/nn/modules/linear.py\"}], \"package\": \"torch\"}\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/workspace",
+            "op-bench-pytorch__160952__bilinear_lazy_check-74f1e9380001",
+            "python",
+            "test/nn/test_bilinear_lazy_op_bench.py",
+            "TestLazyBilinearOpBench.test_lazy_bilinear_can_be_constructed"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__160952__bilinear_lazy_check-idi39ur2/workspace",
+          "duration_sec": 6.033449499999733,
+          "exit_code": 1,
+          "stderr": "E\n======================================================================\nERROR: test_lazy_bilinear_can_be_constructed (__main__.TestLazyBilinearOpBench.test_lazy_bilinear_can_be_constructed)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/workspace/test/nn/test_bilinear_lazy_op_bench.py\", line 38, in test_lazy_bilinear_can_be_constructed\n    module = LazyBilinearForTest(3)\n             ^^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/test/nn/test_bilinear_lazy_op_bench.py\", line 13, in __init__\n    super().__init__(0, 0, out_features, bias=bias)\n  File \"/tmp/op_bench_runtime/site-packages/torch/nn/modules/lazy.py\", line 187, in __init__\n    super().__init__(*args, **kwargs)  # type: ignore[misc]\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/nn/modules/linear.py\", line 218, in __init__\n    raise ValueError(f\"in1_features must be > 0, but got {in1_features}\")\nValueError: in1_features must be > 0, but got 0\n\n----------------------------------------------------------------------\nRan 1 test in 0.003s\n\nFAILED (errors=1)\n",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/workspace",
+            "op-bench-pytorch__160952__bilinear_lazy_check-74f1e9380001",
+            "python",
+            "-c",
+            "import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('.')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))",
+            "{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/nn/modules/linear.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__160952__bilinear_lazy_check-idi39ur2/workspace",
+          "duration_sec": 6.022102625000116,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "{\"mode\": \"python_overlay\", \"overlay_files\": [{\"runtime\": \"/tmp/op_bench_runtime/site-packages/torch/nn/modules/linear.py\", \"sha256\": \"sha256:63fb3cae2a1561fec5e183e45c171d177080113a3996f1046eea35530cd33247\", \"workspace\": \"/workspace/torch/nn/modules/linear.py\"}], \"package\": \"torch\"}\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/workspace",
+            "op-bench-pytorch__160952__bilinear_lazy_check-74f1e9380001",
+            "python",
+            "test/nn/test_bilinear_lazy_op_bench.py",
+            "TestLazyBilinearOpBench.test_regular_bilinear_still_runs"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__160952__bilinear_lazy_check-idi39ur2/workspace",
+          "duration_sec": 5.970484333999593,
+          "exit_code": 0,
+          "stderr": ".\n----------------------------------------------------------------------\nRan 1 test in 0.020s\n\nOK\n",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "rm",
+            "-f",
+            "op-bench-pytorch__160952__bilinear_lazy_check-74f1e9380001"
+          ],
+          "cwd": "",
+          "duration_sec": 0.18810495800016724,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "op-bench-pytorch__160952__bilinear_lazy_check-74f1e9380001\n",
+          "timed_out": false
+        }
+      ],
+      "duration_sec": 38.262368499999866,
+      "environment": {
+        "command_workdir": "/workspace",
+        "container_name": "op-bench-pytorch__160952__bilinear_lazy_check-74f1e9380001",
+        "digest_kind": "local_image_id",
+        "docker_available": true,
+        "environment_id": "pytorch-cpu-torch2.6.0-py311",
+        "executor": "docker",
+        "gpus": null,
+        "host_machine": "arm64",
+        "host_platform": "macOS-26.5.1-arm64-arm-64bit",
+        "image": "op-bench/pytorch-cpu:torch2.6.0-py311",
+        "image_digest": "sha256:9507757065fd73fa7a958cd13f01de163a3fa46d826c09142f9522eda0f1e400",
+        "platform": "linux/amd64",
+        "preflight_command_count": 2,
+        "preflight_passed": true,
+        "preflight_workdir": "/tmp",
+        "runtime_tier": "cpu_python_overlay",
+        "workspace_dir": "/workspace"
+      },
+      "fail_to_pass_passed": 0,
+      "fail_to_pass_total": 1,
+      "mode": "baseline",
+      "pass_to_pass_passed": 1,
+      "pass_to_pass_total": 1,
+      "status": "baseline_reproduced",
+      "task_id": "pytorch__160952__bilinear_lazy_check"
+    },
+    {
+      "agent": "baseline",
+      "commands": [
+        {
+          "command": [
+            "op_bench",
+            "copy-source-snapshot",
+            "/Users/yy/dev/graduate/op_bench/.op_bench_cache/sources/pytorch/pytorch/fefc406a3d0d90db0f808419fb88045f90b213cd/source",
+            "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__162340__nn_arg_length-wfx8_77c/workspace"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__162340__nn_arg_length-wfx8_77c",
+          "duration_sec": 3.107254208000086,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "copied source snapshot from /Users/yy/dev/graduate/op_bench/.op_bench_cache/sources/pytorch/pytorch/fefc406a3d0d90db0f808419fb88045f90b213cd/source\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "image",
+            "inspect",
+            "op-bench/pytorch-cpu:torch2.6.0-py311"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__162340__nn_arg_length-wfx8_77c/workspace",
+          "duration_sec": 0.02300408300015988,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "[\n    {\n        \"Architecture\": \"amd64\",\n        \"Config\": {\n            \"Cmd\": [\n                \"/bin/bash\"\n            ],\n            \"Env\": [\n                \"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\",\n                \"DEBIAN_FRONTEND=noninteractive\",\n                \"LANG=C.UTF-8\",\n                \"PYTHONUNBUFFERED=1\",\n                \"PYTHONDONTWRITEBYTECODE=1\"\n            ],\n            \"Labels\": {\n                \"com.docker.compose.project\": \"pytorch\",\n                \"com.docker.compose.service\": \"ipex-base\",\n                \"com.docker.compose.version\": \"2.26.1\",\n                \"dependency.apt.wget\": \"true\",\n                \"dependency.python\": \"3.11\",\n                \"dependency.python.pip\": \"requirements.txt\",\n                \"docs\": \"pytorch\",\n                \"org.opencontainers.base.name\": \"intel/python:3.11-full\",\n                \"org.opencontainers.image.name\": \"intel/intel-optimized-pytorch\",\n                \"org.opencontainers.image.ref.name\": \"ubuntu\",\n                \"org.opencontainers.image.title\": \"Intel\u00ae Extension for PyTorch Base Image\",\n                \"org.opencontainers.image.version\": \"2.6.0-pip-base\"\n            },\n            \"Shell\": [\n                \"/bin/bash\",\n                \"-c\"\n            ],\n            \"WorkingDir\": \"/workspace\"\n        },\n        \"Created\": \"2026-07-06T17:50:18.306039527+08:00\",\n        \"Descriptor\": {\n            \"digest\": \"sha256:6986cc95a36f26d91335b9e57bd5af6acbcdf63f39dacdd3967ce3556935be3d\",\n            \"mediaType\": \"application/vnd.oci.image.manifest.v1+json\",\n            \"size\": 2974\n        },\n        \"Id\": \"sha256:6986cc95a36f26d91335b9e57bd5af6acbcdf63f39dacdd3967ce3556935be3d\",\n        \"Metadata\": {\n            \"LastTagTime\": \"2026-07-06T09:50:18.422551132Z\"\n        },\n        \"Os\": \"linux\",\n        \"Parent\": \"sha256:4862aafe6afea5d1544978870c416af7d9ad511bdd547787e8382e4b993feef0\",\n        \"RepoDigests\": [\n            \"op-bench/pytorch-cpu@sha256:6986cc95a36f26d91335b9e57bd5af6acbcdf63f39dacdd3967ce3556935be3d\"\n        ],\n        \"RepoTags\": [\n            \"op-bench/pytorch-cpu:torch2.6.0-py311\"\n        ],\n        \"RootFS\": {\n            \"Layers\": [\n                \"sha256:270a1170e7e398434ff1b31e17e233f7d7b71aa99a40473615860068e86720af\",\n                \"sha256:1c3a41a316e74f3573300283e7e01e6a1daf878ec7695fb8a78ff7fd70a44b70\",\n                \"sha256:12c3e171d22282ddfb12a1da96d90e15a74b2273ca5b44f2ac7d812d89c7e59a\",\n                \"sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef\",\n                \"sha256:7b3d48b71cc96c955e06fd0925f836c256573c8f88246546d67a4cd3b8189e53\",\n                \"sha256:a6e85488ac83608d843b4bd6b499fa00429d3b5c6e468781c67ed6e3e356962d\",\n                \"sha256:5fcd6e37f0e2f7882fd49c3cd9484c01a94e2317c5dcfa5969e5380a7cb71138\",\n                \"sha256:35f95c256a0c96d24901c9133e92325c8054da0494440d3fe8351c0f7e155cdf\",\n                \"sha256:b414dedeb164c6b5251cc6afcf83356148e3f0da3eb0acc1d53746747f60fd6a\",\n                \"sha256:75e3822f49725e642fa2b10c3858618a225ed5d5756061cac34d5b855c168348\",\n                \"sha256:eb7d260c96044542eaf1086be37933977b7a406d35efb26149e10bd807e51d6a\",\n                \"sha256:2b5afb2f22aa02d49fd8fffc3487519dc378baf7b55215ae4ad1cbb6e9c8fa40\"\n            ],\n            \"Type\": \"layers\"\n        },\n        \"Size\": 734073131\n    }\n]\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "run",
+            "--detach",
+            "--name",
+            "op-bench-pytorch__162340__nn_arg_length-39061c28dc59",
+            "--label",
+            "op-bench.environment-id=pytorch-cpu-torch2.6.0-py311",
+            "--label",
+            "op-bench.managed=true",
+            "--label",
+            "op-bench.runtime-tier=cpu_python_overlay",
+            "--label",
+            "op-bench.task-id=pytorch__162340__nn_arg_length",
+            "--volume",
+            "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__162340__nn_arg_length-wfx8_77c/workspace:/workspace",
+            "--workdir",
+            "/workspace",
+            "op-bench/pytorch-cpu:torch2.6.0-py311",
+            "tail",
+            "-f",
+            "/dev/null"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__162340__nn_arg_length-wfx8_77c/workspace",
+          "duration_sec": 0.08921779100001004,
+          "exit_code": 0,
+          "stderr": "WARNING: The requested image's platform (linux/amd64) does not match the detected host platform (linux/arm64/v8) and no specific platform was requested\n",
+          "stdout": "083415423f5cb8f72baa1ecad284683999e60072b15725c072b0b95411bf2ac5\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/tmp",
+            "op-bench-pytorch__162340__nn_arg_length-39061c28dc59",
+            "python",
+            "--version"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__162340__nn_arg_length-wfx8_77c/workspace",
+          "duration_sec": 0.0416589159999603,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "Python 3.11.0rc1\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/tmp",
+            "op-bench-pytorch__162340__nn_arg_length-39061c28dc59",
+            "python",
+            "-c",
+            "import torch; print(torch.__version__); print(torch.__file__)"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__162340__nn_arg_length-wfx8_77c/workspace",
+          "duration_sec": 6.715106540999841,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "2.6.0+cpu\n/usr/local/lib/python3.11/dist-packages/torch/__init__.py\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "git",
+            "apply",
+            "/Users/yy/dev/graduate/op_bench/tasks/pytorch/162340_nn_arg_length/artifacts/hidden_test.patch"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__162340__nn_arg_length-wfx8_77c/workspace",
+          "duration_sec": 0.020583167000040703,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/workspace",
+            "op-bench-pytorch__162340__nn_arg_length-39061c28dc59",
+            "python",
+            "-c",
+            "import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('.')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))",
+            "{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/nn/modules/conv.py\", \"torch/nn/modules/utils.py\", \"torch/testing/_internal/common_nn.py\", \"torch/testing/_internal/common_mkldnn.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__162340__nn_arg_length-wfx8_77c/workspace",
+          "duration_sec": 8.702863958000307,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "{\"mode\": \"python_overlay\", \"overlay_files\": [{\"runtime\": \"/tmp/op_bench_runtime/site-packages/torch/nn/modules/conv.py\", \"sha256\": \"sha256:ba25b53dfc94b341b21d96ed628babe8204963454ca768c18d981452f2c61d9c\", \"workspace\": \"/workspace/torch/nn/modules/conv.py\"}, {\"runtime\": \"/tmp/op_bench_runtime/site-packages/torch/nn/modules/utils.py\", \"sha256\": \"sha256:9c30558581dfb26c356a19b489739527dc07e1a363d2d8171ae0a1c10fc7dae3\", \"workspace\": \"/workspace/torch/nn/modules/utils.py\"}, {\"runtime\": \"/tmp/op_bench_runtime/site-packages/torch/testing/_internal/common_nn.py\", \"sha256\": \"sha256:9353951a17535aca0b2bf495cae557d3820088714cb8d77b2f2fda69fe845dfc\", \"workspace\": \"/workspace/torch/testing/_internal/common_nn.py\"}, {\"runtime\": \"/tmp/op_bench_runtime/site-packages/torch/testing/_internal/common_mkldnn.py\", \"sha256\": \"sha256:0a0b86c617c02d8f9eac3eb68a5f45fa57cefb9f9087eacb875a480f2da5ea78\", \"workspace\": \"/workspace/torch/testing/_internal/common_mkldnn.py\"}], \"package\": \"torch\"}\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/workspace",
+            "op-bench-pytorch__162340__nn_arg_length-39061c28dc59",
+            "python",
+            "test/nn/test_pooling.py",
+            "TestPoolingNN.test_max_unpool3d_input_check"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__162340__nn_arg_length-wfx8_77c/workspace",
+          "duration_sec": 11.160764582999946,
+          "exit_code": 1,
+          "stderr": "E\n======================================================================\nERROR: test_max_unpool3d_input_check (__main__.TestPoolingNN.test_max_unpool3d_input_check)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/tmp/op_bench_runtime/site-packages/torch/testing/_internal/common_utils.py\", line 3108, in wrapper\n    method(*args, **kwargs)\n  File \"/workspace/test/nn/test_pooling.py\", line 485, in test_max_unpool3d_input_check\n    F.max_unpool3d(x, torch.zeros(x.shape, dtype=int), [1, 1])\n  File \"/tmp/op_bench_runtime/site-packages/torch/nn/functional.py\", line 1073, in max_unpool3d\n    return torch._C._nn.max_unpool3d(input, indices, output_size, _stride, padding)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nRuntimeError: There should be exactly three elements (depth, height, width) in output_size, but got 2 elements.\n\nTo execute this test, run the following from the base repo dir:\n    python test/nn/test_pooling.py TestPoolingNN.test_max_unpool3d_input_check\n\nThis message can be suppressed by setting PYTORCH_PRINT_REPRO_ON_FAILURE=0\n\n----------------------------------------------------------------------\nRan 1 test in 0.024s\n\nFAILED (errors=1)\n",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/workspace",
+            "op-bench-pytorch__162340__nn_arg_length-39061c28dc59",
+            "python",
+            "-c",
+            "import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('.')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))",
+            "{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/nn/modules/conv.py\", \"torch/nn/modules/utils.py\", \"torch/testing/_internal/common_nn.py\", \"torch/testing/_internal/common_mkldnn.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__162340__nn_arg_length-wfx8_77c/workspace",
+          "duration_sec": 6.167320166000081,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "{\"mode\": \"python_overlay\", \"overlay_files\": [{\"runtime\": \"/tmp/op_bench_runtime/site-packages/torch/nn/modules/conv.py\", \"sha256\": \"sha256:ba25b53dfc94b341b21d96ed628babe8204963454ca768c18d981452f2c61d9c\", \"workspace\": \"/workspace/torch/nn/modules/conv.py\"}, {\"runtime\": \"/tmp/op_bench_runtime/site-packages/torch/nn/modules/utils.py\", \"sha256\": \"sha256:9c30558581dfb26c356a19b489739527dc07e1a363d2d8171ae0a1c10fc7dae3\", \"workspace\": \"/workspace/torch/nn/modules/utils.py\"}, {\"runtime\": \"/tmp/op_bench_runtime/site-packages/torch/testing/_internal/common_nn.py\", \"sha256\": \"sha256:9353951a17535aca0b2bf495cae557d3820088714cb8d77b2f2fda69fe845dfc\", \"workspace\": \"/workspace/torch/testing/_internal/common_nn.py\"}, {\"runtime\": \"/tmp/op_bench_runtime/site-packages/torch/testing/_internal/common_mkldnn.py\", \"sha256\": \"sha256:0a0b86c617c02d8f9eac3eb68a5f45fa57cefb9f9087eacb875a480f2da5ea78\", \"workspace\": \"/workspace/torch/testing/_internal/common_mkldnn.py\"}], \"package\": \"torch\"}\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/workspace",
+            "op-bench-pytorch__162340__nn_arg_length-39061c28dc59",
+            "python",
+            "test/nn/test_pooling.py",
+            "TestPoolingNN.test_adaptive_pooling_size_none"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__162340__nn_arg_length-wfx8_77c/workspace",
+          "duration_sec": 11.21279529100002,
+          "exit_code": 0,
+          "stderr": ".\n----------------------------------------------------------------------\nRan 1 test in 0.015s\n\nOK\n",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "rm",
+            "-f",
+            "op-bench-pytorch__162340__nn_arg_length-39061c28dc59"
+          ],
+          "cwd": "",
+          "duration_sec": 0.19517291600004683,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "op-bench-pytorch__162340__nn_arg_length-39061c28dc59\n",
+          "timed_out": false
+        }
+      ],
+      "duration_sec": 47.438405375,
+      "environment": {
+        "command_workdir": "/workspace",
+        "container_name": "op-bench-pytorch__162340__nn_arg_length-39061c28dc59",
+        "digest_kind": "local_image_id",
+        "docker_available": true,
+        "environment_id": "pytorch-cpu-torch2.6.0-py311",
+        "executor": "docker",
+        "gpus": null,
+        "host_machine": "arm64",
+        "host_platform": "macOS-26.5.1-arm64-arm-64bit",
+        "image": "op-bench/pytorch-cpu:torch2.6.0-py311",
+        "image_digest": "sha256:9507757065fd73fa7a958cd13f01de163a3fa46d826c09142f9522eda0f1e400",
+        "platform": null,
+        "preflight_command_count": 2,
+        "preflight_passed": true,
+        "preflight_workdir": "/tmp",
+        "runtime_tier": "cpu_python_overlay",
+        "workspace_dir": "/workspace"
+      },
+      "fail_to_pass_passed": 0,
+      "fail_to_pass_total": 1,
+      "mode": "baseline",
+      "pass_to_pass_passed": 1,
+      "pass_to_pass_total": 1,
+      "status": "baseline_reproduced",
+      "task_id": "pytorch__162340__nn_arg_length"
+    },
+    {
+      "agent": "baseline",
+      "commands": [
+        {
+          "command": [
+            "op_bench",
+            "copy-source-snapshot",
+            "/Users/yy/dev/graduate/op_bench/.op_bench_cache/sources/pytorch/pytorch/618efe837d71c179a96dc851ca08ebd9b10cae1f/source",
+            "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__163961__dataloader_subset-9301cpkh/workspace"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__163961__dataloader_subset-9301cpkh",
+          "duration_sec": 3.277350125000339,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "copied source snapshot from /Users/yy/dev/graduate/op_bench/.op_bench_cache/sources/pytorch/pytorch/618efe837d71c179a96dc851ca08ebd9b10cae1f/source\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "image",
+            "inspect",
+            "op-bench/pytorch-cpu:torch2.6.0-py311"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__163961__dataloader_subset-9301cpkh/workspace",
+          "duration_sec": 0.04534154200064222,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "[\n    {\n        \"Architecture\": \"amd64\",\n        \"Config\": {\n            \"Cmd\": [\n                \"/bin/bash\"\n            ],\n            \"Env\": [\n                \"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\",\n                \"DEBIAN_FRONTEND=noninteractive\",\n                \"LANG=C.UTF-8\",\n                \"PYTHONUNBUFFERED=1\",\n                \"PYTHONDONTWRITEBYTECODE=1\"\n            ],\n            \"Labels\": {\n                \"com.docker.compose.project\": \"pytorch\",\n                \"com.docker.compose.service\": \"ipex-base\",\n                \"com.docker.compose.version\": \"2.26.1\",\n                \"dependency.apt.wget\": \"true\",\n                \"dependency.python\": \"3.11\",\n                \"dependency.python.pip\": \"requirements.txt\",\n                \"docs\": \"pytorch\",\n                \"org.opencontainers.base.name\": \"intel/python:3.11-full\",\n                \"org.opencontainers.image.name\": \"intel/intel-optimized-pytorch\",\n                \"org.opencontainers.image.ref.name\": \"ubuntu\",\n                \"org.opencontainers.image.title\": \"Intel\u00ae Extension for PyTorch Base Image\",\n                \"org.opencontainers.image.version\": \"2.6.0-pip-base\"\n            },\n            \"Shell\": [\n                \"/bin/bash\",\n                \"-c\"\n            ],\n            \"WorkingDir\": \"/workspace\"\n        },\n        \"Created\": \"2026-07-06T17:50:18.306039527+08:00\",\n        \"Descriptor\": {\n            \"digest\": \"sha256:6986cc95a36f26d91335b9e57bd5af6acbcdf63f39dacdd3967ce3556935be3d\",\n            \"mediaType\": \"application/vnd.oci.image.manifest.v1+json\",\n            \"size\": 2974\n        },\n        \"Id\": \"sha256:6986cc95a36f26d91335b9e57bd5af6acbcdf63f39dacdd3967ce3556935be3d\",\n        \"Metadata\": {\n            \"LastTagTime\": \"2026-07-06T09:50:18.422551132Z\"\n        },\n        \"Os\": \"linux\",\n        \"Parent\": \"sha256:4862aafe6afea5d1544978870c416af7d9ad511bdd547787e8382e4b993feef0\",\n        \"RepoDigests\": [\n            \"op-bench/pytorch-cpu@sha256:6986cc95a36f26d91335b9e57bd5af6acbcdf63f39dacdd3967ce3556935be3d\"\n        ],\n        \"RepoTags\": [\n            \"op-bench/pytorch-cpu:torch2.6.0-py311\"\n        ],\n        \"RootFS\": {\n            \"Layers\": [\n                \"sha256:270a1170e7e398434ff1b31e17e233f7d7b71aa99a40473615860068e86720af\",\n                \"sha256:1c3a41a316e74f3573300283e7e01e6a1daf878ec7695fb8a78ff7fd70a44b70\",\n                \"sha256:12c3e171d22282ddfb12a1da96d90e15a74b2273ca5b44f2ac7d812d89c7e59a\",\n                \"sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef\",\n                \"sha256:7b3d48b71cc96c955e06fd0925f836c256573c8f88246546d67a4cd3b8189e53\",\n                \"sha256:a6e85488ac83608d843b4bd6b499fa00429d3b5c6e468781c67ed6e3e356962d\",\n                \"sha256:5fcd6e37f0e2f7882fd49c3cd9484c01a94e2317c5dcfa5969e5380a7cb71138\",\n                \"sha256:35f95c256a0c96d24901c9133e92325c8054da0494440d3fe8351c0f7e155cdf\",\n                \"sha256:b414dedeb164c6b5251cc6afcf83356148e3f0da3eb0acc1d53746747f60fd6a\",\n                \"sha256:75e3822f49725e642fa2b10c3858618a225ed5d5756061cac34d5b855c168348\",\n                \"sha256:eb7d260c96044542eaf1086be37933977b7a406d35efb26149e10bd807e51d6a\",\n                \"sha256:2b5afb2f22aa02d49fd8fffc3487519dc378baf7b55215ae4ad1cbb6e9c8fa40\"\n            ],\n            \"Type\": \"layers\"\n        },\n        \"Size\": 734073131\n    }\n]\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "run",
+            "--detach",
+            "--name",
+            "op-bench-pytorch__163961__dataloader_subset-804aa617fee8",
+            "--label",
+            "op-bench.environment-id=pytorch-cpu-torch2.6.0-py311",
+            "--label",
+            "op-bench.managed=true",
+            "--label",
+            "op-bench.runtime-tier=cpu_python_overlay",
+            "--label",
+            "op-bench.task-id=pytorch__163961__dataloader_subset",
+            "--volume",
+            "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__163961__dataloader_subset-9301cpkh/workspace:/workspace",
+            "--workdir",
+            "/workspace",
+            "op-bench/pytorch-cpu:torch2.6.0-py311",
+            "tail",
+            "-f",
+            "/dev/null"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__163961__dataloader_subset-9301cpkh/workspace",
+          "duration_sec": 0.10667083399948751,
+          "exit_code": 0,
+          "stderr": "WARNING: The requested image's platform (linux/amd64) does not match the detected host platform (linux/arm64/v8) and no specific platform was requested\n",
+          "stdout": "09fa0d77286cc5ffde5d93371d9d98e41804f7958f5faa16fbc00e34a9f51a08\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/tmp",
+            "op-bench-pytorch__163961__dataloader_subset-804aa617fee8",
+            "python",
+            "--version"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__163961__dataloader_subset-9301cpkh/workspace",
+          "duration_sec": 0.0429426250002507,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "Python 3.11.0rc1\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/tmp",
+            "op-bench-pytorch__163961__dataloader_subset-804aa617fee8",
+            "python",
+            "-c",
+            "import torch; print(torch.__version__); print(torch.__file__)"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__163961__dataloader_subset-9301cpkh/workspace",
+          "duration_sec": 6.2559069579992865,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "2.6.0+cpu\n/usr/local/lib/python3.11/dist-packages/torch/__init__.py\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "git",
+            "apply",
+            "/Users/yy/dev/graduate/op_bench/tasks/pytorch/163961_dataloader_subset/artifacts/hidden_test.patch"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__163961__dataloader_subset-9301cpkh/workspace",
+          "duration_sec": 0.01658191599926795,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/workspace",
+            "op-bench-pytorch__163961__dataloader_subset-804aa617fee8",
+            "python",
+            "-c",
+            "import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('.')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))",
+            "{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/utils/data/dataset.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__163961__dataloader_subset-9301cpkh/workspace",
+          "duration_sec": 8.173178500000176,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "{\"mode\": \"python_overlay\", \"overlay_files\": [{\"runtime\": \"/tmp/op_bench_runtime/site-packages/torch/utils/data/dataset.py\", \"sha256\": \"sha256:422394efa4393528c5633957ad9dd2233a34e2478018a0b4ae2901998675d752\", \"workspace\": \"/workspace/torch/utils/data/dataset.py\"}], \"package\": \"torch\"}\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/workspace",
+            "op-bench-pytorch__163961__dataloader_subset-804aa617fee8",
+            "python",
+            "test/test_dataloader.py",
+            "TestDataLoader.test_subset_override_getitem_requires_getitems"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__163961__dataloader_subset-9301cpkh/workspace",
+          "duration_sec": 10.840240125000491,
+          "exit_code": 1,
+          "stderr": "F\n======================================================================\nFAIL: test_subset_override_getitem_requires_getitems (__main__.TestDataLoader.test_subset_override_getitem_requires_getitems)\nTest that subclassing Subset and overriding only __getitem__ without\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/tmp/op_bench_runtime/site-packages/torch/testing/_internal/common_utils.py\", line 3108, in wrapper\n    method(*args, **kwargs)\n  File \"/workspace/test/test_dataloader.py\", line 2580, in test_subset_override_getitem_requires_getitems\n    with self.assertRaises(NotImplementedError) as cm:\nAssertionError: NotImplementedError not raised\n\nTo execute this test, run the following from the base repo dir:\n    python test/test_dataloader.py TestDataLoader.test_subset_override_getitem_requires_getitems\n\nThis message can be suppressed by setting PYTORCH_PRINT_REPRO_ON_FAILURE=0\n\n----------------------------------------------------------------------\nRan 1 test in 0.015s\n\nFAILED (failures=1)\n",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/workspace",
+            "op-bench-pytorch__163961__dataloader_subset-804aa617fee8",
+            "python",
+            "-c",
+            "import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('.')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))",
+            "{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/utils/data/dataset.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__163961__dataloader_subset-9301cpkh/workspace",
+          "duration_sec": 6.090402499999982,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "{\"mode\": \"python_overlay\", \"overlay_files\": [{\"runtime\": \"/tmp/op_bench_runtime/site-packages/torch/utils/data/dataset.py\", \"sha256\": \"sha256:422394efa4393528c5633957ad9dd2233a34e2478018a0b4ae2901998675d752\", \"workspace\": \"/workspace/torch/utils/data/dataset.py\"}], \"package\": \"torch\"}\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/workspace",
+            "op-bench-pytorch__163961__dataloader_subset-804aa617fee8",
+            "python",
+            "test/test_dataloader.py",
+            "TestDataLoader.test_subset_custom_getitem"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__163961__dataloader_subset-9301cpkh/workspace",
+          "duration_sec": 10.758578291999584,
+          "exit_code": 0,
+          "stderr": ".\n----------------------------------------------------------------------\nRan 1 test in 0.022s\n\nOK\n",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "rm",
+            "-f",
+            "op-bench-pytorch__163961__dataloader_subset-804aa617fee8"
+          ],
+          "cwd": "",
+          "duration_sec": 0.2216467089992875,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "op-bench-pytorch__163961__dataloader_subset-804aa617fee8\n",
+          "timed_out": false
+        }
+      ],
+      "duration_sec": 45.831762875000095,
+      "environment": {
+        "command_workdir": "/workspace",
+        "container_name": "op-bench-pytorch__163961__dataloader_subset-804aa617fee8",
+        "digest_kind": "local_image_id",
+        "docker_available": true,
+        "environment_id": "pytorch-cpu-torch2.6.0-py311",
+        "executor": "docker",
+        "gpus": null,
+        "host_machine": "arm64",
+        "host_platform": "macOS-26.5.1-arm64-arm-64bit",
+        "image": "op-bench/pytorch-cpu:torch2.6.0-py311",
+        "image_digest": "sha256:9507757065fd73fa7a958cd13f01de163a3fa46d826c09142f9522eda0f1e400",
+        "platform": null,
+        "preflight_command_count": 2,
+        "preflight_passed": true,
+        "preflight_workdir": "/tmp",
+        "runtime_tier": "cpu_python_overlay",
+        "workspace_dir": "/workspace"
+      },
+      "fail_to_pass_passed": 0,
+      "fail_to_pass_total": 1,
+      "mode": "baseline",
+      "pass_to_pass_passed": 1,
+      "pass_to_pass_total": 1,
+      "status": "baseline_reproduced",
+      "task_id": "pytorch__163961__dataloader_subset"
+    },
+    {
+      "agent": "baseline",
+      "commands": [
+        {
+          "command": [
+            "op_bench",
+            "copy-source-snapshot",
+            "/Users/yy/dev/graduate/op_bench/.op_bench_cache/sources/pytorch/pytorch/d4de871adfac825e12bae9068e1c8433bd58455d/source",
+            "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__168295__autograd_create_graph-convkq2d/workspace"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__168295__autograd_create_graph-convkq2d",
+          "duration_sec": 2.9911381250003615,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "copied source snapshot from /Users/yy/dev/graduate/op_bench/.op_bench_cache/sources/pytorch/pytorch/d4de871adfac825e12bae9068e1c8433bd58455d/source\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "image",
+            "inspect",
+            "op-bench/pytorch-cpu:torch2.6.0-py311"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__168295__autograd_create_graph-convkq2d/workspace",
+          "duration_sec": 0.0193425000006755,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "[\n    {\n        \"Architecture\": \"amd64\",\n        \"Config\": {\n            \"Cmd\": [\n                \"/bin/bash\"\n            ],\n            \"Env\": [\n                \"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\",\n                \"DEBIAN_FRONTEND=noninteractive\",\n                \"LANG=C.UTF-8\",\n                \"PYTHONUNBUFFERED=1\",\n                \"PYTHONDONTWRITEBYTECODE=1\"\n            ],\n            \"Labels\": {\n                \"com.docker.compose.project\": \"pytorch\",\n                \"com.docker.compose.service\": \"ipex-base\",\n                \"com.docker.compose.version\": \"2.26.1\",\n                \"dependency.apt.wget\": \"true\",\n                \"dependency.python\": \"3.11\",\n                \"dependency.python.pip\": \"requirements.txt\",\n                \"docs\": \"pytorch\",\n                \"org.opencontainers.base.name\": \"intel/python:3.11-full\",\n                \"org.opencontainers.image.name\": \"intel/intel-optimized-pytorch\",\n                \"org.opencontainers.image.ref.name\": \"ubuntu\",\n                \"org.opencontainers.image.title\": \"Intel\u00ae Extension for PyTorch Base Image\",\n                \"org.opencontainers.image.version\": \"2.6.0-pip-base\"\n            },\n            \"Shell\": [\n                \"/bin/bash\",\n                \"-c\"\n            ],\n            \"WorkingDir\": \"/workspace\"\n        },\n        \"Created\": \"2026-07-06T17:50:18.306039527+08:00\",\n        \"Descriptor\": {\n            \"digest\": \"sha256:6986cc95a36f26d91335b9e57bd5af6acbcdf63f39dacdd3967ce3556935be3d\",\n            \"mediaType\": \"application/vnd.oci.image.manifest.v1+json\",\n            \"size\": 2974\n        },\n        \"Id\": \"sha256:6986cc95a36f26d91335b9e57bd5af6acbcdf63f39dacdd3967ce3556935be3d\",\n        \"Metadata\": {\n            \"LastTagTime\": \"2026-07-06T09:50:18.422551132Z\"\n        },\n        \"Os\": \"linux\",\n        \"Parent\": \"sha256:4862aafe6afea5d1544978870c416af7d9ad511bdd547787e8382e4b993feef0\",\n        \"RepoDigests\": [\n            \"op-bench/pytorch-cpu@sha256:6986cc95a36f26d91335b9e57bd5af6acbcdf63f39dacdd3967ce3556935be3d\"\n        ],\n        \"RepoTags\": [\n            \"op-bench/pytorch-cpu:torch2.6.0-py311\"\n        ],\n        \"RootFS\": {\n            \"Layers\": [\n                \"sha256:270a1170e7e398434ff1b31e17e233f7d7b71aa99a40473615860068e86720af\",\n                \"sha256:1c3a41a316e74f3573300283e7e01e6a1daf878ec7695fb8a78ff7fd70a44b70\",\n                \"sha256:12c3e171d22282ddfb12a1da96d90e15a74b2273ca5b44f2ac7d812d89c7e59a\",\n                \"sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef\",\n                \"sha256:7b3d48b71cc96c955e06fd0925f836c256573c8f88246546d67a4cd3b8189e53\",\n                \"sha256:a6e85488ac83608d843b4bd6b499fa00429d3b5c6e468781c67ed6e3e356962d\",\n                \"sha256:5fcd6e37f0e2f7882fd49c3cd9484c01a94e2317c5dcfa5969e5380a7cb71138\",\n                \"sha256:35f95c256a0c96d24901c9133e92325c8054da0494440d3fe8351c0f7e155cdf\",\n                \"sha256:b414dedeb164c6b5251cc6afcf83356148e3f0da3eb0acc1d53746747f60fd6a\",\n                \"sha256:75e3822f49725e642fa2b10c3858618a225ed5d5756061cac34d5b855c168348\",\n                \"sha256:eb7d260c96044542eaf1086be37933977b7a406d35efb26149e10bd807e51d6a\",\n                \"sha256:2b5afb2f22aa02d49fd8fffc3487519dc378baf7b55215ae4ad1cbb6e9c8fa40\"\n            ],\n            \"Type\": \"layers\"\n        },\n        \"Size\": 734073131\n    }\n]\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "run",
+            "--detach",
+            "--name",
+            "op-bench-pytorch__168295__autograd_create_graph-b2d8bf5af994",
+            "--label",
+            "op-bench.environment-id=pytorch-cpu-torch2.6.0-py311",
+            "--label",
+            "op-bench.managed=true",
+            "--label",
+            "op-bench.runtime-tier=cpu_python_overlay",
+            "--label",
+            "op-bench.task-id=pytorch__168295__autograd_create_graph",
+            "--volume",
+            "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__168295__autograd_create_graph-convkq2d/workspace:/workspace",
+            "--workdir",
+            "/workspace",
+            "op-bench/pytorch-cpu:torch2.6.0-py311",
+            "tail",
+            "-f",
+            "/dev/null"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__168295__autograd_create_graph-convkq2d/workspace",
+          "duration_sec": 0.07750666599986289,
+          "exit_code": 0,
+          "stderr": "WARNING: The requested image's platform (linux/amd64) does not match the detected host platform (linux/arm64/v8) and no specific platform was requested\n",
+          "stdout": "8149dbf5da3219efad0dd763db824f2c6c1378c9b6cbdd7523ed9c603ca3b090\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/tmp",
+            "op-bench-pytorch__168295__autograd_create_graph-b2d8bf5af994",
+            "python",
+            "--version"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__168295__autograd_create_graph-convkq2d/workspace",
+          "duration_sec": 0.03896554200036917,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "Python 3.11.0rc1\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/tmp",
+            "op-bench-pytorch__168295__autograd_create_graph-b2d8bf5af994",
+            "python",
+            "-c",
+            "import torch; print(torch.__version__); print(torch.__file__)"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__168295__autograd_create_graph-convkq2d/workspace",
+          "duration_sec": 5.717468208000355,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "2.6.0+cpu\n/usr/local/lib/python3.11/dist-packages/torch/__init__.py\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "git",
+            "apply",
+            "/Users/yy/dev/graduate/op_bench/tasks/pytorch/168295_autograd_create_graph/artifacts/hidden_test.patch"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__168295__autograd_create_graph-convkq2d/workspace",
+          "duration_sec": 0.0147894579995409,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/workspace",
+            "op-bench-pytorch__168295__autograd_create_graph-b2d8bf5af994",
+            "python",
+            "-c",
+            "import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('.')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))",
+            "{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/autograd/__init__.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__168295__autograd_create_graph-convkq2d/workspace",
+          "duration_sec": 7.462363583000297,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "{\"mode\": \"python_overlay\", \"overlay_files\": [{\"runtime\": \"/tmp/op_bench_runtime/site-packages/torch/autograd/__init__.py\", \"sha256\": \"sha256:6269bee478a17b4e472fb778c1e704577f1680199d6feac68340efe9a1f6b252\", \"workspace\": \"/workspace/torch/autograd/__init__.py\"}], \"package\": \"torch\"}\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/workspace",
+            "op-bench-pytorch__168295__autograd_create_graph-b2d8bf5af994",
+            "python",
+            "test/test_autograd.py",
+            "TestAutograd.test_unused_grad_requires_grad_with_materialize"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__168295__autograd_create_graph-convkq2d/workspace",
+          "duration_sec": 12.428722416999335,
+          "exit_code": 1,
+          "stderr": "F\n======================================================================\nFAIL: test_unused_grad_requires_grad_with_materialize (__main__.TestAutograd.test_unused_grad_requires_grad_with_materialize)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/tmp/op_bench_runtime/site-packages/torch/testing/_internal/common_utils.py\", line 3108, in wrapper\n    method(*args, **kwargs)\n  File \"/workspace/test/test_autograd.py\", line 416, in test_unused_grad_requires_grad_with_materialize\n    self.assertFalse(g[1].requires_grad)\nAssertionError: True is not false\n\nTo execute this test, run the following from the base repo dir:\n    python test/test_autograd.py TestAutograd.test_unused_grad_requires_grad_with_materialize\n\nThis message can be suppressed by setting PYTORCH_PRINT_REPRO_ON_FAILURE=0\n\n----------------------------------------------------------------------\nRan 1 test in 0.020s\n\nFAILED (failures=1)\n",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/workspace",
+            "op-bench-pytorch__168295__autograd_create_graph-b2d8bf5af994",
+            "python",
+            "-c",
+            "import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('.')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))",
+            "{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/autograd/__init__.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__168295__autograd_create_graph-convkq2d/workspace",
+          "duration_sec": 5.741279290999955,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "{\"mode\": \"python_overlay\", \"overlay_files\": [{\"runtime\": \"/tmp/op_bench_runtime/site-packages/torch/autograd/__init__.py\", \"sha256\": \"sha256:6269bee478a17b4e472fb778c1e704577f1680199d6feac68340efe9a1f6b252\", \"workspace\": \"/workspace/torch/autograd/__init__.py\"}], \"package\": \"torch\"}\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/workspace",
+            "op-bench-pytorch__168295__autograd_create_graph-b2d8bf5af994",
+            "python",
+            "test/test_autograd.py",
+            "TestAutograd.test_legacy_function_deprecation_exception"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__168295__autograd_create_graph-convkq2d/workspace",
+          "duration_sec": 12.425333459000285,
+          "exit_code": 0,
+          "stderr": "/workspace/test/test_autograd.py:432: DeprecationWarning: <class '__main__.TestAutograd.test_legacy_function_deprecation_exception.<locals>.MyFunction'> should not be instantiated. Methods on autograd functions are all static, so you should invoke them on the class itself. Instantiating an autograd function will raise an error in a future version of PyTorch.\n  MyFunction()(torch.randn(3, 4))\n.\n----------------------------------------------------------------------\nRan 1 test in 0.009s\n\nOK\n",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "rm",
+            "-f",
+            "op-bench-pytorch__168295__autograd_create_graph-b2d8bf5af994"
+          ],
+          "cwd": "",
+          "duration_sec": 0.17960849999963102,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "op-bench-pytorch__168295__autograd_create_graph-b2d8bf5af994\n",
+          "timed_out": false
+        }
+      ],
+      "duration_sec": 47.09912875000009,
+      "environment": {
+        "command_workdir": "/workspace",
+        "container_name": "op-bench-pytorch__168295__autograd_create_graph-b2d8bf5af994",
+        "digest_kind": "local_image_id",
+        "docker_available": true,
+        "environment_id": "pytorch-cpu-torch2.6.0-py311",
+        "executor": "docker",
+        "gpus": null,
+        "host_machine": "arm64",
+        "host_platform": "macOS-26.5.1-arm64-arm-64bit",
+        "image": "op-bench/pytorch-cpu:torch2.6.0-py311",
+        "image_digest": "sha256:9507757065fd73fa7a958cd13f01de163a3fa46d826c09142f9522eda0f1e400",
+        "platform": null,
+        "preflight_command_count": 2,
+        "preflight_passed": true,
+        "preflight_workdir": "/tmp",
+        "runtime_tier": "cpu_python_overlay",
+        "workspace_dir": "/workspace"
+      },
+      "fail_to_pass_passed": 0,
+      "fail_to_pass_total": 1,
+      "mode": "baseline",
+      "pass_to_pass_passed": 1,
+      "pass_to_pass_total": 1,
+      "status": "baseline_reproduced",
+      "task_id": "pytorch__168295__autograd_create_graph"
+    },
+    {
+      "agent": "baseline",
+      "commands": [
+        {
+          "command": [
+            "op_bench",
+            "copy-source-snapshot",
+            "/Users/yy/dev/graduate/op_bench/.op_bench_cache/sources/pytorch/pytorch/6926710adf697e9d2160d43c4a96212dd27ceae0/source",
+            "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__161488__lbfgs_wolfe-sed3z2hg/workspace"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__161488__lbfgs_wolfe-sed3z2hg",
+          "duration_sec": 3.063059207999686,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "copied source snapshot from /Users/yy/dev/graduate/op_bench/.op_bench_cache/sources/pytorch/pytorch/6926710adf697e9d2160d43c4a96212dd27ceae0/source\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "image",
+            "inspect",
+            "op-bench/pytorch-cpu:torch2.6.0-py311"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__161488__lbfgs_wolfe-sed3z2hg/workspace",
+          "duration_sec": 0.02346666699850175,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "[\n    {\n        \"Architecture\": \"amd64\",\n        \"Config\": {\n            \"Cmd\": [\n                \"/bin/bash\"\n            ],\n            \"Env\": [\n                \"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\",\n                \"DEBIAN_FRONTEND=noninteractive\",\n                \"LANG=C.UTF-8\",\n                \"PYTHONUNBUFFERED=1\",\n                \"PYTHONDONTWRITEBYTECODE=1\"\n            ],\n            \"Labels\": {\n                \"com.docker.compose.project\": \"pytorch\",\n                \"com.docker.compose.service\": \"ipex-base\",\n                \"com.docker.compose.version\": \"2.26.1\",\n                \"dependency.apt.wget\": \"true\",\n                \"dependency.python\": \"3.11\",\n                \"dependency.python.pip\": \"requirements.txt\",\n                \"docs\": \"pytorch\",\n                \"org.opencontainers.base.name\": \"intel/python:3.11-full\",\n                \"org.opencontainers.image.name\": \"intel/intel-optimized-pytorch\",\n                \"org.opencontainers.image.ref.name\": \"ubuntu\",\n                \"org.opencontainers.image.title\": \"Intel\u00ae Extension for PyTorch Base Image\",\n                \"org.opencontainers.image.version\": \"2.6.0-pip-base\"\n            },\n            \"Shell\": [\n                \"/bin/bash\",\n                \"-c\"\n            ],\n            \"WorkingDir\": \"/workspace\"\n        },\n        \"Created\": \"2026-07-06T17:50:18.306039527+08:00\",\n        \"Descriptor\": {\n            \"digest\": \"sha256:6986cc95a36f26d91335b9e57bd5af6acbcdf63f39dacdd3967ce3556935be3d\",\n            \"mediaType\": \"application/vnd.oci.image.manifest.v1+json\",\n            \"size\": 2974\n        },\n        \"Id\": \"sha256:6986cc95a36f26d91335b9e57bd5af6acbcdf63f39dacdd3967ce3556935be3d\",\n        \"Metadata\": {\n            \"LastTagTime\": \"2026-07-06T09:50:18.422551132Z\"\n        },\n        \"Os\": \"linux\",\n        \"Parent\": \"sha256:4862aafe6afea5d1544978870c416af7d9ad511bdd547787e8382e4b993feef0\",\n        \"RepoDigests\": [\n            \"op-bench/pytorch-cpu@sha256:6986cc95a36f26d91335b9e57bd5af6acbcdf63f39dacdd3967ce3556935be3d\"\n        ],\n        \"RepoTags\": [\n            \"op-bench/pytorch-cpu:torch2.6.0-py311\"\n        ],\n        \"RootFS\": {\n            \"Layers\": [\n                \"sha256:270a1170e7e398434ff1b31e17e233f7d7b71aa99a40473615860068e86720af\",\n                \"sha256:1c3a41a316e74f3573300283e7e01e6a1daf878ec7695fb8a78ff7fd70a44b70\",\n                \"sha256:12c3e171d22282ddfb12a1da96d90e15a74b2273ca5b44f2ac7d812d89c7e59a\",\n                \"sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef\",\n                \"sha256:7b3d48b71cc96c955e06fd0925f836c256573c8f88246546d67a4cd3b8189e53\",\n                \"sha256:a6e85488ac83608d843b4bd6b499fa00429d3b5c6e468781c67ed6e3e356962d\",\n                \"sha256:5fcd6e37f0e2f7882fd49c3cd9484c01a94e2317c5dcfa5969e5380a7cb71138\",\n                \"sha256:35f95c256a0c96d24901c9133e92325c8054da0494440d3fe8351c0f7e155cdf\",\n                \"sha256:b414dedeb164c6b5251cc6afcf83356148e3f0da3eb0acc1d53746747f60fd6a\",\n                \"sha256:75e3822f49725e642fa2b10c3858618a225ed5d5756061cac34d5b855c168348\",\n                \"sha256:eb7d260c96044542eaf1086be37933977b7a406d35efb26149e10bd807e51d6a\",\n                \"sha256:2b5afb2f22aa02d49fd8fffc3487519dc378baf7b55215ae4ad1cbb6e9c8fa40\"\n            ],\n            \"Type\": \"layers\"\n        },\n        \"Size\": 734073131\n    }\n]\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "run",
+            "--detach",
+            "--name",
+            "op-bench-pytorch__161488__lbfgs_wolfe-09098f66e37c",
+            "--label",
+            "op-bench.environment-id=pytorch-cpu-torch2.6.0-py311",
+            "--label",
+            "op-bench.managed=true",
+            "--label",
+            "op-bench.runtime-tier=cpu_python_overlay",
+            "--label",
+            "op-bench.task-id=pytorch__161488__lbfgs_wolfe",
+            "--volume",
+            "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__161488__lbfgs_wolfe-sed3z2hg/workspace:/workspace",
+            "--workdir",
+            "/workspace",
+            "op-bench/pytorch-cpu:torch2.6.0-py311",
+            "tail",
+            "-f",
+            "/dev/null"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__161488__lbfgs_wolfe-sed3z2hg/workspace",
+          "duration_sec": 0.10319970799901057,
+          "exit_code": 0,
+          "stderr": "WARNING: The requested image's platform (linux/amd64) does not match the detected host platform (linux/arm64/v8) and no specific platform was requested\n",
+          "stdout": "0e32ecb1450085b61b30f022612eb91a7122cf0eb9ded3e7ab5af03ccf369a39\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/tmp",
+            "op-bench-pytorch__161488__lbfgs_wolfe-09098f66e37c",
+            "python",
+            "--version"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__161488__lbfgs_wolfe-sed3z2hg/workspace",
+          "duration_sec": 0.044126917000539834,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "Python 3.11.0rc1\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/tmp",
+            "op-bench-pytorch__161488__lbfgs_wolfe-09098f66e37c",
+            "python",
+            "-c",
+            "import torch; print(torch.__version__); print(torch.__file__)"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__161488__lbfgs_wolfe-sed3z2hg/workspace",
+          "duration_sec": 6.084007833000214,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "2.6.0+cpu\n/usr/local/lib/python3.11/dist-packages/torch/__init__.py\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "git",
+            "apply",
+            "/Users/yy/dev/graduate/op_bench/tasks/pytorch/161488_lbfgs_wolfe/artifacts/hidden_test.patch"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__161488__lbfgs_wolfe-sed3z2hg/workspace",
+          "duration_sec": 0.015571959000226343,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/workspace",
+            "op-bench-pytorch__161488__lbfgs_wolfe-09098f66e37c",
+            "python",
+            "-c",
+            "import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('.')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))",
+            "{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/optim/lbfgs.py\", \"torch/optim/optimizer.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__161488__lbfgs_wolfe-sed3z2hg/workspace",
+          "duration_sec": 7.993231500000547,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "{\"mode\": \"python_overlay\", \"overlay_files\": [{\"runtime\": \"/tmp/op_bench_runtime/site-packages/torch/optim/lbfgs.py\", \"sha256\": \"sha256:d15dff277f15e86a4e3666e1d048819a5ed25187c6f975c7c5a6b55cc2941ef3\", \"workspace\": \"/workspace/torch/optim/lbfgs.py\"}, {\"runtime\": \"/tmp/op_bench_runtime/site-packages/torch/optim/optimizer.py\", \"sha256\": \"sha256:71c46defba9abbc4831b328ddcc7db8e7771cc28da7a550c01820da70f7c5dad\", \"workspace\": \"/workspace/torch/optim/optimizer.py\"}], \"package\": \"torch\"}\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/workspace",
+            "op-bench-pytorch__161488__lbfgs_wolfe-09098f66e37c",
+            "python",
+            "test/test_optim.py",
+            "TestOptimRenewedCPU.test_step_iteration_float32_cpu_float32"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__161488__lbfgs_wolfe-sed3z2hg/workspace",
+          "duration_sec": 12.934970166999847,
+          "exit_code": 1,
+          "stderr": "[W707 05:08:31.957957540 NNPACK.cpp:62] Could not initialize NNPACK! Reason: Unsupported hardware.\nF\n======================================================================\nFAIL: test_step_iteration_float32_cpu_float32 (__main__.TestOptimRenewedCPU.test_step_iteration_float32_cpu_float32)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/tmp/op_bench_runtime/site-packages/torch/testing/_internal/common_utils.py\", line 3108, in wrapper\n    method(*args, **kwargs)\n  File \"/tmp/op_bench_runtime/site-packages/torch/testing/_internal/common_device_type.py\", line 460, in instantiated_test\n    result = test(self, **param_kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/test/test_optim.py\", line 2334, in test_step_iteration\n    self.assertEqual(counter, 6)\n  File \"/tmp/op_bench_runtime/site-packages/torch/testing/_internal/common_utils.py\", line 4016, in assertEqual\n    raise error_metas.pop()[0].to_error(\nAssertionError: Scalars are not equal!\n\nExpected 6 but got 27.\nAbsolute difference: 21\nRelative difference: 3.5\n\nTo execute this test, run the following from the base repo dir:\n    python test/test_optim.py TestOptimRenewedCPU.test_step_iteration_float32_cpu_float32\n\nThis message can be suppressed by setting PYTORCH_PRINT_REPRO_ON_FAILURE=0\n\n----------------------------------------------------------------------\nRan 1 test in 0.112s\n\nFAILED (failures=1)\n",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/workspace",
+            "op-bench-pytorch__161488__lbfgs_wolfe-09098f66e37c",
+            "python",
+            "-c",
+            "import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('.')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))",
+            "{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/optim/lbfgs.py\", \"torch/optim/optimizer.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__161488__lbfgs_wolfe-sed3z2hg/workspace",
+          "duration_sec": 6.014770375000808,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "{\"mode\": \"python_overlay\", \"overlay_files\": [{\"runtime\": \"/tmp/op_bench_runtime/site-packages/torch/optim/lbfgs.py\", \"sha256\": \"sha256:d15dff277f15e86a4e3666e1d048819a5ed25187c6f975c7c5a6b55cc2941ef3\", \"workspace\": \"/workspace/torch/optim/lbfgs.py\"}, {\"runtime\": \"/tmp/op_bench_runtime/site-packages/torch/optim/optimizer.py\", \"sha256\": \"sha256:71c46defba9abbc4831b328ddcc7db8e7771cc28da7a550c01820da70f7c5dad\", \"workspace\": \"/workspace/torch/optim/optimizer.py\"}], \"package\": \"torch\"}\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/workspace",
+            "op-bench-pytorch__161488__lbfgs_wolfe-09098f66e37c",
+            "python",
+            "test/test_optim.py",
+            "TestOptimRenewedCPU.test_non_empty_state_LBFGS_cpu_float32"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__161488__lbfgs_wolfe-sed3z2hg/workspace",
+          "duration_sec": 12.792990375000954,
+          "exit_code": 0,
+          "stderr": ".\n----------------------------------------------------------------------\nRan 1 test in 0.059s\n\nOK\n",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "rm",
+            "-f",
+            "op-bench-pytorch__161488__lbfgs_wolfe-09098f66e37c"
+          ],
+          "cwd": "",
+          "duration_sec": 0.15886670799955027,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "op-bench-pytorch__161488__lbfgs_wolfe-09098f66e37c\n",
+          "timed_out": false
+        }
+      ],
+      "duration_sec": 49.231615916998635,
+      "environment": {
+        "command_workdir": "/workspace",
+        "container_name": "op-bench-pytorch__161488__lbfgs_wolfe-09098f66e37c",
+        "digest_kind": "local_image_id",
+        "docker_available": true,
+        "environment_id": "pytorch-cpu-torch2.6.0-py311",
+        "executor": "docker",
+        "gpus": null,
+        "host_machine": "arm64",
+        "host_platform": "macOS-26.5.1-arm64-arm-64bit",
+        "image": "op-bench/pytorch-cpu:torch2.6.0-py311",
+        "image_digest": "sha256:9507757065fd73fa7a958cd13f01de163a3fa46d826c09142f9522eda0f1e400",
+        "platform": null,
+        "preflight_command_count": 2,
+        "preflight_passed": true,
+        "preflight_workdir": "/tmp",
+        "runtime_tier": "cpu_python_overlay",
+        "workspace_dir": "/workspace"
+      },
+      "fail_to_pass_passed": 0,
+      "fail_to_pass_total": 1,
+      "mode": "baseline",
+      "pass_to_pass_passed": 1,
+      "pass_to_pass_total": 1,
+      "status": "baseline_reproduced",
+      "task_id": "pytorch__161488__lbfgs_wolfe"
+    },
+    {
+      "agent": "baseline",
+      "commands": [
+        {
+          "command": [
+            "op_bench",
+            "copy-source-snapshot",
+            "/Users/yy/dev/graduate/op_bench/.op_bench_cache/sources/pytorch/pytorch/6f9ffaa9916c02fa2aaae453db579a942b354708/source",
+            "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__150975__autograd_backward_inputs-xcti8q_t/workspace"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__150975__autograd_backward_inputs-xcti8q_t",
+          "duration_sec": 2.4258058330015047,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "copied source snapshot from /Users/yy/dev/graduate/op_bench/.op_bench_cache/sources/pytorch/pytorch/6f9ffaa9916c02fa2aaae453db579a942b354708/source\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "image",
+            "inspect",
+            "op-bench/pytorch-cpu:torch2.6.0-py311"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__150975__autograd_backward_inputs-xcti8q_t/workspace",
+          "duration_sec": 0.023190749998320825,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "[\n    {\n        \"Architecture\": \"amd64\",\n        \"Config\": {\n            \"Cmd\": [\n                \"/bin/bash\"\n            ],\n            \"Env\": [\n                \"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\",\n                \"DEBIAN_FRONTEND=noninteractive\",\n                \"LANG=C.UTF-8\",\n                \"PYTHONUNBUFFERED=1\",\n                \"PYTHONDONTWRITEBYTECODE=1\"\n            ],\n            \"Labels\": {\n                \"com.docker.compose.project\": \"pytorch\",\n                \"com.docker.compose.service\": \"ipex-base\",\n                \"com.docker.compose.version\": \"2.26.1\",\n                \"dependency.apt.wget\": \"true\",\n                \"dependency.python\": \"3.11\",\n                \"dependency.python.pip\": \"requirements.txt\",\n                \"docs\": \"pytorch\",\n                \"org.opencontainers.base.name\": \"intel/python:3.11-full\",\n                \"org.opencontainers.image.name\": \"intel/intel-optimized-pytorch\",\n                \"org.opencontainers.image.ref.name\": \"ubuntu\",\n                \"org.opencontainers.image.title\": \"Intel\u00ae Extension for PyTorch Base Image\",\n                \"org.opencontainers.image.version\": \"2.6.0-pip-base\"\n            },\n            \"Shell\": [\n                \"/bin/bash\",\n                \"-c\"\n            ],\n            \"WorkingDir\": \"/workspace\"\n        },\n        \"Created\": \"2026-07-06T17:50:18.306039527+08:00\",\n        \"Descriptor\": {\n            \"digest\": \"sha256:6986cc95a36f26d91335b9e57bd5af6acbcdf63f39dacdd3967ce3556935be3d\",\n            \"mediaType\": \"application/vnd.oci.image.manifest.v1+json\",\n            \"size\": 2974\n        },\n        \"Id\": \"sha256:6986cc95a36f26d91335b9e57bd5af6acbcdf63f39dacdd3967ce3556935be3d\",\n        \"Metadata\": {\n            \"LastTagTime\": \"2026-07-06T09:50:18.422551132Z\"\n        },\n        \"Os\": \"linux\",\n        \"Parent\": \"sha256:4862aafe6afea5d1544978870c416af7d9ad511bdd547787e8382e4b993feef0\",\n        \"RepoDigests\": [\n            \"op-bench/pytorch-cpu@sha256:6986cc95a36f26d91335b9e57bd5af6acbcdf63f39dacdd3967ce3556935be3d\"\n        ],\n        \"RepoTags\": [\n            \"op-bench/pytorch-cpu:torch2.6.0-py311\"\n        ],\n        \"RootFS\": {\n            \"Layers\": [\n                \"sha256:270a1170e7e398434ff1b31e17e233f7d7b71aa99a40473615860068e86720af\",\n                \"sha256:1c3a41a316e74f3573300283e7e01e6a1daf878ec7695fb8a78ff7fd70a44b70\",\n                \"sha256:12c3e171d22282ddfb12a1da96d90e15a74b2273ca5b44f2ac7d812d89c7e59a\",\n                \"sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef\",\n                \"sha256:7b3d48b71cc96c955e06fd0925f836c256573c8f88246546d67a4cd3b8189e53\",\n                \"sha256:a6e85488ac83608d843b4bd6b499fa00429d3b5c6e468781c67ed6e3e356962d\",\n                \"sha256:5fcd6e37f0e2f7882fd49c3cd9484c01a94e2317c5dcfa5969e5380a7cb71138\",\n                \"sha256:35f95c256a0c96d24901c9133e92325c8054da0494440d3fe8351c0f7e155cdf\",\n                \"sha256:b414dedeb164c6b5251cc6afcf83356148e3f0da3eb0acc1d53746747f60fd6a\",\n                \"sha256:75e3822f49725e642fa2b10c3858618a225ed5d5756061cac34d5b855c168348\",\n                \"sha256:eb7d260c96044542eaf1086be37933977b7a406d35efb26149e10bd807e51d6a\",\n                \"sha256:2b5afb2f22aa02d49fd8fffc3487519dc378baf7b55215ae4ad1cbb6e9c8fa40\"\n            ],\n            \"Type\": \"layers\"\n        },\n        \"Size\": 734073131\n    }\n]\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "run",
+            "--detach",
+            "--name",
+            "op-bench-pytorch__150975__autograd_backward_inputs-4100a7252e17",
+            "--label",
+            "op-bench.environment-id=pytorch-cpu-torch2.6.0-py311",
+            "--label",
+            "op-bench.managed=true",
+            "--label",
+            "op-bench.runtime-tier=cpu_python_overlay",
+            "--label",
+            "op-bench.task-id=pytorch__150975__autograd_backward_inputs",
+            "--volume",
+            "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__150975__autograd_backward_inputs-xcti8q_t/workspace:/workspace",
+            "--workdir",
+            "/workspace",
+            "op-bench/pytorch-cpu:torch2.6.0-py311",
+            "tail",
+            "-f",
+            "/dev/null"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__150975__autograd_backward_inputs-xcti8q_t/workspace",
+          "duration_sec": 0.08601137499863398,
+          "exit_code": 0,
+          "stderr": "WARNING: The requested image's platform (linux/amd64) does not match the detected host platform (linux/arm64/v8) and no specific platform was requested\n",
+          "stdout": "a8e74a58e16774bb025e09eee901fef30fd091bfb581cba13b1d70ede3c76ddf\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/tmp",
+            "op-bench-pytorch__150975__autograd_backward_inputs-4100a7252e17",
+            "python",
+            "--version"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__150975__autograd_backward_inputs-xcti8q_t/workspace",
+          "duration_sec": 0.03552762500112294,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "Python 3.11.0rc1\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/tmp",
+            "op-bench-pytorch__150975__autograd_backward_inputs-4100a7252e17",
+            "python",
+            "-c",
+            "import torch; print(torch.__version__); print(torch.__file__)"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__150975__autograd_backward_inputs-xcti8q_t/workspace",
+          "duration_sec": 5.6702474579979025,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "2.6.0+cpu\n/usr/local/lib/python3.11/dist-packages/torch/__init__.py\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "git",
+            "apply",
+            "/Users/yy/dev/graduate/op_bench/tasks/pytorch/150975_autograd_backward_inputs/artifacts/hidden_test.patch"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__150975__autograd_backward_inputs-xcti8q_t/workspace",
+          "duration_sec": 0.01721591699970304,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/workspace",
+            "op-bench-pytorch__150975__autograd_backward_inputs-4100a7252e17",
+            "python",
+            "-c",
+            "import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('.')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))",
+            "{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/autograd/__init__.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__150975__autograd_backward_inputs-xcti8q_t/workspace",
+          "duration_sec": 7.4652872500009835,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "{\"mode\": \"python_overlay\", \"overlay_files\": [{\"runtime\": \"/tmp/op_bench_runtime/site-packages/torch/autograd/__init__.py\", \"sha256\": \"sha256:7d03bcd743f369f448c64e06102069c5beb6ac5599e219db5255c0cdb7ea006c\", \"workspace\": \"/workspace/torch/autograd/__init__.py\"}], \"package\": \"torch\"}\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/workspace",
+            "op-bench-pytorch__150975__autograd_backward_inputs-4100a7252e17",
+            "python",
+            "test/test_autograd.py",
+            "TestAutograd.test_backward_with_scalar_input"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__150975__autograd_backward_inputs-xcti8q_t/workspace",
+          "duration_sec": 12.20124512500115,
+          "exit_code": 1,
+          "stderr": "E\n======================================================================\nERROR: test_backward_with_scalar_input (__main__.TestAutograd.test_backward_with_scalar_input)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/tmp/op_bench_runtime/site-packages/torch/testing/_internal/common_utils.py\", line 3108, in wrapper\n    method(*args, **kwargs)\n  File \"/workspace/test/test_autograd.py\", line 2513, in test_backward_with_scalar_input\n    out.backward(inputs=x)\n  File \"/tmp/op_bench_runtime/site-packages/torch/_tensor.py\", line 626, in backward\n    torch.autograd.backward(\n  File \"/tmp/op_bench_runtime/site-packages/torch/autograd/__init__.py\", line 328, in backward\n    if inputs is not None and len(inputs) == 0:\n                              ^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/_tensor.py\", line 1132, in __len__\n    raise TypeError(\"len() of a 0-d tensor\")\nTypeError: len() of a 0-d tensor\n\nTo execute this test, run the following from the base repo dir:\n    python test/test_autograd.py TestAutograd.test_backward_with_scalar_input\n\nThis message can be suppressed by setting PYTORCH_PRINT_REPRO_ON_FAILURE=0\n\n----------------------------------------------------------------------\nRan 1 test in 0.012s\n\nFAILED (errors=1)\n",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/workspace",
+            "op-bench-pytorch__150975__autograd_backward_inputs-4100a7252e17",
+            "python",
+            "-c",
+            "import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('.')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))",
+            "{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/autograd/__init__.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__150975__autograd_backward_inputs-xcti8q_t/workspace",
+          "duration_sec": 5.6485862499976065,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "{\"mode\": \"python_overlay\", \"overlay_files\": [{\"runtime\": \"/tmp/op_bench_runtime/site-packages/torch/autograd/__init__.py\", \"sha256\": \"sha256:7d03bcd743f369f448c64e06102069c5beb6ac5599e219db5255c0cdb7ea006c\", \"workspace\": \"/workspace/torch/autograd/__init__.py\"}], \"package\": \"torch\"}\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/workspace",
+            "op-bench-pytorch__150975__autograd_backward_inputs-4100a7252e17",
+            "python",
+            "test/test_autograd.py",
+            "TestAutograd.test_backward_with_nonleaf_inputs"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__150975__autograd_backward_inputs-xcti8q_t/workspace",
+          "duration_sec": 12.175498290998803,
+          "exit_code": 0,
+          "stderr": "/tmp/op_bench_runtime/site-packages/torch/autograd/graph.py:823: UserWarning: Using backward() with create_graph=True will create a reference cycle between the parameter and its gradient which can cause a memory leak. We recommend using autograd.grad when creating the graph to avoid this. If you have to use this function, make sure to reset the .grad fields of your parameters to None after use to break the cycle and avoid the leak. (Triggered internally at /pytorch/torch/csrc/autograd/engine.cpp:1260.)\n  return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass\n.\n----------------------------------------------------------------------\nRan 1 test in 0.026s\n\nOK\n",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "rm",
+            "-f",
+            "op-bench-pytorch__150975__autograd_backward_inputs-4100a7252e17"
+          ],
+          "cwd": "",
+          "duration_sec": 0.20274883299862267,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "op-bench-pytorch__150975__autograd_backward_inputs-4100a7252e17\n",
+          "timed_out": false
+        }
+      ],
+      "duration_sec": 45.956041916000686,
+      "environment": {
+        "command_workdir": "/workspace",
+        "container_name": "op-bench-pytorch__150975__autograd_backward_inputs-4100a7252e17",
+        "digest_kind": "local_image_id",
+        "docker_available": true,
+        "environment_id": "pytorch-cpu-torch2.6.0-py311",
+        "executor": "docker",
+        "gpus": null,
+        "host_machine": "arm64",
+        "host_platform": "macOS-26.5.1-arm64-arm-64bit",
+        "image": "op-bench/pytorch-cpu:torch2.6.0-py311",
+        "image_digest": "sha256:9507757065fd73fa7a958cd13f01de163a3fa46d826c09142f9522eda0f1e400",
+        "platform": null,
+        "preflight_command_count": 2,
+        "preflight_passed": true,
+        "preflight_workdir": "/tmp",
+        "runtime_tier": "cpu_python_overlay",
+        "workspace_dir": "/workspace"
+      },
+      "fail_to_pass_passed": 0,
+      "fail_to_pass_total": 1,
+      "mode": "baseline",
+      "pass_to_pass_passed": 1,
+      "pass_to_pass_total": 1,
+      "status": "baseline_reproduced",
+      "task_id": "pytorch__150975__autograd_backward_inputs"
+    },
+    {
+      "agent": "baseline",
+      "commands": [
+        {
+          "command": [
+            "op_bench",
+            "copy-source-snapshot",
+            "/Users/yy/dev/graduate/op_bench/.op_bench_cache/sources/pytorch/pytorch/afa78ad08cc748c25e7e82cec02cec4c97c7d3af/source",
+            "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__124385__load_state_dict_prefix-c5dg7y70/workspace"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__124385__load_state_dict_prefix-c5dg7y70",
+          "duration_sec": 4.6729892089970235,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "copied source snapshot from /Users/yy/dev/graduate/op_bench/.op_bench_cache/sources/pytorch/pytorch/afa78ad08cc748c25e7e82cec02cec4c97c7d3af/source\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "image",
+            "inspect",
+            "op-bench/pytorch-cpu:torch2.6.0-py311"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__124385__load_state_dict_prefix-c5dg7y70/workspace",
+          "duration_sec": 0.030644917002064176,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "[\n    {\n        \"Architecture\": \"amd64\",\n        \"Config\": {\n            \"Cmd\": [\n                \"/bin/bash\"\n            ],\n            \"Env\": [\n                \"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\",\n                \"DEBIAN_FRONTEND=noninteractive\",\n                \"LANG=C.UTF-8\",\n                \"PYTHONUNBUFFERED=1\",\n                \"PYTHONDONTWRITEBYTECODE=1\"\n            ],\n            \"Labels\": {\n                \"com.docker.compose.project\": \"pytorch\",\n                \"com.docker.compose.service\": \"ipex-base\",\n                \"com.docker.compose.version\": \"2.26.1\",\n                \"dependency.apt.wget\": \"true\",\n                \"dependency.python\": \"3.11\",\n                \"dependency.python.pip\": \"requirements.txt\",\n                \"docs\": \"pytorch\",\n                \"org.opencontainers.base.name\": \"intel/python:3.11-full\",\n                \"org.opencontainers.image.name\": \"intel/intel-optimized-pytorch\",\n                \"org.opencontainers.image.ref.name\": \"ubuntu\",\n                \"org.opencontainers.image.title\": \"Intel\u00ae Extension for PyTorch Base Image\",\n                \"org.opencontainers.image.version\": \"2.6.0-pip-base\"\n            },\n            \"Shell\": [\n                \"/bin/bash\",\n                \"-c\"\n            ],\n            \"WorkingDir\": \"/workspace\"\n        },\n        \"Created\": \"2026-07-06T17:50:18.306039527+08:00\",\n        \"Descriptor\": {\n            \"digest\": \"sha256:6986cc95a36f26d91335b9e57bd5af6acbcdf63f39dacdd3967ce3556935be3d\",\n            \"mediaType\": \"application/vnd.oci.image.manifest.v1+json\",\n            \"size\": 2974\n        },\n        \"Id\": \"sha256:6986cc95a36f26d91335b9e57bd5af6acbcdf63f39dacdd3967ce3556935be3d\",\n        \"Metadata\": {\n            \"LastTagTime\": \"2026-07-06T09:50:18.422551132Z\"\n        },\n        \"Os\": \"linux\",\n        \"Parent\": \"sha256:4862aafe6afea5d1544978870c416af7d9ad511bdd547787e8382e4b993feef0\",\n        \"RepoDigests\": [\n            \"op-bench/pytorch-cpu@sha256:6986cc95a36f26d91335b9e57bd5af6acbcdf63f39dacdd3967ce3556935be3d\"\n        ],\n        \"RepoTags\": [\n            \"op-bench/pytorch-cpu:torch2.6.0-py311\"\n        ],\n        \"RootFS\": {\n            \"Layers\": [\n                \"sha256:270a1170e7e398434ff1b31e17e233f7d7b71aa99a40473615860068e86720af\",\n                \"sha256:1c3a41a316e74f3573300283e7e01e6a1daf878ec7695fb8a78ff7fd70a44b70\",\n                \"sha256:12c3e171d22282ddfb12a1da96d90e15a74b2273ca5b44f2ac7d812d89c7e59a\",\n                \"sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef\",\n                \"sha256:7b3d48b71cc96c955e06fd0925f836c256573c8f88246546d67a4cd3b8189e53\",\n                \"sha256:a6e85488ac83608d843b4bd6b499fa00429d3b5c6e468781c67ed6e3e356962d\",\n                \"sha256:5fcd6e37f0e2f7882fd49c3cd9484c01a94e2317c5dcfa5969e5380a7cb71138\",\n                \"sha256:35f95c256a0c96d24901c9133e92325c8054da0494440d3fe8351c0f7e155cdf\",\n                \"sha256:b414dedeb164c6b5251cc6afcf83356148e3f0da3eb0acc1d53746747f60fd6a\",\n                \"sha256:75e3822f49725e642fa2b10c3858618a225ed5d5756061cac34d5b855c168348\",\n                \"sha256:eb7d260c96044542eaf1086be37933977b7a406d35efb26149e10bd807e51d6a\",\n                \"sha256:2b5afb2f22aa02d49fd8fffc3487519dc378baf7b55215ae4ad1cbb6e9c8fa40\"\n            ],\n            \"Type\": \"layers\"\n        },\n        \"Size\": 734073131\n    }\n]\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "run",
+            "--detach",
+            "--name",
+            "op-bench-pytorch__124385__load_state_dict_prefix-e9bda394617c",
+            "--label",
+            "op-bench.environment-id=pytorch-cpu-torch2.6.0-py311",
+            "--label",
+            "op-bench.managed=true",
+            "--label",
+            "op-bench.runtime-tier=cpu_python_overlay",
+            "--label",
+            "op-bench.task-id=pytorch__124385__load_state_dict_prefix",
+            "--volume",
+            "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__124385__load_state_dict_prefix-c5dg7y70/workspace:/workspace",
+            "--workdir",
+            "/workspace",
+            "op-bench/pytorch-cpu:torch2.6.0-py311",
+            "tail",
+            "-f",
+            "/dev/null"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__124385__load_state_dict_prefix-c5dg7y70/workspace",
+          "duration_sec": 0.10000145799858728,
+          "exit_code": 0,
+          "stderr": "WARNING: The requested image's platform (linux/amd64) does not match the detected host platform (linux/arm64/v8) and no specific platform was requested\n",
+          "stdout": "c988e81e7671ab532df6db7dbd04b980f799b57e57d872217af2582ea99474c5\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/tmp",
+            "op-bench-pytorch__124385__load_state_dict_prefix-e9bda394617c",
+            "python",
+            "--version"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__124385__load_state_dict_prefix-c5dg7y70/workspace",
+          "duration_sec": 0.042076334000739735,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "Python 3.11.0rc1\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/tmp",
+            "op-bench-pytorch__124385__load_state_dict_prefix-e9bda394617c",
+            "python",
+            "-c",
+            "import torch; print(torch.__version__); print(torch.__file__)"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__124385__load_state_dict_prefix-c5dg7y70/workspace",
+          "duration_sec": 6.409932958998979,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "2.6.0+cpu\n/usr/local/lib/python3.11/dist-packages/torch/__init__.py\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "git",
+            "apply",
+            "/Users/yy/dev/graduate/op_bench/tasks/pytorch/124385_load_state_dict_prefix/artifacts/hidden_test.patch"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__124385__load_state_dict_prefix-c5dg7y70/workspace",
+          "duration_sec": 0.017415250000340166,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/workspace",
+            "op-bench-pytorch__124385__load_state_dict_prefix-e9bda394617c",
+            "python",
+            "-c",
+            "import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('.')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))",
+            "{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/nn/modules/module.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__124385__load_state_dict_prefix-c5dg7y70/workspace",
+          "duration_sec": 8.712099915999715,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "{\"mode\": \"python_overlay\", \"overlay_files\": [{\"runtime\": \"/tmp/op_bench_runtime/site-packages/torch/nn/modules/module.py\", \"sha256\": \"sha256:b3d3b900019989412f9377e4e808d6de44226118d1f9aa2a92f5ab2fb81cbc5a\", \"workspace\": \"/workspace/torch/nn/modules/module.py\"}], \"package\": \"torch\"}\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/workspace",
+            "op-bench-pytorch__124385__load_state_dict_prefix-e9bda394617c",
+            "python",
+            "test/nn/test_load_state_dict.py",
+            "TestLoadStateDict.test_load_state_dict_with_unexpected_key_swap_True"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__124385__load_state_dict_prefix-c5dg7y70/workspace",
+          "duration_sec": 11.051349458000914,
+          "exit_code": 1,
+          "stderr": "F\n======================================================================\nFAIL: test_load_state_dict_with_unexpected_key_swap_True (__main__.TestLoadStateDict.test_load_state_dict_with_unexpected_key_swap_True)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/tmp/op_bench_runtime/site-packages/torch/testing/_internal/common_utils.py\", line 3108, in wrapper\n    method(*args, **kwargs)\n  File \"/tmp/op_bench_runtime/site-packages/torch/testing/_internal/common_utils.py\", line 557, in instantiated_test\n    test(self, **param_kwargs)\n  File \"/tmp/op_bench_runtime/site-packages/torch/testing/_internal/common_utils.py\", line 2119, in wrapper\n    fn(*args, **kwargs)\n  File \"/workspace/test/nn/test_load_state_dict.py\", line 474, in test_load_state_dict_with_unexpected_key\n    with self.assertRaisesRegex(RuntimeError, \"Unexpected key\"):\nAssertionError: RuntimeError not raised\n\nTo execute this test, run the following from the base repo dir:\n    python test/nn/test_load_state_dict.py TestLoadStateDict.test_load_state_dict_with_unexpected_key_swap_True\n\nThis message can be suppressed by setting PYTORCH_PRINT_REPRO_ON_FAILURE=0\n\n----------------------------------------------------------------------\nRan 1 test in 0.046s\n\nFAILED (failures=1)\n",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/workspace",
+            "op-bench-pytorch__124385__load_state_dict_prefix-e9bda394617c",
+            "python",
+            "-c",
+            "import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('.')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))",
+            "{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/nn/modules/module.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__124385__load_state_dict_prefix-c5dg7y70/workspace",
+          "duration_sec": 5.768899624999904,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "{\"mode\": \"python_overlay\", \"overlay_files\": [{\"runtime\": \"/tmp/op_bench_runtime/site-packages/torch/nn/modules/module.py\", \"sha256\": \"sha256:b3d3b900019989412f9377e4e808d6de44226118d1f9aa2a92f5ab2fb81cbc5a\", \"workspace\": \"/workspace/torch/nn/modules/module.py\"}], \"package\": \"torch\"}\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/workspace",
+            "op-bench-pytorch__124385__load_state_dict_prefix-e9bda394617c",
+            "python",
+            "test/nn/test_load_state_dict.py",
+            "TestLoadStateDict.test_load_state_dict_custom_swap_False"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__124385__load_state_dict_prefix-c5dg7y70/workspace",
+          "duration_sec": 10.131471832999523,
+          "exit_code": 0,
+          "stderr": ".\n----------------------------------------------------------------------\nRan 1 test in 0.042s\n\nOK\n",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "rm",
+            "-f",
+            "op-bench-pytorch__124385__load_state_dict_prefix-e9bda394617c"
+          ],
+          "cwd": "",
+          "duration_sec": 0.2954834169977403,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "op-bench-pytorch__124385__load_state_dict_prefix-e9bda394617c\n",
+          "timed_out": false
+        }
+      ],
+      "duration_sec": 47.237186624999595,
+      "environment": {
+        "command_workdir": "/workspace",
+        "container_name": "op-bench-pytorch__124385__load_state_dict_prefix-e9bda394617c",
+        "digest_kind": "local_image_id",
+        "docker_available": true,
+        "environment_id": "pytorch-cpu-torch2.6.0-py311",
+        "executor": "docker",
+        "gpus": null,
+        "host_machine": "arm64",
+        "host_platform": "macOS-26.5.1-arm64-arm-64bit",
+        "image": "op-bench/pytorch-cpu:torch2.6.0-py311",
+        "image_digest": "sha256:9507757065fd73fa7a958cd13f01de163a3fa46d826c09142f9522eda0f1e400",
+        "platform": null,
+        "preflight_command_count": 2,
+        "preflight_passed": true,
+        "preflight_workdir": "/tmp",
+        "runtime_tier": "cpu_python_overlay",
+        "workspace_dir": "/workspace"
+      },
+      "fail_to_pass_passed": 0,
+      "fail_to_pass_total": 1,
+      "mode": "baseline",
+      "pass_to_pass_passed": 1,
+      "pass_to_pass_total": 1,
+      "status": "baseline_reproduced",
+      "task_id": "pytorch__124385__load_state_dict_prefix"
+    },
+    {
+      "agent": "baseline",
+      "commands": [
+        {
+          "command": [
+            "op_bench",
+            "copy-source-snapshot",
+            "/Users/yy/dev/graduate/op_bench/.op_bench_cache/sources/pytorch/pytorch/e3c4d1b7d6ea848f6b5558edf67e66dc28243641/source",
+            "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__143455__set_submodule-pktz7rao/workspace"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__143455__set_submodule-pktz7rao",
+          "duration_sec": 2.4567653750018508,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "copied source snapshot from /Users/yy/dev/graduate/op_bench/.op_bench_cache/sources/pytorch/pytorch/e3c4d1b7d6ea848f6b5558edf67e66dc28243641/source\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "image",
+            "inspect",
+            "op-bench/pytorch-cpu:torch2.6.0-py311"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__143455__set_submodule-pktz7rao/workspace",
+          "duration_sec": 0.03848704199845088,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "[\n    {\n        \"Architecture\": \"amd64\",\n        \"Config\": {\n            \"Cmd\": [\n                \"/bin/bash\"\n            ],\n            \"Env\": [\n                \"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\",\n                \"DEBIAN_FRONTEND=noninteractive\",\n                \"LANG=C.UTF-8\",\n                \"PYTHONUNBUFFERED=1\",\n                \"PYTHONDONTWRITEBYTECODE=1\"\n            ],\n            \"Labels\": {\n                \"com.docker.compose.project\": \"pytorch\",\n                \"com.docker.compose.service\": \"ipex-base\",\n                \"com.docker.compose.version\": \"2.26.1\",\n                \"dependency.apt.wget\": \"true\",\n                \"dependency.python\": \"3.11\",\n                \"dependency.python.pip\": \"requirements.txt\",\n                \"docs\": \"pytorch\",\n                \"org.opencontainers.base.name\": \"intel/python:3.11-full\",\n                \"org.opencontainers.image.name\": \"intel/intel-optimized-pytorch\",\n                \"org.opencontainers.image.ref.name\": \"ubuntu\",\n                \"org.opencontainers.image.title\": \"Intel\u00ae Extension for PyTorch Base Image\",\n                \"org.opencontainers.image.version\": \"2.6.0-pip-base\"\n            },\n            \"Shell\": [\n                \"/bin/bash\",\n                \"-c\"\n            ],\n            \"WorkingDir\": \"/workspace\"\n        },\n        \"Created\": \"2026-07-06T17:50:18.306039527+08:00\",\n        \"Descriptor\": {\n            \"digest\": \"sha256:6986cc95a36f26d91335b9e57bd5af6acbcdf63f39dacdd3967ce3556935be3d\",\n            \"mediaType\": \"application/vnd.oci.image.manifest.v1+json\",\n            \"size\": 2974\n        },\n        \"Id\": \"sha256:6986cc95a36f26d91335b9e57bd5af6acbcdf63f39dacdd3967ce3556935be3d\",\n        \"Metadata\": {\n            \"LastTagTime\": \"2026-07-06T09:50:18.422551132Z\"\n        },\n        \"Os\": \"linux\",\n        \"Parent\": \"sha256:4862aafe6afea5d1544978870c416af7d9ad511bdd547787e8382e4b993feef0\",\n        \"RepoDigests\": [\n            \"op-bench/pytorch-cpu@sha256:6986cc95a36f26d91335b9e57bd5af6acbcdf63f39dacdd3967ce3556935be3d\"\n        ],\n        \"RepoTags\": [\n            \"op-bench/pytorch-cpu:torch2.6.0-py311\"\n        ],\n        \"RootFS\": {\n            \"Layers\": [\n                \"sha256:270a1170e7e398434ff1b31e17e233f7d7b71aa99a40473615860068e86720af\",\n                \"sha256:1c3a41a316e74f3573300283e7e01e6a1daf878ec7695fb8a78ff7fd70a44b70\",\n                \"sha256:12c3e171d22282ddfb12a1da96d90e15a74b2273ca5b44f2ac7d812d89c7e59a\",\n                \"sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef\",\n                \"sha256:7b3d48b71cc96c955e06fd0925f836c256573c8f88246546d67a4cd3b8189e53\",\n                \"sha256:a6e85488ac83608d843b4bd6b499fa00429d3b5c6e468781c67ed6e3e356962d\",\n                \"sha256:5fcd6e37f0e2f7882fd49c3cd9484c01a94e2317c5dcfa5969e5380a7cb71138\",\n                \"sha256:35f95c256a0c96d24901c9133e92325c8054da0494440d3fe8351c0f7e155cdf\",\n                \"sha256:b414dedeb164c6b5251cc6afcf83356148e3f0da3eb0acc1d53746747f60fd6a\",\n                \"sha256:75e3822f49725e642fa2b10c3858618a225ed5d5756061cac34d5b855c168348\",\n                \"sha256:eb7d260c96044542eaf1086be37933977b7a406d35efb26149e10bd807e51d6a\",\n                \"sha256:2b5afb2f22aa02d49fd8fffc3487519dc378baf7b55215ae4ad1cbb6e9c8fa40\"\n            ],\n            \"Type\": \"layers\"\n        },\n        \"Size\": 734073131\n    }\n]\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "run",
+            "--detach",
+            "--name",
+            "op-bench-pytorch__143455__set_submodule-8586bdb026c2",
+            "--label",
+            "op-bench.environment-id=pytorch-cpu-torch2.6.0-py311",
+            "--label",
+            "op-bench.managed=true",
+            "--label",
+            "op-bench.runtime-tier=cpu_python_overlay",
+            "--label",
+            "op-bench.task-id=pytorch__143455__set_submodule",
+            "--volume",
+            "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__143455__set_submodule-pktz7rao/workspace:/workspace",
+            "--workdir",
+            "/workspace",
+            "op-bench/pytorch-cpu:torch2.6.0-py311",
+            "tail",
+            "-f",
+            "/dev/null"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__143455__set_submodule-pktz7rao/workspace",
+          "duration_sec": 0.10015312500036089,
+          "exit_code": 0,
+          "stderr": "WARNING: The requested image's platform (linux/amd64) does not match the detected host platform (linux/arm64/v8) and no specific platform was requested\n",
+          "stdout": "2e28f6099a4f6dd794b3759057aff03dc1f7bca9a6f88c7b80a1f14a21893c9b\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/tmp",
+            "op-bench-pytorch__143455__set_submodule-8586bdb026c2",
+            "python",
+            "--version"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__143455__set_submodule-pktz7rao/workspace",
+          "duration_sec": 0.03816391600048519,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "Python 3.11.0rc1\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/tmp",
+            "op-bench-pytorch__143455__set_submodule-8586bdb026c2",
+            "python",
+            "-c",
+            "import torch; print(torch.__version__); print(torch.__file__)"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__143455__set_submodule-pktz7rao/workspace",
+          "duration_sec": 6.524574500002927,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "2.6.0+cpu\n/usr/local/lib/python3.11/dist-packages/torch/__init__.py\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "git",
+            "apply",
+            "/Users/yy/dev/graduate/op_bench/tasks/pytorch/143455_set_submodule/artifacts/hidden_test.patch"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__143455__set_submodule-pktz7rao/workspace",
+          "duration_sec": 0.019268125000962755,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/workspace",
+            "op-bench-pytorch__143455__set_submodule-8586bdb026c2",
+            "python",
+            "-c",
+            "import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('.')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))",
+            "{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/nn/modules/module.py\", \"torch/testing/_internal/common_nn.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__143455__set_submodule-pktz7rao/workspace",
+          "duration_sec": 8.900846375003312,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "{\"mode\": \"python_overlay\", \"overlay_files\": [{\"runtime\": \"/tmp/op_bench_runtime/site-packages/torch/nn/modules/module.py\", \"sha256\": \"sha256:a12c3f1a61dcc7b221e300614ef02bebb8b96201434b8b4b3a3cdd6ccdb0bcd1\", \"workspace\": \"/workspace/torch/nn/modules/module.py\"}, {\"runtime\": \"/tmp/op_bench_runtime/site-packages/torch/testing/_internal/common_nn.py\", \"sha256\": \"sha256:4ede935c70d2ce731d170f1cd1db8a0ace302d7eceda6f459e2ab8e5365a5439\", \"workspace\": \"/workspace/torch/testing/_internal/common_nn.py\"}], \"package\": \"torch\"}\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/workspace",
+            "op-bench-pytorch__143455__set_submodule-8586bdb026c2",
+            "python",
+            "test/test_nn.py",
+            "TestNN.test_set_submodule"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__143455__set_submodule-pktz7rao/workspace",
+          "duration_sec": 12.981902499999705,
+          "exit_code": 1,
+          "stderr": "E\n======================================================================\nERROR: test_set_submodule (__main__.TestNN.test_set_submodule)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/tmp/op_bench_runtime/site-packages/torch/testing/_internal/common_utils.py\", line 3108, in wrapper\n    method(*args, **kwargs)\n  File \"/workspace/test/test_nn.py\", line 1481, in test_set_submodule\n    A.set_submodule(\"net_b.net_c.conv\", new_linear, True)\nTypeError: Module.set_submodule() takes 3 positional arguments but 4 were given\n\nTo execute this test, run the following from the base repo dir:\n    python test/test_nn.py TestNN.test_set_submodule\n\nThis message can be suppressed by setting PYTORCH_PRINT_REPRO_ON_FAILURE=0\n\n----------------------------------------------------------------------\nRan 1 test in 0.013s\n\nFAILED (errors=1)\n",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/workspace",
+            "op-bench-pytorch__143455__set_submodule-8586bdb026c2",
+            "python",
+            "-c",
+            "import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('.')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))",
+            "{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/nn/modules/module.py\", \"torch/testing/_internal/common_nn.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__143455__set_submodule-pktz7rao/workspace",
+          "duration_sec": 6.043326167000487,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "{\"mode\": \"python_overlay\", \"overlay_files\": [{\"runtime\": \"/tmp/op_bench_runtime/site-packages/torch/nn/modules/module.py\", \"sha256\": \"sha256:a12c3f1a61dcc7b221e300614ef02bebb8b96201434b8b4b3a3cdd6ccdb0bcd1\", \"workspace\": \"/workspace/torch/nn/modules/module.py\"}, {\"runtime\": \"/tmp/op_bench_runtime/site-packages/torch/testing/_internal/common_nn.py\", \"sha256\": \"sha256:4ede935c70d2ce731d170f1cd1db8a0ace302d7eceda6f459e2ab8e5365a5439\", \"workspace\": \"/workspace/torch/testing/_internal/common_nn.py\"}], \"package\": \"torch\"}\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "exec",
+            "--workdir",
+            "/workspace",
+            "op-bench-pytorch__143455__set_submodule-8586bdb026c2",
+            "python",
+            "test/test_nn.py",
+            "TestNN.test_module_to_argparse"
+          ],
+          "cwd": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__143455__set_submodule-pktz7rao/workspace",
+          "duration_sec": 12.265854084002058,
+          "exit_code": 0,
+          "stderr": ".\n----------------------------------------------------------------------\nRan 1 test in 0.013s\n\nOK\n",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "docker",
+            "rm",
+            "-f",
+            "op-bench-pytorch__143455__set_submodule-8586bdb026c2"
+          ],
+          "cwd": "",
+          "duration_sec": 0.2105946670017147,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "op-bench-pytorch__143455__set_submodule-8586bdb026c2\n",
+          "timed_out": false
+        }
+      ],
+      "duration_sec": 49.5871576669997,
+      "environment": {
+        "command_workdir": "/workspace",
+        "container_name": "op-bench-pytorch__143455__set_submodule-8586bdb026c2",
+        "digest_kind": "local_image_id",
+        "docker_available": true,
+        "environment_id": "pytorch-cpu-torch2.6.0-py311",
+        "executor": "docker",
+        "gpus": null,
+        "host_machine": "arm64",
+        "host_platform": "macOS-26.5.1-arm64-arm-64bit",
+        "image": "op-bench/pytorch-cpu:torch2.6.0-py311",
+        "image_digest": "sha256:9507757065fd73fa7a958cd13f01de163a3fa46d826c09142f9522eda0f1e400",
+        "platform": null,
+        "preflight_command_count": 2,
+        "preflight_passed": true,
+        "preflight_workdir": "/tmp",
+        "runtime_tier": "cpu_python_overlay",
+        "workspace_dir": "/workspace"
+      },
+      "fail_to_pass_passed": 0,
+      "fail_to_pass_total": 1,
+      "mode": "baseline",
+      "pass_to_pass_passed": 1,
+      "pass_to_pass_total": 1,
+      "status": "baseline_reproduced",
+      "task_id": "pytorch__143455__set_submodule"
+    }
+  ],
+  "total_records": 30
+}

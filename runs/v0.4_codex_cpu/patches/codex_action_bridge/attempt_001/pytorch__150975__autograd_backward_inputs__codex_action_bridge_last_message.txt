@@ -1,0 +1,11 @@
+Implemented the fix in `torch/autograd/__init__.py`.
+
+Changed `torch.autograd.backward` so `inputs` is normalized before emptiness checks, and invalid `inputs` values now get a Python-side `TypeError` instead of falling through to confusing downstream behavior. Single tensor inputs, including scalar or empty tensors, are no longer misinterpreted via `len(inputs)`.
+
+Verification run:
+- `TestAutograd.test_backward_with_inputs` passed
+- `TestAutograd.test_backward_with_nonleaf_inputs` passed
+- `TestAutograd.test_backward_to_node` passed
+- `python test/test_autograd.py -k backward_with_inputs` passed
+
+Final diff only touches `torch/autograd/__init__.py`.

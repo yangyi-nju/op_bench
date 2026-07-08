@@ -1,0 +1,12 @@
+Implemented the fix in `torch/autograd/__init__.py`.
+
+Unused materialized gradients now respect `create_graph`:
+- `create_graph=True`: returns `input * 0`, so the zero is connected to the input graph.
+- `create_graph=False`: returns a plain `torch.zeros_like(input)`.
+
+Fresh verification passed:
+- `TestAutograd.test_grad_materialize_grads`
+- `TestAutograd.test_grad_to_node_materialize`
+- `TestAutograd.test_grad_unreachable`
+
+I did not modify tests or commit changes.

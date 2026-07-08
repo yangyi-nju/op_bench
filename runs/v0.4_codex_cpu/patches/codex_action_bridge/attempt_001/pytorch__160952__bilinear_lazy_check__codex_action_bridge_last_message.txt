@@ -1,0 +1,10 @@
+Implemented the focused fix in `torch/nn/modules/linear.py`.
+
+Changed `Bilinear` so:
+- `in1_features == 0` no longer fails in `__init__`, allowing lazy subclasses to construct with unknown sizes.
+- negative `in1_features` still raises the existing `ValueError` before tensor allocation.
+- `reset_parameters()` now checks `self.weight.size(1) <= 0` before the `1 / sqrt(...)` division.
+
+Verification:
+- `python -m py_compile torch/nn/modules/linear.py` passed.
+- `run_test 'TestLazyModules.test_linear_state'` could not run because `test/nn/test_bilinear_lazy_op_bench.py` is not present in this repair workspace.

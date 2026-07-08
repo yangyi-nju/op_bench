@@ -1,0 +1,14 @@
+diff --git a/torch/nn/modules/linear.py b/torch/nn/modules/linear.py
+index c8a17e5e..da074aba 100644
+--- a/torch/nn/modules/linear.py
++++ b/torch/nn/modules/linear.py
+@@ -285,7 +285,8 @@ class LazyLinear(LazyModuleMixin, Linear):
+     def initialize_parameters(self, input) -> None:  # type: ignore[override]
+         if self.has_uninitialized_params():
+             with torch.no_grad():
+-                self.weight.materialize((self.out_features, input.shape[-1]))
++                self.in_features = input.shape[-1]
++                self.weight.materialize((self.out_features, self.in_features))
+                 if self.bias is not None:
+                     self.bias.materialize((self.out_features,))
+                 self.reset_parameters()

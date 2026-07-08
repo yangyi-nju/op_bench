@@ -1,0 +1,13 @@
+Implemented the source-only fix in `torch/nn/modules/module.py`.
+
+The strict unexpected-key check now distinguishes:
+
+- dotted suffixes: must refer to a registered child module
+- non-dotted suffixes: must refer to a local parameter/buffer
+
+This prevents keys like `weight.bad_key` or `0.weight.bad_key` from being silently accepted.
+
+Verification run:
+
+- `python test/nn/test_load_state_dict.py -k test_load_state_dict` → 23 tests OK
+- Regression probe confirmed prefixed corrupt keys raise in `strict=True` and appear in `unexpected_keys` with `strict=False`

@@ -1,0 +1,12 @@
+Implemented the minimal source fix in `torch/nn/modules/linear.py`.
+
+Change: `LazyLinear.initialize_parameters()` now sets `self.in_features` immediately after materializing `weight`, before calling `reset_parameters()`. That lets `reset_parameters()` run with the inferred input size instead of skipping initialization while `in_features == 0`. The loaded-state path is preserved via `elif`.
+
+Verification run:
+- Patched-source LazyLinear probe: initialized weights in normal uniform range, nonzero output
+- Patched-source no-bias probe: initialized weights, nonzero output
+- `TestLazyModules.test_linear`: pass
+- `TestLazyModules.test_linear_state`: pass
+- `TestLazyModules.test_lazy_linear_state_and_forward`: pass
+- `TestLazyModules.test_chained_initialization`: pass
+- `git_diff`: only `torch/nn/modules/linear.py` changed

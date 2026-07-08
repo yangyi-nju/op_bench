@@ -1,0 +1,17 @@
+diff --git a/torch/nn/modules/linear.py b/torch/nn/modules/linear.py
+index c8a17e5e..f2a2eb51 100644
+--- a/torch/nn/modules/linear.py
++++ b/torch/nn/modules/linear.py
+@@ -286,10 +286,11 @@ class LazyLinear(LazyModuleMixin, Linear):
+         if self.has_uninitialized_params():
+             with torch.no_grad():
+                 self.weight.materialize((self.out_features, input.shape[-1]))
++                self.in_features = input.shape[-1]
+                 if self.bias is not None:
+                     self.bias.materialize((self.out_features,))
+                 self.reset_parameters()
+-        if self.in_features == 0:
++        elif self.in_features == 0:
+             assert input.shape[-1] == self.weight.shape[-1], (
+                 f"The in_features inferred from input: {input.shape[-1]} "
+                 f"is not equal to in_features from self.weight: "

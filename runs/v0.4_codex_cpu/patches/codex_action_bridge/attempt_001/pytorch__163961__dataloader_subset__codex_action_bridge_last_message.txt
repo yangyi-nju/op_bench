@@ -1,0 +1,11 @@
+Implemented the minimal source fix in `torch/utils/data/dataset.py`.
+
+`Subset.__getitems__` now detects when a `Subset` subclass overrides `__getitem__` and delegates batched loading through `self[idx]`, so `DataLoader` respects custom subclass transformations. Plain `Subset` keeps the existing optimized batched path.
+
+Verification passed:
+- `TestDatasetRandomSplit`
+- `TestStackDataset.test_getitems`
+- `TestStackDataset.test_getitems_raises_index_error`
+- `TestStackDataset.test_getitems_value_error`
+
+Final diff touches only the allowed file.

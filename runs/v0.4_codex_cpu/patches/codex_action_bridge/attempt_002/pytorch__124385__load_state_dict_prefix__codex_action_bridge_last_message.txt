@@ -1,0 +1,15 @@
+Implemented the minimal source fix in `torch/nn/modules/module.py`.
+
+The strict unexpected-key check now distinguishes:
+
+- exact local parameter/buffer keys, like `weight`
+- child-module paths, like `layer.weight`
+- invalid suffixed parameter keys, like `weight.bad_suffix`
+
+Verification run:
+
+`./opbench_action.py run_command "python test/nn/test_load_state_dict.py -k test_load_state_dict"`
+
+Result: `Ran 23 tests ... OK`.
+
+Final diff is limited to the allowed file.

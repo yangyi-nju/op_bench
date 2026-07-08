@@ -1,0 +1,81 @@
+diff --git a/torch/nn/modules/module.py b/torch/nn/modules/module.py
+index 6c74a9b..ed14fd3 100644
+--- a/torch/nn/modules/module.py
++++ b/torch/nn/modules/module.py
+@@ -716,10 +716,18 @@ class Module:
+ 
+         return mod
+ 
+-    def set_submodule(self, target: str, module: "Module") -> None:
++    def set_submodule(
++        self, target: str, module: "Module", strict: bool = False
++    ) -> None:
+         """
+         Set the submodule given by ``target`` if it exists, otherwise throw an error.
+ 
++        If ``strict`` is set to ``False`` (default), the method will replace an
++        existing submodule or create a new submodule if the parent module exists.
++        If ``strict`` is set to ``True``, the method will only attempt to
++        replace an existing submodule and throw an error if the submodule does
++        not already exist.
++
+         For example, let's say you have an ``nn.Module`` ``A`` that
+         looks like this:
+ 
+@@ -747,9 +755,15 @@ class Module:
+                 to look for. (See above example for how to specify a
+                 fully-qualified string.)
+             module: The module to set the submodule to.
++            strict: If ``False``, the method will replace an existing submodule
++                or create a new submodule if the parent module exists. If
++                ``True``, the method will only attempt to replace an existing
++                submodule and throw an error if the submodule does not already
++                exist.
+ 
+         Raises:
+-            ValueError: If the target string is empty
++            ValueError: If the target string is empty or ``module`` is not an
++                instance of ``nn.Module``
+             AttributeError: If the target string references an invalid
+                 path or resolves to something that is not an
+                 ``nn.Module``
+@@ -757,23 +771,28 @@ class Module:
+         if target == "":
+             raise ValueError("Cannot set the submodule without a target name!")
+ 
++        if not isinstance(module, torch.nn.Module):
++            raise ValueError(f"`module` is not an nn.Module, found {type(module)}")
++
+         atoms: list[str] = target.split(".")
+-        name = atoms.pop(-1)
+-        mod: torch.nn.Module = self
++        name = atoms[-1]
++        parent: torch.nn.Module = self.get_submodule(".".join(atoms[:-1]))
+ 
+-        for item in atoms:
+-            if not hasattr(mod, item):
+-                raise AttributeError(
+-                    mod._get_name() + " has no attribute `" + item + "`"
+-                )
++        if strict and not hasattr(parent, name):
++            raise AttributeError(
++                parent._get_name() + " has no attribute `" + name + "`"
++            )
+ 
+-            mod = getattr(mod, item)
++        if hasattr(parent, name):
++            existing = getattr(parent, name)
+ 
+             # Use isinstance instead of type here to also handle subclass of nn.Module
+-            if not isinstance(mod, torch.nn.Module):
+-                raise AttributeError("`" + item + "` is not an nn.Module")
++            if not isinstance(existing, torch.nn.Module):
++                raise AttributeError(
++                    "`" + name + "` is not an nn.Module"
++                )
+ 
+-        setattr(mod, name, module)
++        setattr(parent, name, module)
+ 
+     def get_parameter(self, target: str) -> "Parameter":
+         """Return the parameter given by ``target`` if it exists, otherwise throw an error.

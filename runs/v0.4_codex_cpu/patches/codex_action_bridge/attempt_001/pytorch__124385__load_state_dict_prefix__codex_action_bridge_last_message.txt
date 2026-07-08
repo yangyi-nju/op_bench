@@ -1,0 +1,14 @@
+Implemented the source-only fix in `torch/nn/modules/module.py`.
+
+The strict `load_state_dict` unexpected-key check now distinguishes:
+
+- exact local parameter/buffer keys like `weight`
+- child-module keys like `child.weight`
+- invalid suffix keys like `weight.bad` or `child.weight.bad`
+
+Verification run:
+
+- `python test/nn/test_load_state_dict.py -k test_load_state_dict` passed: 23 tests OK
+- `python test/nn/test_load_state_dict.py -k test_load_state_dict_invalid` passed: 2 tests OK
+
+Final diff only touches the allowed file. A broader `TestLoadStateDict` class run exposed unrelated `torch.load(weights_only=True)` serialization errors in backward-compat hook tests, so I used the focused benchmark-style `-k` checks for validation.

@@ -1,0 +1,7 @@
+Modified `torch/nn/modules/linear.py` only.
+
+Changed `Bilinear` so `__init__` no longer rejects `in1_features <= 0` before subclasses can override initialization behavior. The same validation now happens in `reset_parameters()` immediately before dividing by `sqrt(self.weight.size(1))`, preserving the direct-module error path while allowing lazy-style subclasses to bypass reset until materialization.
+
+Verification:
+- `python -m py_compile /workspace/torch/nn/modules/linear.py` passed.
+- Tried the allowed benchmark runner, but `/workspace/test/nn/test_bilinear_lazy_op_bench.py` is not present in this workspace, so that test could not be run here.

@@ -1,0 +1,7 @@
+Implemented the scoped LBFGS fix in `torch/optim/lbfgs.py`: `_strong_wolfe` now receives `max_ls=max_eval - current_evals`, matching the referenced upstream PR behavior.
+
+Verification:
+- `python test/test_optim.py -k non_empty_state` passed: 14 tests OK.
+- Final diff only touches `torch/optim/lbfgs.py`.
+
+I also checked the final diff through `./opbench_action.py git_diff`; no out-of-scope files were changed.

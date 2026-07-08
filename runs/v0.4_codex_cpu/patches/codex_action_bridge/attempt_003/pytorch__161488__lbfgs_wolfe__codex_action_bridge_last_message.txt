@@ -1,0 +1,6 @@
+Implemented the minimal source fix in `torch/optim/lbfgs.py`: `_strong_wolfe` now receives `max_ls=max_eval - current_evals`, so the strong Wolfe line search uses the optimizer’s remaining evaluation budget instead of the fixed default of 25.
+
+Verification run:
+`./opbench_action.py run_command 'python test/test_optim.py -k LBFGS'`
+
+Result: 45 tests ran, 6 skipped, exit code 0. Only `torch/optim/lbfgs.py` was changed.

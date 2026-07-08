@@ -1,0 +1,9 @@
+Implemented the focused source fix in `torch/nn/modules/linear.py`.
+
+Change: `LazyLinear.initialize_parameters()` now sets `in_features` from `self.weight.shape[-1]` when parameters are already materialized, covering the state-dict-loaded-before-forward path.
+
+Verification:
+- Reproduced the original runtime behavior: after forward, `in_features` stayed `0`.
+- `python -m py_compile /workspace/torch/nn/modules/linear.py` exited `0`.
+- Ran an equivalent patched-method behavior probe: after forward, output was `after_forward 5 3 Linear (2, 3)` and assertions passed.
+- The allowed visible `run_test` target was unavailable because `test/nn/test_lazylinear_state_op_bench.py` is not present in this workspace.

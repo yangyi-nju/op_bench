@@ -1,0 +1,8 @@
+Implemented the minimal source fix in `torch/nn/modules/utils.py`: `_ntuple` now validates iterable argument length before returning it, so `_single`, `_pair`, `_triple`, and `_quadruple` reject mismatched tuple/list/generator lengths with `ValueError`.
+
+Verification:
+- Directly loaded patched `utils.py`: bad lengths raised `ValueError`; valid scalar/iterable inputs still normalized correctly.
+- Ran `python test/nn/test_pooling.py -k MaxUnpool2d`: passed, 1 test OK.
+- `git_diff` shows only the intended `utils.py` change.
+
+One broader smoke run, `-k FractionalMaxPool`, hit an existing scalar `kernel_size=0` validation failure unrelated to this length-check patch.

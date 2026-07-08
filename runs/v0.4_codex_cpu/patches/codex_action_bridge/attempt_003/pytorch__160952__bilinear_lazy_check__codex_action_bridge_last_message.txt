@@ -1,0 +1,8 @@
+Implemented the minimal source fix in `torch/nn/modules/linear.py`.
+
+`Bilinear.__init__` no longer rejects `in1_features <= 0` before lazy subclasses can initialize. The same `ValueError` check is now in `reset_parameters()` immediately before the `1 / sqrt(...)` calculation, preserving eager `Bilinear(0, ...)` failure while allowing lazy subclasses to defer reset.
+
+Verification:
+- `python -m py_compile torch/nn/modules/linear.py` passed.
+- `run_test 'TestNN.test_bilinear_value_error'` could not run because `test/nn/test_bilinear_lazy_op_bench.py` is not present in this workspace.
+- Final diff touches only `torch/nn/modules/linear.py`.

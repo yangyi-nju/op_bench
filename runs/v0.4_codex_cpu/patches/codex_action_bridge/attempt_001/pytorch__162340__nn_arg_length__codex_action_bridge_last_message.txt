@@ -1,0 +1,6 @@
+Implemented the minimal source fix in `torch/nn/modules/utils.py`: `_ntuple` now converts iterables to tuples and raises `ValueError` when their length does not match `_single/_pair/_triple/_quadruple` expectations.
+
+Verification:
+- `PYTHONDONTWRITEBYTECODE=1` helper probe passed: valid scalar/tuple/list inputs still normalize, invalid iterable lengths raise `ValueError`.
+- Final `opbench_action.py git_diff` shows only `torch/nn/modules/utils.py` changed.
+- Attempted allowed pooling test: `python test/nn/test_pooling.py -k test_max_unpool`, but the runtime exited `139` with no output, so I can’t claim that benchmark test passed.

@@ -1,0 +1,12 @@
+Implemented the source fix in `torch/nn/modules/module.py`.
+
+Changed `Module.set_submodule` to:
+- accept `strict: bool = False`
+- resolve the parent path with `get_submodule`
+- handle single-segment targets correctly
+- raise when `strict=True` and the target submodule is missing
+- validate that the replacement is an `nn.Module`
+
+Verification run through `opbench_action.py`:
+- `python -m py_compile torch/nn/modules/module.py`
+- `run_test 'TestNN.test_set_submodule'` passed: `Ran 1 test ... OK`
