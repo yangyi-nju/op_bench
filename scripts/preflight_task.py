@@ -151,6 +151,23 @@ def preflight_task(task_dir: Path) -> tuple[bool, list[str]]:
     messages.append(f"backend: {task.environment_backend}")
     messages.append(f"runtime_tier: {task.runtime_tier}")
 
+    # v0.5+: verified tasks must declare problem_dimension. Historical tasks
+    # (v0.3/v0.4 CPU) may skip this and appear in aggregate reports under the
+    # `unclassified` group. Draft tasks are exempt.
+    if task.admission_status == "verified" and not task.problem_dimension:
+        # Allow the v0.3-era CPU tasks by name — anything else must classify.
+        # (Kept as a warning rather than hard fail so preflight remains
+        # unblocked for pre-v0.5 verified tasks.)
+        messages.append(
+            "WARN: verified task missing operator.problem_dimension "
+            "(required for v0.5+ tasks; historical tasks may skip)"
+        )
+    if task.problem_dimension:
+        messages.append(
+            f"problem_dimension: {task.problem_dimension}"
+            + (f" / {task.problem_subclass}" if task.problem_subclass else "")
+        )
+
     # 2. Snapshot exists
     snapshot = task.source_snapshot_path
     if not snapshot or not snapshot.exists():

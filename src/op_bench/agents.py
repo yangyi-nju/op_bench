@@ -169,9 +169,8 @@ class CodexActionBridgeAgent:
     requires_actions = True
     runtime_boundary = "op_bench_action_interface_file_cli"
 
-    def __init__(self, progress: Progress | None = None, hide_public_tests: bool = False) -> None:
+    def __init__(self, progress: Progress | None = None) -> None:
         self.progress = progress or noop_progress
-        self.hide_public_tests = hide_public_tests
 
     def produce_patch(
         self,
@@ -252,13 +251,6 @@ class CodexActionBridgeAgent:
                 "Only changes to these files will be evaluated. Changes outside scope will be rejected.\n"
             )
 
-        public_tests_section = ""
-        if task.public_tests and not self.hide_public_tests:
-            public_tests_section = (
-                f"\nPublic tests you can run during repair: {task.public_tests}\n"
-                "These are visible sanity tests. Final scoring uses additional hidden tests.\n"
-            )
-
         return (
             "You are solving an op_bench task. The target repository is not in your current directory, "
             "and you must not try to locate it on the host filesystem.\n"
@@ -276,7 +268,6 @@ class CodexActionBridgeAgent:
             "If a class name like TestFoo is missing, try TestFooCUDA; if a method like test_bar is missing, try\n"
             "test_bar_cuda or test_bar_cuda_float32.\n\n"
             f"{scope_section}"
-            f"{public_tests_section}"
             "Action CLI examples:\n"
             f"  ./{action_cli_name} read_file torch/nn/modules/linear.py\n"
             f"  ./{action_cli_name} run_test 'TestLazyModules.test_linear_state'\n"
@@ -301,9 +292,8 @@ class ClaudeCodeActionBridgeAgent:
     requires_actions = True
     runtime_boundary = "op_bench_action_interface_file_cli"
 
-    def __init__(self, progress: Progress | None = None, hide_public_tests: bool = False) -> None:
+    def __init__(self, progress: Progress | None = None) -> None:
         self.progress = progress or noop_progress
-        self.hide_public_tests = hide_public_tests
 
     def produce_patch(
         self,
@@ -375,13 +365,6 @@ class ClaudeCodeActionBridgeAgent:
                 "Only changes to these files will be evaluated. Changes outside scope will be rejected.\n"
             )
 
-        public_tests_section = ""
-        if task.public_tests and not self.hide_public_tests:
-            public_tests_section = (
-                f"\nPublic tests you can run during repair: {task.public_tests}\n"
-                "These are visible sanity tests. Final scoring uses additional hidden tests.\n"
-            )
-
         return (
             "You are solving an op_bench task. The target repository is not in your current directory, "
             "and you must not try to locate it on the host filesystem.\n"
@@ -399,7 +382,6 @@ class ClaudeCodeActionBridgeAgent:
             "If a class name like TestFoo is missing, try TestFooCUDA; if a method like test_bar is missing, try\n"
             "test_bar_cuda or test_bar_cuda_float32.\n\n"
             f"{scope_section}"
-            f"{public_tests_section}"
             "Action CLI examples:\n"
             f"  ./{action_cli_name} read_file torch/nn/modules/linear.py\n"
             f"  ./{action_cli_name} run_test 'TestLazyModules.test_linear_state'\n"
@@ -421,12 +403,11 @@ class ClaudeCodeActionBridgeAgent:
 def agent_by_name(
     name: str,
     progress: Progress | None = None,
-    hide_public_tests: bool = False,
 ) -> GoldAgent | CodexActionBridgeAgent | ClaudeCodeActionBridgeAgent:
     if name == "gold":
         return GoldAgent()
     if name == "codex_action_bridge":
-        return CodexActionBridgeAgent(progress=progress, hide_public_tests=hide_public_tests)
+        return CodexActionBridgeAgent(progress=progress)
     if name == "claude_code_action_bridge":
-        return ClaudeCodeActionBridgeAgent(progress=progress, hide_public_tests=hide_public_tests)
+        return ClaudeCodeActionBridgeAgent(progress=progress)
     raise ValueError(f"unknown agent: {name}")

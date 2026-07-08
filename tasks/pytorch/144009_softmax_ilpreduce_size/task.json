@@ -40,6 +40,8 @@
     "component": "aten.native.cuda.softmax",
     "operator_name": "torch.nn.functional.log_softmax",
     "problem_type": "kernel-index-underflow",
+    "problem_dimension": "precision",
+    "problem_subclass": "P5",
     "tags": [
       "cuda-kernel",
       "softmax",

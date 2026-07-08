@@ -117,12 +117,7 @@ class Evaluator:
                     return finish("runner_error")
 
             if task.public_test_patch_path is not None and task.public_test_patch_path.exists():
-                public_patch_result = self._apply_patch(task.public_test_patch_path, workspace)
-                command_log.append(public_patch_result)
-                if public_patch_result.timed_out:
-                    return finish("timeout")
-                if public_patch_result.exit_code != 0:
-                    return finish("runner_error")
+                pass  # public_test_patch mechanism deprecated in v0.5; field kept in schema for history
 
             if patch_path is not None and patch_path.read_text(encoding="utf-8").strip():
                 patch_text = patch_path.read_text(encoding="utf-8")

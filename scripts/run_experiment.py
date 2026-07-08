@@ -21,7 +21,7 @@ from op_bench.environment import EnvironmentManager
 from op_bench.evaluator import Evaluator
 from op_bench.progress import ProgressLogger, format_duration
 from op_bench.registry import load_resolved_task
-from op_bench.reporter import summarize_results, write_json, write_jsonl
+from op_bench.reporter import compute_extended_metrics, summarize_results, write_json, write_jsonl
 from op_bench.resume import BASELINE_CACHE_DIRNAME, BaselineCache, ResultsStore, RunState, RUN_STATE_FILE
 from op_bench.task import TaskManifest
 
@@ -80,14 +80,6 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=1,
         help="Number of independent attempts to run for each agent on each reproduced task.",
-    )
-    parser.add_argument(
-        "--no-public-tests",
-        action="store_true",
-        help=(
-            "Hide public tests from the agent (skip applying public_test.patch in the agent workspace "
-            "and omit public_tests from the agent prompt). Used for ablation experiments."
-        ),
     )
     parser.add_argument(
         "--max-parallel",
@@ -290,7 +282,6 @@ def main(argv: list[str] | None = None) -> int:
                     agent_repeat=args.agent_repeat,
                     output_dir=output_dir,
                     patches_dir=patches_dir,
-                    hide_public_tests=args.no_public_tests,
                     environment_manager=environment_manager,
                     evaluator=evaluator,
                     progress=progress,
@@ -312,7 +303,6 @@ def main(argv: list[str] | None = None) -> int:
                     agent_repeat=args.agent_repeat,
                     output_dir=output_dir,
                     patches_dir=patches_dir,
-                    hide_public_tests=args.no_public_tests,
                     environment_manager=environment_manager,
                     evaluator=evaluator,
                     progress=progress,
@@ -322,7 +312,7 @@ def main(argv: list[str] | None = None) -> int:
 
     # --- Post-run: write summary from stored records --------------------------
 
-    _write_summary(store, output_dir, progress)
+    _write_summary(store, output_dir, progress, tasks)
     print(output_dir / "summary.json")
     return 0
 
@@ -335,12 +325,11 @@ def _run_single_attempt(
     agent_repeat: int,
     output_dir: Path,
     patches_dir: Path,
-    hide_public_tests: bool,
     environment_manager: EnvironmentManager,
     evaluator: Evaluator,
     progress,
 ) -> dict[str, object]:
-    agent = agent_by_name(agent_name, progress=progress, hide_public_tests=hide_public_tests)
+    agent = agent_by_name(agent_name, progress=progress)
     agent_label = str(getattr(agent, "agent_id", getattr(agent, "name", agent_name)))
     attempt_label = f"attempt_{attempt:03d}"
     progress(f"agent start: task={task.task_id}, agent={agent_label}, attempt={attempt}/{agent_repeat}")
@@ -361,14 +350,6 @@ def _run_single_attempt(
             return _error_record(
                 agent_label, attempt, task, "runner_error", prepare_error, {}, [],
             )
-        if task.public_test_patch_path is not None and task.public_test_patch_path.exists() and not hide_public_tests:
-            import subprocess
-            patch_result = subprocess.run(
-                ["git", "apply", str(task.public_test_patch_path)],
-                cwd=str(workspace), capture_output=True, text=True, timeout=30,
-            )
-            if patch_result.returncode != 0:
-                progress(f"agent public_test_patch apply failed: {patch_result.stderr}")
         progress(f"agent environment prepare: task={task.task_id}, agent={agent_label}")
         environment_preparation = environment_manager.prepare(task, workspace)
         if not environment_preparation.available:
@@ -429,7 +410,7 @@ def _run_single_attempt(
     return record
 
 
-def _write_summary(store: ResultsStore, output_dir: Path, progress) -> None:
+def _write_summary(store: ResultsStore, output_dir: Path, progress, tasks: list["TaskManifest"] | None = None) -> None:
     results = store.load_all_results()
     baselines = store.load_all_baselines()
     progress(f"write summary: {output_dir / 'summary.json'}")
@@ -438,10 +419,29 @@ def _write_summary(store: ResultsStore, output_dir: Path, progress) -> None:
     summary = summarize_results(results)
     summary["baselines"] = baselines
     summary["baseline_count"] = len(baselines)
+    # v0.5 extended metrics (patch conciseness, tier-weighted score, per-dimension).
+    if tasks is not None:
+        task_meta = {
+            t.task_id: {
+                "gold_patch_lines": _count_lines(t.gold_patch_path),
+                "runtime_tier": t.runtime_tier,
+                "problem_type": t.problem_type,
+                "problem_dimension": t.problem_dimension,
+                "problem_subclass": t.problem_subclass,
+            }
+            for t in tasks
+        }
+    else:
+        task_meta = {}
+    summary["extended"] = compute_extended_metrics(results, task_meta)
     write_json(output_dir / "summary.json", summary)
-    # Also refresh results.jsonl in canonical (sorted) form for downstream tooling —
-    # the append-only file is authoritative, but a re-sorted mirror is nicer to diff.
-    # (Skipped to avoid touching evidence; consumers should read results.jsonl directly.)
+
+
+def _count_lines(path: Path) -> int:
+    try:
+        return len(path.read_text(encoding="utf-8").splitlines())
+    except (OSError, UnicodeDecodeError):
+        return 0
 
 
 def _load_tasks(task_dirs: list[str], dataset_paths: list[str], verified_only: bool = False) -> list[TaskManifest]:

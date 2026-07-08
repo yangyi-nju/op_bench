@@ -40,6 +40,8 @@
     "component": "torch.nested._internal.sdpa",
     "operator_name": "torch.nn.functional.scaled_dot_product_attention",
     "problem_type": "dtype-precision",
+    "problem_dimension": "precision",
+    "problem_subclass": "P3",
     "tags": [
       "nested-tensor",
       "sdpa",

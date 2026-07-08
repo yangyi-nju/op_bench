@@ -288,6 +288,34 @@ class TaskManifest:
         return self.metadata_admission_status
 
     @property
+    def operator_metadata(self) -> dict[str, Any]:
+        value = self.data.get("operator")
+        return dict(value) if isinstance(value, dict) else {}
+
+    @property
+    def problem_dimension(self) -> str | None:
+        """v0.5+ dimension classifier: precision | boundary | device_compat | performance.
+
+        None means the task predates the classification (historical v0.3/v0.4 CPU tasks)
+        or is intentionally not classified. `preflight_task.py` enforces that new verified
+        tasks declare this field.
+        """
+        value = self.operator_metadata.get("problem_dimension")
+        return str(value) if value else None
+
+    @property
+    def problem_subclass(self) -> str | None:
+        """v0.5+ subclass classifier within a dimension (e.g. P1..P5 for precision)."""
+        value = self.operator_metadata.get("problem_subclass")
+        return str(value) if value else None
+
+    @property
+    def problem_type(self) -> str | None:
+        """Free-form legacy tag from v0.3/v0.4 (e.g. "kernel-index-underflow")."""
+        value = self.operator_metadata.get("problem_type")
+        return str(value) if value else None
+
+    @property
     def admission_evidence_path(self) -> Path | None:
         admission = self.data.get("admission")
         if not isinstance(admission, dict) or not admission.get("evidence"):
