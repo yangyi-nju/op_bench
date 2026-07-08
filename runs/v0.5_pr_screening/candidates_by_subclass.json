@@ -1,0 +1,510 @@
+{
+  "P1": [
+    {
+      "pr_url": "https://github.com/pytorch/pytorch/pull/108559",
+      "issue_url": "https://github.com/pytorch/pytorch/issues/83149",
+      "title": "Fix permuted sum precision issue for lower precision on CPU",
+      "subclass": "P1",
+      "problem_dimension": "precision",
+      "component": "aten/src/ATen/native/ReduceOps.cpp",
+      "files_changed": [
+        "aten/src/ATen/native/ReduceOps.cpp",
+        "test/test_reductions.py"
+      ],
+      "test_files_changed": [
+        "test/test_reductions.py"
+      ],
+      "base_commit": "34e3f6f3c9ed0b8ebdbf37637722a6e53274198a",
+      "merge_commit": "412c687e2e014c885ac3dcfb074619856f85eb9c",
+      "patch_lines_source": 33,
+      "patch_lines_test": 44,
+      "requires_kernel_build": true,
+      "min_gpu_arch": "cpu",
+      "bug_pattern": "Permuted bf16/fp16 CPU reductions truncate intermediate sums when TensorIterator reduces more than two logical dimensions.",
+      "why_good": "The added low-precision non-contiguous sum test compares against an explicit float reference, so base fails on accumulated truncation and the accumulator-buffer fix passes."
+    },
+    {
+      "pr_url": "https://github.com/pytorch/pytorch/pull/141052",
+      "issue_url": null,
+      "title": "[Inductor/Triton] Upcast FP16/BF16 math reductions to FP32",
+      "subclass": "P1",
+      "problem_dimension": "precision",
+      "component": "torch/_inductor/codegen/triton.py",
+      "files_changed": [
+        "test/inductor/test_op_dtype_prop.py",
+        "torch/_inductor/codegen/triton.py"
+      ],
+      "test_files_changed": [
+        "test/inductor/test_op_dtype_prop.py"
+      ],
+      "base_commit": "816328fa51382e9b50e60fb928a690d5c1bdadaf",
+      "merge_commit": "417d9c3522dc6349b9d79c3822b846ad3c76386c",
+      "patch_lines_source": 42,
+      "patch_lines_test": 29,
+      "requires_kernel_build": false,
+      "min_gpu_arch": "sm_70",
+      "bug_pattern": "Generated Triton fp16/bf16 math reductions accumulate in low precision instead of promoting reducer inputs to fp32.",
+      "why_good": "The regression test compiles low-precision reductions and asserts the generated Triton contains fp32 casts while matching eager output."
+    },
+    {
+      "pr_url": "https://github.com/pytorch/pytorch/pull/147203",
+      "issue_url": "https://github.com/pytorch/pytorch/issues/134106",
+      "title": "Fix rms_norm in fp16/bf16",
+      "subclass": "P1",
+      "problem_dimension": "precision",
+      "component": "aten/src/ATen/native/layer_norm.cpp",
+      "files_changed": [
+        "aten/src/ATen/native/layer_norm.cpp",
+        "test/test_nn.py",
+        "torch/testing/_internal/common_modules.py"
+      ],
+      "test_files_changed": [
+        "test/test_nn.py",
+        "torch/testing/_internal/common_modules.py"
+      ],
+      "base_commit": "85467ed063d284fa21a2f1d2adfec8fda544923d",
+      "merge_commit": "8f71d4563eabbc978940c43b72fa67d770125e78",
+      "patch_lines_source": 8,
+      "patch_lines_test": 28,
+      "requires_kernel_build": true,
+      "min_gpu_arch": "cpu",
+      "bug_pattern": "RMSNorm downcasts the normalized value before the weight multiply, causing extra fp16/bf16 truncation.",
+      "why_good": "The numeric test compares functional RMSNorm with a reference that keeps the reduction and weight multiply in float until the final cast."
+    },
+    {
+      "pr_url": "https://github.com/pytorch/pytorch/pull/140557",
+      "issue_url": null,
+      "title": "fix layer_norm decomp precision for cpu",
+      "subclass": "P1",
+      "problem_dimension": "precision",
+      "component": "torch/_refs/__init__.py",
+      "files_changed": [
+        "test/test_decomp.py",
+        "torch/_refs/__init__.py"
+      ],
+      "test_files_changed": [
+        "test/test_decomp.py"
+      ],
+      "base_commit": "240aa77ad01c4f0cd9b2417748272f2f617c112f",
+      "merge_commit": "9ae19ffbedaa7754ee194b5da8d57cc2d2fee20e",
+      "patch_lines_source": 5,
+      "patch_lines_test": 25,
+      "requires_kernel_build": false,
+      "min_gpu_arch": "cpu",
+      "bug_pattern": "CPU native_layer_norm decomposition misses CPU-specific low-precision upcast/return-dtype behavior under fake tensor dispatch.",
+      "why_good": "The fake tensor decomposition test checks output dtype parity against real CPU bf16 native_layer_norm outputs."
+    }
+  ],
+  "P2": [
+    {
+      "pr_url": "https://github.com/pytorch/pytorch/pull/128953",
+      "issue_url": null,
+      "title": "Set correct output dtype for dequantize op during convert_pt2e in decomposed mode",
+      "subclass": "P2",
+      "problem_dimension": "precision",
+      "component": "torch/ao/quantization/fx/convert.py",
+      "files_changed": [
+        "test/quantization/pt2e/test_quantize_pt2e.py",
+        "torch/ao/quantization/fx/convert.py",
+        "torch/testing/_internal/common_quantization.py"
+      ],
+      "test_files_changed": [
+        "test/quantization/pt2e/test_quantize_pt2e.py",
+        "torch/testing/_internal/common_quantization.py"
+      ],
+      "base_commit": "d59803fb67ee1efeceb04edee13111ed0ee8d969",
+      "merge_commit": "4f60a2e39c83491ca2521ab2e81c461355be26f4",
+      "patch_lines_source": 12,
+      "patch_lines_test": 55,
+      "requires_kernel_build": false,
+      "min_gpu_arch": "cpu",
+      "bug_pattern": "PT2E decomposed dequantize conversion drops the intended non-float output dtype such as bf16.",
+      "why_good": "The test drives convert_pt2e with non-float unquantized dtype and catches the wrong dequantized output dtype on the base commit."
+    },
+    {
+      "pr_url": "https://github.com/pytorch/pytorch/pull/139999",
+      "issue_url": null,
+      "title": "Update torch.masked.mean to upcast dtype for bool tensors",
+      "subclass": "P2",
+      "problem_dimension": "precision",
+      "component": "torch/masked/_ops.py",
+      "files_changed": [
+        "test/inductor/test_cpu_repro.py",
+        "torch/masked/_ops.py",
+        "torch/testing/_internal/opinfo/definitions/_masked.py"
+      ],
+      "test_files_changed": [
+        "test/inductor/test_cpu_repro.py",
+        "torch/testing/_internal/opinfo/definitions/_masked.py"
+      ],
+      "base_commit": "60a505022f3fdf070b3a73225d8a39009caa216b",
+      "merge_commit": "a5051a9521766c70a2f65cf1eadb4e982a23c459",
+      "patch_lines_source": 8,
+      "patch_lines_test": 21,
+      "requires_kernel_build": false,
+      "min_gpu_arch": "cpu",
+      "bug_pattern": "torch.masked.mean on bool tensors infers bool for the internal sum, clamping totals to True and losing count precision.",
+      "why_good": "The repro computes a bool masked mean where bool accumulation gives 0.5 instead of the integer-count mean; the patch upcasts the sum dtype."
+    },
+    {
+      "pr_url": "https://github.com/pytorch/pytorch/pull/144646",
+      "issue_url": null,
+      "title": "[Inductor] Unifiy Low Precision FP Legalization for to_dtype_bitcast & constant",
+      "subclass": "P2",
+      "problem_dimension": "precision",
+      "component": "torch/_inductor/codegen/cpp.py",
+      "files_changed": [
+        "test/inductor/test_torchinductor.py",
+        "torch/_inductor/codegen/common.py",
+        "torch/_inductor/codegen/cpp.py"
+      ],
+      "test_files_changed": [
+        "test/inductor/test_torchinductor.py"
+      ],
+      "base_commit": "af349047c3e1aaf36b03e94af992830ef1a4723f",
+      "merge_commit": "b18e3c01aa8bfee37078b4a06cef4361bf63b36b",
+      "patch_lines_source": 158,
+      "patch_lines_test": 6,
+      "requires_kernel_build": false,
+      "min_gpu_arch": "cpu",
+      "bug_pattern": "Inductor low-precision bitcast legalization upcasts values before dtype-sensitive sink operations such as bitwise ops.",
+      "why_good": "The focused float16/bfloat16-to-int16 CPU tests fail when legalization inserts the wrong cast and pass once source/sink dtype propagation is unified."
+    },
+    {
+      "pr_url": "https://github.com/pytorch/pytorch/pull/148686",
+      "issue_url": "https://github.com/pytorch/pytorch/issues/147889",
+      "title": "[MPS] Fix scalar to tensors bitshifts",
+      "subclass": "P2",
+      "problem_dimension": "precision",
+      "component": "aten/src/ATen/native/mps/operations/BitwiseOps.mm",
+      "files_changed": [
+        "aten/src/ATen/native/mps/operations/BitwiseOps.mm",
+        "test/test_mps.py"
+      ],
+      "test_files_changed": [
+        "test/test_mps.py"
+      ],
+      "base_commit": "116c1e42c55fc877904f9fada013b2f5949ffbb6",
+      "merge_commit": "f84710aef42c03c0b6aeb0e84a229e5c0a4c325c",
+      "patch_lines_source": 51,
+      "patch_lines_test": 8,
+      "requires_kernel_build": true,
+      "min_gpu_arch": "mps",
+      "bug_pattern": "MPS scalar-to-tensor bitshifts cast the scalar after the operation, diverging from CPU low-width integer dtype semantics.",
+      "why_good": "Regression tests compare uint8 scalar shift behavior and catch the output-value mismatch caused by delayed dtype conversion."
+    },
+    {
+      "pr_url": "https://github.com/pytorch/pytorch/pull/151598",
+      "issue_url": "https://github.com/pytorch/pytorch/issues/151156",
+      "title": "Fix uint view copy",
+      "subclass": "P2",
+      "problem_dimension": "precision",
+      "component": "torch/_inductor/codegen/triton.py",
+      "files_changed": [
+        "test/inductor/test_cuda_repro.py",
+        "torch/_inductor/codegen/triton.py"
+      ],
+      "test_files_changed": [
+        "test/inductor/test_cuda_repro.py"
+      ],
+      "base_commit": "28974a1ec3b921809c20a1217178da3792e5c545",
+      "merge_commit": "9ccdeae7db5a06372bef59b47ba962d39baff7b5",
+      "patch_lines_source": 38,
+      "patch_lines_test": 14,
+      "requires_kernel_build": false,
+      "min_gpu_arch": "sm_70",
+      "bug_pattern": "Inductor uint view-copy codegen undoes an upcast before dtype bitcast using imprecise dtype logic.",
+      "why_good": "The CUDA repro covers uint view copy through Triton codegen and fails when the generated dtype restoration is wrong."
+    }
+  ],
+  "P3": [
+    {
+      "pr_url": "https://github.com/pytorch/pytorch/pull/129138",
+      "issue_url": null,
+      "title": "[inductor] fix linear_add_bias for autocast case",
+      "subclass": "P3",
+      "problem_dimension": "precision",
+      "component": "torch/_inductor/fx_passes/mkldnn_fusion.py",
+      "files_changed": [
+        "test/inductor/test_mkldnn_pattern_matcher.py",
+        "torch/_inductor/fx_passes/mkldnn_fusion.py"
+      ],
+      "test_files_changed": [
+        "test/inductor/test_mkldnn_pattern_matcher.py"
+      ],
+      "base_commit": "5d8e23b49c5327590fb32b28309c41129e2b3f08",
+      "merge_commit": "27ae1f981d8a800505ddfde08898ddcf4c6f9765",
+      "patch_lines_source": 6,
+      "patch_lines_test": 24,
+      "requires_kernel_build": false,
+      "min_gpu_arch": "cpu",
+      "bug_pattern": "linear_add_bias fusion assumes bf16 bias under autocast and mishandles fp32 bias with bf16 weight.",
+      "why_good": "The autocast test exercises MKLDNN linear+bias fusion and catches the dtype mismatch that appears only under autocast."
+    },
+    {
+      "pr_url": "https://github.com/pytorch/pytorch/pull/132835",
+      "issue_url": null,
+      "title": "[NJT] manually autocast in SDPA handling",
+      "subclass": "P3",
+      "problem_dimension": "precision",
+      "component": "torch/nested/_internal/sdpa.py",
+      "files_changed": [
+        "test/test_nestedtensor.py",
+        "torch/nested/_internal/sdpa.py"
+      ],
+      "test_files_changed": [
+        "test/test_nestedtensor.py"
+      ],
+      "base_commit": "bbf568aac8ec06bcbfc00cac84747256ac021c5d",
+      "merge_commit": "59f4725b49a59bc328bd55744e44369a0113ec95",
+      "patch_lines_source": 46,
+      "patch_lines_test": 79,
+      "requires_kernel_build": false,
+      "min_gpu_arch": "sm_70",
+      "bug_pattern": "Nested jagged tensor SDPA intercepts before dispatcher autocast, so SDPA inputs are not cast to the expected autocast dtype.",
+      "why_good": "The nested tensor SDPA test runs with autocast enabled and fails unless sdpa.py manually applies the same casts as dispatcher autocast."
+    },
+    {
+      "pr_url": "https://github.com/pytorch/pytorch/pull/133938",
+      "issue_url": "https://github.com/pytorch/pytorch/issues/132715",
+      "title": "[CUDA][AMP] Fix autocast_dtype",
+      "subclass": "P3",
+      "problem_dimension": "precision",
+      "component": "aten/src/ATen/ThreadLocalState.cpp",
+      "files_changed": [
+        "aten/src/ATen/ThreadLocalState.cpp",
+        "aten/src/ATen/ThreadLocalState.h",
+        "test/test_autocast.py"
+      ],
+      "test_files_changed": [
+        "test/test_autocast.py"
+      ],
+      "base_commit": "977a909250e6d58eaf5e772d6f7d0badd3e09da4",
+      "merge_commit": "956da79bda83c9fba31b67b99611556cb29c9e79",
+      "patch_lines_source": 23,
+      "patch_lines_test": 26,
+      "requires_kernel_build": true,
+      "min_gpu_arch": "sm_70",
+      "bug_pattern": "CUDA AMP autocast dtype is thread-local, causing backward side threads to use fp16 when forward selected bf16.",
+      "why_good": "The autocast test reproduces cross-thread dtype inconsistency and passes after autocast_dtype is made consistent across forward/backward threads."
+    },
+    {
+      "pr_url": "https://github.com/pytorch/pytorch/pull/137495",
+      "issue_url": null,
+      "title": "Fix autocast for non-strict export",
+      "subclass": "P3",
+      "problem_dimension": "precision",
+      "component": "torch/amp/autocast_mode.py",
+      "files_changed": [
+        "test/export/test_export.py",
+        "torch/amp/autocast_mode.py",
+        "torch/fx/experimental/proxy_tensor.py"
+      ],
+      "test_files_changed": [
+        "test/export/test_export.py"
+      ],
+      "base_commit": "7ba706c74e352dc752a0afd4b23d250108e2cb3e",
+      "merge_commit": "a47bb4a3936e571953b47a6af4cc6b46bceb3441",
+      "patch_lines_source": 41,
+      "patch_lines_test": 22,
+      "requires_kernel_build": false,
+      "min_gpu_arch": "cpu",
+      "bug_pattern": "Non-strict export drops autocast enter/exit nodes, losing mixed-precision context in the exported graph.",
+      "why_good": "The export_for_training test checks that autocast nodes remain in the non-strict export graph instead of silently disappearing."
+    },
+    {
+      "pr_url": "https://github.com/pytorch/pytorch/pull/141065",
+      "issue_url": null,
+      "title": "Fix autocast HOP pass for nested autocast",
+      "subclass": "P3",
+      "problem_dimension": "precision",
+      "component": "torch/_export/passes/replace_autocast_with_hop_pass.py",
+      "files_changed": [
+        "test/export/test_passes.py",
+        "torch/_export/passes/replace_autocast_with_hop_pass.py",
+        "torch/_export/passes/replace_with_hop_pass_util.py"
+      ],
+      "test_files_changed": [
+        "test/export/test_passes.py"
+      ],
+      "base_commit": "87f9c1abe5f7bb76bd437e3cad66ab8d28ea8cd9",
+      "merge_commit": "5c37b20d133d37f11278fda8c3127228beab73f5",
+      "patch_lines_source": 12,
+      "patch_lines_test": 48,
+      "requires_kernel_build": false,
+      "min_gpu_arch": "cpu",
+      "bug_pattern": "Autocast higher-order-op replacement pass mishandles nested autocast regions.",
+      "why_good": "The pass test covers nested autocast and fails if the transformed graph cannot preserve the nested autocast semantics."
+    }
+  ],
+  "P4": [
+    {
+      "pr_url": "https://github.com/pytorch/pytorch/pull/119898",
+      "issue_url": null,
+      "title": "[PyTorch][Vulkan]fix the issue of log 0 after softmax",
+      "subclass": "P4",
+      "problem_dimension": "precision",
+      "component": "aten/src/ATen/native/vulkan/ops/Softmax.cpp",
+      "files_changed": [
+        "aten/src/ATen/native/vulkan/ops/Softmax.cpp",
+        "aten/src/ATen/test/vulkan_api_test.cpp"
+      ],
+      "test_files_changed": [
+        "aten/src/ATen/test/vulkan_api_test.cpp"
+      ],
+      "base_commit": "cd08dc37f831f7b7deabdc92893758de84c4d3d9",
+      "merge_commit": "af346df6a0f77bba8a275ce5c9dc09a11ec0b6d6",
+      "patch_lines_source": 10,
+      "patch_lines_test": 50,
+      "requires_kernel_build": true,
+      "min_gpu_arch": "vulkan",
+      "bug_pattern": "Vulkan log_softmax can take log(0) after fp16 softmax underflows tiny probabilities to zero, producing -inf/NaN.",
+      "why_good": "The Vulkan log_softmax tests exercise underflow-sized probabilities and catch non-finite output before the epsilon stabilization."
+    },
+    {
+      "pr_url": "https://github.com/pytorch/pytorch/pull/121381",
+      "issue_url": "https://github.com/pytorch/pytorch/issues/120899",
+      "title": "Fix torch.clamp in MPS to handle NaN correctly",
+      "subclass": "P4",
+      "problem_dimension": "precision",
+      "component": "aten/src/ATen/native/mps/operations/TensorCompare.mm",
+      "files_changed": [
+        "aten/src/ATen/native/mps/operations/TensorCompare.mm",
+        "test/test_mps.py"
+      ],
+      "test_files_changed": [
+        "test/test_mps.py"
+      ],
+      "base_commit": "0a1b3be2163ea99633f95c4927bd816eb713e9bd",
+      "merge_commit": "40acc84aafa82f00a5b3966302638f344bef07bd",
+      "patch_lines_source": 31,
+      "patch_lines_test": 19,
+      "requires_kernel_build": true,
+      "min_gpu_arch": "mps",
+      "bug_pattern": "MPS torch.clamp uses min/max forms that do not propagate NaN like PyTorch clamp semantics require.",
+      "why_good": "The MPS clamp regression test checks NaN propagation directly and fails when NaN is clamped to a numeric bound."
+    },
+    {
+      "pr_url": "https://github.com/pytorch/pytorch/pull/129154",
+      "issue_url": "https://github.com/pytorch/pytorch/issues/127749",
+      "title": "Fix exp decomp numerics",
+      "subclass": "P4",
+      "problem_dimension": "precision",
+      "component": "torch/_refs/__init__.py",
+      "files_changed": [
+        "test/test_decomp.py",
+        "torch/_refs/__init__.py"
+      ],
+      "test_files_changed": [
+        "test/test_decomp.py"
+      ],
+      "base_commit": "ff89ebc50a738c734496393dc25313cf197fd0b4",
+      "merge_commit": "8cd9b104568754c088f843eebeb9f2b4f1c426d2",
+      "patch_lines_source": 13,
+      "patch_lines_test": 11,
+      "requires_kernel_build": false,
+      "min_gpu_arch": "cpu",
+      "bug_pattern": "exp decomposition misses eager numeric guards, allowing sampled/log-transformed values to produce inf.",
+      "why_good": "The decomp test asserts non-inf behavior for the edge case described in the issue and passes once eager-style numeric handling is restored."
+    },
+    {
+      "pr_url": "https://github.com/pytorch/pytorch/pull/129352",
+      "issue_url": "https://github.com/pytorch/pytorch/issues/123645",
+      "title": "Fix numerical instability for norm",
+      "subclass": "P4",
+      "problem_dimension": "precision",
+      "component": "aten/src/ATen/native/cpu/ReduceOpsKernel.cpp",
+      "files_changed": [
+        "aten/src/ATen/native/cpu/ReduceOpsKernel.cpp",
+        "test/test_reductions.py"
+      ],
+      "test_files_changed": [
+        "test/test_reductions.py"
+      ],
+      "base_commit": "adc77a9b7feda9a1e81f95a33091dcae92158b5a",
+      "merge_commit": "66340e67515cd3592bda6bdd9bfe2ffa22fe7413",
+      "patch_lines_source": 44,
+      "patch_lines_test": 11,
+      "requires_kernel_build": true,
+      "min_gpu_arch": "cpu",
+      "bug_pattern": "Large CPU norm reductions overflow fp32 range when reduced directly, producing incorrect results.",
+      "why_good": "The reduction test covers a large norm case and fails on base until the implementation groups reductions and uses double intermediate accumulation."
+    },
+    {
+      "pr_url": "https://github.com/pytorch/pytorch/pull/144073",
+      "issue_url": "https://github.com/pytorch/pytorch/issues/143960",
+      "title": "Avoid overflow in vector_norm for scalar input",
+      "subclass": "P4",
+      "problem_dimension": "precision",
+      "component": "torch/_refs/linalg/__init__.py",
+      "files_changed": [
+        "test/inductor/test_torchinductor.py",
+        "torch/_refs/linalg/__init__.py",
+        "torch/testing/_internal/opinfo/definitions/linalg.py"
+      ],
+      "test_files_changed": [
+        "test/inductor/test_torchinductor.py",
+        "torch/testing/_internal/opinfo/definitions/linalg.py"
+      ],
+      "base_commit": "06e9deabb623e004eb6024e703a976c5748d51e6",
+      "merge_commit": "957faaadca78ec453d60f2fe986c1191e2e7c5b6",
+      "patch_lines_source": 16,
+      "patch_lines_test": 18,
+      "requires_kernel_build": false,
+      "min_gpu_arch": "cpu",
+      "bug_pattern": "vector_norm for scalar input computes power then root and can overflow where eager avoids the overflow.",
+      "why_good": "The Inductor/vector_norm test compares torch.dist/vector_norm scalar behavior against eager and catches the overflow-induced mismatch."
+    }
+  ],
+  "P5": [
+    {
+      "pr_url": "https://github.com/pytorch/pytorch/pull/137529",
+      "issue_url": null,
+      "title": "[SymmetricMemoryOps] use float32 as the accumulator type when accumulating bfloat16 with multimem.ld_reduce",
+      "subclass": "P5",
+      "problem_dimension": "precision",
+      "component": "torch/csrc/distributed/c10d/CUDASymmetricMemoryOps.cu",
+      "files_changed": [
+        "test/distributed/test_symmetric_memory.py",
+        "torch/csrc/distributed/c10d/CUDASymmetricMemory-inl.h",
+        "torch/csrc/distributed/c10d/CUDASymmetricMemoryOps.cu"
+      ],
+      "test_files_changed": [
+        "test/distributed/test_symmetric_memory.py"
+      ],
+      "base_commit": "39c5122a4f19d0fc0d7f8eb254c0cfcfbf95f318",
+      "merge_commit": "fbaf9b62dea3214a58d41019b448bc144bc49d5a",
+      "patch_lines_source": 84,
+      "patch_lines_test": 15,
+      "requires_kernel_build": true,
+      "min_gpu_arch": "sm_80",
+      "bug_pattern": "CUDA multimem.ld_reduce accumulates bfloat16 in bf16 precision instead of using fp32 accumulator precision.",
+      "why_good": "The distributed symmetric memory test sums random bf16 inputs across ranks and checks closeness to a gathered fp32-style reference, exercising the kernel accumulator change."
+    },
+    {
+      "pr_url": "https://github.com/pytorch/pytorch/pull/139372",
+      "issue_url": "https://github.com/pytorch/pytorch/issues/139360",
+      "title": "Fix torch.histc not checking min > max on cuda for int8 tensors",
+      "subclass": "P5",
+      "problem_dimension": "precision",
+      "component": "aten/src/ATen/native/cuda/SummaryOps.cu",
+      "files_changed": [
+        "aten/src/ATen/native/cuda/SummaryOps.cu",
+        "test/test_reductions.py",
+        "torch/testing/_internal/common_methods_invocations.py"
+      ],
+      "test_files_changed": [
+        "test/test_reductions.py",
+        "torch/testing/_internal/common_methods_invocations.py"
+      ],
+      "base_commit": "356fc41ae04816fe137bc85ccca4087ede291e3e",
+      "merge_commit": "ffb7a08921239784636dc1e41f69990522c4d76e",
+      "patch_lines_source": 6,
+      "patch_lines_test": 26,
+      "requires_kernel_build": true,
+      "min_gpu_arch": "sm_70",
+      "bug_pattern": "CUDA histc stores min/max bounds in low-precision input_t for int8, making min > max checks compare the wrong values.",
+      "why_good": "The reductions test reproduces int8 CUDA histc with invalid bounds and fails until the kernel uses a wider bound type for the comparison."
+    }
+  ]
+}
