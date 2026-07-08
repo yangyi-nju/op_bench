@@ -112,7 +112,7 @@ class RemoteDockerExecutor:
         container_name: str | None = None,
         command_workdir: str | None = None,
         labels: dict[str, str] | None = None,
-        gpus: str | None = "all",
+        gpus: str | None = None,
         remote_workspace: str | None = None,
     ) -> None:
         self.host = host

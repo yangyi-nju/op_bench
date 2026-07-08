@@ -89,6 +89,18 @@ def build_parser() -> argparse.ArgumentParser:
             "and omit public_tests from the agent prompt). Used for ablation experiments."
         ),
     )
+    parser.add_argument(
+        "--max-parallel",
+        type=int,
+        default=1,
+        metavar="N",
+        help=(
+            "Maximum number of (task × agent × attempt) triples to run concurrently. "
+            "Default 1 (serial). Parallelism is at the attempt level; each attempt gets "
+            "its own workspace and container. GPU tiers should keep N=1 to avoid "
+            "contending for the single --gpus all allocation."
+        ),
+    )
     parser.add_argument("--output-dir", required=True, help="Directory for result artifacts.")
     parser.add_argument(
         "--fresh",
@@ -251,11 +263,48 @@ def main(argv: list[str] | None = None) -> int:
 
         # -- Agent attempts (with resume) --------------------------------------
 
+        # -- Agent attempts (with resume + optional parallelism) ---------------
+
         for agent_name in args.agent:
             for attempt in range(1, args.agent_repeat + 1):
                 if (task.task_id, agent_name, attempt) in completed_keys:
                     progress(f"skip (already done): task={task.task_id}, agent={agent_name}, attempt={attempt}")
-                    continue
+
+        pending_to_run = [
+            (agent_name, attempt)
+            for agent_name in args.agent
+            for attempt in range(1, args.agent_repeat + 1)
+            if (task.task_id, agent_name, attempt) not in completed_keys
+        ]
+
+        if args.max_parallel > 1 and len(pending_to_run) > 1:
+            import concurrent.futures
+            import threading
+            store_lock = threading.Lock()
+
+            def run_and_store(agent_name: str, attempt: int) -> None:
+                record = _run_single_attempt(
+                    task=task,
+                    agent_name=agent_name,
+                    attempt=attempt,
+                    agent_repeat=args.agent_repeat,
+                    output_dir=output_dir,
+                    patches_dir=patches_dir,
+                    hide_public_tests=args.no_public_tests,
+                    environment_manager=environment_manager,
+                    evaluator=evaluator,
+                    progress=progress,
+                )
+                with store_lock:
+                    store.append_result(record)
+                    completed_keys.add((task.task_id, agent_name, attempt))
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=args.max_parallel) as pool:
+                futures = [pool.submit(run_and_store, a, i) for a, i in pending_to_run]
+                for f in concurrent.futures.as_completed(futures):
+                    f.result()  # propagate exceptions
+        else:
+            for agent_name, attempt in pending_to_run:
                 record = _run_single_attempt(
                     task=task,
                     agent_name=agent_name,

@@ -158,7 +158,11 @@ class TaskManifest:
 
     @property
     def environment_backend(self) -> str:
-        return str(self.data["environment"].get("backend", "local"))
+        import os
+        backend = str(self.data["environment"].get("backend", "local"))
+        if backend == "remote_docker" and os.environ.get("OP_BENCH_FORCE_LOCAL_DOCKER") == "1":
+            return "docker"
+        return backend
 
     @property
     def environment_host(self) -> str | None:
