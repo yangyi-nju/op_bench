@@ -1,5 +1,7 @@
 # Public Test Patches — Design Notes
 
+> **Status (2026-07-08)**: content preparation deferred to v0.5. No v0.4 task currently ships an `artifacts/public_test.patch`, so the two experiment arms would produce identical results. The `--no-public-tests` flag is retained in `scripts/run_experiment.py`. This document is kept as the design record for whoever picks up ablation next.
+
 For the v0.4 ablation experiment, we add `artifacts/public_test.patch` to a subset of
 existing v0.3 tasks. The public test should:
 

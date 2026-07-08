@@ -4,31 +4,42 @@ This file records user-visible OpBench version milestones. Detailed design,
 implementation, and experiment evidence remain in the versioned documents
 under `docs/`.
 
-## v0.4 - In Progress
+## v0.4 - Completed
 
-Development started on 2026-06-21.
+Development started on 2026-06-21. Experiment completed on 2026-07-08.
 
 Implemented:
 
-- Claude Code agent (`claude_code_action_bridge`) — validated 3/3 on v0.3 tasks.
-- Remote GPU Docker executor via SSH (`src/op_bench/remote.py`) with rsync workspace sync and `--gpus all` flag injection.
+- Remote GPU Docker executor via SSH (`src/op_bench/remote.py`) with rsync workspace sync (excludes `.ccache/`, `build/`, `torch.egg-info/`, `__pycache__/`), `--gpus all` flag injection, `ServerAliveInterval=30` keep-alive, and `_kill_remote_container_processes` fallback on subprocess timeout.
 - Two new runtime tiers: `cuda_python_overlay`, `cuda_kernel_build`.
-- `inplace_build` source loading mode for full PyTorch source rebuilds (cuda_kernel_build tier).
-- CUDA Docker images: `pytorch-cuda` (overlay) and `pytorch-cuda-devel` (with nvcc + ccache + cmake<4 + CMAKE_POLICY_VERSION_MINIMUM=3.5).
+- `inplace_build` source loading mode for full PyTorch source rebuilds (cuda_kernel_build tier); default build command streams `setup.py develop` output to `.op_bench_build.log` and preserves progress on timeout.
+- `kernel_full` snapshot mode (`scripts/setup_sources.py`) with recursive submodule init from `.gitmodules`.
+- CUDA Docker images: `pytorch-cuda` (overlay, torch 2.6.0 wheel) and `pytorch-cuda-devel` (with nvcc + ccache via `/usr/lib/ccache` symlinks + `cmake<4` + `CMAKE_POLICY_VERSION_MINIMUM=3.5` + `setuptools>=70,<81` + `USE_NCCL=0 USE_DISTRIBUTED=0 USE_TENSORPIPE=0 USE_GLOO=0 USE_MPI=0 USE_KINETO=0`).
+- Codex CLI rate-limit auto-retry (`_run_codex`): detects 429 / "rate limit" / "quota exceeded" signatures, sleeps `OP_BENCH_CODEX_RATE_LIMIT_WAIT_SEC` (default 5h5min), retries up to `OP_BENCH_CODEX_RATE_LIMIT_MAX_RETRIES` (default 3).
+- `TaskManifest.build_timeout_sec` property (defaults to 6h for `cuda_kernel_build` / `inplace_build`).
+- Empty `hidden_test.patch` support (skip apply when PR fixes a pre-existing test).
 - Patch apply fuzz fallback (`patch -F 3`) for minor base-commit drift.
-- `--no-public-tests` ablation flag.
+- `--no-public-tests` ablation flag (mechanism present, not exercised in v0.4).
 - Preflight script (`scripts/preflight_task.py`) to verify task admission readiness offline: snapshot exists, patches apply, test names resolve.
 
-v0.4 dataset (`datasets/pytorch_v0.4/dataset.json`):
+v0.4 dataset (`datasets/pytorch_v0.4/dataset.json`): **13 tasks verified** (10 from v0.3 + 2 cuda_python_overlay: 132616, 132835 + 1 cuda_kernel_build: 144009).
 
-- Verified (from v0.3): 10 tasks
-- New CUDA candidates: 5 (132616, 132835, 141820, 143264, 139409) — 2 verified, 3 pending remote build
-- Deprecated (incompatible with 2.6.0 stable wheel or non-admissible pattern): 147786, 131858, 133729
-- Target task count: 15
+v0.4 experiment result (Codex CLI, 3-repeat):
+
+- **33/39 = 84.6% resolved** (v0.3 was 76.7%).
+- Batch A (CPU, 10 tasks × 3): 24/30, median 45.9s. 2 stable failures (162340, 163961) carried over from v0.3.
+- Batch B (GPU, 3 tasks × 3, remote_docker on 4× V100): 9/9, median 82.2s.
+- `cuda_kernel_build` (144009): 3/3, median ~91min per attempt (build-heavy).
+
+Deferred to v0.5:
+
+- Multi-agent comparison with Claude Code (blocked on external conditions; agent adapter design retained).
+- Public test ablation (no task ships `public_test.patch` yet; mechanism kept, content deferred).
 
 Documents:
 
 - `docs/v0.4/design.md`
+- `docs/v0.4/experiment_report.md`
 - `docs/v0.4/candidate_tasks_cuda.md`
 - `docs/v0.4/public_test_ablation.md`
 
