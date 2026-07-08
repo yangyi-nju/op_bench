@@ -1,5 +1,34 @@
 # OpBench v0.5 P1 Preview
 
+## Authenticated `gh` Retry Result
+
+After the first preview was pushed, `gh` authentication became available and I reran the P1 verification.
+
+Important correction: the four fallback candidates below are real PyTorch landed commits with PR references in main commit messages, but `gh pr view` reports those PRs as `CLOSED` with `mergedAt: null` and `mergeCommit: null`. They therefore do **not** satisfy the strict `gh pr list --state merged ... is:merged` requirement.
+
+Authenticated commands run:
+
+```bash
+gh pr view 108559 --repo pytorch/pytorch --json title,state,closedAt,mergedAt,mergeCommit,baseRefOid,files
+gh pr view 141052 --repo pytorch/pytorch --json title,state,closedAt,mergedAt,mergeCommit,baseRefOid,files
+gh pr view 147203 --repo pytorch/pytorch --json title,state,closedAt,mergedAt,mergeCommit,baseRefOid,files
+gh pr view 140557 --repo pytorch/pytorch --json title,state,closedAt,mergedAt,mergeCommit,baseRefOid,files
+```
+
+Observed for all four: `state: CLOSED`, `mergedAt: null`, `mergeCommit: null`.
+
+I also reran P1-style `gh pr list --state merged` searches with the required JSON fields. Exact P1 keyword pack returned 0 results:
+
+```bash
+gh pr list --repo pytorch/pytorch --state merged --limit 300 \
+  --search '(accumulator OR "Kahan" OR "logsumexp" OR "log_sum_exp" OR "sum precision") is:merged merged:2024-01-01..2025-04-30' \
+  --json number,title,url,mergedAt,body,files
+```
+
+Expanded authenticated search across `bf16`, `fp16`, `sum`, `mean`, `norm`, `reduce`, `precision`, `accuracy`, and `correctness` found 24-27 unique true-GitHub-merged PRs depending on pack grouping. Hard filtering produced 3 to 6 pass-through PRs, but soft review rejected them for P1 because they were mix-precision copy, MPS/Inductor layout, quantization, performance/storage, or feature support issues rather than numerical accumulation errors.
+
+Conclusion: with strict GitHub `is:merged` semantics, I did not find a compliant P1 pool. The candidates below are retained only as **directional fallback candidates** if OpBench decides that PyTorch ghstack/Phabricator "Pull Request resolved" commits are acceptable despite GitHub API `mergedAt` being null.
+
 ## Scope
 
 Subclass: P1, numerical accumulation error.
@@ -8,7 +37,7 @@ Target pattern: low-precision reduction, norm, or accumulator path where fp16/bf
 
 ## Search Notes
 
-Requested `gh pr list` / `gh pr view` commands could not be executed because this machine's `gh` CLI is not authenticated:
+Initial requested `gh pr list` / `gh pr view` commands could not be executed because this machine's `gh` CLI was not authenticated at the time:
 
 ```text
 To get started with GitHub CLI, please run:  gh auth login
@@ -29,9 +58,9 @@ PYTHONPATH=src python3 scripts/screen_candidates.py \
   --output /tmp/candidates_p1_screened.json
 ```
 
-Hard filter result for this preview pool: 9 candidates checked, 7 passed, 2 rejected.
+Hard filter result for the fallback commit-derived preview pool: 9 candidates checked, 7 passed, 2 rejected.
 
-## Candidate Table
+## Fallback Candidate Table
 
 | # | PR | Subclass | Component | Patch Lines | Files | Bug Pattern |
 |---:|---:|:---:|---|---:|---:|---|
@@ -40,7 +69,7 @@ Hard filter result for this preview pool: 9 candidates checked, 7 passed, 2 reje
 | 3 | [#147203](https://github.com/pytorch/pytorch/pull/147203) | P1 | `aten/src/ATen/native/layer_norm.cpp` | 36 | 3 | `rms_norm` downcasts before the final weight multiply, truncating fp16/bf16 computation. |
 | 4 | [#140557](https://github.com/pytorch/pytorch/pull/140557) | P1 | `torch/_refs/__init__.py` | 30 | 2 | CPU `native_layer_norm` decomposition loses the CPU-specific low-precision upcast/return-dtype behavior under fake tensor dispatch. |
 
-## Candidate Schema Preview
+## Fallback Candidate Schema Preview
 
 ```json
 [
@@ -153,10 +182,11 @@ Hard filter result for this preview pool: 9 candidates checked, 7 passed, 2 reje
 
 ## Screening Summary
 
-- Raw P1-related candidates checked: 9
+- Raw fallback P1-related candidates checked: 9
 - Passed hard filter: 7
 - Rejected by hard filter: 2
 - Rejected by soft review for P1: 3
-- Final P1 preview candidates: 4
+- Final fallback P1 preview candidates: 4
+- Final strict `gh is:merged` P1 candidates: 0
 
-Important caveat: because `gh` is not authenticated in this environment, this preview could not satisfy the exact "each PR verified once with `gh pr view`" instruction. Each listed PR was instead verified against real PyTorch merged main commits whose commit messages contain the resolved PR URL, with file lists and patch lines taken from local Git history.
+Important caveat: after authenticated retry, the listed fallback PRs were verified with `gh pr view` to exist, but they are GitHub `CLOSED` PRs with `mergedAt: null`. Their patches were verified against real PyTorch main commits whose commit messages contain the resolved PR URL, with file lists and patch lines taken from local Git history.
