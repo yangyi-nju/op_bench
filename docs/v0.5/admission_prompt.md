@@ -4,144 +4,127 @@
 
 ---
 
-## 首条 pilot（#140557）
+## 后续 5 条批量
 
-你是 OpBench 项目的远程执行 agent。任务：对新加入的 pilot task
-`pytorch__140557__layer_norm_decomp_precision` 跑 admission，验证 v0.5 首条
-precision 任务能走通全流程。
+你是 OpBench 项目的远程执行 agent。Pilot task `#140557` 已 verified。
+现在对其余 5 条 v0.5 precision task 跑批量 admission。
 
-### 前置
+### 前置检查
 
 ```bash
 cd <op_bench_root>
-git pull --ff-only origin main   # 拉到 ebcaff0 或更新
+git pull --ff-only origin main   # 拉到 fe5b4ab 或更新
 ```
 
-必读：
-- `tasks/pytorch/140557_layer_norm_decomp_precision/task.json` — 任务定义
-- `tasks/pytorch/140557_layer_norm_decomp_precision/issue.md` — 复现说明
-- `docs/v0.5/setup_remote_agent.md` — 远程环境说明
+**⚠️ 第一步：确认 configs/remote_hosts.json 存在**
 
-前置资源：
-- `configs/remote_hosts.json` 配置好指向服务器
-- 服务器有 CPU docker image `op-bench/pytorch-cpu:torch2.6.0-py311`
+这个文件不在 git 里（含服务器 IP 等敏感信息）。如果不存在，先创建：
 
-### 步骤 1：拉源码 snapshot
+```bash
+cat > configs/remote_hosts.json << 'EOF'
+{
+  "hosts": {
+    "gpu-a10": {
+      "user": "<your-username>",
+      "hostname": "<server-ip-or-hostname>",
+      "port": 22,
+      "identity_file": "~/.ssh/<your_key>",
+      "remote_workspace_root": "/data/op_bench_workspaces"
+    }
+  }
+}
+EOF
+```
+
+字段说明：与之前 v0.4 用的同一份配置文件一致，照旧就好。
+
+**⚠️ 第二步：确认 Docker 镜像已构建**
+
+运行 admission 前检查服务器上对应镜像是否存在：
+
+```bash
+# CPU 镜像（4 条 cpu_python_overlay task 用）
+ssh <server> "docker image inspect op-bench/pytorch-cpu:torch2.6.0-py311 2>&1 | head -3"
+
+# CUDA overlay 镜像（#129154 exp_decomp 用）
+ssh <server> "docker image inspect op-bench/pytorch-cuda:torch2.6.0-cu124-py311 2>&1 | head -3"
+
+# CUDA devel 镜像（#139372 histc kernel_build 用）
+ssh <server> "docker image inspect op-bench/pytorch-cuda-devel:torch2.6.0-cu124-py311 2>&1 | head -3"
+```
+
+如果镜像不存在，先在服务器上构建（以 CPU 为例）：
+
+```bash
+# 本地触发远程构建
+ssh <server> "docker build \
+  -t op-bench/pytorch-cpu:torch2.6.0-py311 \
+  -f /path/to/op_bench/environments/pytorch-cpu/Dockerfile \
+  /path/to/op_bench/environments/pytorch-cpu"
+
+# 或者本地构建后 docker save | ssh | docker load
+docker build -t op-bench/pytorch-cpu:torch2.6.0-py311 \
+  -f environments/pytorch-cpu/Dockerfile environments/pytorch-cpu
+docker save op-bench/pytorch-cpu:torch2.6.0-py311 | \
+  ssh <server> "docker load"
+```
+
+CUDA overlay 和 CUDA devel 镜像同理，Dockerfile 分别在
+`environments/pytorch-cuda/` 和 `environments/pytorch-cuda-devel/`。
+
+### 步骤 1：拉源码 snapshot（一次跑完 5 条）
 
 ```bash
 PYTHONPATH=src python3 scripts/setup_sources.py
 ```
 
-期望：`sources/registry.json` 里新加的 `pytorch-240aa77-python-overlay`
-会被拉到
-`.op_bench_cache/sources/pytorch/pytorch/240aa77ad01c4f0cd9b2417748272f2f617c112f/source/`
-（sparse checkout `torch/` + `test/`，几分钟）。
+5 个新的 base commit 都在 sources/registry.json 里。顺序拉，每个约 3 分钟，
+共约 15 分钟。期望：`Done: N ok, 0 failed`。
 
-### 步骤 2：离线预检
-
-```bash
-PYTHONPATH=src python3 scripts/preflight_task.py \
-  tasks/pytorch/140557_layer_norm_decomp_precision
-```
-
-期望：
-- snapshot 存在
-- `hidden_test.patch` 可以 `git apply`
-- `gold.patch` 可以 `git apply`（在 `hidden_test.patch` 之上）
-- 两个测试名 `DecompOneOffTestsCPU.test_native_layer_norm_cpu_decomp_cpu`
-  和 `DecompOneOffTestsCPU.test_contiguous_softmax_cpu` 可解析
-- `PREFLIGHT OK`
-
-如果 preflight 失败，把完整输出贴回来，暂停不推进。
-
-### 步骤 3：正式 admission
-
-```bash
-OP_BENCH_REMOTE_HOSTS_PATH=configs/remote_hosts.json \
-PYTHONPATH=src python3 scripts/run_admission.py \
-  --task tasks/pytorch/140557_layer_norm_decomp_precision \
-  --output-dir runs/admission/pytorch__140557__layer_norm_decomp_precision/v1 \
-  --write-task-evidence
-```
-
-期望的 JSON 输出（最后一行）：
-
-```json
-{"baseline": "baseline_reproduced", "gold": "resolved", "decision": "verified", ...}
-```
-
-同时 `task.json` 里 `admission.status` 会从 `draft` 变 `verified`，
-`tasks/pytorch/140557_layer_norm_decomp_precision/admission/evidence.json` 生成。
-
-### 步骤 4：报告
-
-把下面几项贴回来：
-
-1. `setup_sources.py` 最后一段输出（确认 snapshot 拉到）
-2. `preflight_task.py` 完整输出
-3. `run_admission.py` 最后 20 行 stderr + 最后的 JSON 判定
-4. 生成的 `admission/evidence.json` 的 `decision` 字段
-5. 如果 decision 是 verified：`git diff --stat` 确认哪些文件变化
-   （应该是 `task.json` + `evidence.json`）
-6. 如果 decision 不是 verified：baseline 或 gold 阶段的完整 stderr 摘要，
-   **不要自作主张改任务定义**
-
-### 硬性约束
-
-1. **不要提前推 commit**。所有报告先发回来，维护者确认后再决定推 main。
-2. **不要修改任何 task.json、gold.patch、hidden_test.patch**。这些是 pilot
-   数据，问题要暴露出来而不是被静默 patch 掉。
-3. 出错先看 preflight。preflight 通过但 admission 失败往往说明 baseline
-   或 gold 有真实内容问题，非平台问题。
-
-### 时间预期
-
-`setup_sources` ~3 min（浅 clone + sparse checkout）。preflight <30s。
-admission ~10 min（CPU python_overlay，无 build）。总共不到 20 分钟。
-
----
-
-## 后续 5 条批量（等 pilot verified 后）
-
-Pilot verified 后，维护者会推 5 条新 task bundle：
-
-- `#139999` masked.mean bool（P2, CPU）
-- `#129138` linear_add_bias（P3, CPU）
-- `#129154` exp decomp（P4, CPU）
-- `#144073` vector_norm overflow（P4, CPU）
-- `#139372` histc int8（P5, CUDA kernel_build ~90min）
-
-流程同上。三点差异：
-
-1. `setup_sources.py` 一次跑，会把 5 条对应的 snapshot 都拉下来
-   （5 × ~3min 顺序完成）。
-2. 每条独立跑 `preflight_task.py` + `run_admission.py`。
-3. `#139372` 是 `cuda_kernel_build` tier，单次 admission 约 90 分钟
-   （首次 build 60min + 增量 build + baseline/gold 各跑一次）。安排最后跑，
-   前 4 条 CPU 完成后再启动。
-
-对每条 task 用同样的四步报告：`setup_sources` 输出、preflight、admission
-JSON、evidence decision、涉及的 git diff。
-
-### 批量执行建议
-
-CPU 4 条串行跑，`--max-parallel` 保持 1（每条只有 baseline + gold，共 2 次
-容器启动，并发意义不大）：
+### 步骤 2：离线预检（每条独立跑）
 
 ```bash
 for task in 139999_masked_mean_bool_upcast \
             129138_linear_add_bias_autocast \
             129154_exp_decomp_numerics \
-            144073_vector_norm_scalar_overflow; do
-  OP_BENCH_REMOTE_HOSTS_PATH=configs/remote_hosts.json \
-  PYTHONPATH=src python3 scripts/run_admission.py \
-    --task tasks/pytorch/$task \
-    --output-dir runs/admission/pytorch__$task/v1 \
-    --write-task-evidence 2>&1 | tee /tmp/admission_$task.log
+            144073_vector_norm_scalar_overflow \
+            139372_histc_int8_cuda_bounds; do
+  echo "=== preflight: $task ==="
+  PYTHONPATH=src python3 scripts/preflight_task.py tasks/pytorch/$task
 done
 ```
 
-最后单独跑 `#139372`：
+期望每条都输出 `PREFLIGHT OK`。如有任何一条 `PREFLIGHT FAILED`，把
+完整输出贴回来，暂停该条不推进，其他条可继续。
+
+### 步骤 3：admission — CPU 4 条串行
+
+```bash
+for task in 139999_masked_mean_bool_upcast \
+            129138_linear_add_bias_autocast \
+            144073_vector_norm_scalar_overflow; do
+  echo "=== admitting $task ==="
+  OP_BENCH_REMOTE_HOSTS_PATH=configs/remote_hosts.json \
+  PYTHONPATH=src python3 scripts/run_admission.py \
+    --task tasks/pytorch/$task \
+    --output-dir runs/admission/pytorch__${task}/v1 \
+    --write-task-evidence 2>&1 | tee /tmp/admission_${task}.log
+done
+```
+
+注意 `#129154` exp_decomp 是 `cuda_python_overlay`（需要 GPU），单独放到 GPU 队列：
+
+```bash
+OP_BENCH_REMOTE_HOSTS_PATH=configs/remote_hosts.json \
+PYTHONPATH=src python3 scripts/run_admission.py \
+  --task tasks/pytorch/129154_exp_decomp_numerics \
+  --output-dir runs/admission/pytorch__129154_exp_decomp_numerics/v1 \
+  --write-task-evidence 2>&1 | tee /tmp/admission_129154.log
+```
+
+### 步骤 4：admission — P5 CUDA kernel_build（最后单独跑）
+
+约 90 分钟，建议 tmux 包住：
 
 ```bash
 OP_BENCH_REMOTE_HOSTS_PATH=configs/remote_hosts.json \
@@ -151,10 +134,44 @@ PYTHONPATH=src python3 scripts/run_admission.py \
   --write-task-evidence 2>&1 | tee /tmp/admission_139372.log
 ```
 
-### 后续如果某条 admission 失败
+### 步骤 5：报告
 
-- 记录失败 task 的完整 preflight + admission log
-- **不改任务定义**
-- 报告回来，维护者会静态分析（patch 是否需要重新提取、test 名是否有隐藏
-  decorator、base commit 是否有 wheel 不兼容问题）
-- Passed 的其余 task 正常写 evidence 到 main，failed 的挂在 draft 状态即可
+对每条 task 报告：
+
+1. 最后的 JSON 判定（`decision` 字段）
+2. 如果 verified：`cat tasks/pytorch/<task>/admission/evidence.json | python3 -m json.tool | head -10`
+3. 如果不是 verified：关键失败阶段的 stderr 摘要
+
+**不要改任何 task.json / gold.patch / hidden_test.patch。**
+**不要提前 push。** 维护者看到报告后更新 task.json 状态并统一 push。
+
+### 如果 admission 失败
+
+- `baseline_not_reproduced`：说明 base commit 上 gold 前测试就过了，
+  task 的 baseline 假设不成立，报回来由维护者判断。
+- `gold_not_resolved`：gold.patch 没修好测试，报回来由维护者重新提取 patch。
+- `environment_unavailable`：镜像缺失或 SSH 连不到，先检查步骤 0 的镜像
+  和 configs/remote_hosts.json。
+
+---
+
+## 附：如何确认 configs/remote_hosts.json 格式
+
+参见 v0.4 实验时用过的格式（`src/op_bench/remote.py` RemoteHost 文档）：
+
+```json
+{
+  "hosts": {
+    "gpu-a10": {
+      "user": "ubuntu",
+      "hostname": "10.0.0.X",
+      "port": 22,
+      "identity_file": "~/.ssh/KeyPair-02-openssh",
+      "remote_workspace_root": "/data/op_bench_workspaces"
+    }
+  }
+}
+```
+
+`OP_BENCH_REMOTE_HOSTS_PATH` 指向该文件路径（支持绝对路径或相对路径）。
+如果已经有一份 v0.4 用的 hosts 配置，直接复用即可。

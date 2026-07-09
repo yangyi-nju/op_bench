@@ -5,7 +5,9 @@
   "runtime_tier": "cpu_python_overlay",
   "source_ref": "pytorch-240aa77-python-overlay",
   "admission": {
-    "status": "draft"
+    "status": "verified",
+    "evidence": "admission/evidence.json",
+    "verified_at": "2026-07-09T03:33:34Z"
   },
   "patch_scope": {
     "allowed_paths": [
@@ -119,11 +121,11 @@
   },
   "metadata": {
     "difficulty": "easy",
-    "curation_status": "draft",
+    "curation_status": "verified",
     "deterministic": true,
     "estimated_runtime_min": 10,
     "layer": "A",
-    "admission_status": "draft",
-    "notes": "v0.5 P1 candidate. Gold patch is 5 source lines (single fake impl registration); hidden test adds test_native_layer_norm_cpu_decomp to DecompOneOffTests (renamed to _cpu by instantiate_device_type_tests)."
+    "admission_status": "verified",
+    "notes": "v0.5 P1. Gold patch is 5 source lines (single fake impl registration); hidden test adds test_native_layer_norm_cpu_decomp to DecompOneOffTests (renamed to _cpu by instantiate_device_type_tests)."
   }
 }
