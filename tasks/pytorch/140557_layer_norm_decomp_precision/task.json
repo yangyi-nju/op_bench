@@ -1,0 +1,129 @@
+{
+  "task_id": "pytorch__140557__layer_norm_decomp_precision",
+  "version": "v1",
+  "environment_ref": "pytorch-cpu-torch2.6.0-py311",
+  "runtime_tier": "cpu_python_overlay",
+  "source_ref": "pytorch-240aa77-python-overlay",
+  "admission": {
+    "status": "draft"
+  },
+  "patch_scope": {
+    "allowed_paths": [
+      "torch/_refs/__init__.py"
+    ],
+    "mode": "enforced"
+  },
+  "source": {
+    "pr_url": "https://github.com/pytorch/pytorch/pull/140557",
+    "issue_url": null,
+    "repo": "pytorch/pytorch",
+    "repo_url": "https://github.com/pytorch/pytorch.git",
+    "issue_number": null,
+    "pr_number": 140557,
+    "base_commit": "240aa77ad01c4f0cd9b2417748272f2f617c112f",
+    "merge_commit": "9ae19ffbedaa7754ee194b5da8d57cc2d2fee20e",
+    "checkout_mode": "git",
+    "snapshot_path": "../../../.op_bench_cache/sources/pytorch/pytorch/240aa77ad01c4f0cd9b2417748272f2f617c112f/source"
+  },
+  "statement": {
+    "title": "CPU native_layer_norm decomposition returns wrong dtype under fake tensor dispatch",
+    "body": "When `torch.ops.aten.native_layer_norm.default` is invoked under `FakeTensorMode` with the Python dispatcher enabled, the decomposition path in `torch/_refs/__init__.py` misses the CPU-specific low-precision upcast/return-dtype handling that eager CPU native_layer_norm performs. Result: `native_layer_norm` output dtype under fake tensor dispatch diverges from the real eager CPU output dtype for bf16 inputs.\n\nFix (~5 lines in `torch/_refs/__init__.py`): register a dedicated fake impl for `aten.native_layer_norm.default` that dispatches through the real `native_layer_norm` decomposition so the CPU-specific dtype semantics are preserved.",
+    "labels": [
+      "module: nn",
+      "module: decomposition",
+      "module: fake tensor",
+      "topic: numerical"
+    ]
+  },
+  "operator": {
+    "framework": "pytorch",
+    "component": "torch._refs.native_layer_norm",
+    "operator_name": "torch.ops.aten.native_layer_norm.default",
+    "problem_type": "decomposition-dtype-parity",
+    "problem_dimension": "precision",
+    "problem_subclass": "P1",
+    "tags": [
+      "layer-norm",
+      "fake-tensor",
+      "decomposition",
+      "bfloat16",
+      "cpu"
+    ]
+  },
+  "environment": {
+    "backend": "remote_docker",
+    "host": "gpu-a10",
+    "tier": "cpu-deterministic",
+    "image": "op-bench/pytorch-cpu:torch2.6.0-py311",
+    "image_digest": "sha256:9507757065fd73fa7a958cd13f01de163a3fa46d826c09142f9522eda0f1e400",
+    "digest_kind": "local_image_id",
+    "dockerfile": "../../../environments/pytorch-cpu/Dockerfile",
+    "build_context": "../../../environments/pytorch-cpu",
+    "workspace_dir": "/workspace",
+    "preflight_workdir": "/tmp",
+    "python_executable": "python",
+    "python_version": "3.11",
+    "os": "linux",
+    "platform": "linux/amd64",
+    "build_mode": "prebuilt-wheel",
+    "hardware": {
+      "device": "cpu",
+      "min_memory_gb": 8
+    },
+    "resource_requirements": {
+      "cpu": true,
+      "gpu": false
+    },
+    "dependencies": [
+      "pytorch wheel with selected Python source overlay"
+    ],
+    "source_loading": {
+      "mode": "python_overlay",
+      "installed_package": "torch",
+      "overlay_paths": [
+        "torch/_refs/__init__.py"
+      ],
+      "runtime_site_packages": "/tmp/op_bench_runtime/site-packages",
+      "sync_before_tests": true
+    },
+    "preflight_commands": [
+      "{python} --version",
+      "{python} -c \"import torch; print(torch.__version__); print(torch.__file__)\""
+    ]
+  },
+  "agent_visible": {
+    "repo_setup_commands": [],
+    "known_constraints": [
+      "CPU-only task; no CUDA required.",
+      "The bug is in the fake tensor dispatch path for aten.native_layer_norm.default. Real eager CPU native_layer_norm is already correct; only the decomposition/fake path needs fixing.",
+      "Modify only torch/_refs/__init__.py."
+    ],
+    "allowed_test_commands": [
+      "{python} test/test_decomp.py {test}"
+    ]
+  },
+  "evaluation": {
+    "setup_commands": [],
+    "fail_to_pass": [
+      "DecompOneOffTestsCPU.test_native_layer_norm_cpu_decomp_cpu"
+    ],
+    "pass_to_pass": [
+      "DecompOneOffTestsCPU.test_contiguous_softmax_cpu"
+    ],
+    "test_command": "{python} test/test_decomp.py {test}",
+    "timeout_sec": 900
+  },
+  "artifacts": {
+    "gold_patch": "artifacts/gold.patch",
+    "hidden_test_patch": "artifacts/hidden_test.patch"
+  },
+  "metadata": {
+    "difficulty": "easy",
+    "curation_status": "draft",
+    "deterministic": true,
+    "estimated_runtime_min": 10,
+    "layer": "A",
+    "admission_status": "draft",
+    "notes": "v0.5 P1 candidate. Gold patch is 5 source lines (single fake impl registration); hidden test adds test_native_layer_norm_cpu_decomp to DecompOneOffTests (renamed to _cpu by instantiate_device_type_tests)."
+  }
+}

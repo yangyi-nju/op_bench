@@ -365,6 +365,25 @@
       "snapshot_mode": "overlay"
     },
     {
+      "id": "pytorch-240aa77-python-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "240aa77ad01c4f0cd9b2417748272f2f617c112f",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/240aa77ad01c4f0cd9b2417748272f2f617c112f/source",
+      "checksum": null,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__140557__layer_norm_decomp_precision"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.5 P1 precision task. Task overlays torch/_refs/__init__.py; test file test/test_decomp.py is included in the sparse checkout by default (torch/ + test/)."
+    },
+    {
       "id": "pytorch-d99c9c2-kernel-build",
       "repo_url": "https://github.com/pytorch/pytorch.git",
       "commit": "d99c9c2acb0fd24e68a71603fc8edc6c11379104",
