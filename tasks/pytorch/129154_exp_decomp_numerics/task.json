@@ -1,0 +1,95 @@
+{
+  "task_id": "pytorch__129154__exp_decomp_numerics",
+  "version": "v1",
+  "environment_ref": "pytorch-cuda-torch2.6.0-py311-cu124",
+  "runtime_tier": "cuda_python_overlay",
+  "source_ref": "pytorch-ff89ebc-cuda-overlay",
+  "admission": {"status": "draft"},
+  "patch_scope": {
+    "allowed_paths": ["torch/_refs/__init__.py"],
+    "mode": "enforced"
+  },
+  "source": {
+    "pr_url": "https://github.com/pytorch/pytorch/pull/129154",
+    "issue_url": "https://github.com/pytorch/pytorch/issues/127749",
+    "repo": "pytorch/pytorch",
+    "repo_url": "https://github.com/pytorch/pytorch.git",
+    "pr_number": 129154,
+    "base_commit": "ff89ebc50a738c734496393dc25313cf197fd0b4",
+    "merge_commit": "8cd9b104568754c088f843eebeb9f2b4f1c426d2",
+    "checkout_mode": "git",
+    "snapshot_path": "../../../.op_bench_cache/sources/pytorch/pytorch/ff89ebc50a738c734496393dc25313cf197fd0b4/source"
+  },
+  "statement": {
+    "title": "torch._refs.exponential can produce Inf for inputs near 1.0 due to log(0) underflow",
+    "body": "The Python decomp of `exponential_` uses `-1/rate * log1p(-rand_like(self))`. When the uniform sample is exactly 1.0 (valid for `curand_uniform` which samples `(0, 1]`), `log1p(-1.0) = log(0) = -inf`, giving `+inf` as the exponential value. Fix: add an epsilon guard — when `uniform >= 1 - eps/2`, substitute `-eps/2` instead of computing log, matching CUDA's numerical behavior.",
+    "labels": ["module: decomposition", "topic: numerical"]
+  },
+  "operator": {
+    "framework": "pytorch",
+    "component": "torch._refs.exponential",
+    "operator_name": "torch.Tensor.exponential_",
+    "problem_type": "log-inf-underflow",
+    "problem_dimension": "precision",
+    "problem_subclass": "P4",
+    "tags": ["exponential", "log", "inf", "cuda", "numerical-stability"]
+  },
+  "environment": {
+    "backend": "remote_docker",
+    "host": "gpu-a10",
+    "tier": "cuda_python_overlay",
+    "image": "op-bench/pytorch-cuda:torch2.6.0-cu124-py311",
+    "workspace_dir": "/workspace",
+    "preflight_workdir": "/tmp",
+    "python_executable": "python",
+    "python_version": "3.11",
+    "os": "linux",
+    "platform": "linux/amd64",
+    "build_mode": "prebuilt-wheel",
+    "hardware": {"device": "cuda", "requires_gpu": true, "cuda": "12.4", "min_memory_gb": 16},
+    "resource_requirements": {"cpu": true, "gpu": true},
+    "dependencies": ["pytorch wheel with selected Python source overlay"],
+    "source_loading": {
+      "mode": "python_overlay",
+      "installed_package": "torch",
+      "overlay_paths": ["torch/_refs/__init__.py"],
+      "runtime_site_packages": "/tmp/op_bench_runtime/site-packages",
+      "sync_before_tests": true
+    },
+    "preflight_commands": [
+      "{python} --version",
+      "{python} -c \"import torch; print(torch.__version__); print(torch.cuda.is_available()); print(torch.cuda.get_device_name(0))\""
+    ]
+  },
+  "agent_visible": {
+    "repo_setup_commands": [],
+    "known_constraints": [
+      "CUDA GPU is required; the test is @onlyCUDA.",
+      "The bug is in torch/_refs/__init__.py in the exponential() decomposition.",
+      "Modify only torch/_refs/__init__.py."
+    ],
+    "allowed_test_commands": [
+      "{python} test/test_decomp.py {test}"
+    ]
+  },
+  "evaluation": {
+    "setup_commands": [],
+    "fail_to_pass": ["DecompOneOffTestsCUDA.test_exponential_non_inf_cuda"],
+    "pass_to_pass": ["DecompOneOffTestsCUDA.test_contiguous_log_softmax_cuda"],
+    "test_command": "{python} test/test_decomp.py {test}",
+    "timeout_sec": 900
+  },
+  "artifacts": {
+    "gold_patch": "artifacts/gold.patch",
+    "hidden_test_patch": "artifacts/hidden_test.patch"
+  },
+  "metadata": {
+    "difficulty": "easy",
+    "curation_status": "draft",
+    "deterministic": false,
+    "estimated_runtime_min": 15,
+    "layer": "A",
+    "admission_status": "draft",
+    "notes": "deterministic=false because exponential_ uses CUDA RNG; but isinf check is deterministic."
+  }
+}

@@ -1,0 +1,30 @@
+diff --git a/aten/src/ATen/native/cuda/SummaryOps.cu b/aten/src/ATen/native/cuda/SummaryOps.cu
+index f9ceb9bdf7e0b..d70443ad35d46 100644
+--- a/aten/src/ATen/native/cuda/SummaryOps.cu
++++ b/aten/src/ATen/native/cuda/SummaryOps.cu
+@@ -320,8 +320,10 @@ Tensor _histc_cuda_template(
+       std::nullopt /* layout */,
+       DeviceType::CUDA,
+       std::nullopt /* pin_memory */);
+-  input_t minvalue = min;
+-  input_t maxvalue = max;
++  using bounds_t = at::acc_type<input_t, /*is_cuda=*/true>;
++  bounds_t minvalue = min;
++  bounds_t maxvalue = max;
++
+   if (min == max && self.numel() > 0) {
+     minvalue = *self.min().cpu().const_data_ptr<input_t>();
+     maxvalue = *self.max().cpu().const_data_ptr<input_t>();
+diff --git a/torch/testing/_internal/common_methods_invocations.py b/torch/testing/_internal/common_methods_invocations.py
+index 0df201fb6f133..b9ec84b8cd9cf 100644
+--- a/torch/testing/_internal/common_methods_invocations.py
++++ b/torch/testing/_internal/common_methods_invocations.py
+@@ -19375,7 +19375,7 @@ def sample_inputs_alias_copy(op_info, device, dtype, requires_grad, **kwargs):
+            )),
+     OpInfo('histc',
+            dtypes=floating_types_and(torch.bfloat16, torch.float16),
+-           dtypesIfCUDA=floating_types_and(torch.int8, torch.int16, torch.int32, torch.int64),
++           dtypesIfCUDA=floating_types_and(torch.int8, torch.uint8, torch.int16, torch.int32, torch.int64),
+            sample_inputs_func=sample_inputs_histc,
+            supports_out=True,
+            supports_autograd=False,

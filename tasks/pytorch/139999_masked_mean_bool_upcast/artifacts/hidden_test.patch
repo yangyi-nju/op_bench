@@ -1,0 +1,20 @@
+diff --git a/test/inductor/test_cpu_repro.py b/test/inductor/test_cpu_repro.py
+index 63c8972abbb93..5b7039e5f8e40 100644
+--- a/test/inductor/test_cpu_repro.py
++++ b/test/inductor/test_cpu_repro.py
+@@ -4868,6 +4868,14 @@ def fn(x):
+ 
+     @requires_vectorization
++    def test_masked_mean_bool_raises(self):
++        """torch.masked.mean on bool must raise ValueError (not silently produce wrong output)."""
++        x = torch.zeros(4, dtype=torch.bool)
++        with self.assertRaisesRegex(ValueError, "mean"):
++            torch.masked.mean(x, 0)
++
++    @requires_vectorization
+     def test_bool_reduction_vec(self):
+         for op in (
+-            torch.masked.mean,
+             torch.any,
+             torch.min,
+             torch.max,

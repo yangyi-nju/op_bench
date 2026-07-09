@@ -1,0 +1,98 @@
+{
+  "task_id": "pytorch__139999__masked_mean_bool_upcast",
+  "version": "v1",
+  "environment_ref": "pytorch-cpu-torch2.6.0-py311",
+  "runtime_tier": "cpu_python_overlay",
+  "source_ref": "pytorch-60a5050-python-overlay",
+  "admission": {"status": "draft"},
+  "patch_scope": {
+    "allowed_paths": ["torch/masked/_ops.py"],
+    "mode": "enforced"
+  },
+  "source": {
+    "pr_url": "https://github.com/pytorch/pytorch/pull/139999",
+    "issue_url": null,
+    "repo": "pytorch/pytorch",
+    "repo_url": "https://github.com/pytorch/pytorch.git",
+    "pr_number": 139999,
+    "base_commit": "60a505022f3fdf070b3a73225d8a39009caa216b",
+    "merge_commit": "a5051a9521766c70a2f65cf1eadb4e982a23c459",
+    "checkout_mode": "git",
+    "snapshot_path": "../../../.op_bench_cache/sources/pytorch/pytorch/60a505022f3fdf070b3a73225d8a39009caa216b/source"
+  },
+  "statement": {
+    "title": "torch.masked.mean on bool tensor silently accumulates in bool dtype, clamping totals",
+    "body": "`torch.masked.mean` with a bool input tensor infers `dtype=torch.bool` for the internal sum, so any count of 2 or more reduces to `True` (1). The result is wrong instead of raising an error. Fix: explicitly reject non-floating/complex dtypes with a clear `ValueError`.",
+    "labels": ["module: masked", "topic: numerical"]
+  },
+  "operator": {
+    "framework": "pytorch",
+    "component": "torch.masked._ops.mean",
+    "operator_name": "torch.masked.mean",
+    "problem_type": "dtype-accumulation-error",
+    "problem_dimension": "precision",
+    "problem_subclass": "P2",
+    "tags": ["masked", "bool", "dtype-promotion", "cpu"]
+  },
+  "environment": {
+    "backend": "remote_docker",
+    "host": "gpu-a10",
+    "tier": "cpu-deterministic",
+    "image": "op-bench/pytorch-cpu:torch2.6.0-py311",
+    "image_digest": "sha256:9507757065fd73fa7a958cd13f01de163a3fa46d826c09142f9522eda0f1e400",
+    "digest_kind": "local_image_id",
+    "dockerfile": "../../../environments/pytorch-cpu/Dockerfile",
+    "build_context": "../../../environments/pytorch-cpu",
+    "workspace_dir": "/workspace",
+    "preflight_workdir": "/tmp",
+    "python_executable": "python",
+    "python_version": "3.11",
+    "os": "linux",
+    "platform": "linux/amd64",
+    "build_mode": "prebuilt-wheel",
+    "hardware": {"device": "cpu", "min_memory_gb": 8},
+    "resource_requirements": {"cpu": true, "gpu": false},
+    "dependencies": ["pytorch wheel with selected Python source overlay"],
+    "source_loading": {
+      "mode": "python_overlay",
+      "installed_package": "torch",
+      "overlay_paths": ["torch/masked/_ops.py"],
+      "runtime_site_packages": "/tmp/op_bench_runtime/site-packages",
+      "sync_before_tests": true
+    },
+    "preflight_commands": [
+      "{python} --version",
+      "{python} -c \"import torch; print(torch.__version__); print(torch.__file__)\""
+    ]
+  },
+  "agent_visible": {
+    "repo_setup_commands": [],
+    "known_constraints": [
+      "CPU-only task; no CUDA required.",
+      "The bug is in torch/masked/_ops.py — the mean function does not validate that the dtype is floating-point or complex before accumulating.",
+      "Modify only torch/masked/_ops.py."
+    ],
+    "allowed_test_commands": [
+      "{python} test/inductor/test_cpu_repro.py {test}"
+    ]
+  },
+  "evaluation": {
+    "setup_commands": [],
+    "fail_to_pass": ["CPUReproTests.test_masked_mean_bool_raises"],
+    "pass_to_pass": ["CPUReproTests.test_conv_stride_constraints"],
+    "test_command": "{python} test/inductor/test_cpu_repro.py {test}",
+    "timeout_sec": 900
+  },
+  "artifacts": {
+    "gold_patch": "artifacts/gold.patch",
+    "hidden_test_patch": "artifacts/hidden_test.patch"
+  },
+  "metadata": {
+    "difficulty": "easy",
+    "curation_status": "draft",
+    "deterministic": true,
+    "estimated_runtime_min": 10,
+    "layer": "A",
+    "admission_status": "draft"
+  }
+}

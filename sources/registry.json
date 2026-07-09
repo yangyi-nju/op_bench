@@ -384,6 +384,66 @@
       "notes": "v0.5 P1 precision task. Task overlays torch/_refs/__init__.py; test file test/test_decomp.py is included in the sparse checkout by default (torch/ + test/)."
     },
     {
+      "id": "pytorch-60a5050-python-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "60a505022f3fdf070b3a73225d8a39009caa216b",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/60a505022f3fdf070b3a73225d8a39009caa216b/source",
+      "checksum": null,
+      "submodules": {"policy": "none_required", "status": "not_initialized"},
+      "source_loading_modes": ["python_overlay"],
+      "related_tasks": ["pytorch__139999__masked_mean_bool_upcast"],
+      "snapshot_mode": "overlay",
+      "notes": "v0.5 P2. Overlays torch/masked/_ops.py."
+    },
+    {
+      "id": "pytorch-5d8e23b-python-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "5d8e23b49c5327590fb32b28309c41129e2b3f08",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/5d8e23b49c5327590fb32b28309c41129e2b3f08/source",
+      "checksum": null,
+      "submodules": {"policy": "none_required", "status": "not_initialized"},
+      "source_loading_modes": ["python_overlay"],
+      "related_tasks": ["pytorch__129138__linear_add_bias_autocast"],
+      "snapshot_mode": "overlay",
+      "notes": "v0.5 P3. Overlays torch/_inductor/fx_passes/mkldnn_fusion.py."
+    },
+    {
+      "id": "pytorch-ff89ebc-cuda-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "ff89ebc50a738c734496393dc25313cf197fd0b4",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/ff89ebc50a738c734496393dc25313cf197fd0b4/source",
+      "checksum": null,
+      "submodules": {"policy": "none_required", "status": "not_initialized"},
+      "source_loading_modes": ["python_overlay"],
+      "related_tasks": ["pytorch__129154__exp_decomp_numerics"],
+      "snapshot_mode": "overlay",
+      "notes": "v0.5 P4. Overlays torch/_refs/__init__.py. Test is @onlyCUDA → cuda_python_overlay tier."
+    },
+    {
+      "id": "pytorch-06e9dea-python-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "06e9deabb623e004eb6024e703a976c5748d51e6",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/06e9deabb623e004eb6024e703a976c5748d51e6/source",
+      "checksum": null,
+      "submodules": {"policy": "none_required", "status": "not_initialized"},
+      "source_loading_modes": ["python_overlay"],
+      "related_tasks": ["pytorch__144073__vector_norm_scalar_overflow"],
+      "snapshot_mode": "overlay",
+      "notes": "v0.5 P4. Overlays torch/_refs/linalg/__init__.py."
+    },
+    {
+      "id": "pytorch-356fc41-kernel-build",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "356fc41ae04816fe137bc85ccca4087ede291e3e",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/356fc41ae04816fe137bc85ccca4087ede291e3e/source",
+      "checksum": null,
+      "submodules": {"policy": "third_party_required", "status": "not_initialized"},
+      "source_loading_modes": ["inplace_build"],
+      "related_tasks": ["pytorch__139372__histc_int8_cuda_bounds"],
+      "snapshot_mode": "kernel_full",
+      "notes": "v0.5 P5. Modifies aten/src/ATen/native/cuda/SummaryOps.cu. Requires kernel_full snapshot + inplace_build."
+    },
+    {
       "id": "pytorch-d99c9c2-kernel-build",
       "repo_url": "https://github.com/pytorch/pytorch.git",
       "commit": "d99c9c2acb0fd24e68a71603fc8edc6c11379104",
