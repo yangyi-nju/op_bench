@@ -16,11 +16,9 @@ index f9ceb9bdf7e0b..d70443ad35d46 100644
      minvalue = *self.min().cpu().const_data_ptr<input_t>();
      maxvalue = *self.max().cpu().const_data_ptr<input_t>();
 diff --git a/torch/testing/_internal/common_methods_invocations.py b/torch/testing/_internal/common_methods_invocations.py
-index 0df201fb6f133..b9ec84b8cd9cf 100644
 --- a/torch/testing/_internal/common_methods_invocations.py
 +++ b/torch/testing/_internal/common_methods_invocations.py
-@@ -19375,7 +19375,7 @@ def sample_inputs_alias_copy(op_info, device, dtype, requires_grad, **kwargs):
-            )),
+@@ -19376,6 +19376,6 @@
      OpInfo('histc',
             dtypes=floating_types_and(torch.bfloat16, torch.float16),
 -           dtypesIfCUDA=floating_types_and(torch.int8, torch.int16, torch.int32, torch.int64),

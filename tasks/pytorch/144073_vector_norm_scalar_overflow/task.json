@@ -12,6 +12,7 @@
   "source": {
     "pr_url": "https://github.com/pytorch/pytorch/pull/144073",
     "issue_url": "https://github.com/pytorch/pytorch/issues/143960",
+    "issue_number": 143960,
     "repo": "pytorch/pytorch",
     "repo_url": "https://github.com/pytorch/pytorch.git",
     "pr_number": 144073,

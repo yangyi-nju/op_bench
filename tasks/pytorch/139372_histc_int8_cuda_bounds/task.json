@@ -15,6 +15,7 @@
   "source": {
     "pr_url": "https://github.com/pytorch/pytorch/pull/139372",
     "issue_url": "https://github.com/pytorch/pytorch/issues/139360",
+    "issue_number": 139360,
     "repo": "pytorch/pytorch",
     "repo_url": "https://github.com/pytorch/pytorch.git",
     "pr_number": 139372,
@@ -48,7 +49,7 @@
     "python_version": "3.11",
     "os": "linux",
     "platform": "linux/amd64",
-    "build_mode": "inplace_build",
+    "build_mode": "source-build",
     "hardware": {"device": "cuda", "requires_gpu": true, "cuda": "12.4", "min_memory_gb": 16, "min_compute_capability": "7.0"},
     "resource_requirements": {"cpu": true, "gpu": true},
     "dependencies": ["full PyTorch source build via setup.py develop"],
