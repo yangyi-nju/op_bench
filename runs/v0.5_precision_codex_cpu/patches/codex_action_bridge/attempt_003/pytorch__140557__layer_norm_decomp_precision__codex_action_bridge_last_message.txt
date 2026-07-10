@@ -1,0 +1,5 @@
+Implemented the scoped fake implementation for `aten::native_layer_norm.default`, delegating to the existing reference decomposition so CPU low-precision output dtype handling is retained under fake dispatch.
+
+Validated with:
+
+`python test/test_decomp.py -k native_layer_norm` — 8 passed.

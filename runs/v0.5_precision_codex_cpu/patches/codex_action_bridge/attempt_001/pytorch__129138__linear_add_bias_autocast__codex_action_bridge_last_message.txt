@@ -1,0 +1,3 @@
+Added the dtype compatibility check in `is_linear_add_bias`, preventing fp32 biases from being fused with bf16 weights.
+
+Verification: final diff is scoped correctly. The supplied test command could not run because its test file is absent in the runtime.

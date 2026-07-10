@@ -1,0 +1,3 @@
+Implemented the minimal CUDA fix in `SummaryOps.cu`.
+
+`histc` bounds now use `at::acc_type<input_t, true>` rather than `input_t`, preventing int8/uint8 narrowing before the `minvalue < maxvalue` validation. Existing CUDA `histc` coverage completed successfully.

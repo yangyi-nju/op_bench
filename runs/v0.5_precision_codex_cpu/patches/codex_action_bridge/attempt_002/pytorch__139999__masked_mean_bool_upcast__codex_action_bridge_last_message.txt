@@ -1,0 +1,5 @@
+Implemented the masked mean dtype guard in `torch/masked/_ops.py`.
+
+`torch.masked.mean` now raises `ValueError` unless the resolved dtype is floating-point or complex, preventing incorrect bool/integer accumulation.
+
+Verified syntax with `py_compile`. The supplied focused test file is not present in this runtime.

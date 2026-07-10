@@ -1,0 +1,5 @@
+Implemented the CUDA `histc` bounds fix in `SummaryOps.cu`.
+
+`minvalue` and `maxvalue` now use `at::acc_type<input_t, true>`, preventing int8/uint8 truncation before range validation.
+
+Verified with the existing CUDA `histc` reduction test (`TestReductionsCUDA.test_histc_cuda`), which passed.

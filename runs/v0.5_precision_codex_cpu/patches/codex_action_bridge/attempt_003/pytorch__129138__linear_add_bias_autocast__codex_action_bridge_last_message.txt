@@ -1,0 +1,5 @@
+Implemented the minimal fusion guard in `is_linear_add_bias`:
+
+- Rejects fusion when `bias_meta.dtype != weight_meta.dtype`.
+
+The targeted test file is not present in this runtime, so it could not be run. The final diff contains only the permitted source change.

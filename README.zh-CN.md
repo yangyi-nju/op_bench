@@ -4,7 +4,7 @@
 
 OpBench 是一个面向算子问题的 benchmark，用于评测 coding agent 解决真实框架 issue 的能力。它借鉴 SWE-bench 的真实仓库修复思路，但把运行环境作为每条任务的一部分，因为算子问题经常依赖框架版本、Python 包布局、设备可用性、数值行为和后端选择。
 
-v0.1 已经建立隔离 replay/evaluation 闭环。v0.2 已完成数据集扩展所需的平台能力：资产 registry、正式 admission evidence、dataset curation，以及容器和 cache 管理。v0.3 将数据集扩展到 10 条 verified task，覆盖 5 个 PyTorch 子系统，新增 patch scope enforcement、public/hidden test 分层、multi-file overlay 和 3 次重复稳定性评测（Codex CLI resolved rate 76.7%）。v0.4 新增两个 CUDA runtime tier（`cuda_python_overlay`、`cuda_kernel_build`）、远程 GPU Docker SSH 执行器和 `inplace_build` 源码加载模式。当前 `pytorch_v0.4` 切片有 13 条 verified task，Codex CLI resolved rate **84.6%**（33/39）。多 agent 对比（Claude Code）推迟到 v0.5。
+v0.1 建立了隔离 replay/evaluation 闭环。v0.2 补齐资产 registry、admission evidence、dataset curation 和容器/cache 管理。v0.3 将数据集扩展到 10 条 verified task，并加入 3-repeat 稳定性评测。v0.4 新增 CUDA runtime tier 和远程 GPU Docker 执行器，13-task Codex 实验达到 **84.6% resolved**（33/39）。v0.5 按问题维度逐步建设：累计 draft manifest 当前包含 17 条 verified task，已完成的 precision 阶段覆盖 6 条 task，达到 **72.2% resolved**（13/18），并首次落地 8 维指标和 P1-P5 拆解。边界、兼容等维度加入后再进行最终 v0.5 全量实验。
 
 ## 当前代码包含什么
 
@@ -34,6 +34,8 @@ v0.1 已经建立隔离 replay/evaluation 闭环。v0.2 已完成数据集扩展
 | `src/op_bench/` | 核心实现：task model、环境准备、evaluator、actions、agent bridge、reporting。 |
 | `scripts/` | 校验、环境准备、source snapshot、replay、实验运行等 CLI 入口。 |
 | `docs/` | 按版本归档的设计、实验报告、开发指南和历史记录。 |
+| `docs/v0.5/design.md` | v0.5 问题维度分类和扩展评测指标。 |
+| `docs/v0.5/experiment_report.md` | v0.5 precision 阶段 6-task、18-attempt Codex 评测。 |
 | `docs/v0.4/design.md` | v0.4 CUDA tier、远程 GPU Docker SSH 执行器、`inplace_build` 源码加载。 |
 | `docs/v0.4/experiment_report.md` | v0.4 13 task × 3 repeat Codex 评测：84.6% resolved。 |
 | `docs/v0.3/design.md` | v0.3 数据扩展、multi-file overlay、public/hidden test 分层和 CUDA 试点设计。 |
@@ -65,7 +67,7 @@ PATH=.venv/bin:$PATH PYTHONPATH=src python -m unittest discover tests -v
 
 ```bash
 PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/validate_dataset.py \
-  datasets/pytorch_v0.4/dataset.json
+  datasets/pytorch_v0.5/dataset.json
 ```
 
 离线预检（不需要 docker/GPU）：
@@ -87,10 +89,10 @@ PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/run_admission.py \
 
 ```bash
 PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/run_experiment.py \
-  --dataset datasets/pytorch_v0.4/dataset.json \
+  --dataset datasets/pytorch_v0.5/dataset.json \
   --verified-only \
   --agent gold \
-  --output-dir runs/experiments/pytorch_v0.4_gold
+  --output-dir runs/experiments/pytorch_v0.5_gold
 ```
 
 检查已登记资产：
@@ -158,23 +160,18 @@ PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/run_experiment.py \
 
 ## 当前数据集
 
-主数据集是 [datasets/pytorch_v0.4](datasets/pytorch_v0.4/dataset.json)（13 条 verified task，Codex CLI 3-repeat resolved rate **84.6%**，33/39）。
+累计 [pytorch_v0.5 manifest](datasets/pytorch_v0.5/dataset.json) 当前是包含 17 条 verified task 的 draft：v0.4 的 13 条全部保留，另加入 4 条新 precision task；deprecated 的 #129154 和 #144073 不进入清单。precision 阶段运行了全部 6 条 precision task，其中包含 2 条继承自 v0.4 的锚点：
 
-| Task | PR | Tier | 组件 | 通过率 |
-| --- | --- | --- | --- | --- |
-| `pytorch__168295__autograd_create_graph` | #168295 | cpu | torch.autograd | 3/3 |
-| `pytorch__150975__autograd_backward_inputs` | #150975 | cpu | torch.autograd | 3/3 |
-| `pytorch__161488__lbfgs_wolfe` | #161488 | cpu | torch.optim | 3/3 |
-| `pytorch__124385__load_state_dict_prefix` | #124385 | cpu | torch.nn.Module | 3/3 |
-| `pytorch__149693__lazylinear_init` | #149693 | cpu | torch.nn.LazyLinear | 3/3 |
-| `pytorch__147599__lazylinear_state_forward` | #147599 | cpu | torch.nn.LazyLinear | 3/3 |
-| `pytorch__160952__bilinear_lazy_check` | #160952 | cpu | torch.nn.Bilinear | 3/3 |
-| `pytorch__143455__set_submodule` | #143455 | cpu | torch.nn.Module | 3/3 |
-| `pytorch__162340__nn_arg_length` | #162340 | cpu | torch.nn.conv/utils | 0/3 |
-| `pytorch__163961__dataloader_subset` | #163961 | cpu | torch.utils.data | 0/3 |
-| `pytorch__132835__njt_sdpa_autocast` | #132835 | cuda_py | torch.nested._internal.sdpa | 3/3 |
-| `pytorch__132616__cuda_mem_get_info` | #132616 | cuda_py | torch.cuda.memory | 3/3 |
-| `pytorch__144009__softmax_ilpreduce_size` | #144009 | cuda_kernel | aten.native.cuda.softmax | 3/3 |
+| Task | PR | 子类 | Tier | 通过率 |
+| --- | ---: | :---: | --- | ---: |
+| `pytorch__140557__layer_norm_decomp_precision` | #140557 | P1 | cpu | 0/3 |
+| `pytorch__139999__masked_mean_bool_upcast` | #139999 | P2 | cpu | 3/3 |
+| `pytorch__129138__linear_add_bias_autocast` | #129138 | P3 | cpu | 3/3 |
+| `pytorch__132835__njt_sdpa_autocast` | #132835 | P3 | cuda_py | 1/3 |
+| `pytorch__144009__softmax_ilpreduce_size` | #144009 | P5 | cuda_kernel | 3/3 |
+| `pytorch__139372__histc_int8_cuda_bounds` | #139372 | P5 | cuda_kernel | 3/3 |
+
+precision 阶段结果：**13/18 resolved（72.2%）**，patch conciseness 1.000，pass-to-pass kept rate 83.3%，regression rate 0%，tier-weighted score 78.8%。P4 尚无通过 admission 的 task，因此保持 N/A。失败分析和指标定义见 [v0.5 precision 实验报告](docs/v0.5/experiment_report.md)。
 
 Tier 简写：`cpu` = `cpu_python_overlay`，`cuda_py` = `cuda_python_overlay`，`cuda_kernel` = `cuda_kernel_build`。
 
@@ -199,7 +196,7 @@ Agent 身份、模型调用和控制逻辑运行在 host 侧。每次修复 atte
 
 ## 继续扩展
 
-修改内部实现前先阅读 [docs/v0.2/developer_guide.md](docs/v0.2/developer_guide.md)、[docs/v0.3/design.md](docs/v0.3/design.md) 和 [docs/v0.4/design.md](docs/v0.4/design.md)。通常扩展路径是：
+修改内部实现前先阅读 [docs/v0.2/developer_guide.md](docs/v0.2/developer_guide.md)、[docs/v0.4/design.md](docs/v0.4/design.md) 和 [docs/v0.5/design.md](docs/v0.5/design.md)。通常扩展路径是：
 
 1. 在 `tasks/<framework>/` 下新增或整理 task bundle。
 2. 在 `environments/registry.json` 和 `sources/registry.json` 中登记可复用环境和源码资产。
@@ -212,6 +209,8 @@ Agent 身份、模型调用和控制逻辑运行在 host 侧。每次修复 atte
 ## 参考文档
 
 - [文档索引](docs/README.zh-CN.md)
+- [v0.5 设计方案](docs/v0.5/design.md)
+- [v0.5 precision 实验报告](docs/v0.5/experiment_report.md)
 - [v0.4 设计方案](docs/v0.4/design.md)
 - [v0.4 实验报告](docs/v0.4/experiment_report.md)
 - [v0.3 设计方案](docs/v0.3/design.md)

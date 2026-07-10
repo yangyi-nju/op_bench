@@ -1,0 +1,970 @@
+{
+  "agents": {
+    "codex_action_bridge": {
+      "failure_reasons": {
+        "pass_to_pass_regressed": 3,
+        "resolved": 6
+      },
+      "median_runtime_sec": 101.04070870904252,
+      "resolved": 6,
+      "resolved_rate": 0.6666666666666666,
+      "total": 9
+    }
+  },
+  "baseline_count": 3,
+  "baselines": [
+    {
+      "agent": "baseline",
+      "commands": [
+        {
+          "command": [
+            "op_bench",
+            "copy-source-snapshot",
+            "/Users/yy/dev/graduate/op_bench/.op_bench_cache/sources/pytorch/pytorch/240aa77ad01c4f0cd9b2417748272f2f617c112f/source",
+            "/var/folders/yf/pljpbb8x7nl_crf68gh72hs00000gn/T/op-bench-pytorch__140557__layer_norm_decomp_precision-ma3xbds9/workspace"
+          ],
+          "cwd": "/var/folders/yf/pljpbb8x7nl_crf68gh72hs00000gn/T/op-bench-pytorch__140557__layer_norm_decomp_precision-ma3xbds9",
+          "duration_sec": 1.9845003749942407,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "copied source snapshot from /Users/yy/dev/graduate/op_bench/.op_bench_cache/sources/pytorch/pytorch/240aa77ad01c4f0cd9b2417748272f2f617c112f/source\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "rsync",
+            "-az",
+            "--delete",
+            "--exclude=.ccache/",
+            "--exclude=build/",
+            "--exclude=torch.egg-info/",
+            "--exclude=__pycache__/",
+            "-e",
+            "ssh -p 22313 -i /Users/yy/.ssh/KeyPair-02-openssh -o StrictHostKeyChecking=accept-new",
+            "/private/var/folders/yf/pljpbb8x7nl_crf68gh72hs00000gn/T/op-bench-pytorch__140557__layer_norm_decomp_precision-ma3xbds9/workspace/",
+            "root@210.28.133.13:/data/op_bench_workspaces/op-bench-pytorch__140557__layer_norm_decomp_precision-63c85c262cdc/"
+          ],
+          "cwd": "",
+          "duration_sec": 41.33025912498124,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "ssh",
+            "-p",
+            "22313",
+            "-i",
+            "/Users/yy/.ssh/KeyPair-02-openssh",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            "-o",
+            "ServerAliveInterval=30",
+            "-o",
+            "ServerAliveCountMax=3",
+            "root@210.28.133.13",
+            "docker image inspect op-bench/pytorch-cpu:torch2.6.0-py311"
+          ],
+          "cwd": "",
+          "duration_sec": 0.975397291011177,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "[\n    {\n        \"Id\": \"sha256:721dd55c9253c6d887e9d95a949c22e5607d16bf9917edae3f8d98b911a9c12b\",\n        \"RepoTags\": [\n            \"op-bench/pytorch-cpu:torch2.6.0-py311\"\n        ],\n        \"RepoDigests\": [],\n        \"Parent\": \"\",\n        \"Comment\": \"buildkit.dockerfile.v0\",\n        \"Created\": \"2026-07-09T03:30:50.735836959Z\",\n        \"DockerVersion\": \"\",\n        \"Author\": \"\",\n        \"Architecture\": \"amd64\",\n        \"Os\": \"linux\",\n        \"Size\": 2378891704,\n        \"GraphDriver\": {\n            \"Data\": {\n                \"LowerDir\": \"/var/lib/docker/overlay2/es7fuio66aig1i6gkwluwvu6o/diff:/var/lib/docker/overlay2/3d21efb0867eba7610f1dc7dcfb7272eeaa64ddb512cc087235e51b6408a1919/diff:/var/lib/docker/overlay2/8402b289a17d70ef280b86fe4ad56db27a3109b5bda3889720281c92ca1ed4b9/diff:/var/lib/docker/overlay2/166aff1658294b89554525a0685aa5ac6bb5d87528fdd60a1e1e5159297e6d31/diff:/var/lib/docker/overlay2/65158e7a12fe88e7d96dfffe44064e9878c48dff4dfecf1c4040faa2c15170e2/diff:/var/lib/docker/overlay2/6e4af56f6952e5d866e82a7df499bb45038f57db4113bb80ef63222200e3de17/diff:/var/lib/docker/overlay2/8f6fe6879ace3994c3f8fb19ac17cd103c114114df7922d270f2fcffa164a190/diff:/var/lib/docker/overlay2/65413836d360db350dfa28c76b1ab1e4daafb218c51649d9c5690fbb8737cb84/diff:/var/lib/docker/overlay2/ddb28914173f244adcbd8073b75d96184e8142dfb3d4fe41200bc9325d14d73b/diff:/var/lib/docker/overlay2/724de7ce92a757c8375e4a71c32380505ad5d91168e64efd0aeac8c47e88608f/diff:/var/lib/docker/overlay2/ef59bbca24f14fb9c4bed4ca8bca5eb23265674fdc453bab88a8998702f966e9/diff\",\n                \"MergedDir\": \"/var/lib/docker/overlay2/502tngdf24zncy781s035dhos/merged\",\n                \"UpperDir\": \"/var/lib/docker/overlay2/502tngdf24zncy781s035dhos/diff\",\n                \"WorkDir\": \"/var/lib/docker/overlay2/502tngdf24zncy781s035dhos/work\"\n            },\n            \"Name\": \"overlay2\"\n        },\n        \"RootFS\": {\n            \"Type\": \"layers\",\n            \"Layers\": [\n                \"sha256:270a1170e7e398434ff1b31e17e233f7d7b71aa99a40473615860068e86720af\",\n                \"sha256:1c3a41a316e74f3573300283e7e01e6a1daf878ec7695fb8a78ff7fd70a44b70\",\n                \"sha256:12c3e171d22282ddfb12a1da96d90e15a74b2273ca5b44f2ac7d812d89c7e59a\",\n                \"sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef\",\n                \"sha256:7b3d48b71cc96c955e06fd0925f836c256573c8f88246546d67a4cd3b8189e53\",\n                \"sha256:a6e85488ac83608d843b4bd6b499fa00429d3b5c6e468781c67ed6e3e356962d\",\n                \"sha256:5fcd6e37f0e2f7882fd49c3cd9484c01a94e2317c5dcfa5969e5380a7cb71138\",\n                \"sha256:35f95c256a0c96d24901c9133e92325c8054da0494440d3fe8351c0f7e155cdf\",\n                \"sha256:b414dedeb164c6b5251cc6afcf83356148e3f0da3eb0acc1d53746747f60fd6a\",\n                \"sha256:75e3822f49725e642fa2b10c3858618a225ed5d5756061cac34d5b855c168348\",\n                \"sha256:2f43611c732086d5b8de22c82e3ec44ee0b1fdf19516e17a67f9500905957203\",\n                \"sha256:7041cd16e663498b7958ac1759f8735a979f40c2dde0b8c00798c32b12e79816\"\n            ]\n        },\n        \"Metadata\": {\n            \"LastTagTime\": \"2026-07-09T03:30:51.097248984Z\"\n        },\n        \"Config\": {\n            \"Cmd\": [\n                \"/bin/bash\"\n            ],\n            \"Entrypoint\": null,\n            \"Env\": [\n                \"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\",\n                \"DEBIAN_FRONTEND=noninteractive\",\n                \"LANG=C.UTF-8\",\n                \"PYTHONUNBUFFERED=1\",\n                \"PYTHONDONTWRITEBYTECODE=1\"\n            ],\n            \"Labels\": {\n                \"com.docker.compose.project\": \"pytorch\",\n                \"com.docker.compose.service\": \"ipex-base\",\n                \"com.docker.compose.version\": \"2.26.1\",\n                \"dependency.apt.wget\": \"true\",\n                \"dependency.python\": \"3.11\",\n                \"dependency.python.pip\": \"requirements.txt\",\n                \"docs\": \"pytorch\",\n                \"org.opencontainers.base.name\": \"intel/python:3.11-full\",\n                \"org.opencontainers.image.name\": \"intel/intel-optimized-pytorch\",\n                \"org.opencontainers.image.ref.name\": \"ubuntu\",\n                \"org.opencontainers.image.title\": \"Intel\u00ae Extension for PyTorch Base Image\",\n                \"org.opencontainers.image.version\": \"2.6.0-pip-base\"\n            },\n            \"OnBuild\": null,\n            \"Shell\": [\n                \"/bin/bash\",\n                \"-c\"\n            ],\n            \"User\": \"\",\n            \"Volumes\": null,\n            \"WorkingDir\": \"/workspace\"\n        }\n    }\n]\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "ssh",
+            "-p",
+            "22313",
+            "-i",
+            "/Users/yy/.ssh/KeyPair-02-openssh",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            "-o",
+            "ServerAliveInterval=30",
+            "-o",
+            "ServerAliveCountMax=3",
+            "root@210.28.133.13",
+            "docker run --detach --name op-bench-pytorch__140557__layer_norm_decomp_precision-63c85c262cdc --label op-bench.environment-id=pytorch-cpu-torch2.6.0-py311 --label op-bench.managed=true --label op-bench.runtime-tier=cpu_python_overlay --label op-bench.task-id=pytorch__140557__layer_norm_decomp_precision --volume /data/op_bench_workspaces/op-bench-pytorch__140557__layer_norm_decomp_precision-63c85c262cdc:/workspace --workdir /workspace op-bench/pytorch-cpu:torch2.6.0-py311 tail -f /dev/null"
+          ],
+          "cwd": "",
+          "duration_sec": 1.829779583029449,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "b9592769a82cc1e19cea393bce09310d307cf6cc97919c7a558cbfc882d5ea9f\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "ssh",
+            "-p",
+            "22313",
+            "-i",
+            "/Users/yy/.ssh/KeyPair-02-openssh",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            "-o",
+            "ServerAliveInterval=30",
+            "-o",
+            "ServerAliveCountMax=3",
+            "root@210.28.133.13",
+            "docker exec --workdir /tmp op-bench-pytorch__140557__layer_norm_decomp_precision-63c85c262cdc python --version"
+          ],
+          "cwd": "",
+          "duration_sec": 0.7387389169307426,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "Python 3.11.0rc1\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "ssh",
+            "-p",
+            "22313",
+            "-i",
+            "/Users/yy/.ssh/KeyPair-02-openssh",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            "-o",
+            "ServerAliveInterval=30",
+            "-o",
+            "ServerAliveCountMax=3",
+            "root@210.28.133.13",
+            "docker exec --workdir /tmp op-bench-pytorch__140557__layer_norm_decomp_precision-63c85c262cdc python -c 'import torch; print(torch.__version__); print(torch.__file__)'"
+          ],
+          "cwd": "",
+          "duration_sec": 2.3375703339697793,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "2.6.0+cpu\n/usr/local/lib/python3.11/dist-packages/torch/__init__.py\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "git",
+            "apply",
+            "/Users/yy/dev/graduate/op_bench/tasks/pytorch/140557_layer_norm_decomp_precision/artifacts/hidden_test.patch"
+          ],
+          "cwd": "/var/folders/yf/pljpbb8x7nl_crf68gh72hs00000gn/T/op-bench-pytorch__140557__layer_norm_decomp_precision-ma3xbds9/workspace",
+          "duration_sec": 0.03089220798574388,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "rsync",
+            "-az",
+            "--delete",
+            "--exclude=.ccache/",
+            "--exclude=build/",
+            "--exclude=torch.egg-info/",
+            "--exclude=__pycache__/",
+            "-e",
+            "ssh -p 22313 -i /Users/yy/.ssh/KeyPair-02-openssh -o StrictHostKeyChecking=accept-new",
+            "/private/var/folders/yf/pljpbb8x7nl_crf68gh72hs00000gn/T/op-bench-pytorch__140557__layer_norm_decomp_precision-ma3xbds9/workspace/",
+            "root@210.28.133.13:/data/op_bench_workspaces/op-bench-pytorch__140557__layer_norm_decomp_precision-63c85c262cdc/"
+          ],
+          "cwd": "",
+          "duration_sec": 1.3449875420192257,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "ssh",
+            "-p",
+            "22313",
+            "-i",
+            "/Users/yy/.ssh/KeyPair-02-openssh",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            "-o",
+            "ServerAliveInterval=30",
+            "-o",
+            "ServerAliveCountMax=3",
+            "root@210.28.133.13",
+            "docker exec --workdir /workspace op-bench-pytorch__140557__layer_norm_decomp_precision-63c85c262cdc python -c 'import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('\"'\"'.'\"'\"')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))' '{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/_refs/__init__.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}'"
+          ],
+          "cwd": "",
+          "duration_sec": 3.9389707919908687,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "{\"mode\": \"python_overlay\", \"overlay_files\": [{\"runtime\": \"/tmp/op_bench_runtime/site-packages/torch/_refs/__init__.py\", \"sha256\": \"sha256:528712cda5481f4dcccc3bd2186f87bc678a69a9a14388e4d67349d90c3f2231\", \"workspace\": \"/workspace/torch/_refs/__init__.py\"}], \"package\": \"torch\"}\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "ssh",
+            "-p",
+            "22313",
+            "-i",
+            "/Users/yy/.ssh/KeyPair-02-openssh",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            "-o",
+            "ServerAliveInterval=30",
+            "-o",
+            "ServerAliveCountMax=3",
+            "root@210.28.133.13",
+            "docker exec --workdir /workspace op-bench-pytorch__140557__layer_norm_decomp_precision-63c85c262cdc python test/test_decomp.py DecompOneOffTestsCPU.test_native_layer_norm_cpu_decomp_cpu"
+          ],
+          "cwd": "",
+          "duration_sec": 5.8541744579561055,
+          "exit_code": 1,
+          "stderr": "F\n======================================================================\nFAIL: test_native_layer_norm_cpu_decomp_cpu (__main__.DecompOneOffTestsCPU.test_native_layer_norm_cpu_decomp_cpu)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/tmp/op_bench_runtime/site-packages/torch/testing/_internal/common_utils.py\", line 3108, in wrapper\n    method(*args, **kwargs)\n  File \"/tmp/op_bench_runtime/site-packages/torch/testing/_internal/common_device_type.py\", line 460, in instantiated_test\n    result = test(self, **param_kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/testing/_internal/common_device_type.py\", line 1412, in only_fn\n    return fn(slf, *args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/test/test_decomp.py\", line 1228, in test_native_layer_norm_cpu_decomp\n    self.assertEqual(o_ref.dtype, o.dtype)\n  File \"/tmp/op_bench_runtime/site-packages/torch/testing/_internal/common_utils.py\", line 4016, in assertEqual\n    raise error_metas.pop()[0].to_error(\nAssertionError: Object comparison failed: torch.bfloat16 != torch.float32\n\nTo execute this test, run the following from the base repo dir:\n    python test/test_decomp.py DecompOneOffTestsCPU.test_native_layer_norm_cpu_decomp_cpu\n\nThis message can be suppressed by setting PYTORCH_PRINT_REPRO_ON_FAILURE=0\n\n----------------------------------------------------------------------\nRan 1 test in 0.011s\n\nFAILED (failures=1)\n",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "ssh",
+            "-p",
+            "22313",
+            "-i",
+            "/Users/yy/.ssh/KeyPair-02-openssh",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            "-o",
+            "ServerAliveInterval=30",
+            "-o",
+            "ServerAliveCountMax=3",
+            "root@210.28.133.13",
+            "docker exec --workdir /workspace op-bench-pytorch__140557__layer_norm_decomp_precision-63c85c262cdc python test/test_decomp.py DecompOneOffTestsCPU.test_contiguous_softmax_cpu"
+          ],
+          "cwd": "",
+          "duration_sec": 5.837050125002861,
+          "exit_code": 0,
+          "stderr": ".\n----------------------------------------------------------------------\nRan 1 test in 0.006s\n\nOK\n",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "ssh",
+            "-p",
+            "22313",
+            "-i",
+            "/Users/yy/.ssh/KeyPair-02-openssh",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            "-o",
+            "ServerAliveInterval=30",
+            "-o",
+            "ServerAliveCountMax=3",
+            "root@210.28.133.13",
+            "docker rm -f op-bench-pytorch__140557__layer_norm_decomp_precision-63c85c262cdc"
+          ],
+          "cwd": "",
+          "duration_sec": 1.6950733750127256,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "op-bench-pytorch__140557__layer_norm_decomp_precision-63c85c262cdc\n",
+          "timed_out": false
+        }
+      ],
+      "duration_sec": 70.04950637498405,
+      "environment": {
+        "command_workdir": "/workspace",
+        "container_name": "op-bench-pytorch__140557__layer_norm_decomp_precision-63c85c262cdc",
+        "digest_kind": "local_image_id",
+        "environment_id": "pytorch-cpu-torch2.6.0-py311",
+        "executor": "remote_docker",
+        "gpus": null,
+        "host_machine": "arm64",
+        "host_platform": "macOS-26.5.1-arm64-arm-64bit",
+        "image": "op-bench/pytorch-cpu:torch2.6.0-py311",
+        "image_digest": "sha256:721dd55c9253c6d887e9d95a949c22e5607d16bf9917edae3f8d98b911a9c12b",
+        "platform": "linux/amd64",
+        "preflight_command_count": 2,
+        "preflight_passed": true,
+        "preflight_workdir": "/tmp",
+        "remote_ccache_dir": null,
+        "remote_host": "210.28.133.13",
+        "remote_user": "root",
+        "remote_workspace": "/data/op_bench_workspaces/op-bench-pytorch__140557__layer_norm_decomp_precision-63c85c262cdc",
+        "runtime_tier": "cpu_python_overlay",
+        "workspace_dir": "/workspace"
+      },
+      "fail_to_pass_passed": 0,
+      "fail_to_pass_total": 1,
+      "mode": "baseline",
+      "pass_to_pass_passed": 1,
+      "pass_to_pass_total": 1,
+      "status": "baseline_reproduced",
+      "task_id": "pytorch__140557__layer_norm_decomp_precision"
+    },
+    {
+      "agent": "baseline",
+      "commands": [
+        {
+          "command": [
+            "op_bench",
+            "copy-source-snapshot",
+            "/Users/yy/dev/graduate/op_bench/.op_bench_cache/sources/pytorch/pytorch/60a505022f3fdf070b3a73225d8a39009caa216b/source",
+            "/var/folders/yf/pljpbb8x7nl_crf68gh72hs00000gn/T/op-bench-pytorch__139999__masked_mean_bool_upcast-nj1w3r38/workspace"
+          ],
+          "cwd": "/var/folders/yf/pljpbb8x7nl_crf68gh72hs00000gn/T/op-bench-pytorch__139999__masked_mean_bool_upcast-nj1w3r38",
+          "duration_sec": 1.9996367079438642,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "copied source snapshot from /Users/yy/dev/graduate/op_bench/.op_bench_cache/sources/pytorch/pytorch/60a505022f3fdf070b3a73225d8a39009caa216b/source\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "rsync",
+            "-az",
+            "--delete",
+            "--exclude=.ccache/",
+            "--exclude=build/",
+            "--exclude=torch.egg-info/",
+            "--exclude=__pycache__/",
+            "-e",
+            "ssh -p 22313 -i /Users/yy/.ssh/KeyPair-02-openssh -o StrictHostKeyChecking=accept-new",
+            "/private/var/folders/yf/pljpbb8x7nl_crf68gh72hs00000gn/T/op-bench-pytorch__139999__masked_mean_bool_upcast-nj1w3r38/workspace/",
+            "root@210.28.133.13:/data/op_bench_workspaces/op-bench-pytorch__139999__masked_mean_bool_upcast-77d9de85a284/"
+          ],
+          "cwd": "",
+          "duration_sec": 23.981051541981287,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "ssh",
+            "-p",
+            "22313",
+            "-i",
+            "/Users/yy/.ssh/KeyPair-02-openssh",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            "-o",
+            "ServerAliveInterval=30",
+            "-o",
+            "ServerAliveCountMax=3",
+            "root@210.28.133.13",
+            "docker image inspect op-bench/pytorch-cpu:torch2.6.0-py311"
+          ],
+          "cwd": "",
+          "duration_sec": 1.178166582947597,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "[\n    {\n        \"Id\": \"sha256:721dd55c9253c6d887e9d95a949c22e5607d16bf9917edae3f8d98b911a9c12b\",\n        \"RepoTags\": [\n            \"op-bench/pytorch-cpu:torch2.6.0-py311\"\n        ],\n        \"RepoDigests\": [],\n        \"Parent\": \"\",\n        \"Comment\": \"buildkit.dockerfile.v0\",\n        \"Created\": \"2026-07-09T03:30:50.735836959Z\",\n        \"DockerVersion\": \"\",\n        \"Author\": \"\",\n        \"Architecture\": \"amd64\",\n        \"Os\": \"linux\",\n        \"Size\": 2378891704,\n        \"GraphDriver\": {\n            \"Data\": {\n                \"LowerDir\": \"/var/lib/docker/overlay2/es7fuio66aig1i6gkwluwvu6o/diff:/var/lib/docker/overlay2/3d21efb0867eba7610f1dc7dcfb7272eeaa64ddb512cc087235e51b6408a1919/diff:/var/lib/docker/overlay2/8402b289a17d70ef280b86fe4ad56db27a3109b5bda3889720281c92ca1ed4b9/diff:/var/lib/docker/overlay2/166aff1658294b89554525a0685aa5ac6bb5d87528fdd60a1e1e5159297e6d31/diff:/var/lib/docker/overlay2/65158e7a12fe88e7d96dfffe44064e9878c48dff4dfecf1c4040faa2c15170e2/diff:/var/lib/docker/overlay2/6e4af56f6952e5d866e82a7df499bb45038f57db4113bb80ef63222200e3de17/diff:/var/lib/docker/overlay2/8f6fe6879ace3994c3f8fb19ac17cd103c114114df7922d270f2fcffa164a190/diff:/var/lib/docker/overlay2/65413836d360db350dfa28c76b1ab1e4daafb218c51649d9c5690fbb8737cb84/diff:/var/lib/docker/overlay2/ddb28914173f244adcbd8073b75d96184e8142dfb3d4fe41200bc9325d14d73b/diff:/var/lib/docker/overlay2/724de7ce92a757c8375e4a71c32380505ad5d91168e64efd0aeac8c47e88608f/diff:/var/lib/docker/overlay2/ef59bbca24f14fb9c4bed4ca8bca5eb23265674fdc453bab88a8998702f966e9/diff\",\n                \"MergedDir\": \"/var/lib/docker/overlay2/502tngdf24zncy781s035dhos/merged\",\n                \"UpperDir\": \"/var/lib/docker/overlay2/502tngdf24zncy781s035dhos/diff\",\n                \"WorkDir\": \"/var/lib/docker/overlay2/502tngdf24zncy781s035dhos/work\"\n            },\n            \"Name\": \"overlay2\"\n        },\n        \"RootFS\": {\n            \"Type\": \"layers\",\n            \"Layers\": [\n                \"sha256:270a1170e7e398434ff1b31e17e233f7d7b71aa99a40473615860068e86720af\",\n                \"sha256:1c3a41a316e74f3573300283e7e01e6a1daf878ec7695fb8a78ff7fd70a44b70\",\n                \"sha256:12c3e171d22282ddfb12a1da96d90e15a74b2273ca5b44f2ac7d812d89c7e59a\",\n                \"sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef\",\n                \"sha256:7b3d48b71cc96c955e06fd0925f836c256573c8f88246546d67a4cd3b8189e53\",\n                \"sha256:a6e85488ac83608d843b4bd6b499fa00429d3b5c6e468781c67ed6e3e356962d\",\n                \"sha256:5fcd6e37f0e2f7882fd49c3cd9484c01a94e2317c5dcfa5969e5380a7cb71138\",\n                \"sha256:35f95c256a0c96d24901c9133e92325c8054da0494440d3fe8351c0f7e155cdf\",\n                \"sha256:b414dedeb164c6b5251cc6afcf83356148e3f0da3eb0acc1d53746747f60fd6a\",\n                \"sha256:75e3822f49725e642fa2b10c3858618a225ed5d5756061cac34d5b855c168348\",\n                \"sha256:2f43611c732086d5b8de22c82e3ec44ee0b1fdf19516e17a67f9500905957203\",\n                \"sha256:7041cd16e663498b7958ac1759f8735a979f40c2dde0b8c00798c32b12e79816\"\n            ]\n        },\n        \"Metadata\": {\n            \"LastTagTime\": \"2026-07-09T03:30:51.097248984Z\"\n        },\n        \"Config\": {\n            \"Cmd\": [\n                \"/bin/bash\"\n            ],\n            \"Entrypoint\": null,\n            \"Env\": [\n                \"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\",\n                \"DEBIAN_FRONTEND=noninteractive\",\n                \"LANG=C.UTF-8\",\n                \"PYTHONUNBUFFERED=1\",\n                \"PYTHONDONTWRITEBYTECODE=1\"\n            ],\n            \"Labels\": {\n                \"com.docker.compose.project\": \"pytorch\",\n                \"com.docker.compose.service\": \"ipex-base\",\n                \"com.docker.compose.version\": \"2.26.1\",\n                \"dependency.apt.wget\": \"true\",\n                \"dependency.python\": \"3.11\",\n                \"dependency.python.pip\": \"requirements.txt\",\n                \"docs\": \"pytorch\",\n                \"org.opencontainers.base.name\": \"intel/python:3.11-full\",\n                \"org.opencontainers.image.name\": \"intel/intel-optimized-pytorch\",\n                \"org.opencontainers.image.ref.name\": \"ubuntu\",\n                \"org.opencontainers.image.title\": \"Intel\u00ae Extension for PyTorch Base Image\",\n                \"org.opencontainers.image.version\": \"2.6.0-pip-base\"\n            },\n            \"OnBuild\": null,\n            \"Shell\": [\n                \"/bin/bash\",\n                \"-c\"\n            ],\n            \"User\": \"\",\n            \"Volumes\": null,\n            \"WorkingDir\": \"/workspace\"\n        }\n    }\n]\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "ssh",
+            "-p",
+            "22313",
+            "-i",
+            "/Users/yy/.ssh/KeyPair-02-openssh",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            "-o",
+            "ServerAliveInterval=30",
+            "-o",
+            "ServerAliveCountMax=3",
+            "root@210.28.133.13",
+            "docker run --detach --name op-bench-pytorch__139999__masked_mean_bool_upcast-77d9de85a284 --label op-bench.environment-id=pytorch-cpu-torch2.6.0-py311 --label op-bench.managed=true --label op-bench.runtime-tier=cpu_python_overlay --label op-bench.task-id=pytorch__139999__masked_mean_bool_upcast --volume /data/op_bench_workspaces/op-bench-pytorch__139999__masked_mean_bool_upcast-77d9de85a284:/workspace --workdir /workspace op-bench/pytorch-cpu:torch2.6.0-py311 tail -f /dev/null"
+          ],
+          "cwd": "",
+          "duration_sec": 1.906609750003554,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "06ecce579407cfe90437ea2849b828d3bfdcadd170e87a2e2fba9af06093a651\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "ssh",
+            "-p",
+            "22313",
+            "-i",
+            "/Users/yy/.ssh/KeyPair-02-openssh",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            "-o",
+            "ServerAliveInterval=30",
+            "-o",
+            "ServerAliveCountMax=3",
+            "root@210.28.133.13",
+            "docker exec --workdir /tmp op-bench-pytorch__139999__masked_mean_bool_upcast-77d9de85a284 python --version"
+          ],
+          "cwd": "",
+          "duration_sec": 0.7598100419854745,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "Python 3.11.0rc1\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "ssh",
+            "-p",
+            "22313",
+            "-i",
+            "/Users/yy/.ssh/KeyPair-02-openssh",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            "-o",
+            "ServerAliveInterval=30",
+            "-o",
+            "ServerAliveCountMax=3",
+            "root@210.28.133.13",
+            "docker exec --workdir /tmp op-bench-pytorch__139999__masked_mean_bool_upcast-77d9de85a284 python -c 'import torch; print(torch.__version__); print(torch.__file__)'"
+          ],
+          "cwd": "",
+          "duration_sec": 2.4116470830049366,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "2.6.0+cpu\n/usr/local/lib/python3.11/dist-packages/torch/__init__.py\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "git",
+            "apply",
+            "/Users/yy/dev/graduate/op_bench/tasks/pytorch/139999_masked_mean_bool_upcast/artifacts/hidden_test.patch"
+          ],
+          "cwd": "/var/folders/yf/pljpbb8x7nl_crf68gh72hs00000gn/T/op-bench-pytorch__139999__masked_mean_bool_upcast-nj1w3r38/workspace",
+          "duration_sec": 0.021301832981407642,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "rsync",
+            "-az",
+            "--delete",
+            "--exclude=.ccache/",
+            "--exclude=build/",
+            "--exclude=torch.egg-info/",
+            "--exclude=__pycache__/",
+            "-e",
+            "ssh -p 22313 -i /Users/yy/.ssh/KeyPair-02-openssh -o StrictHostKeyChecking=accept-new",
+            "/private/var/folders/yf/pljpbb8x7nl_crf68gh72hs00000gn/T/op-bench-pytorch__139999__masked_mean_bool_upcast-nj1w3r38/workspace/",
+            "root@210.28.133.13:/data/op_bench_workspaces/op-bench-pytorch__139999__masked_mean_bool_upcast-77d9de85a284/"
+          ],
+          "cwd": "",
+          "duration_sec": 1.3947570000309497,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "ssh",
+            "-p",
+            "22313",
+            "-i",
+            "/Users/yy/.ssh/KeyPair-02-openssh",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            "-o",
+            "ServerAliveInterval=30",
+            "-o",
+            "ServerAliveCountMax=3",
+            "root@210.28.133.13",
+            "docker exec --workdir /workspace op-bench-pytorch__139999__masked_mean_bool_upcast-77d9de85a284 python -c 'import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('\"'\"'.'\"'\"')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))' '{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/masked/_ops.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}'"
+          ],
+          "cwd": "",
+          "duration_sec": 4.014182999962941,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "{\"mode\": \"python_overlay\", \"overlay_files\": [{\"runtime\": \"/tmp/op_bench_runtime/site-packages/torch/masked/_ops.py\", \"sha256\": \"sha256:f5fdd2cf2939610b624c8e10f38ad7b8509dc6e757373d5f4afbf611d74843ce\", \"workspace\": \"/workspace/torch/masked/_ops.py\"}], \"package\": \"torch\"}\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "ssh",
+            "-p",
+            "22313",
+            "-i",
+            "/Users/yy/.ssh/KeyPair-02-openssh",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            "-o",
+            "ServerAliveInterval=30",
+            "-o",
+            "ServerAliveCountMax=3",
+            "root@210.28.133.13",
+            "docker exec --workdir /workspace op-bench-pytorch__139999__masked_mean_bool_upcast-77d9de85a284 python test/test_op_bench_masked_mean_bool.py TestMaskedMeanBoolRaises.test_masked_mean_bool_raises"
+          ],
+          "cwd": "",
+          "duration_sec": 2.3517885410692543,
+          "exit_code": 1,
+          "stderr": "F\n======================================================================\nFAIL: test_masked_mean_bool_raises (__main__.TestMaskedMeanBoolRaises.test_masked_mean_bool_raises)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/workspace/test/test_op_bench_masked_mean_bool.py\", line 13, in test_masked_mean_bool_raises\n    with self.assertRaisesRegex(ValueError, \"mean\"):\nAssertionError: ValueError not raised\n\n----------------------------------------------------------------------\nRan 1 test in 0.002s\n\nFAILED (failures=1)\n",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "ssh",
+            "-p",
+            "22313",
+            "-i",
+            "/Users/yy/.ssh/KeyPair-02-openssh",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            "-o",
+            "ServerAliveInterval=30",
+            "-o",
+            "ServerAliveCountMax=3",
+            "root@210.28.133.13",
+            "docker exec --workdir /workspace op-bench-pytorch__139999__masked_mean_bool_upcast-77d9de85a284 python test/test_op_bench_masked_mean_bool.py TestMaskedMeanBoolRaises.test_masked_mean_float_still_works"
+          ],
+          "cwd": "",
+          "duration_sec": 2.3328137500211596,
+          "exit_code": 0,
+          "stderr": ".\n----------------------------------------------------------------------\nRan 1 test in 0.002s\n\nOK\n",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "ssh",
+            "-p",
+            "22313",
+            "-i",
+            "/Users/yy/.ssh/KeyPair-02-openssh",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            "-o",
+            "ServerAliveInterval=30",
+            "-o",
+            "ServerAliveCountMax=3",
+            "root@210.28.133.13",
+            "docker rm -f op-bench-pytorch__139999__masked_mean_bool_upcast-77d9de85a284"
+          ],
+          "cwd": "",
+          "duration_sec": 4.460246832924895,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "op-bench-pytorch__139999__masked_mean_bool_upcast-77d9de85a284\n",
+          "timed_out": false
+        }
+      ],
+      "duration_sec": 48.94944637489971,
+      "environment": {
+        "command_workdir": "/workspace",
+        "container_name": "op-bench-pytorch__139999__masked_mean_bool_upcast-77d9de85a284",
+        "digest_kind": "local_image_id",
+        "environment_id": "pytorch-cpu-torch2.6.0-py311",
+        "executor": "remote_docker",
+        "gpus": null,
+        "host_machine": "arm64",
+        "host_platform": "macOS-26.5.1-arm64-arm-64bit",
+        "image": "op-bench/pytorch-cpu:torch2.6.0-py311",
+        "image_digest": "sha256:721dd55c9253c6d887e9d95a949c22e5607d16bf9917edae3f8d98b911a9c12b",
+        "platform": "linux/amd64",
+        "preflight_command_count": 2,
+        "preflight_passed": true,
+        "preflight_workdir": "/tmp",
+        "remote_ccache_dir": null,
+        "remote_host": "210.28.133.13",
+        "remote_user": "root",
+        "remote_workspace": "/data/op_bench_workspaces/op-bench-pytorch__139999__masked_mean_bool_upcast-77d9de85a284",
+        "runtime_tier": "cpu_python_overlay",
+        "workspace_dir": "/workspace"
+      },
+      "fail_to_pass_passed": 0,
+      "fail_to_pass_total": 1,
+      "mode": "baseline",
+      "pass_to_pass_passed": 1,
+      "pass_to_pass_total": 1,
+      "status": "baseline_reproduced",
+      "task_id": "pytorch__139999__masked_mean_bool_upcast"
+    },
+    {
+      "agent": "baseline",
+      "commands": [
+        {
+          "command": [
+            "op_bench",
+            "copy-source-snapshot",
+            "/Users/yy/dev/graduate/op_bench/.op_bench_cache/sources/pytorch/pytorch/5d8e23b49c5327590fb32b28309c41129e2b3f08/source",
+            "/var/folders/yf/pljpbb8x7nl_crf68gh72hs00000gn/T/op-bench-pytorch__129138__linear_add_bias_autocast-3j5yul9s/workspace"
+          ],
+          "cwd": "/var/folders/yf/pljpbb8x7nl_crf68gh72hs00000gn/T/op-bench-pytorch__129138__linear_add_bias_autocast-3j5yul9s",
+          "duration_sec": 2.040937415906228,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "copied source snapshot from /Users/yy/dev/graduate/op_bench/.op_bench_cache/sources/pytorch/pytorch/5d8e23b49c5327590fb32b28309c41129e2b3f08/source\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "rsync",
+            "-az",
+            "--delete",
+            "--exclude=.ccache/",
+            "--exclude=build/",
+            "--exclude=torch.egg-info/",
+            "--exclude=__pycache__/",
+            "-e",
+            "ssh -p 22313 -i /Users/yy/.ssh/KeyPair-02-openssh -o StrictHostKeyChecking=accept-new",
+            "/private/var/folders/yf/pljpbb8x7nl_crf68gh72hs00000gn/T/op-bench-pytorch__129138__linear_add_bias_autocast-3j5yul9s/workspace/",
+            "root@210.28.133.13:/data/op_bench_workspaces/op-bench-pytorch__129138__linear_add_bias_autocast-b7af50937a4a/"
+          ],
+          "cwd": "",
+          "duration_sec": 39.47359341697302,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "ssh",
+            "-p",
+            "22313",
+            "-i",
+            "/Users/yy/.ssh/KeyPair-02-openssh",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            "-o",
+            "ServerAliveInterval=30",
+            "-o",
+            "ServerAliveCountMax=3",
+            "root@210.28.133.13",
+            "docker image inspect op-bench/pytorch-cpu-compile:torch2.6.0-py311"
+          ],
+          "cwd": "",
+          "duration_sec": 1.198155999998562,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "[\n    {\n        \"Id\": \"sha256:baa57df9fec9d6e15fbe7d8f6e2d19ff162d90c91a3aa8d48d874a02f9c663bc\",\n        \"RepoTags\": [\n            \"op-bench/pytorch-cpu-compile:torch2.6.0-py311\"\n        ],\n        \"RepoDigests\": [],\n        \"Parent\": \"\",\n        \"Comment\": \"buildkit.dockerfile.v0\",\n        \"Created\": \"2026-07-10T09:49:15.959440342Z\",\n        \"DockerVersion\": \"\",\n        \"Author\": \"\",\n        \"Architecture\": \"amd64\",\n        \"Os\": \"linux\",\n        \"Size\": 2685107338,\n        \"GraphDriver\": {\n            \"Data\": {\n                \"LowerDir\": \"/var/lib/docker/overlay2/9obh8pddb6t6ubt43bnfeo3s9/diff:/var/lib/docker/overlay2/502tngdf24zncy781s035dhos/diff:/var/lib/docker/overlay2/es7fuio66aig1i6gkwluwvu6o/diff:/var/lib/docker/overlay2/3d21efb0867eba7610f1dc7dcfb7272eeaa64ddb512cc087235e51b6408a1919/diff:/var/lib/docker/overlay2/8402b289a17d70ef280b86fe4ad56db27a3109b5bda3889720281c92ca1ed4b9/diff:/var/lib/docker/overlay2/166aff1658294b89554525a0685aa5ac6bb5d87528fdd60a1e1e5159297e6d31/diff:/var/lib/docker/overlay2/65158e7a12fe88e7d96dfffe44064e9878c48dff4dfecf1c4040faa2c15170e2/diff:/var/lib/docker/overlay2/6e4af56f6952e5d866e82a7df499bb45038f57db4113bb80ef63222200e3de17/diff:/var/lib/docker/overlay2/8f6fe6879ace3994c3f8fb19ac17cd103c114114df7922d270f2fcffa164a190/diff:/var/lib/docker/overlay2/65413836d360db350dfa28c76b1ab1e4daafb218c51649d9c5690fbb8737cb84/diff:/var/lib/docker/overlay2/ddb28914173f244adcbd8073b75d96184e8142dfb3d4fe41200bc9325d14d73b/diff:/var/lib/docker/overlay2/724de7ce92a757c8375e4a71c32380505ad5d91168e64efd0aeac8c47e88608f/diff:/var/lib/docker/overlay2/ef59bbca24f14fb9c4bed4ca8bca5eb23265674fdc453bab88a8998702f966e9/diff\",\n                \"MergedDir\": \"/var/lib/docker/overlay2/pl5d4172lx3wqd3w2nrwof33i/merged\",\n                \"UpperDir\": \"/var/lib/docker/overlay2/pl5d4172lx3wqd3w2nrwof33i/diff\",\n                \"WorkDir\": \"/var/lib/docker/overlay2/pl5d4172lx3wqd3w2nrwof33i/work\"\n            },\n            \"Name\": \"overlay2\"\n        },\n        \"RootFS\": {\n            \"Type\": \"layers\",\n            \"Layers\": [\n                \"sha256:270a1170e7e398434ff1b31e17e233f7d7b71aa99a40473615860068e86720af\",\n                \"sha256:1c3a41a316e74f3573300283e7e01e6a1daf878ec7695fb8a78ff7fd70a44b70\",\n                \"sha256:12c3e171d22282ddfb12a1da96d90e15a74b2273ca5b44f2ac7d812d89c7e59a\",\n                \"sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef\",\n                \"sha256:7b3d48b71cc96c955e06fd0925f836c256573c8f88246546d67a4cd3b8189e53\",\n                \"sha256:a6e85488ac83608d843b4bd6b499fa00429d3b5c6e468781c67ed6e3e356962d\",\n                \"sha256:5fcd6e37f0e2f7882fd49c3cd9484c01a94e2317c5dcfa5969e5380a7cb71138\",\n                \"sha256:35f95c256a0c96d24901c9133e92325c8054da0494440d3fe8351c0f7e155cdf\",\n                \"sha256:b414dedeb164c6b5251cc6afcf83356148e3f0da3eb0acc1d53746747f60fd6a\",\n                \"sha256:75e3822f49725e642fa2b10c3858618a225ed5d5756061cac34d5b855c168348\",\n                \"sha256:2f43611c732086d5b8de22c82e3ec44ee0b1fdf19516e17a67f9500905957203\",\n                \"sha256:7041cd16e663498b7958ac1759f8735a979f40c2dde0b8c00798c32b12e79816\",\n                \"sha256:97d73ed29eb83bee21f3529e4550eef47327a776fe9f013ddb69b9132a04c690\",\n                \"sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef\"\n            ]\n        },\n        \"Metadata\": {\n            \"LastTagTime\": \"2026-07-10T09:49:18.644495656Z\"\n        },\n        \"Config\": {\n            \"Cmd\": [\n                \"/bin/bash\"\n            ],\n            \"Entrypoint\": null,\n            \"Env\": [\n                \"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\",\n                \"DEBIAN_FRONTEND=noninteractive\",\n                \"LANG=C.UTF-8\",\n                \"PYTHONUNBUFFERED=1\",\n                \"PYTHONDONTWRITEBYTECODE=1\"\n            ],\n            \"Labels\": {\n                \"com.docker.compose.project\": \"pytorch\",\n                \"com.docker.compose.service\": \"ipex-base\",\n                \"com.docker.compose.version\": \"2.26.1\",\n                \"dependency.apt.wget\": \"true\",\n                \"dependency.python\": \"3.11\",\n                \"dependency.python.pip\": \"requirements.txt\",\n                \"docs\": \"pytorch\",\n                \"org.opencontainers.base.name\": \"intel/python:3.11-full\",\n                \"org.opencontainers.image.name\": \"intel/intel-optimized-pytorch\",\n                \"org.opencontainers.image.ref.name\": \"ubuntu\",\n                \"org.opencontainers.image.title\": \"Intel\u00ae Extension for PyTorch Base Image\",\n                \"org.opencontainers.image.version\": \"2.6.0-pip-base\"\n            },\n            \"OnBuild\": null,\n            \"Shell\": [\n                \"/bin/bash\",\n                \"-c\"\n            ],\n            \"User\": \"\",\n            \"Volumes\": null,\n            \"WorkingDir\": \"/workspace\"\n        }\n    }\n]\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "ssh",
+            "-p",
+            "22313",
+            "-i",
+            "/Users/yy/.ssh/KeyPair-02-openssh",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            "-o",
+            "ServerAliveInterval=30",
+            "-o",
+            "ServerAliveCountMax=3",
+            "root@210.28.133.13",
+            "docker run --detach --name op-bench-pytorch__129138__linear_add_bias_autocast-b7af50937a4a --label op-bench.environment-id=pytorch-cpu-compile-torch2.6.0-py311 --label op-bench.managed=true --label op-bench.runtime-tier=cpu_python_overlay --label op-bench.task-id=pytorch__129138__linear_add_bias_autocast --volume /data/op_bench_workspaces/op-bench-pytorch__129138__linear_add_bias_autocast-b7af50937a4a:/workspace --workdir /workspace op-bench/pytorch-cpu-compile:torch2.6.0-py311 tail -f /dev/null"
+          ],
+          "cwd": "",
+          "duration_sec": 2.3415436659706756,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "1005bd6ef7026a787f41700aaa52640a9b5d12d7bb101abe2c20923487818643\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "ssh",
+            "-p",
+            "22313",
+            "-i",
+            "/Users/yy/.ssh/KeyPair-02-openssh",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            "-o",
+            "ServerAliveInterval=30",
+            "-o",
+            "ServerAliveCountMax=3",
+            "root@210.28.133.13",
+            "docker exec --workdir /tmp op-bench-pytorch__129138__linear_add_bias_autocast-b7af50937a4a g++ --version"
+          ],
+          "cwd": "",
+          "duration_sec": 0.757531207986176,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "g++ (Ubuntu 11.4.0-1ubuntu1~22.04.3) 11.4.0\nCopyright (C) 2021 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "ssh",
+            "-p",
+            "22313",
+            "-i",
+            "/Users/yy/.ssh/KeyPair-02-openssh",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            "-o",
+            "ServerAliveInterval=30",
+            "-o",
+            "ServerAliveCountMax=3",
+            "root@210.28.133.13",
+            "docker exec --workdir /tmp op-bench-pytorch__129138__linear_add_bias_autocast-b7af50937a4a bash -lc 'test -f /usr/include/python3.11/Python.h'"
+          ],
+          "cwd": "",
+          "duration_sec": 0.7215220420621336,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "ssh",
+            "-p",
+            "22313",
+            "-i",
+            "/Users/yy/.ssh/KeyPair-02-openssh",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            "-o",
+            "ServerAliveInterval=30",
+            "-o",
+            "ServerAliveCountMax=3",
+            "root@210.28.133.13",
+            "docker exec --workdir /tmp op-bench-pytorch__129138__linear_add_bias_autocast-b7af50937a4a python --version"
+          ],
+          "cwd": "",
+          "duration_sec": 0.844996124971658,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "Python 3.11.0rc1\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "ssh",
+            "-p",
+            "22313",
+            "-i",
+            "/Users/yy/.ssh/KeyPair-02-openssh",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            "-o",
+            "ServerAliveInterval=30",
+            "-o",
+            "ServerAliveCountMax=3",
+            "root@210.28.133.13",
+            "docker exec --workdir /tmp op-bench-pytorch__129138__linear_add_bias_autocast-b7af50937a4a python -c 'import torch; print(torch.__version__); print(torch.__file__)'"
+          ],
+          "cwd": "",
+          "duration_sec": 2.2822409169748425,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "2.6.0+cpu\n/usr/local/lib/python3.11/dist-packages/torch/__init__.py\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "git",
+            "apply",
+            "/Users/yy/dev/graduate/op_bench/tasks/pytorch/129138_linear_add_bias_autocast/artifacts/hidden_test.patch"
+          ],
+          "cwd": "/var/folders/yf/pljpbb8x7nl_crf68gh72hs00000gn/T/op-bench-pytorch__129138__linear_add_bias_autocast-3j5yul9s/workspace",
+          "duration_sec": 0.021871999953873456,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "rsync",
+            "-az",
+            "--delete",
+            "--exclude=.ccache/",
+            "--exclude=build/",
+            "--exclude=torch.egg-info/",
+            "--exclude=__pycache__/",
+            "-e",
+            "ssh -p 22313 -i /Users/yy/.ssh/KeyPair-02-openssh -o StrictHostKeyChecking=accept-new",
+            "/private/var/folders/yf/pljpbb8x7nl_crf68gh72hs00000gn/T/op-bench-pytorch__129138__linear_add_bias_autocast-3j5yul9s/workspace/",
+            "root@210.28.133.13:/data/op_bench_workspaces/op-bench-pytorch__129138__linear_add_bias_autocast-b7af50937a4a/"
+          ],
+          "cwd": "",
+          "duration_sec": 1.34629012492951,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "ssh",
+            "-p",
+            "22313",
+            "-i",
+            "/Users/yy/.ssh/KeyPair-02-openssh",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            "-o",
+            "ServerAliveInterval=30",
+            "-o",
+            "ServerAliveCountMax=3",
+            "root@210.28.133.13",
+            "docker exec --workdir /workspace op-bench-pytorch__129138__linear_add_bias_autocast-b7af50937a4a python -c 'import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('\"'\"'.'\"'\"')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))' '{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/_inductor/fx_passes/mkldnn_fusion.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}'"
+          ],
+          "cwd": "",
+          "duration_sec": 3.8986869580112398,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "{\"mode\": \"python_overlay\", \"overlay_files\": [{\"runtime\": \"/tmp/op_bench_runtime/site-packages/torch/_inductor/fx_passes/mkldnn_fusion.py\", \"sha256\": \"sha256:dd5de4116680479c124b0c2f3cbbead901541a4aff8860aa8882637c2dfefd56\", \"workspace\": \"/workspace/torch/_inductor/fx_passes/mkldnn_fusion.py\"}], \"package\": \"torch\"}\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "ssh",
+            "-p",
+            "22313",
+            "-i",
+            "/Users/yy/.ssh/KeyPair-02-openssh",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            "-o",
+            "ServerAliveInterval=30",
+            "-o",
+            "ServerAliveCountMax=3",
+            "root@210.28.133.13",
+            "docker exec --workdir /workspace op-bench-pytorch__129138__linear_add_bias_autocast-b7af50937a4a python test/test_op_bench_linear_add_bias_autocast.py TestLinearAddBiasAutocast.test_autocast_bf16_fp32_bias_matches_eager"
+          ],
+          "cwd": "",
+          "duration_sec": 5.045164083014242,
+          "exit_code": 1,
+          "stderr": "E\n======================================================================\nERROR: test_autocast_bf16_fp32_bias_matches_eager (__main__.TestLinearAddBiasAutocast.test_autocast_bf16_fp32_bias_matches_eager)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/workspace/test/test_op_bench_linear_add_bias_autocast.py\", line 49, in test_autocast_bf16_fp32_bias_matches_eager\n    compiled_out = torch.compile(self.model)(self.x)\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/nn/modules/module.py\", line 1739, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/nn/modules/module.py\", line 1750, in _call_impl\n    return forward_call(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/_dynamo/eval_frame.py\", line 574, in _fn\n    return fn(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/nn/modules/module.py\", line 1739, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/nn/modules/module.py\", line 1750, in _call_impl\n    return forward_call(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/_dynamo/convert_frame.py\", line 1380, in __call__\n    return self._torchdynamo_orig_callable(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/_dynamo/convert_frame.py\", line 1164, in __call__\n    result = self._inner_convert(\n             ^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/_dynamo/convert_frame.py\", line 547, in __call__\n    return _compile(\n           ^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/_dynamo/convert_frame.py\", line 986, in _compile\n    guarded_code = compile_inner(code, one_graph, hooks, transform)\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/_dynamo/convert_frame.py\", line 715, in compile_inner\n    return _compile_inner(code, one_graph, hooks, transform)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/_utils_internal.py\", line 95, in wrapper_function\n    return function(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/_dynamo/convert_frame.py\", line 750, in _compile_inner\n    out_code = transform_code_object(code, transform)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/_dynamo/bytecode_transformation.py\", line 1361, in transform_code_object\n    transformations(instructions, code_options)\n  File \"/tmp/op_bench_runtime/site-packages/torch/_dynamo/convert_frame.py\", line 231, in _fn\n    return fn(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/_dynamo/convert_frame.py\", line 662, in transform\n    tracer.run()\n  File \"/tmp/op_bench_runtime/site-packages/torch/_dynamo/symbolic_convert.py\", line 2868, in run\n    super().run()\n  File \"/tmp/op_bench_runtime/site-packages/torch/_dynamo/symbolic_convert.py\", line 1052, in run\n    while self.step():\n          ^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/_dynamo/symbolic_convert.py\", line 962, in step\n    self.dispatch_table[inst.opcode](self, inst)\n  File \"/tmp/op_bench_runtime/site-packages/torch/_dynamo/symbolic_convert.py\", line 3048, in RETURN_VALUE\n    self._return(inst)\n  File \"/tmp/op_bench_runtime/site-packages/torch/_dynamo/symbolic_convert.py\", line 3033, in _return\n    self.output.compile_subgraph(\n  File \"/tmp/op_bench_runtime/site-packages/torch/_dynamo/output_graph.py\", line 1101, in compile_subgraph\n    self.compile_and_call_fx_graph(\n  File \"/tmp/op_bench_runtime/site-packages/torch/_dynamo/output_graph.py\", line 1382, in compile_and_call_fx_graph\n    compiled_fn = self.call_user_compiler(gm)\n                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/_dynamo/output_graph.py\", line 1432, in call_user_compiler\n    return self._call_user_compiler(gm)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/_dynamo/output_graph.py\", line 1483, in _call_user_compiler\n    raise BackendCompilerFailed(self.compiler_fn, e).with_traceback(\n  File \"/tmp/op_bench_runtime/site-packages/torch/_dynamo/output_graph.py\", line 1462, in _call_user_compiler\n    compiled_fn = compiler_fn(gm, self.example_inputs())\n                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/_dynamo/repro/after_dynamo.py\", line 130, in __call__\n    compiled_gm = compiler_fn(gm, example_inputs)\n                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/__init__.py\", line 2340, in __call__\n    return compile_fx(model_, inputs_, config_patches=self.config)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/_inductor/compile_fx.py\", line 1863, in compile_fx\n    return aot_autograd(\n           ^^^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/_dynamo/backends/common.py\", line 83, in __call__\n    cg = aot_module_simplified(gm, example_inputs, **self.kwargs)\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/_functorch/aot_autograd.py\", line 1155, in aot_module_simplified\n    compiled_fn = dispatch_and_compile()\n                  ^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/_functorch/aot_autograd.py\", line 1131, in dispatch_and_compile\n    compiled_fn, _ = create_aot_dispatcher_function(\n                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/_functorch/aot_autograd.py\", line 580, in create_aot_dispatcher_function\n    return _create_aot_dispatcher_function(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/_functorch/aot_autograd.py\", line 830, in _create_aot_dispatcher_function\n    compiled_fn, fw_metadata = compiler_fn(\n                               ^^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/_functorch/_aot_autograd/jit_compile_runtime_wrappers.py\", line 203, in aot_dispatch_base\n    compiled_fw = compiler(fw_module, updated_flat_args)\n                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/_inductor/compile_fx.py\", line 1457, in fw_compiler_freezing\n    optimized_function = inner_compile(\n                         ^^^^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/_inductor/compile_fx.py\", line 569, in compile_fx_inner\n    return wrap_compiler_debug(_compile_fx_inner, compiler_name=\"inductor\")(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/_dynamo/repro/after_aot.py\", line 102, in debug_wrapper\n    inner_compiled_fn = compiler_fn(gm, example_inputs)\n                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/_inductor/compile_fx.py\", line 675, in _compile_fx_inner\n    mb_compiled_graph = fx_codegen_and_compile(\n                        ^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/_inductor/compile_fx.py\", line 1129, in fx_codegen_and_compile\n    return scheme.codegen_and_compile(gm, example_inputs, inputs_to_check, graph_kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/_inductor/compile_fx.py\", line 979, in codegen_and_compile\n    graph.run(*example_inputs)\n  File \"/tmp/op_bench_runtime/site-packages/torch/_inductor/graph.py\", line 855, in run\n    return super().run(*args)\n           ^^^^^^^^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/fx/interpreter.py\", line 167, in run\n    self.env[node] = self.run_node(node)\n                     ^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/_inductor/graph.py\", line 1496, in run_node\n    result = super().run_node(n)\n             ^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/fx/interpreter.py\", line 230, in run_node\n    return getattr(self, n.op)(n.target, args, kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/_inductor/graph.py\", line 1143, in call_function\n    raise LoweringException(e, target, args, kwargs).with_traceback(\n  File \"/tmp/op_bench_runtime/site-packages/torch/_inductor/graph.py\", line 1133, in call_function\n    out = lowerings[target](*args, **kwargs)  # type: ignore[index]\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/_inductor/lowering.py\", line 409, in wrapped\n    out = decomp_fn(*args, **kwargs)\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/_inductor/mkldnn_lowerings.py\", line 216, in linear_unary\n    assert w.get_name() in V.graph.constants\n           ^^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/_inductor/ir.py\", line 6748, in get_name\n    return self.data.get_name()\n           ^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/_inductor/ir.py\", line 6748, in get_name\n    return self.data.get_name()\n           ^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/_inductor/ir.py\", line 517, in get_name\n    raise NotImplementedError(type(self).__name__)\ntorch._dynamo.exc.BackendCompilerFailed: backend='inductor' raised:\nLoweringException: NotImplementedError: Pointwise\n  target: mkldnn._linear_pointwise.default\n  args[0]: TensorBox(StorageBox(\n    Pointwise(\n      'cpu',\n      torch.bfloat16,\n      def inner_fn(index):\n          i0, i1 = index\n          tmp0 = ops.load(arg2_1, i1 + 10 * i0)\n          tmp1 = ops.to_dtype(tmp0, torch.bfloat16, src_dtype=torch.float32)\n          return tmp1\n      ,\n      ranges=[2, 10],\n      origin_node=convert_element_type_1,\n      origins=OrderedSet([convert_element_type_1])\n    )\n  ))\n  args[1]: TensorBox(StorageBox(\n    ConstantBuffer(name='_frozen_param3', layout=FixedLayout('cpu', torch.bfloat16, size=[8, 10], stride=[1, 0]))\n  ))\n  args[2]: TensorBox(StorageBox(\n    ComputedBuffer(name='buf0', layout=FlexibleLayout('cpu', torch.float32, size=[8], stride=[1]), data=Pointwise(device=device(type='cpu'), dtype=torch.float32, inner_fn=<function tensor.<locals>.inner_fn at 0x7f946faa8a40>, ranges=[8]))\n  ))\n  args[3]: none\n  args[4]: []\n  args[5]: \n\nSet TORCH_LOGS=\"+dynamo\" and TORCHDYNAMO_VERBOSE=1 for more information\n\n\nYou can suppress this exception and fall back to eager by setting:\n    import torch._dynamo\n    torch._dynamo.config.suppress_errors = True\n\n\n----------------------------------------------------------------------\nRan 1 test in 0.696s\n\nFAILED (errors=1)\n",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "ssh",
+            "-p",
+            "22313",
+            "-i",
+            "/Users/yy/.ssh/KeyPair-02-openssh",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            "-o",
+            "ServerAliveInterval=30",
+            "-o",
+            "ServerAliveCountMax=3",
+            "root@210.28.133.13",
+            "docker exec --workdir /workspace op-bench-pytorch__129138__linear_add_bias_autocast-b7af50937a4a python test/test_op_bench_linear_add_bias_autocast.py TestLinearAddBiasAutocast.test_no_autocast_matches_eager"
+          ],
+          "cwd": "",
+          "duration_sec": 14.350849833106622,
+          "exit_code": 0,
+          "stderr": ".\n----------------------------------------------------------------------\nRan 1 test in 9.915s\n\nOK\n",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "ssh",
+            "-p",
+            "22313",
+            "-i",
+            "/Users/yy/.ssh/KeyPair-02-openssh",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            "-o",
+            "ServerAliveInterval=30",
+            "-o",
+            "ServerAliveCountMax=3",
+            "root@210.28.133.13",
+            "docker rm -f op-bench-pytorch__129138__linear_add_bias_autocast-b7af50937a4a"
+          ],
+          "cwd": "",
+          "duration_sec": 1.6624912079423666,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "op-bench-pytorch__129138__linear_add_bias_autocast-b7af50937a4a\n",
+          "timed_out": false
+        }
+      ],
+      "duration_sec": 78.11774079105817,
+      "environment": {
+        "command_workdir": "/workspace",
+        "container_name": "op-bench-pytorch__129138__linear_add_bias_autocast-b7af50937a4a",
+        "digest_kind": "local_image_id",
+        "environment_id": "pytorch-cpu-compile-torch2.6.0-py311",
+        "executor": "remote_docker",
+        "gpus": null,
+        "host_machine": "arm64",
+        "host_platform": "macOS-26.5.1-arm64-arm-64bit",
+        "image": "op-bench/pytorch-cpu-compile:torch2.6.0-py311",
+        "image_digest": "sha256:baa57df9fec9d6e15fbe7d8f6e2d19ff162d90c91a3aa8d48d874a02f9c663bc",
+        "platform": "linux/amd64",
+        "preflight_command_count": 4,
+        "preflight_passed": true,
+        "preflight_workdir": "/tmp",
+        "remote_ccache_dir": null,
+        "remote_host": "210.28.133.13",
+        "remote_user": "root",
+        "remote_workspace": "/data/op_bench_workspaces/op-bench-pytorch__129138__linear_add_bias_autocast-b7af50937a4a",
+        "runtime_tier": "cpu_python_overlay",
+        "workspace_dir": "/workspace"
+      },
+      "fail_to_pass_passed": 0,
+      "fail_to_pass_total": 1,
+      "mode": "baseline",
+      "pass_to_pass_passed": 1,
+      "pass_to_pass_total": 1,
+      "status": "baseline_reproduced",
+      "task_id": "pytorch__129138__linear_add_bias_autocast"
+    }
+  ],
+  "extended": {
+    "codex_action_bridge": {
+      "pass_to_pass_kept_rate": 0.6666666666666666,
+      "patch_conciseness": 1.0,
+      "per_problem_dimension": {
+        "precision": {
+          "resolved": 6,
+          "resolved_rate": 0.6666666666666666,
+          "total": 9
+        }
+      },
+      "per_problem_type": {
+        "autocast-dtype-mismatch": {
+          "resolved": 3,
+          "resolved_rate": 1.0,
+          "total": 3
+        },
+        "decomposition-dtype-parity": {
+          "resolved": 0,
+          "resolved_rate": 0.0,
+          "total": 3
+        },
+        "dtype-accumulation-error": {
+          "resolved": 3,
+          "resolved_rate": 1.0,
+          "total": 3
+        }
+      },
+      "per_tier": {
+        "cpu_python_overlay": {
+          "resolved": 6,
+          "resolved_rate": 0.6666666666666666,
+          "total": 9
+        }
+      },
+      "regression_rate": 0.0,
+      "resolved": 6,
+      "resolved_rate": 0.6666666666666666,
+      "tier_weighted_score": 0.6666666666666666,
+      "total": 9
+    }
+  },
+  "total_records": 9
+}

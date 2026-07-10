@@ -1,0 +1,16 @@
+diff --git a/torch/masked/_ops.py b/torch/masked/_ops.py
+index db808c0..947df87 100644
+--- a/torch/masked/_ops.py
++++ b/torch/masked/_ops.py
+@@ -1386,6 +1386,11 @@ elements, have ``nan`` values.
+ {reduction_example}"""
+     if dtype is None:
+         dtype = input.dtype
++    if not (dtype.is_floating_point or dtype.is_complex):
++        raise ValueError(
++            "masked mean expects input or dtype to be floating point or complex "
++            f"(got {dtype})"
++        )
+     if input.layout == torch.strided:
+         if mask is None:
+             # TODO: compute count analytically

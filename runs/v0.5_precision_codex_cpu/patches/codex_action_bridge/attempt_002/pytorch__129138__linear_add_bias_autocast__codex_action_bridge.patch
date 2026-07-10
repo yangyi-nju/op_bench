@@ -1,0 +1,13 @@
+diff --git a/torch/_inductor/fx_passes/mkldnn_fusion.py b/torch/_inductor/fx_passes/mkldnn_fusion.py
+index 9d70269..1886096 100644
+--- a/torch/_inductor/fx_passes/mkldnn_fusion.py
++++ b/torch/_inductor/fx_passes/mkldnn_fusion.py
+@@ -801,6 +801,8 @@ if torch._C._has_mkldnn:
+             bias_meta = add_node.args[1].meta.get("val")
+             if weight_meta is None or bias_meta is None:
+                 return False
++            if bias_meta.dtype != weight_meta.dtype:
++                return False
+             return (
+                 linear_node.args[2] is None
+                 and bias_meta.dim() == 1

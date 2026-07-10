@@ -4,7 +4,7 @@ Language: English | [中文](README.zh-CN.md)
 
 OpBench is an operator-focused benchmark for evaluating coding agents on real framework issues. It follows the SWE-bench idea of repairing real repository snapshots, but treats the runtime environment as part of each task because operator bugs often depend on framework version, Python package layout, device availability, numerical behavior, and backend selection.
 
-v0.1 established the isolated replay/evaluation loop. v0.2 completed the platform pieces needed to scale the dataset: asset registries, formal admission evidence, dataset curation, and container/cache management. v0.3 expanded the dataset to 10 verified tasks across 5 PyTorch subsystems, added patch scope enforcement, public/hidden test separation, multi-file overlay, and 3-repeat stability evaluation (76.7% resolved with Codex CLI). v0.4 added two CUDA runtime tiers (`cuda_python_overlay`, `cuda_kernel_build`), a remote-GPU Docker executor over SSH, and `inplace_build` source loading. The current `pytorch_v0.4` slice contains 13 verified tasks and reached **84.6% resolved rate** with Codex CLI (33/39). Multi-agent comparison with Claude Code is deferred to v0.5.
+v0.1 established the isolated replay/evaluation loop. v0.2 completed the platform pieces needed to scale the dataset: asset registries, formal admission evidence, dataset curation, and container/cache management. v0.3 expanded the dataset to 10 verified tasks across 5 PyTorch subsystems and added 3-repeat stability evaluation. v0.4 added CUDA runtime tiers and a remote-GPU Docker executor; its 13-task Codex run reached **84.6% resolved** (33/39). v0.5 is being built dimension by dimension: the cumulative draft manifest currently contains 17 verified tasks, and the completed precision phase covers 6 tasks with **72.2% resolved** (13/18), eight-dimensional reporting, and P1-P5 breakdowns. Boundary and compatibility dimensions will be added before the final v0.5 full run.
 
 ## What The Current Code Contains
 
@@ -34,6 +34,8 @@ Development-only experiment adapters have been removed from the public v0.1 surf
 | `src/op_bench/` | Core implementation: task model, environment preparation, evaluator, actions, agent bridges, reporting. |
 | `scripts/` | CLI entry points for validation, environment preparation, source snapshots, replay, and experiments. |
 | `docs/` | Versioned design docs, experiment reports, developer guides, and historical records. |
+| `docs/v0.5/design.md` | v0.5 dimension taxonomy and extended evaluation metrics. |
+| `docs/v0.5/experiment_report.md` | v0.5 precision-phase 6-task, 18-attempt Codex evaluation. |
 | `docs/v0.4/design.md` | v0.4 CUDA tiers, remote GPU Docker executor over SSH, and `inplace_build` source loading. |
 | `docs/v0.4/experiment_report.md` | v0.4 13-task 3-repeat Codex evaluation: 84.6% resolved. |
 | `docs/v0.3/design.md` | v0.3 dataset expansion, multi-file overlay, public/hidden test split, and CUDA pilot design. |
@@ -65,7 +67,7 @@ Validate the current dataset:
 
 ```bash
 PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/validate_dataset.py \
-  datasets/pytorch_v0.4/dataset.json
+  datasets/pytorch_v0.5/dataset.json
 ```
 
 Run offline preflight (patches apply, test names resolve, no docker/GPU needed):
@@ -87,10 +89,10 @@ Run the current dataset gold-loop check:
 
 ```bash
 PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/run_experiment.py \
-  --dataset datasets/pytorch_v0.4/dataset.json \
+  --dataset datasets/pytorch_v0.5/dataset.json \
   --verified-only \
   --agent gold \
-  --output-dir runs/experiments/pytorch_v0.4_gold
+  --output-dir runs/experiments/pytorch_v0.5_gold
 ```
 
 Inspect registered assets:
@@ -158,23 +160,18 @@ PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/run_experiment.py \
 
 ## Current Dataset
 
-The primary dataset is [datasets/pytorch_v0.4](datasets/pytorch_v0.4/dataset.json) (13 verified tasks, Codex CLI 3-repeat resolved rate **84.6%**, 33/39).
+The cumulative [pytorch_v0.5 manifest](datasets/pytorch_v0.5/dataset.json) is a draft containing 17 verified tasks: all 13 v0.4 tasks plus four newly admitted precision tasks. Deprecated tasks #129154 and #144073 are excluded. The precision phase ran all six precision tasks, including two inherited v0.4 anchors:
 
-| Task | PR | Tier | Component | Rate |
-| --- | --- | --- | --- | --- |
-| `pytorch__168295__autograd_create_graph` | #168295 | cpu | torch.autograd | 3/3 |
-| `pytorch__150975__autograd_backward_inputs` | #150975 | cpu | torch.autograd | 3/3 |
-| `pytorch__161488__lbfgs_wolfe` | #161488 | cpu | torch.optim | 3/3 |
-| `pytorch__124385__load_state_dict_prefix` | #124385 | cpu | torch.nn.Module | 3/3 |
-| `pytorch__149693__lazylinear_init` | #149693 | cpu | torch.nn.LazyLinear | 3/3 |
-| `pytorch__147599__lazylinear_state_forward` | #147599 | cpu | torch.nn.LazyLinear | 3/3 |
-| `pytorch__160952__bilinear_lazy_check` | #160952 | cpu | torch.nn.Bilinear | 3/3 |
-| `pytorch__143455__set_submodule` | #143455 | cpu | torch.nn.Module | 3/3 |
-| `pytorch__162340__nn_arg_length` | #162340 | cpu | torch.nn.conv/utils | 0/3 |
-| `pytorch__163961__dataloader_subset` | #163961 | cpu | torch.utils.data | 0/3 |
-| `pytorch__132835__njt_sdpa_autocast` | #132835 | cuda_py | torch.nested._internal.sdpa | 3/3 |
-| `pytorch__132616__cuda_mem_get_info` | #132616 | cuda_py | torch.cuda.memory | 3/3 |
-| `pytorch__144009__softmax_ilpreduce_size` | #144009 | cuda_kernel | aten.native.cuda.softmax | 3/3 |
+| Task | PR | Subclass | Tier | Rate |
+| --- | ---: | :---: | --- | ---: |
+| `pytorch__140557__layer_norm_decomp_precision` | #140557 | P1 | cpu | 0/3 |
+| `pytorch__139999__masked_mean_bool_upcast` | #139999 | P2 | cpu | 3/3 |
+| `pytorch__129138__linear_add_bias_autocast` | #129138 | P3 | cpu | 3/3 |
+| `pytorch__132835__njt_sdpa_autocast` | #132835 | P3 | cuda_py | 1/3 |
+| `pytorch__144009__softmax_ilpreduce_size` | #144009 | P5 | cuda_kernel | 3/3 |
+| `pytorch__139372__histc_int8_cuda_bounds` | #139372 | P5 | cuda_kernel | 3/3 |
+
+Precision-phase result: **13/18 resolved (72.2%)**, patch conciseness 1.000, pass-to-pass kept rate 83.3%, regression rate 0%, and tier-weighted score 78.8%. P4 remains N/A because no P4 task has passed admission. See the [v0.5 precision report](docs/v0.5/experiment_report.md) for failure analysis and metric definitions.
 
 Tier codes: `cpu` = `cpu_python_overlay`, `cuda_py` = `cuda_python_overlay`, `cuda_kernel` = `cuda_kernel_build`.
 
@@ -199,7 +196,7 @@ For Docker tasks, preflight commands, setup commands, test commands, and action-
 
 ## Adding More Work
 
-Read [docs/v0.2/developer_guide.md](docs/v0.2/developer_guide.md), [docs/v0.3/design.md](docs/v0.3/design.md), and [docs/v0.4/design.md](docs/v0.4/design.md) for the current expansion workflow. The usual path is:
+Read [docs/v0.2/developer_guide.md](docs/v0.2/developer_guide.md), [docs/v0.4/design.md](docs/v0.4/design.md), and [docs/v0.5/design.md](docs/v0.5/design.md) for the current expansion workflow. The usual path is:
 
 1. Add or curate task bundles under `tasks/<framework>/`.
 2. Register reusable environment/source assets under `environments/registry.json` and `sources/registry.json`.
@@ -212,6 +209,8 @@ Read [docs/v0.2/developer_guide.md](docs/v0.2/developer_guide.md), [docs/v0.3/de
 ## References
 
 - [Docs index](docs/README.md)
+- [v0.5 design](docs/v0.5/design.md)
+- [v0.5 precision experiment report](docs/v0.5/experiment_report.md)
 - [v0.4 design](docs/v0.4/design.md)
 - [v0.4 experiment report](docs/v0.4/experiment_report.md)
 - [v0.3 design](docs/v0.3/design.md)

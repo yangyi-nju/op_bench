@@ -1,0 +1,17 @@
+diff --git a/torch/nested/_internal/sdpa.py b/torch/nested/_internal/sdpa.py
+index b8c0174..d234568 100644
+--- a/torch/nested/_internal/sdpa.py
++++ b/torch/nested/_internal/sdpa.py
+@@ -625,6 +625,12 @@ def jagged_scaled_dot_product_attention(
+     scale=None,
+     enable_gqa=False,
+ ):
++    if torch.is_autocast_enabled():
++        target_dtype = torch.get_autocast_gpu_dtype()
++        query = query.to(target_dtype)
++        key = key.to(target_dtype)
++        value = value.to(target_dtype)
++
+     _validate_sdpa_input(query, key, value, attn_mask, dropout_p, is_causal, scale)
+     # for mypy, ugh
+     assert (

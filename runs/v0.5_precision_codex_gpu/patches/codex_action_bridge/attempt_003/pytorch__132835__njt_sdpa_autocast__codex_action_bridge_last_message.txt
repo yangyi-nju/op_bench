@@ -1,0 +1,7 @@
+Implemented the nested-jagged SDPA autocast fix in `torch/nested/_internal/sdpa.py`.
+
+When autocast is enabled, Q/K/V are explicitly cast to the active device autocast dtype before SDPA backend selection.
+
+Verified with:
+
+`TestNestedTensorSubclassCUDA.test_sdpa_cuda_float16` — passed.

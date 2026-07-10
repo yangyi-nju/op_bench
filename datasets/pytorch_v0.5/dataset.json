@@ -1,0 +1,172 @@
+{
+  "dataset_id": "pytorch_v0.5",
+  "version": "v0.5",
+  "status": "draft",
+  "target_task_count": 17,
+  "policy": {
+    "backend": "mixed",
+    "preflight_required": true,
+    "admission_required": true,
+    "patch_scope_required": true,
+    "supports_remote_docker": true
+  },
+  "tasks": [
+    {
+      "task_id": "pytorch__149693__lazylinear_init",
+      "task_path": "../../tasks/pytorch/149693_lazylinear_init",
+      "admission_status": "verified",
+      "environment_status": "ready",
+      "source_status": "ready",
+      "replay_status": "verified",
+      "admission_evidence": "tasks/pytorch/149693_lazylinear_init/admission/evidence.json"
+    },
+    {
+      "task_id": "pytorch__147599__lazylinear_state_forward",
+      "task_path": "../../tasks/pytorch/147599_lazylinear_state_forward",
+      "admission_status": "verified",
+      "environment_status": "ready",
+      "source_status": "ready",
+      "replay_status": "verified",
+      "admission_evidence": "tasks/pytorch/147599_lazylinear_state_forward/admission/evidence.json"
+    },
+    {
+      "task_id": "pytorch__160952__bilinear_lazy_check",
+      "task_path": "../../tasks/pytorch/160952_bilinear_lazy_check",
+      "admission_status": "verified",
+      "environment_status": "ready",
+      "source_status": "ready",
+      "replay_status": "verified",
+      "admission_evidence": "tasks/pytorch/160952_bilinear_lazy_check/admission/evidence.json"
+    },
+    {
+      "task_id": "pytorch__162340__nn_arg_length",
+      "task_path": "../../tasks/pytorch/162340_nn_arg_length",
+      "admission_status": "verified",
+      "environment_status": "ready",
+      "source_status": "ready",
+      "replay_status": "verified",
+      "admission_evidence": "tasks/pytorch/162340_nn_arg_length/admission/evidence.json"
+    },
+    {
+      "task_id": "pytorch__163961__dataloader_subset",
+      "task_path": "../../tasks/pytorch/163961_dataloader_subset",
+      "admission_status": "verified",
+      "environment_status": "ready",
+      "source_status": "ready",
+      "replay_status": "verified",
+      "admission_evidence": "tasks/pytorch/163961_dataloader_subset/admission/evidence.json"
+    },
+    {
+      "task_id": "pytorch__168295__autograd_create_graph",
+      "task_path": "../../tasks/pytorch/168295_autograd_create_graph",
+      "admission_status": "verified",
+      "environment_status": "ready",
+      "source_status": "ready",
+      "replay_status": "verified",
+      "admission_evidence": "tasks/pytorch/168295_autograd_create_graph/admission/evidence.json"
+    },
+    {
+      "task_id": "pytorch__161488__lbfgs_wolfe",
+      "task_path": "../../tasks/pytorch/161488_lbfgs_wolfe",
+      "admission_status": "verified",
+      "environment_status": "ready",
+      "source_status": "ready",
+      "replay_status": "verified",
+      "admission_evidence": "tasks/pytorch/161488_lbfgs_wolfe/admission/evidence.json"
+    },
+    {
+      "task_id": "pytorch__150975__autograd_backward_inputs",
+      "task_path": "../../tasks/pytorch/150975_autograd_backward_inputs",
+      "admission_status": "verified",
+      "environment_status": "ready",
+      "source_status": "ready",
+      "replay_status": "verified",
+      "admission_evidence": "tasks/pytorch/150975_autograd_backward_inputs/admission/evidence.json"
+    },
+    {
+      "task_id": "pytorch__124385__load_state_dict_prefix",
+      "task_path": "../../tasks/pytorch/124385_load_state_dict_prefix",
+      "admission_status": "verified",
+      "environment_status": "ready",
+      "source_status": "ready",
+      "replay_status": "verified",
+      "admission_evidence": "tasks/pytorch/124385_load_state_dict_prefix/admission/evidence.json"
+    },
+    {
+      "task_id": "pytorch__143455__set_submodule",
+      "task_path": "../../tasks/pytorch/143455_set_submodule",
+      "admission_status": "verified",
+      "environment_status": "ready",
+      "source_status": "ready",
+      "replay_status": "verified",
+      "admission_evidence": "tasks/pytorch/143455_set_submodule/admission/evidence.json"
+    },
+    {
+      "task_id": "pytorch__132835__njt_sdpa_autocast",
+      "task_path": "../../tasks/pytorch/132835_njt_sdpa_autocast",
+      "admission_status": "verified",
+      "environment_status": "ready",
+      "source_status": "ready",
+      "replay_status": "verified",
+      "admission_evidence": "tasks/pytorch/132835_njt_sdpa_autocast/admission/evidence.json"
+    },
+    {
+      "task_id": "pytorch__132616__cuda_mem_get_info",
+      "task_path": "../../tasks/pytorch/132616_cuda_mem_get_info",
+      "admission_status": "verified",
+      "environment_status": "ready",
+      "source_status": "ready",
+      "replay_status": "verified",
+      "admission_evidence": "tasks/pytorch/132616_cuda_mem_get_info/admission/evidence.json"
+    },
+    {
+      "task_id": "pytorch__144009__softmax_ilpreduce_size",
+      "task_path": "../../tasks/pytorch/144009_softmax_ilpreduce_size",
+      "admission_status": "verified",
+      "environment_status": "ready",
+      "source_status": "ready",
+      "replay_status": "verified",
+      "admission_evidence": "tasks/pytorch/144009_softmax_ilpreduce_size/admission/evidence.json"
+    },
+    {
+      "task_id": "pytorch__140557__layer_norm_decomp_precision",
+      "task_path": "../../tasks/pytorch/140557_layer_norm_decomp_precision",
+      "admission_status": "verified",
+      "environment_status": "ready",
+      "source_status": "ready",
+      "replay_status": "verified",
+      "admission_evidence": "tasks/pytorch/140557_layer_norm_decomp_precision/admission/evidence.json"
+    },
+    {
+      "task_id": "pytorch__139999__masked_mean_bool_upcast",
+      "task_path": "../../tasks/pytorch/139999_masked_mean_bool_upcast",
+      "admission_status": "verified",
+      "environment_status": "ready",
+      "source_status": "ready",
+      "replay_status": "verified",
+      "admission_evidence": "tasks/pytorch/139999_masked_mean_bool_upcast/admission/evidence.json"
+    },
+    {
+      "task_id": "pytorch__129138__linear_add_bias_autocast",
+      "task_path": "../../tasks/pytorch/129138_linear_add_bias_autocast",
+      "admission_status": "verified",
+      "environment_status": "ready",
+      "source_status": "ready",
+      "replay_status": "verified",
+      "admission_evidence": "tasks/pytorch/129138_linear_add_bias_autocast/admission/evidence.json"
+    },
+    {
+      "task_id": "pytorch__139372__histc_int8_cuda_bounds",
+      "task_path": "../../tasks/pytorch/139372_histc_int8_cuda_bounds",
+      "admission_status": "verified",
+      "environment_status": "ready",
+      "source_status": "ready",
+      "replay_status": "verified",
+      "admission_evidence": "tasks/pytorch/139372_histc_int8_cuda_bounds/admission/evidence.json"
+    }
+  ],
+  "registries": {
+    "environments": "environments/registry.json",
+    "sources": "sources/registry.json"
+  }
+}

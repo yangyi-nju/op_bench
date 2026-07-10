@@ -1,0 +1,3 @@
+Implemented the scoped fix in `torch/masked/_ops.py`.
+
+`torch.masked.mean` now raises `ValueError` when its inferred or requested dtype is neither floating-point nor complex, while preserving explicit floating/complex upcasts.

@@ -1,0 +1,5 @@
+Implemented the fake implementation for `aten.native_layer_norm.default` in `torch/_refs/__init__.py`.
+
+It delegates to the existing `native_layer_norm` reference, preserving CPU low-precision mean/rstd dtype semantics under fake tensor dispatch.
+
+Verified with the provided BF16 repro: eager and fake outputs are all `torch.bfloat16`.

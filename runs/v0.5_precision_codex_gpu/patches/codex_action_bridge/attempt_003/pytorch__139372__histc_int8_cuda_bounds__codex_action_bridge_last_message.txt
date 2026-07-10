@@ -1,0 +1,4 @@
+Implemented the minimal CUDA fix in `SummaryOps.cu`:
+
+- `histc` bounds now use `at::acc_type<input_t, true>` rather than `input_t`, preventing int8/uint8 wrapping before `min < max` validation.
+- Verified with `TestReductionsCUDA.test_histc_cuda` (passes).

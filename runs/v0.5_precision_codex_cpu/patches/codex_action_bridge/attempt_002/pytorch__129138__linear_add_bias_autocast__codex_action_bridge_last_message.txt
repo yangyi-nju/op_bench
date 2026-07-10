@@ -1,0 +1,5 @@
+Implemented the targeted MKLDNN fusion guard in `is_linear_add_bias`.
+
+It now rejects fusion when the added bias dtype differs from the linear weight dtype, preventing fp32 bias folding into a bf16 autocast path.
+
+Validated with `py_compile`; diff is limited to the allowed source file.

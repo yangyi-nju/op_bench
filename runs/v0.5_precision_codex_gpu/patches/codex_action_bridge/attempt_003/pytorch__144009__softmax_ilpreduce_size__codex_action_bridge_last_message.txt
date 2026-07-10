@@ -1,0 +1,3 @@
+Implemented the two-line CUDA fix in `aten/src/ATen/native/cuda/SoftMax.cu`.
+
+Both affected tail-loop decrements now clamp to the remaining `size`, preventing underflow and invalid tail indexing.

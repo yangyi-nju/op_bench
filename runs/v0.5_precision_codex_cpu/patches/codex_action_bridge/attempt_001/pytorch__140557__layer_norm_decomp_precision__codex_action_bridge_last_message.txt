@@ -1,0 +1,5 @@
+Implemented the targeted fake implementation for `aten.native_layer_norm.default` in `torch/_refs/__init__.py`.
+
+It routes FakeTensor dispatch through the existing reference decomposition, preserving CPU bfloat16 return dtypes for output, mean, and rstd.
+
+Verified with a CPU FakeTensor bfloat16 probe: eager and fake outputs now all return `torch.bfloat16`.

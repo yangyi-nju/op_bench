@@ -1,0 +1,7 @@
+Implemented the NJT SDPA autocast fix in `torch/nested/_internal/sdpa.py`.
+
+Nested query, key, and value are now explicitly converted to CUDA’s active autocast dtype before input validation and backend dispatch.
+
+Verified existing CUDA coverage:
+
+`TestNestedTensorSubclassCUDA.test_sdpa_cuda_float16` — passed.

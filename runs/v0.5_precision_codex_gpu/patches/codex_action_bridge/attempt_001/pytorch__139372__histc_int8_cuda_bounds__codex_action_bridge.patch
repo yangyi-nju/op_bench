@@ -1,0 +1,15 @@
+diff --git a/aten/src/ATen/native/cuda/SummaryOps.cu b/aten/src/ATen/native/cuda/SummaryOps.cu
+index f9ceb9b..07983b4 100644
+--- a/aten/src/ATen/native/cuda/SummaryOps.cu
++++ b/aten/src/ATen/native/cuda/SummaryOps.cu
+@@ -320,8 +320,8 @@ Tensor _histc_cuda_template(
+       std::nullopt /* layout */,
+       DeviceType::CUDA,
+       std::nullopt /* pin_memory */);
+-  input_t minvalue = min;
+-  input_t maxvalue = max;
++  at::acc_type<input_t, /*is_cuda=*/true> minvalue = min;
++  at::acc_type<input_t, /*is_cuda=*/true> maxvalue = max;
+   if (min == max && self.numel() > 0) {
+     minvalue = *self.min().cpu().const_data_ptr<input_t>();
+     maxvalue = *self.max().cpu().const_data_ptr<input_t>();

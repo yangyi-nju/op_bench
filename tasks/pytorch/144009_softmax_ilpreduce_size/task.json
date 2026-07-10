@@ -7,7 +7,7 @@
   "admission": {
     "status": "verified",
     "evidence": "admission/evidence.json",
-    "verified_at": "2026-07-06T09:41:33Z"
+    "verified_at": "2026-07-10T12:34:50Z"
   },
   "patch_scope": {
     "allowed_paths": [
@@ -54,6 +54,10 @@
     "host": "gpu-a10",
     "source_loading": {
       "mode": "inplace_build",
+      "build_environment": {
+        "BUILD_TEST": "0",
+        "TORCH_CUDA_ARCH_LIST": "7.0"
+      },
       "sync_before_tests": true
     },
     "preflight_commands": [

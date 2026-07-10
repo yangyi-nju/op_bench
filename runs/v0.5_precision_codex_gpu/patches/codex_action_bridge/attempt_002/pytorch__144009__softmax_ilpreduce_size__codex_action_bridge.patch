@@ -1,0 +1,22 @@
+diff --git a/aten/src/ATen/native/cuda/SoftMax.cu b/aten/src/ATen/native/cuda/SoftMax.cu
+index 3b91ceb..5564c89 100644
+--- a/aten/src/ATen/native/cuda/SoftMax.cu
++++ b/aten/src/ATen/native/cuda/SoftMax.cu
+@@ -468,7 +468,7 @@ ilpReduce(index_t shift,
+     if (offset >= shift && offset < size) {
+       threadVal = r(threadVal, data[offset]);
+     }
+-    size -= blockDim.x;
++    size -= min(size, (index_t)blockDim.x);
+     data += blockDim.x;
+   }
+   index_t last = size % (ILP * blockDim.x);
+@@ -518,7 +518,7 @@ WriteFpropResultsVectorized(
+     if (offset >= shift && offset < size) {
+       output[offset] = epilogue(input[offset]);
+     }
+-    size -= blockDim.x;
++    size -= min(size, (int)blockDim.x);
+     input += blockDim.x;
+     output += blockDim.x;
+   }

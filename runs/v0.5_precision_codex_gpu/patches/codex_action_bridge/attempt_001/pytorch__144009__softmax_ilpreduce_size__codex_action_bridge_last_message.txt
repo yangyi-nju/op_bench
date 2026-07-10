@@ -1,0 +1,3 @@
+Fixed `SoftMax.cu` in the two affected forward paths.
+
+Both tail-loop decrements now clamp to the remaining `size`, preventing unsigned counter underflow and invalid accesses.

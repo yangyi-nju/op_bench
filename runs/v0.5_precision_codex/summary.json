@@ -1,0 +1,94 @@
+{
+  "baseline_count": 6,
+  "datasets": [
+    "datasets/pytorch_v0.5/dataset.json"
+  ],
+  "extended": {
+    "codex_action_bridge": {
+      "pass_to_pass_kept_rate": 0.8333333333333334,
+      "patch_conciseness": 1.0,
+      "per_problem_dimension": {
+        "precision": {
+          "resolved": 13,
+          "resolved_rate": 0.7222222222222222,
+          "total": 18
+        }
+      },
+      "per_problem_type": {
+        "autocast-dtype-mismatch": {
+          "resolved": 3,
+          "resolved_rate": 1.0,
+          "total": 3
+        },
+        "decomposition-dtype-parity": {
+          "resolved": 0,
+          "resolved_rate": 0.0,
+          "total": 3
+        },
+        "dtype-accumulation-error": {
+          "resolved": 3,
+          "resolved_rate": 1.0,
+          "total": 3
+        },
+        "dtype-precision": {
+          "resolved": 1,
+          "resolved_rate": 0.3333333333333333,
+          "total": 3
+        },
+        "integer-bounds-precision": {
+          "resolved": 3,
+          "resolved_rate": 1.0,
+          "total": 3
+        },
+        "kernel-index-underflow": {
+          "resolved": 3,
+          "resolved_rate": 1.0,
+          "total": 3
+        }
+      },
+      "per_tier": {
+        "cpu_python_overlay": {
+          "resolved": 6,
+          "resolved_rate": 0.6666666666666666,
+          "total": 9
+        },
+        "cuda_kernel_build": {
+          "resolved": 6,
+          "resolved_rate": 1.0,
+          "total": 6
+        },
+        "cuda_python_overlay": {
+          "resolved": 1,
+          "resolved_rate": 0.3333333333333333,
+          "total": 3
+        }
+      },
+      "regression_rate": 0.0,
+      "resolved": 13,
+      "resolved_rate": 0.7222222222222222,
+      "tier_weighted_score": 0.7878787878787878,
+      "total": 18
+    }
+  },
+  "input_dirs": [
+    "runs/v0.5_precision_codex_cpu",
+    "runs/v0.5_precision_codex_gpu"
+  ],
+  "legacy": {
+    "agents": {
+      "codex_action_bridge": {
+        "failure_reasons": {
+          "fail_to_pass_failed": 2,
+          "pass_to_pass_regressed": 3,
+          "resolved": 13
+        },
+        "median_runtime_sec": 107.56082937499741,
+        "resolved": 13,
+        "resolved_rate": 0.7222222222222222,
+        "total": 18
+      }
+    },
+    "total_records": 18
+  },
+  "total_records": 24
+}

@@ -1,0 +1,5 @@
+Implemented the targeted fix in `torch/masked/_ops.py`.
+
+`torch.masked.mean` now raises `ValueError` when its inferred or explicit dtype is neither floating-point nor complex, including boolean inputs.
+
+Validation: module compiles successfully. The supplied benchmark test path is not present in the runtime.

@@ -1,0 +1,18 @@
+diff --git a/torch/nested/_internal/sdpa.py b/torch/nested/_internal/sdpa.py
+index b8c0174..121ddab 100644
+--- a/torch/nested/_internal/sdpa.py
++++ b/torch/nested/_internal/sdpa.py
+@@ -632,6 +632,13 @@ def jagged_scaled_dot_product_attention(
+         and isinstance(key, NestedTensor)
+         and isinstance(value, NestedTensor)
+     )
++
++    if torch.is_autocast_enabled():
++        target_dtype = torch.get_autocast_dtype("cuda")
++        query = query.to(target_dtype)
++        key = key.to(target_dtype)
++        value = value.to(target_dtype)
++
+     from torch.nested._internal.nested_tensor import nested_view_from_values_offsets
+ 
+     # Special path for non-ragged sequence length (e.g. for SAM where we have a ragged

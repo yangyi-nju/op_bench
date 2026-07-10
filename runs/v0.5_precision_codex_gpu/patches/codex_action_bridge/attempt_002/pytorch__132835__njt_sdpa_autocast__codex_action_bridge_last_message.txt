@@ -1,0 +1,5 @@
+Implemented the nested SDPA CUDA-autocast fix in `torch/nested/_internal/sdpa.py`.
+
+It now explicitly casts nested query, key, and value tensors to the active CUDA autocast dtype before backend selection.
+
+The existing CUDA test name could not be resolved; a standalone probe used the prebuilt runtime and therefore could not load the patched source.

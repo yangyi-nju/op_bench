@@ -5,7 +5,7 @@
     "verified": true
   },
   "baseline": {
-    "duration_sec": 5383.071923875001,
+    "duration_sec": 1945.559198541916,
     "fail_to_pass_passed": 0,
     "fail_to_pass_total": 1,
     "mode": "baseline",
@@ -14,7 +14,7 @@
     "status": "baseline_reproduced",
     "task_id": "pytorch__144009__softmax_ilpreduce_size"
   },
-  "created_at": "2026-07-06T06:40:50Z",
+  "created_at": "2026-07-10T12:34:50Z",
   "environment": {
     "backend": "remote_docker",
     "digest_kind": null,
@@ -24,9 +24,9 @@
     "platform": null,
     "runtime_tier": "cuda_kernel_build"
   },
-  "evidence_id": "pytorch__144009__softmax_ilpreduce_size:61bb36cfe721:2026-07-06T06:40:50Z",
+  "evidence_id": "pytorch__144009__softmax_ilpreduce_size:758897b403fe:2026-07-10T12:34:50Z",
   "gold": {
-    "duration_sec": 5404.56472825,
+    "duration_sec": 524.9117929579224,
     "fail_to_pass_passed": 1,
     "fail_to_pass_total": 1,
     "mode": "gold",
@@ -44,6 +44,6 @@
     "snapshot_method": null
   },
   "task_id": "pytorch__144009__softmax_ilpreduce_size",
-  "task_manifest_hash": "sha256:9eec76fadaa4fcaacc820e4faa9ddcadb64d777e906980119ee1d6a4c63b5d7a",
+  "task_manifest_hash": "sha256:758897b403fe35c20bc2538a34f0dd44b4942bbc3047cfa4303bc21774a08e6c",
   "task_manifest_hash_kind": "replay_spec_v1"
 }
