@@ -78,10 +78,10 @@
   "evaluation": {
     "setup_commands": [],
     "fail_to_pass": [
-      "TestReductionsCUDA.test_histc_min_max_corner_cases_cuda_int8"
+      "TestReductionsCUDA.test_histc_int8_bounds_overflow_cuda_int8"
     ],
     "pass_to_pass": [
-      "TestReductionsCUDA.test_histc_lowp_cuda_float16"
+      "TestReductionsCUDA.test_histc_cuda"
     ],
     "test_command": "{python} test/test_reductions.py {test}",
     "timeout_sec": 1800,
@@ -98,6 +98,6 @@
     "estimated_runtime_min": 90,
     "layer": "A",
     "admission_status": "draft",
-    "notes": "kernel_build tier. Gold patch is 6 source lines (acc_type widening) + 5 lines in common_methods_invocations adding uint8 to dtypesIfCUDA."
+    "notes": "kernel_build tier. Gold: 6 lines widening bounds_t to at::acc_type<input_t,true> in SummaryOps.cu, plus adding uint8 to dtypesIfCUDA in common_methods_invocations. Hidden test: test_histc_int8_bounds_overflow — @onlyCUDA + @dtypes(int8), runtime name test_histc_int8_bounds_overflow_cuda_int8 (avoiding the earlier _cuda_cuda_int8 collision). pass_to_pass: TestReductionsCUDA.test_histc_cuda (plain test_histc(self, device), no decorators)."
   }
 }

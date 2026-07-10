@@ -1,34 +1,21 @@
 diff --git a/test/test_reductions.py b/test/test_reductions.py
-index 8a1f5fd8e8e44..a2bbec1bd6012 100644
 --- a/test/test_reductions.py
 +++ b/test/test_reductions.py
-@@ -3117,6 +3117,30 @@ def test_histc_lowp(self, device, dtype):
+@@ -3117,6 +3117,18 @@
              actual)
          self.assertEqual(actual.dtype, dtype)
  
-+    @dtypes(torch.uint8, torch.int8, torch.int, torch.long, torch.float, torch.double)
-+    def test_histc_min_max_errors(self, device, dtype):
-+        with self.assertRaisesRegex(RuntimeError, "max must be larger than min"):
-+            torch.histc(torch.tensor([1., 2., 3.], dtype=dtype, device=device), bins=4, min=5, max=1)
-+
-+    @dtypes(torch.float, torch.double)
-+    def test_histc_min_max_corner_cases(self, device, dtype):
-+        actual = torch.histc(
-+            torch.tensor([1., 2, 1], dtype=dtype, device=device),
-+            bins=4, min=5, max=5)
-+        self.assertEqual(
-+            torch.tensor([2, 0, 0, 1], dtype=dtype, device=device),
-+            actual)
-+
 +    @onlyCUDA
-+    @dtypes(torch.uint8, torch.int8, torch.int, torch.long)
-+    def test_histc_min_max_corner_cases_cuda(self, device, dtype):
-+        actual = torch.histc(
-+            torch.tensor([1., 2, 1], dtype=dtype, device=device),
-+            bins=4, min=5, max=5)
-+        self.assertEqual(
-+            torch.tensor([2, 0, 0, 1], dtype=dtype, device=device),
-+            actual)
++    @dtypes(torch.int8)
++    def test_histc_int8_bounds_overflow(self, device, dtype):
++        # Regression test for #139360: on base commit, histc CUDA stores
++        # min/max in input_t (int8), so min=5, max=1 is silently wrapped
++        # into int8 range and the min>max check does not fire. On gold,
++        # bounds use the wider acc_type and the RuntimeError is raised.
++        with self.assertRaisesRegex(RuntimeError, "max must be larger than min"):
++            torch.histc(
++                torch.tensor([1, 2, 3], dtype=dtype, device=device),
++                bins=4, min=5, max=1)
 +
      """
      Runs torch.histogram and numpy.histogram on the specified input parameters

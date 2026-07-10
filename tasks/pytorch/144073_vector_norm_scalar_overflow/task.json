@@ -4,7 +4,7 @@
   "environment_ref": "pytorch-cpu-torch2.6.0-py311",
   "runtime_tier": "cpu_python_overlay",
   "source_ref": "pytorch-06e9dea-python-overlay",
-  "admission": {"status": "draft"},
+  "admission": {"status": "deprecated"},
   "patch_scope": {
     "allowed_paths": ["torch/_refs/linalg/__init__.py"],
     "mode": "enforced"
@@ -94,6 +94,7 @@
     "deterministic": true,
     "estimated_runtime_min": 15,
     "layer": "A",
-    "admission_status": "draft"
+    "admission_status": "deprecated",
+    "notes": "DEPRECATED for v0.5. base commit 06e9dea (2025-04) is later than torch 2.6 (2024-12). Overlaying its torch/_refs/linalg/__init__.py onto the 2.6 wheel triggers assertion on out_wrapper's tuple[Tensor, ...] type annotation which older _decomp helpers don't accept. Fix requires matched-version wheel or source build. Reconsider in v0.6."
   }
 }

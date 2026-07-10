@@ -74,14 +74,14 @@
       "Modify only torch/masked/_ops.py."
     ],
     "allowed_test_commands": [
-      "{python} test/inductor/test_cpu_repro.py {test}"
+      "{python} test/test_op_bench_masked_mean_bool.py {test}"
     ]
   },
   "evaluation": {
     "setup_commands": [],
-    "fail_to_pass": ["CPUReproTests.test_masked_mean_bool_raises"],
-    "pass_to_pass": ["CPUReproTests.test_conv_stride_constraints"],
-    "test_command": "{python} test/inductor/test_cpu_repro.py {test}",
+    "fail_to_pass": ["TestMaskedMeanBoolRaises.test_masked_mean_bool_raises"],
+    "pass_to_pass": ["TestMaskedMeanBoolRaises.test_masked_mean_float_still_works"],
+    "test_command": "{python} test/test_op_bench_masked_mean_bool.py {test}",
     "timeout_sec": 900
   },
   "artifacts": {

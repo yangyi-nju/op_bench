@@ -4,7 +4,7 @@
   "environment_ref": "pytorch-cuda-torch2.6.0-py311-cu124",
   "runtime_tier": "cuda_python_overlay",
   "source_ref": "pytorch-ff89ebc-cuda-overlay",
-  "admission": {"status": "draft"},
+  "admission": {"status": "deprecated"},
   "patch_scope": {
     "allowed_paths": ["torch/_refs/__init__.py"],
     "mode": "enforced"
@@ -90,7 +90,7 @@
     "deterministic": false,
     "estimated_runtime_min": 15,
     "layer": "A",
-    "admission_status": "draft",
-    "notes": "deterministic=false because exponential_ uses CUDA RNG; but isinf check is deterministic."
+    "admission_status": "deprecated",
+    "notes": "DEPRECATED for v0.5. base commit ff89ebc (2024-06) overlays torch/_refs/__init__.py onto torch 2.6 wheel, but the wheel's common_methods_invocations.py still expects torch._refs.expand_copy which was added later. Import fails before exponential() is exercised. Fix requires either (a) matched-version wheel image, or (b) full source build — both are scope changes beyond v0.5 python_overlay. Reconsider in v0.6."
   }
 }

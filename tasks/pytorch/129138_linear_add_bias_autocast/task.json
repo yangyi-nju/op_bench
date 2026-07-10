@@ -74,14 +74,14 @@
       "Modify only torch/_inductor/fx_passes/mkldnn_fusion.py."
     ],
     "allowed_test_commands": [
-      "{python} test/inductor/test_mkldnn_pattern_matcher.py {test}"
+      "{python} test/test_op_bench_linear_add_bias_autocast.py {test}"
     ]
   },
   "evaluation": {
     "setup_commands": [],
-    "fail_to_pass": ["TestPatternMatcher.test_linear_add_bias"],
-    "pass_to_pass": ["TestPatternMatcher.test_linear_unary"],
-    "test_command": "{python} test/inductor/test_mkldnn_pattern_matcher.py {test}",
+    "fail_to_pass": ["TestLinearAddBiasAutocast.test_autocast_bf16_fp32_bias_matches_eager"],
+    "pass_to_pass": ["TestLinearAddBiasAutocast.test_no_autocast_matches_eager"],
+    "test_command": "{python} test/test_op_bench_linear_add_bias_autocast.py {test}",
     "timeout_sec": 900
   },
   "artifacts": {

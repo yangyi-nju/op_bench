@@ -1,16 +1,29 @@
-diff --git a/test/inductor/test_cpu_repro.py b/test/inductor/test_cpu_repro.py
---- a/test/inductor/test_cpu_repro.py
-+++ b/test/inductor/test_cpu_repro.py
-@@ -4879,4 +4879,12 @@
-                 exactly=True,
-             ).run(code)
- 
-+    @requires_vectorization
+diff --git a/test/test_op_bench_masked_mean_bool.py b/test/test_op_bench_masked_mean_bool.py
+new file mode 100644
+--- /dev/null
++++ b/test/test_op_bench_masked_mean_bool.py
+@@ -0,0 +1,24 @@
++# OpBench regression test for pytorch/pytorch#139999.
++# torch.masked.mean on a bool input silently accumulates in bool dtype,
++# clamping any count >= 2 to True (1). Gold fix rejects non-floating/complex
++# dtypes with ValueError.
++import unittest
++
++import torch
++
++
++class TestMaskedMeanBoolRaises(unittest.TestCase):
 +    def test_masked_mean_bool_raises(self):
-+        """torch.masked.mean on bool must raise ValueError, not silently produce wrong output."""
-+        x = torch.zeros(4, dtype=torch.bool)
++        x = torch.tensor([True, True, True, True])
 +        with self.assertRaisesRegex(ValueError, "mean"):
 +            torch.masked.mean(x, 0)
 +
++    def test_masked_mean_float_still_works(self):
++        # pass_to_pass: normal float mean must keep working after the fix.
++        x = torch.tensor([1.0, 2.0, 3.0, 4.0])
++        result = torch.masked.mean(x, 0)
++        self.assertEqual(result.item(), 2.5)
 +
-     @requires_vectorization
++
++if __name__ == "__main__":
++    unittest.main()
