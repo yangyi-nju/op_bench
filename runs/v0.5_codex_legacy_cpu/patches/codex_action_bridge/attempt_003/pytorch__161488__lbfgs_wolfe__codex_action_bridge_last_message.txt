@@ -1,0 +1,5 @@
+Implemented the LBFGS strong-Wolfe evaluation limit fix in `torch/optim/lbfgs.py`.
+
+It now passes the step’s remaining evaluation budget to `_strong_wolfe`.
+
+Validation: `python test/test_optim.py -k LBFGS` — 45 passed, 6 skipped.

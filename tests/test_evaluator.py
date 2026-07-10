@@ -125,6 +125,26 @@ class EvaluatorTests(unittest.TestCase):
 
         self.assertTrue(Evaluator()._has_runner_error([result]))
 
+    def test_failed_fix_is_not_mislabeled_as_regression(self) -> None:
+        status = Evaluator()._classify(
+            mode="agent:codex",
+            fail_total=1,
+            fail_passed=0,
+            pass_total=1,
+            pass_passed=0,
+        )
+        self.assertEqual(status, "fail_to_pass_failed")
+
+    def test_regression_requires_the_fix_to_pass(self) -> None:
+        status = Evaluator()._classify(
+            mode="agent:codex",
+            fail_total=1,
+            fail_passed=1,
+            pass_total=1,
+            pass_passed=0,
+        )
+        self.assertEqual(status, "pass_to_pass_regressed")
+
     def test_baseline_reproduces_failure(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             result = Evaluator().evaluate_baseline(TaskManifest.load(self._fixable_task(Path(tmp)) / "task.json"))

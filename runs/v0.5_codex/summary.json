@@ -1,0 +1,188 @@
+{
+  "baseline_count": 17,
+  "datasets": [
+    "datasets/pytorch_v0.5/dataset.json"
+  ],
+  "extended": {
+    "codex_action_bridge": {
+      "fail_to_pass_only_rate": 0.7254901960784313,
+      "pass_to_pass_kept_rate": 0.9411764705882353,
+      "patch_conciseness": 1.0,
+      "per_problem_dimension": {
+        "precision": {
+          "resolved": 13,
+          "resolved_rate": 0.7222222222222222,
+          "total": 18
+        },
+        "unclassified": {
+          "resolved": 24,
+          "resolved_rate": 0.7272727272727273,
+          "total": 33
+        }
+      },
+      "per_problem_subclass": {
+        "P1": {
+          "resolved": 3,
+          "resolved_rate": 1.0,
+          "total": 3
+        },
+        "P2": {
+          "resolved": 0,
+          "resolved_rate": 0.0,
+          "total": 3
+        },
+        "P3": {
+          "resolved": 4,
+          "resolved_rate": 0.6666666666666666,
+          "total": 6
+        },
+        "P5": {
+          "resolved": 6,
+          "resolved_rate": 1.0,
+          "total": 6
+        },
+        "unclassified": {
+          "resolved": 24,
+          "resolved_rate": 0.7272727272727273,
+          "total": 33
+        }
+      },
+      "per_problem_type": {
+        "autocast-dtype-mismatch": {
+          "resolved": 3,
+          "resolved_rate": 1.0,
+          "total": 3
+        },
+        "autograd-state-management": {
+          "resolved": 3,
+          "resolved_rate": 1.0,
+          "total": 3
+        },
+        "decomposition-dtype-parity": {
+          "resolved": 0,
+          "resolved_rate": 0.0,
+          "total": 3
+        },
+        "dispatch-logic": {
+          "resolved": 0,
+          "resolved_rate": 0.0,
+          "total": 3
+        },
+        "dtype-accumulation-error": {
+          "resolved": 3,
+          "resolved_rate": 1.0,
+          "total": 3
+        },
+        "dtype-precision": {
+          "resolved": 1,
+          "resolved_rate": 0.3333333333333333,
+          "total": 3
+        },
+        "initialization-semantics": {
+          "resolved": 3,
+          "resolved_rate": 1.0,
+          "total": 3
+        },
+        "integer-bounds-precision": {
+          "resolved": 3,
+          "resolved_rate": 1.0,
+          "total": 3
+        },
+        "kernel-index-underflow": {
+          "resolved": 3,
+          "resolved_rate": 1.0,
+          "total": 3
+        },
+        "lazy-module-initialization": {
+          "resolved": 3,
+          "resolved_rate": 1.0,
+          "total": 3
+        },
+        "lazy-module-state-inference": {
+          "resolved": 3,
+          "resolved_rate": 1.0,
+          "total": 3
+        },
+        "module-state-management": {
+          "resolved": 0,
+          "resolved_rate": 0.0,
+          "total": 3
+        },
+        "optimizer-control-flow": {
+          "resolved": 3,
+          "resolved_rate": 1.0,
+          "total": 3
+        },
+        "parameter-validation": {
+          "resolved": 6,
+          "resolved_rate": 0.6666666666666666,
+          "total": 9
+        },
+        "serialization-state-dict": {
+          "resolved": 3,
+          "resolved_rate": 1.0,
+          "total": 3
+        }
+      },
+      "per_tier": {
+        "cpu_python_overlay": {
+          "resolved": 27,
+          "resolved_rate": 0.6923076923076923,
+          "total": 39
+        },
+        "cuda_kernel_build": {
+          "resolved": 6,
+          "resolved_rate": 1.0,
+          "total": 6
+        },
+        "cuda_python_overlay": {
+          "resolved": 4,
+          "resolved_rate": 0.6666666666666666,
+          "total": 6
+        }
+      },
+      "regression_rate": 0.0,
+      "resolved": 37,
+      "resolved_rate": 0.7254901960784313,
+      "tier_weighted_score": 0.7681159420289855,
+      "total": 51
+    }
+  },
+  "input_dirs": [
+    "runs/v0.5_precision_codex_cpu",
+    "runs/v0.5_precision_codex_gpu",
+    "runs/v0.5_codex_legacy_cpu",
+    "runs/v0.5_codex_legacy_cuda"
+  ],
+  "integrity": {
+    "agents": [
+      "codex_action_bridge"
+    ],
+    "complete": true,
+    "expected_attempt_count": 51,
+    "expected_repeat": 3,
+    "expected_task_count": 17,
+    "invalid_baselines": [],
+    "missing_attempts": [],
+    "missing_baselines": [],
+    "observed_attempt_count": 51,
+    "transient_attempts": [],
+    "unexpected_attempts": []
+  },
+  "legacy": {
+    "agents": {
+      "codex_action_bridge": {
+        "failure_reasons": {
+          "fail_to_pass_failed": 14,
+          "resolved": 37
+        },
+        "median_runtime_sec": 101.04070870904252,
+        "resolved": 37,
+        "resolved_rate": 0.7254901960784313,
+        "total": 51
+      }
+    },
+    "total_records": 51
+  },
+  "total_records": 68
+}

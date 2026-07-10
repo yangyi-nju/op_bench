@@ -1,0 +1,3 @@
+Fixed `Subset.__getitems__` to honor overridden `__getitem__` methods in `Subset` subclasses.
+
+Verified with `TestDatasetRandomSplit.test_slicing_of_subset_of_dataset` (passes).

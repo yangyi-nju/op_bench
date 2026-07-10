@@ -1,0 +1,4 @@
+Fixed unused, materialized gradients to respect `create_graph`.
+
+- Changed zero-gradient creation to `requires_grad=create_graph`.
+- Verified with `TestAutograd.test_grad_materialize_grads` (passes).

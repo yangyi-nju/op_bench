@@ -1,0 +1,5 @@
+Implemented the focused fix in `torch/nn/modules/linear.py`.
+
+`Bilinear` now defers its `in1_features <= 0` validation from `__init__` to `reset_parameters()`, enabling lazy subclasses to construct with unknown dimensions while retaining the normal validation before division-based initialization.
+
+The provided benchmark test file is not present in this workspace, so no visible test could be run.

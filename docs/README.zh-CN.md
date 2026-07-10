@@ -6,7 +6,7 @@
 
 建议按以下顺序阅读：
 
-1. [v0.5 precision 实验报告](v0.5/experiment_report.md)：17-task 累计 draft manifest，以及 6-task、18-attempt precision 阶段 8 维结果。
+1. [v0.5 实验报告](v0.5/experiment_report.md)：verified 17-task 数据集、51-attempt 全量结果、precision 拆解和 8 维指标。
 2. [v0.5 设计方案](v0.5/design.md)：问题维度分类、precision 子类、候选策略和扩展指标。
 3. [v0.5 候选检索](v0.5/candidate_search.md)：兼容 ghstack 的 PyTorch PR 检索和 precision 筛选规则。
 4. [v0.5 远程 agent 配置](v0.5/setup_remote_agent.md)：远程镜像、主机配置和 admission 执行方法。

@@ -25,6 +25,11 @@ class RunStateTests(unittest.TestCase):
         s2 = RunState.build(["a", "b", "c"], ["codex"], 3)
         self.assertNotEqual(s1.dataset_signature, s2.dataset_signature)
 
+    def test_signature_changes_when_task_content_changes(self) -> None:
+        s1 = RunState.build(["a"], ["codex"], 3, task_signatures=["sha256:one"])
+        s2 = RunState.build(["a"], ["codex"], 3, task_signatures=["sha256:two"])
+        self.assertNotEqual(s1.dataset_signature, s2.dataset_signature)
+
     def test_save_and_load_roundtrip(self) -> None:
         state = RunState.build(["a", "b"], ["codex"], 3)
         with tempfile.TemporaryDirectory() as tmp:
@@ -106,6 +111,58 @@ class ResultsStoreTests(unittest.TestCase):
             # No 'attempt' field — shouldn't be counted as a resumable agent record.
             store.append_result({"task_id": "t1", "agent": "codex", "status": "resolved"})
             self.assertEqual(store.completed_agent_keys(), set())
+
+    def test_transient_attempt_is_retried_and_latest_result_is_scored(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = ResultsStore(Path(tmp))
+            store.append_result({
+                "task_id": "t1", "agent": "codex", "attempt": 1,
+                "status": "environment_unavailable",
+            })
+            self.assertEqual(store.completed_agent_keys(), set())
+
+            store.append_result({
+                "task_id": "t1", "agent": "codex", "attempt": 1,
+                "status": "resolved",
+            })
+            self.assertEqual(store.completed_agent_keys(), {("t1", "codex", 1)})
+            results = store.load_all_results()
+            self.assertEqual(len(results), 1)
+            self.assertEqual(results[0]["status"], "resolved")
+
+    def test_timeout_and_runner_error_are_terminal_attempt_results(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = ResultsStore(Path(tmp))
+            store.append_result({
+                "task_id": "t1", "agent": "codex", "attempt": 1,
+                "status": "timeout",
+            })
+            store.append_result({
+                "task_id": "t1", "agent": "codex", "attempt": 2,
+                "status": "runner_error",
+            })
+
+            self.assertEqual(
+                store.completed_agent_keys(),
+                {("t1", "codex", 1), ("t1", "codex", 2)},
+            )
+
+    def test_transient_baseline_is_not_reused(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = ResultsStore(Path(tmp))
+            store.append_baseline({
+                "task_id": "t1", "agent": "baseline",
+                "status": "environment_unavailable",
+            })
+            self.assertEqual(store.completed_baseline_task_ids(), {})
+
+            store.append_baseline({
+                "task_id": "t1", "agent": "baseline",
+                "status": "baseline_reproduced",
+            })
+            baselines = store.completed_baseline_task_ids()
+            self.assertEqual(baselines["t1"]["status"], "baseline_reproduced")
+            self.assertEqual(len(store.load_all_baselines()), 1)
 
     def test_load_all_results(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

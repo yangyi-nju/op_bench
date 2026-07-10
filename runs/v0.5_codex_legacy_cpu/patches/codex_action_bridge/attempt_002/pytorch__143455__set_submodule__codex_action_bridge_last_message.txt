@@ -1,0 +1,1 @@
+Updated `set_submodule` to split the target with `rpartition`, explicitly treating undelimited targets as direct children of the root module.

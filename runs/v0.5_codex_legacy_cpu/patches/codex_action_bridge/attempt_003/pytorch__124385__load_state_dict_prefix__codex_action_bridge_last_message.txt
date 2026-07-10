@@ -1,0 +1,8 @@
+Fixed strict `load_state_dict` validation in `torch/nn/modules/module.py`.
+
+Nested suffixes are now allowed only beneath child modules; keys like `weight.bad` are correctly reported as unexpected.
+
+Verified existing coverage:
+
+- `TestLoadStateDict.test_load_state_dict_swap_False`
+- `TestLoadStateDict.test_load_state_dict_swap_True`

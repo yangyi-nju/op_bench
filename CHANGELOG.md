@@ -4,36 +4,40 @@ This file records user-visible OpBench version milestones. Detailed design,
 implementation, and experiment evidence remain in the versioned documents
 under `docs/`.
 
-## v0.5 Precision Phase - Completed
+## v0.5 - Completed
 
-Precision-phase development completed on 2026-07-11. The v0.5 release remains
-open for additional problem dimensions; the cumulative manifest is intentionally
-marked `draft` until those dimensions are admitted and the final full run is done.
+Development and the full experiment completed on 2026-07-11. v0.5 establishes
+the first problem-dimension slice (numerical precision) and freezes a verified
+17-task cumulative dataset. Boundary and compatibility are separate future
+versions, not blockers for this release.
 
 Implemented:
 
 - Added the precision taxonomy (`problem_dimension=precision`, subclasses P1-P5) and ghstack-aware PyTorch candidate screening workflow.
 - Added extended experiment reporting: resolved rate, patch conciseness, pass-to-pass kept rate, strict resolved rate, regression rate, tier-weighted score, per-problem breakdown, and median runtime.
+- Added `datasets/pytorch_v0.5_precision/dataset.json` as a reusable 6-task precision slice; P4 remains an explicit N/A coverage gap.
 - Added persistent remote ccache reuse, replay-spec evidence hashes, per-source-load build environments, and one source load per evaluation phase.
 - Added the `pytorch-cpu-compile` environment for CPU Inductor/`torch.compile` tasks.
-- Corrected the basic CPU image ID declaration and re-admitted affected precision tasks.
+- Unified all official task replay on Linux `remote_docker`; re-admitted the 10 inherited CPU tasks under that policy.
 - Optimized CUDA kernel builds with `BUILD_TEST=0` and `TORCH_CUDA_ARCH_LIST=7.0`; the warm incremental compile dropped from tens of minutes to roughly 3 minutes.
+- Made resume task-content-aware, excluded explicit environment failures from completed attempt keys, retained append-only audit rows, and deduplicated retries for scoring.
+- Added bounded rsync retry (including mutable Git pack exit 23), incremental summaries, strict F2P/P2P status classification, and aggregate completeness enforcement.
 
-v0.5 cumulative dataset (`datasets/pytorch_v0.5/dataset.json`): **17 verified tasks** in a draft manifest (13 inherited from v0.4 plus #140557, #139999, #129138, and #139372). Deprecated #129154 and #144073 are excluded.
+v0.5 cumulative dataset (`datasets/pytorch_v0.5/dataset.json`): **17 verified tasks** (13 inherited from v0.4 plus #140557, #139999, #129138, and #139372). Deprecated #129154 and #144073 are excluded.
 
-Precision-phase experiment result (Codex CLI 0.144.0-alpha.4, 6 tasks x 3 repeats):
+Full experiment result (Codex CLI 0.144.0-alpha.4, 17 tasks x 3 repeats):
 
-- **13/18 = 72.2% resolved**; tier-weighted score 78.8%.
-- Patch conciseness 1.000; pass-to-pass kept rate 83.3%; strict regression rate 0%.
-- P1 0/3, P2 3/3, P3 4/6, P4 N/A, P5 6/6.
-- CPU overlay 6/9, CUDA overlay 1/3, CUDA kernel build 6/6.
+- **37/51 = 72.5% resolved**; tier-weighted score 76.8%.
+- Patch conciseness 1.000; pass-to-pass kept rate 94.1%; strict regression rate 0%.
+- CPU overlay 27/39, CUDA overlay 4/6, CUDA kernel build 6/6.
+- Precision slice: **13/18 = 72.2%**; P1 3/3, P2 0/3, P3 4/6, P4 N/A, P5 6/6.
+- Aggregate integrity: 17/17 baselines and 51/51 logical attempts, with zero logical environment transient.
 
-Deferred before final v0.5 completion:
+Deferred to later versions:
 
-- Add boundary and compatibility dimensions, then run the frozen cumulative dataset end to end.
 - Admit a real P4 numerical-instability task; P4 remains N/A rather than being filled with a non-matching task.
-- #129154 and #144073 require a matched wheel or source-build environment and remain candidates for a later dataset revision.
-- Align the evaluator's broad `pass_to_pass_regressed` status label with the strict regression metric and add bounded retry for transient remote rsync failures.
+- v0.6 adds boundary tasks; v0.7 adds device/API compatibility tasks.
+- #129154 and #144073 require a matched wheel or source-build environment and remain v0.6 backlog candidates.
 
 Documents:
 

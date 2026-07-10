@@ -1,0 +1,7 @@
+Implemented the Subset dispatch fix in `torch/utils/data/dataset.py`.
+
+Inherited `__getitems__` now calls an overridden subclass `__getitem__`, while standard `Subset` instances retain the optimized batch path.
+
+Verified with:
+
+`TestDatasetRandomSplit` — 9 tests passed.

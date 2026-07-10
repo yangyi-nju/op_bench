@@ -1,0 +1,13 @@
+diff --git a/torch/cuda/memory.py b/torch/cuda/memory.py
+index 236a7bc..d58d5d9 100644
+--- a/torch/cuda/memory.py
++++ b/torch/cuda/memory.py
+@@ -694,7 +694,7 @@ def mem_get_info(device: Union[Device, int] = None) -> Tuple[int, int]:
+     """
+     if device is None:
+         device = torch.cuda.current_device()
+-    device = _get_device_index(device)
++    device = _get_device_index(device, optional=True)
+     return torch.cuda.cudart().cudaMemGetInfo(device)
+ 
+ 

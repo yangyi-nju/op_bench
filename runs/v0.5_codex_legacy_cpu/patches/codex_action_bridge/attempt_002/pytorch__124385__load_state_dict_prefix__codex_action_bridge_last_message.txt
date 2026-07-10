@@ -1,0 +1,7 @@
+Fixed strict state-dict validation in `torch/nn/modules/module.py`.
+
+Dotted suffixes now require the first component to be a child module, so corrupt keys like `weight.extra` are reported as unexpected instead of silently accepted.
+
+Validated with:
+
+`TestLoadStateDict.test_load_state_dict_swap_False` — passed.

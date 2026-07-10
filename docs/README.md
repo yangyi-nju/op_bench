@@ -6,7 +6,7 @@ Documents are archived by version. The docs root keeps only indexes; new version
 
 Use these documents in this order:
 
-1. [v0.5 precision experiment report](v0.5/experiment_report.md): 17-task cumulative draft manifest and 6-task, 18-attempt precision-phase results with eight-dimensional metrics.
+1. [v0.5 experiment report](v0.5/experiment_report.md): verified 17-task dataset, 51-attempt full results, precision breakdown, and eight-dimensional metrics.
 2. [v0.5 design](v0.5/design.md): problem-dimension taxonomy, precision subclasses, candidate policy, and extended metrics.
 3. [v0.5 candidate search](v0.5/candidate_search.md): ghstack-aware PyTorch PR discovery and precision screening rules.
 4. [v0.5 remote agent setup](v0.5/setup_remote_agent.md): remote images, host configuration, and admission execution.

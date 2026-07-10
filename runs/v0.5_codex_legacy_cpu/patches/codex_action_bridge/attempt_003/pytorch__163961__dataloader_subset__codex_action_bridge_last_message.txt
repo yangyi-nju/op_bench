@@ -1,0 +1,5 @@
+Fixed `Subset` batched loading to respect subclass overrides of `__getitem__`.
+
+- Updated `torch/utils/data/dataset.py`
+- `Subset.__getitems__` now dispatches through overridden `__getitem__`
+- Verified with `python test/test_dataloader.py -k subset` (2 tests passed)

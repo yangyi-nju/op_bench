@@ -55,6 +55,15 @@ class ExtendedMetricsTests(unittest.TestCase):
         out = compute_extended_metrics(records, {})
         self.assertAlmostEqual(out["codex"]["regression_rate"], 0.5)
 
+    def test_fail_to_pass_only_rate_is_explicit(self) -> None:
+        records = [
+            _record(f2p_pass=1, f2p_total=1, p2p_pass=3, p2p_total=3),
+            _record(f2p_pass=1, f2p_total=1, p2p_pass=2, p2p_total=3),
+            _record(f2p_pass=0, f2p_total=1, p2p_pass=3, p2p_total=3),
+        ]
+        out = compute_extended_metrics(records, {})
+        self.assertAlmostEqual(out["codex"]["fail_to_pass_only_rate"], 1 / 3)
+
     def test_pass_to_pass_kept_rate(self) -> None:
         records = [
             _record(p2p_pass=2, p2p_total=4),  # 0.5
@@ -159,6 +168,19 @@ class ExtendedMetricsTests(unittest.TestCase):
         self.assertIn("unclassified", per_dim)
         self.assertAlmostEqual(per_dim["precision"]["resolved_rate"], 1.0)
         self.assertAlmostEqual(per_dim["unclassified"]["resolved_rate"], 0.0)
+
+    def test_per_problem_subclass_breakdown(self) -> None:
+        records = [
+            _record(task_id="p1", status="resolved"),
+            _record(task_id="p2", status="fail_to_pass_failed"),
+        ]
+        metadata = {
+            "p1": {"problem_subclass": "P1"},
+            "p2": {"problem_subclass": "P2"},
+        }
+        out = compute_extended_metrics(records, metadata)
+        self.assertEqual(out["codex"]["per_problem_subclass"]["P1"]["resolved_rate"], 1.0)
+        self.assertEqual(out["codex"]["per_problem_subclass"]["P2"]["resolved_rate"], 0.0)
 
     def test_multi_agent_groups(self) -> None:
         records = [

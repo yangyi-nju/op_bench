@@ -1,0 +1,5 @@
+Implemented tuple-length validation in `torch/nn/modules/utils.py`.
+
+Iterable arguments now raise `ValueError` unless their length matches the expected spatial dimension, covering convolution and pooling modules via `_single`, `_pair`, `_triple`, and `_quadruple`.
+
+Verified syntax with `py_compile`.

@@ -6,11 +6,31 @@ import unittest
 from pathlib import Path
 
 from op_bench.agents import GoldAgent
-from op_bench.reporter import summarize_results
+from op_bench.reporter import normalized_result_status, summarize_results
 from op_bench.task import TaskManifest
 
 
 class AgentReporterTests(unittest.TestCase):
+    def test_normalizes_legacy_regression_label_when_fix_also_failed(self) -> None:
+        record = {
+            "status": "pass_to_pass_regressed",
+            "fail_to_pass_total": 1,
+            "fail_to_pass_passed": 0,
+            "pass_to_pass_total": 1,
+            "pass_to_pass_passed": 0,
+        }
+        self.assertEqual(normalized_result_status(record), "fail_to_pass_failed")
+
+    def test_preserves_non_test_outcome_status(self) -> None:
+        record = {
+            "status": "environment_unavailable",
+            "fail_to_pass_total": 1,
+            "fail_to_pass_passed": 0,
+            "pass_to_pass_total": 1,
+            "pass_to_pass_passed": 0,
+        }
+        self.assertEqual(normalized_result_status(record), "environment_unavailable")
+
     def test_gold_agent_returns_gold_patch(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             task = self._task(Path(tmp))

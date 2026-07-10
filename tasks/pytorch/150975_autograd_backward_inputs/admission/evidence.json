@@ -5,7 +5,7 @@
     "verified": true
   },
   "baseline": {
-    "duration_sec": 14.968661334001808,
+    "duration_sec": 212.75304179103114,
     "fail_to_pass_passed": 0,
     "fail_to_pass_total": 1,
     "mode": "baseline",
@@ -14,19 +14,19 @@
     "status": "baseline_reproduced",
     "task_id": "pytorch__150975__autograd_backward_inputs"
   },
-  "created_at": "2026-06-20T17:25:01Z",
+  "created_at": "2026-07-10T19:04:37Z",
   "environment": {
-    "backend": "docker",
+    "backend": "remote_docker",
     "digest_kind": "local_image_id",
     "id": "pytorch-cpu-torch2.6.0-py311",
     "image": "op-bench/pytorch-cpu:torch2.6.0-py311",
-    "image_digest": "sha256:9507757065fd73fa7a958cd13f01de163a3fa46d826c09142f9522eda0f1e400",
+    "image_digest": "sha256:721dd55c9253c6d887e9d95a949c22e5607d16bf9917edae3f8d98b911a9c12b",
     "platform": null,
     "runtime_tier": "cpu_python_overlay"
   },
-  "evidence_id": "pytorch__150975__autograd_backward_inputs:8212bfb497c6:2026-06-20T17:25:01Z",
+  "evidence_id": "pytorch__150975__autograd_backward_inputs:b42dcb012af5:2026-07-10T19:04:37Z",
   "gold": {
-    "duration_sec": 14.365745125003741,
+    "duration_sec": 107.90131812496111,
     "fail_to_pass_passed": 1,
     "fail_to_pass_total": 1,
     "mode": "gold",
@@ -44,5 +44,6 @@
     "snapshot_method": null
   },
   "task_id": "pytorch__150975__autograd_backward_inputs",
-  "task_manifest_hash": "sha256:a8d407007959c621b8d6d5b80355327389d82c054b87f3c2d10f9697a6477efe"
+  "task_manifest_hash": "sha256:b42dcb012af5e9599a1e277f546eb41042939d654309923571ddb9617f7f7941",
+  "task_manifest_hash_kind": "replay_spec_v1"
 }

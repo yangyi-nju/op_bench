@@ -1,0 +1,22 @@
+diff --git a/torch/nn/modules/linear.py b/torch/nn/modules/linear.py
+index a3c867d5..7347da70 100644
+--- a/torch/nn/modules/linear.py
++++ b/torch/nn/modules/linear.py
+@@ -214,8 +214,6 @@ class Bilinear(Module):
+     ) -> None:
+         factory_kwargs = {"device": device, "dtype": dtype}
+         super().__init__()
+-        if in1_features <= 0:
+-            raise ValueError(f"in1_features must be > 0, but got {in1_features}")
+         self.in1_features = in1_features
+         self.in2_features = in2_features
+         self.out_features = out_features
+@@ -233,6 +231,8 @@ class Bilinear(Module):
+         """
+         Resets parameters based on their initialization used in ``__init__``.
+         """
++        if self.weight.size(1) == 0:
++            raise ValueError("in1_features must be > 0")
+         bound = 1 / math.sqrt(self.weight.size(1))
+         init.uniform_(self.weight, -bound, bound)
+         if self.bias is not None:

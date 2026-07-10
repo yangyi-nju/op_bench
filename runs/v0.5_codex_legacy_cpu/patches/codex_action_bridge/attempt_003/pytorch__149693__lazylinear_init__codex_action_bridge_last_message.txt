@@ -1,0 +1,5 @@
+Fixed `LazyLinear` initialization ordering: `in_features` is now inferred before `reset_parameters()` runs.
+
+Verified with:
+
+`TestLazyModules.test_linear_state` — passed.

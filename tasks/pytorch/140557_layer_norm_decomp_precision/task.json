@@ -43,7 +43,7 @@
     "operator_name": "torch.ops.aten.native_layer_norm.default",
     "problem_type": "decomposition-dtype-parity",
     "problem_dimension": "precision",
-    "problem_subclass": "P1",
+    "problem_subclass": "P2",
     "tags": [
       "layer-norm",
       "fake-tensor",
@@ -126,6 +126,6 @@
     "estimated_runtime_min": 10,
     "layer": "A",
     "admission_status": "verified",
-    "notes": "v0.5 P1. Gold patch is 5 source lines (single fake impl registration); hidden test adds test_native_layer_norm_cpu_decomp to DecompOneOffTests (renamed to _cpu by instantiate_device_type_tests)."
+    "notes": "v0.5 P2. Gold patch is 5 source lines (single fake impl registration); hidden test adds test_native_layer_norm_cpu_decomp to DecompOneOffTests (renamed to _cpu by instantiate_device_type_tests)."
   }
 }

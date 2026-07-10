@@ -36,7 +36,7 @@
     "operator_name": "torch.masked.mean",
     "problem_type": "dtype-accumulation-error",
     "problem_dimension": "precision",
-    "problem_subclass": "P2",
+    "problem_subclass": "P1",
     "tags": ["masked", "bool", "dtype-promotion", "cpu"]
   },
   "environment": {

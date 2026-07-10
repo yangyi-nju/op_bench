@@ -1,0 +1,32 @@
+diff --git a/torch/nn/modules/module.py b/torch/nn/modules/module.py
+index 6c74a9b..81a3e97 100644
+--- a/torch/nn/modules/module.py
++++ b/torch/nn/modules/module.py
+@@ -758,22 +758,12 @@ class Module:
+             raise ValueError("Cannot set the submodule without a target name!")
+ 
+         atoms: list[str] = target.split(".")
+-        name = atoms.pop(-1)
+-        mod: torch.nn.Module = self
+-
+-        for item in atoms:
+-            if not hasattr(mod, item):
+-                raise AttributeError(
+-                    mod._get_name() + " has no attribute `" + item + "`"
+-                )
+-
+-            mod = getattr(mod, item)
+-
+-            # Use isinstance instead of type here to also handle subclass of nn.Module
+-            if not isinstance(mod, torch.nn.Module):
+-                raise AttributeError("`" + item + "` is not an nn.Module")
++        if len(atoms) == 1:
++            parent: torch.nn.Module = self
++        else:
++            parent = self.get_submodule(".".join(atoms[:-1]))
+ 
+-        setattr(mod, name, module)
++        setattr(parent, atoms[-1], module)
+ 
+     def get_parameter(self, target: str) -> "Parameter":
+         """Return the parameter given by ``target`` if it exists, otherwise throw an error.

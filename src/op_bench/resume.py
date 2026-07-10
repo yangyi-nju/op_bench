@@ -6,7 +6,7 @@ Three primitives:
   when resuming. Prevents accidental cross-parameter continuation (e.g.
   restarting with `--agent-repeat 5` after a `--agent-repeat 3` batch).
 
-- `ResultsStore`: append-mode writer for `results.jsonl` and `baselines.jsonl`.
+- `ResultsStore`: append-mode writer for the unified `results.jsonl` event log.
   Every record is fsynced. Reader tolerates truncated/corrupt trailing lines.
   Exposes `completed_agents()` and `completed_baseline_task_ids()` for
   skip-lookup on resume.
@@ -37,8 +37,12 @@ from typing import Any, Iterable
 
 RUN_STATE_FILE = "run_state.json"
 RESULTS_FILE = "results.jsonl"
-BASELINES_FILE = "baselines.jsonl"
 BASELINE_CACHE_DIRNAME = "_baseline_cache"
+
+TRANSIENT_STATUSES = {
+    "environment_unavailable",
+    "environment_error",
+}
 
 
 @dataclass(frozen=True)
@@ -63,9 +67,11 @@ class RunState:
         agents: Iterable[str],
         agent_repeat: int,
         only_tasks: Iterable[str] = (),
+        task_signatures: Iterable[str] | None = None,
     ) -> "RunState":
         ids = tuple(sorted(task_ids))
-        signature = hashlib.sha256("\n".join(ids).encode("utf-8")).hexdigest()[:16]
+        signatures = tuple(sorted(task_signatures or ids))
+        signature = hashlib.sha256("\n".join(signatures).encode("utf-8")).hexdigest()[:16]
         return cls(
             dataset_signature=signature,
             task_ids=ids,
@@ -128,7 +134,7 @@ class RunState:
 
 
 class ResultsStore:
-    """Append-mode writer for `results.jsonl` and `baselines.jsonl`.
+    """Append-mode writer for the unified `results.jsonl` event log.
 
     Every write is followed by `flush() + os.fsync()` on the file descriptor.
     A subsequent `kill -9` still preserves the most recent record.
@@ -153,9 +159,9 @@ class ResultsStore:
     def completed_agent_keys(self) -> set[tuple[str, str, int]]:
         """Return the set of (task_id, agent, attempt) triples already recorded.
 
-        Records with status `runner_error` and `environment_unavailable` are counted
-        as completed (their retry rate is very low; if the underlying issue persists,
-        `--fresh` is the appropriate escape hatch).
+        Transient infrastructure statuses are deliberately excluded so a resumed run
+        retries them. The raw failed row remains in results.jsonl for auditability;
+        summary readers use the latest row for each idempotency key.
         """
         keys: set[tuple[str, str, int]] = set()
         for record in _read_jsonl(self.results_path):
@@ -164,7 +170,8 @@ class ResultsStore:
             task_id = record.get("task_id")
             agent = record.get("agent")
             attempt = record.get("attempt")
-            if task_id and agent and attempt is not None:
+            status = str(record.get("status", ""))
+            if task_id and agent and attempt is not None and status not in TRANSIENT_STATUSES:
                 keys.add((str(task_id), str(agent), int(attempt)))
         return keys
 
@@ -179,21 +186,40 @@ class ResultsStore:
             if record.get("agent") != "baseline":
                 continue
             task_id = record.get("task_id")
-            if task_id:
+            status = str(record.get("status", ""))
+            if task_id and status not in TRANSIENT_STATUSES:
                 out[str(task_id)] = record
         return out
 
     def load_all_records(self) -> list[dict[str, Any]]:
-        """All rows in results.jsonl (baseline + agent)."""
-        return list(_read_jsonl(self.results_path))
+        """Latest logical rows in results.jsonl (baseline + agent).
+
+        A transient record can be followed by a successful retry with the same
+        idempotency key. Keep the raw JSONL append-only, but score only the latest
+        row for each baseline task or agent attempt.
+        """
+        latest: dict[tuple[object, ...], dict[str, Any]] = {}
+        unkeyed: list[dict[str, Any]] = []
+        for record in _read_jsonl(self.results_path):
+            task_id = record.get("task_id")
+            agent = record.get("agent")
+            if agent == "baseline" and task_id:
+                latest[("baseline", str(task_id))] = record
+                continue
+            attempt = record.get("attempt")
+            if task_id and agent and attempt is not None:
+                latest[("agent", str(task_id), str(agent), int(attempt))] = record
+                continue
+            unkeyed.append(record)
+        return [*latest.values(), *unkeyed]
 
     def load_all_results(self) -> list[dict[str, Any]]:
         """Agent-only records (excludes baseline rows)."""
-        return [r for r in _read_jsonl(self.results_path) if r.get("agent") != "baseline"]
+        return [r for r in self.load_all_records() if r.get("agent") != "baseline"]
 
     def load_all_baselines(self) -> list[dict[str, Any]]:
         """Baseline-only records."""
-        return [r for r in _read_jsonl(self.results_path) if r.get("agent") == "baseline"]
+        return [r for r in self.load_all_records() if r.get("agent") == "baseline"]
 
 
 class BaselineCache:

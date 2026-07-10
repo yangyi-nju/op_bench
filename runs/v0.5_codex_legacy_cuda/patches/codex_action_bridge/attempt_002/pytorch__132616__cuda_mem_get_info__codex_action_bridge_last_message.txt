@@ -1,0 +1,7 @@
+Fixed `torch.cuda.mem_get_info("cuda")` to accept an index-less CUDA device and resolve it to the current device.
+
+Changed [torch/cuda/memory.py](/workspace/torch/cuda/memory.py:697) to call `_get_device_index(..., optional=True)`.
+
+Verified existing CUDA coverage:
+
+`TestCudaMultiGPU.test_mem_get_info` — passed.

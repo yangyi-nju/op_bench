@@ -209,6 +209,33 @@ class RemoteDockerExecutorTests(unittest.TestCase):
         self.assertIn("-az", second_call_cmd)
         self.assertIn("--delete", second_call_cmd)
 
+    @mock.patch("op_bench.remote.time.sleep")
+    @mock.patch("op_bench.remote.subprocess.run")
+    def test_sync_to_remote_retries_partial_transfer(self, mock_run, mock_sleep):
+        mock_run.side_effect = [
+            mock.Mock(returncode=0, stdout="", stderr=""),
+            mock.Mock(returncode=23, stdout="", stderr="vanished source file"),
+            mock.Mock(returncode=0, stdout="", stderr=""),
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self.executor.sync_to_remote(Path(tmp), timeout_sec=60)
+        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(mock_run.call_count, 3)
+        mock_sleep.assert_called_once_with(2)
+
+    @mock.patch("op_bench.remote.time.sleep")
+    @mock.patch("op_bench.remote.subprocess.run")
+    def test_sync_to_remote_does_not_retry_nontransient_failure(self, mock_run, mock_sleep):
+        mock_run.side_effect = [
+            mock.Mock(returncode=0, stdout="", stderr=""),
+            mock.Mock(returncode=3, stdout="", stderr="permission denied"),
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self.executor.sync_to_remote(Path(tmp), timeout_sec=60)
+        self.assertEqual(result.exit_code, 3)
+        self.assertEqual(mock_run.call_count, 2)
+        mock_sleep.assert_not_called()
+
     @mock.patch("op_bench.remote.subprocess.run")
     def test_close_removes_remote_container(self, mock_run):
         mock_run.return_value = mock.Mock(returncode=0, stdout="", stderr="")

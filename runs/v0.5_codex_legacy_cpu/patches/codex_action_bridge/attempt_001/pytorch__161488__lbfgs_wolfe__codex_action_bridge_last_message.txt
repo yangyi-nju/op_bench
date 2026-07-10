@@ -1,0 +1,3 @@
+Implemented the LBFGS strong-Wolfe fix in `torch/optim/lbfgs.py`.
+
+The line search now uses the remaining `max_eval` budget (`max_eval - current_evals`) instead of its unrelated fixed default. The targeted test selector was not valid in this checkout’s runner, but the final diff is limited to the requested source file.

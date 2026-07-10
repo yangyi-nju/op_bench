@@ -15,7 +15,8 @@ Checks performed (all local, no docker, no GPU needed):
 
 Usage:
     PYTHONPATH=src python3 scripts/preflight_task.py tasks/pytorch/<task_dir>
-    PYTHONPATH=src python3 scripts/preflight_task.py --all  # all tasks in dataset
+    PYTHONPATH=src python3 scripts/preflight_task.py --all
+    PYTHONPATH=src python3 scripts/preflight_task.py --dataset datasets/pytorch_v0.4/dataset.json
 
 Exits 0 if all checks pass, 1 otherwise.
 """
@@ -234,18 +235,32 @@ def preflight_task(task_dir: Path) -> tuple[bool, list[str]]:
     return True, messages
 
 
+def _task_dirs_from_dataset(dataset_path: Path) -> list[Path]:
+    data = json.loads(dataset_path.read_text(encoding="utf-8"))
+    return [
+        (dataset_path.parent / item["task_path"]).resolve()
+        for item in data.get("tasks", [])
+    ]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("task_dir", nargs="?", help="Path to a task directory")
-    parser.add_argument("--all", action="store_true", help="Run on every task in pytorch_v0.4 dataset")
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
+        "--all",
+        action="store_true",
+        help="Run every task in the latest official dataset (pytorch_v0.5)",
+    )
+    group.add_argument("--dataset", help="Run every task in this dataset manifest")
     args = parser.parse_args()
 
     if args.all:
-        dataset = json.loads((ROOT / "datasets" / "pytorch_v0.4" / "dataset.json").read_text())
-        task_dirs = [
-            (ROOT / "datasets" / "pytorch_v0.4" / t["task_path"]).resolve()
-            for t in dataset["tasks"]
-        ]
+        task_dirs = _task_dirs_from_dataset(
+            ROOT / "datasets" / "pytorch_v0.5" / "dataset.json"
+        )
+    elif args.dataset:
+        task_dirs = _task_dirs_from_dataset(Path(args.dataset).resolve())
     elif args.task_dir:
         task_dirs = [Path(args.task_dir).resolve()]
     else:

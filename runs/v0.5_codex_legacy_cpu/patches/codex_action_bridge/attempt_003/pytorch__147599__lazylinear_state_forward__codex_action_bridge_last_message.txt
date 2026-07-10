@@ -1,0 +1,5 @@
+Implemented the focused `LazyLinear` fix in `torch/nn/modules/linear.py`.
+
+After initialized weights are loaded, `initialize_parameters()` now sets `in_features` from `weight.shape[1]`, preserving correct metadata when the module becomes `Linear`.
+
+The provided focused test file is absent in the task runtime, so it could not be executed.

@@ -14,6 +14,19 @@ TIER_WEIGHTS = {
     "cuda_kernel_build": 3.0,
 }
 
+def normalized_result_status(record: dict[str, Any]) -> str:
+    """Normalize legacy test-outcome labels from their actual counters."""
+    status = str(record.get("status", "unknown"))
+    if status != "pass_to_pass_regressed":
+        return status
+    if "fail_to_pass_total" not in record or "pass_to_pass_total" not in record:
+        return status
+    f2p_total = int(record.get("fail_to_pass_total", 0) or 0)
+    f2p_passed = int(record.get("fail_to_pass_passed", 0) or 0)
+    if f2p_total > 0 and f2p_passed < f2p_total:
+        return "fail_to_pass_failed"
+    return status
+
 
 def write_jsonl(path: Path, records: list[dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -38,9 +51,9 @@ def summarize_results(records: list[dict[str, Any]]) -> dict[str, Any]:
     agents: dict[str, dict[str, Any]] = {}
     for agent, agent_records in sorted(grouped.items()):
         total = len(agent_records)
-        resolved = sum(1 for record in agent_records if record.get("status") == "resolved")
+        resolved = sum(1 for record in agent_records if normalized_result_status(record) == "resolved")
         durations = [float(record.get("duration_sec", 0.0)) for record in agent_records]
-        failure_reasons = Counter(str(record.get("status", "unknown")) for record in agent_records)
+        failure_reasons = Counter(normalized_result_status(record) for record in agent_records)
         agents[agent] = {
             "total": total,
             "resolved": resolved,
@@ -104,20 +117,22 @@ def _metrics_for_agent(
             "resolved_rate": 0.0,
             "patch_conciseness": 0.0,
             "pass_to_pass_kept_rate": 0.0,
+            "fail_to_pass_only_rate": 0.0,
             "regression_rate": 0.0,
             "tier_weighted_score": 0.0,
             "per_tier": {},
             "per_problem_type": {},
             "per_problem_dimension": {},
+            "per_problem_subclass": {},
         }
-    resolved = sum(1 for r in records if r.get("status") == "resolved")
+    resolved = sum(1 for r in records if normalized_result_status(r) == "resolved")
 
     # patch_conciseness: median(gold_lines / agent_lines), only for resolved attempts
     # with a captured patch path. Clamped to [0, 1] (agents with tighter patch than
     # gold score 1.0, not >1).
     conciseness_ratios: list[float] = []
     for r in records:
-        if r.get("status") != "resolved":
+        if normalized_result_status(r) != "resolved":
             continue
         meta = task_metadata.get(str(r.get("task_id", "")), {})
         gold_lines = int(meta.get("gold_patch_lines", 0)) if meta else 0
@@ -137,6 +152,16 @@ def _metrics_for_agent(
         p2p_passed = int(r.get("pass_to_pass_passed", 0) or 0)
         p2p_ratios.append(p2p_passed / p2p_total)
     pass_to_pass_kept_rate = sum(p2p_ratios) / len(p2p_ratios) if p2p_ratios else 0.0
+
+    strict_resolved_count = 0
+    for r in records:
+        f2p_pass = int(r.get("fail_to_pass_passed", 0) or 0)
+        f2p_total = int(r.get("fail_to_pass_total", 0) or 0)
+        p2p_pass = int(r.get("pass_to_pass_passed", 0) or 0)
+        p2p_total = int(r.get("pass_to_pass_total", 0) or 0)
+        if f2p_total > 0 and f2p_pass == f2p_total and p2p_pass == p2p_total:
+            strict_resolved_count += 1
+    fail_to_pass_only_rate = strict_resolved_count / total
 
     # regression_rate: fraction of attempts where fail_to_pass_passed == total
     # but pass_to_pass_passed < pass_to_pass_total. Isolates "fixed the bug but
@@ -160,13 +185,14 @@ def _metrics_for_agent(
         tier = str(meta.get("runtime_tier", "cpu_python_overlay"))
         weight = TIER_WEIGHTS.get(tier, 1.0)
         weight_sum += weight
-        if r.get("status") == "resolved":
+        if normalized_result_status(r) == "resolved":
             weighted_resolved += weight
     tier_weighted_score = weighted_resolved / weight_sum if weight_sum else 0.0
 
     per_tier = _group_rate(records, lambda r: task_metadata.get(str(r.get("task_id", "")), {}).get("runtime_tier"))
     per_problem_type = _group_rate(records, lambda r: task_metadata.get(str(r.get("task_id", "")), {}).get("problem_type"))
     per_problem_dimension = _group_rate(records, lambda r: task_metadata.get(str(r.get("task_id", "")), {}).get("problem_dimension"))
+    per_problem_subclass = _group_rate(records, lambda r: task_metadata.get(str(r.get("task_id", "")), {}).get("problem_subclass"))
 
     return {
         "total": total,
@@ -174,11 +200,13 @@ def _metrics_for_agent(
         "resolved_rate": resolved / total,
         "patch_conciseness": patch_conciseness,
         "pass_to_pass_kept_rate": pass_to_pass_kept_rate,
+        "fail_to_pass_only_rate": fail_to_pass_only_rate,
         "regression_rate": regression_rate,
         "tier_weighted_score": tier_weighted_score,
         "per_tier": per_tier,
         "per_problem_type": per_problem_type,
         "per_problem_dimension": per_problem_dimension,
+        "per_problem_subclass": per_problem_subclass,
     }
 
 
@@ -190,9 +218,9 @@ def _group_rate(records: list[dict[str, Any]], key_fn) -> dict[str, dict[str, An
     return {
         group: {
             "total": len(items),
-            "resolved": sum(1 for r in items if r.get("status") == "resolved"),
+            "resolved": sum(1 for r in items if normalized_result_status(r) == "resolved"),
             "resolved_rate": (
-                sum(1 for r in items if r.get("status") == "resolved") / len(items)
+                sum(1 for r in items if normalized_result_status(r) == "resolved") / len(items)
                 if items else 0.0
             ),
         }

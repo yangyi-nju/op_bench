@@ -1,0 +1,73 @@
+{
+  "dataset_id": "pytorch_v0.5_precision",
+  "version": "v0.5",
+  "status": "verified",
+  "target_task_count": 6,
+  "policy": {
+    "backend": "remote_docker",
+    "preflight_required": true,
+    "admission_required": true,
+    "patch_scope_required": true,
+    "supports_remote_docker": true
+  },
+  "tasks": [
+    {
+      "task_id": "pytorch__140557__layer_norm_decomp_precision",
+      "task_path": "../../tasks/pytorch/140557_layer_norm_decomp_precision",
+      "admission_status": "verified",
+      "environment_status": "ready",
+      "source_status": "ready",
+      "replay_status": "verified",
+      "admission_evidence": "tasks/pytorch/140557_layer_norm_decomp_precision/admission/evidence.json"
+    },
+    {
+      "task_id": "pytorch__139999__masked_mean_bool_upcast",
+      "task_path": "../../tasks/pytorch/139999_masked_mean_bool_upcast",
+      "admission_status": "verified",
+      "environment_status": "ready",
+      "source_status": "ready",
+      "replay_status": "verified",
+      "admission_evidence": "tasks/pytorch/139999_masked_mean_bool_upcast/admission/evidence.json"
+    },
+    {
+      "task_id": "pytorch__129138__linear_add_bias_autocast",
+      "task_path": "../../tasks/pytorch/129138_linear_add_bias_autocast",
+      "admission_status": "verified",
+      "environment_status": "ready",
+      "source_status": "ready",
+      "replay_status": "verified",
+      "admission_evidence": "tasks/pytorch/129138_linear_add_bias_autocast/admission/evidence.json"
+    },
+    {
+      "task_id": "pytorch__132835__njt_sdpa_autocast",
+      "task_path": "../../tasks/pytorch/132835_njt_sdpa_autocast",
+      "admission_status": "verified",
+      "environment_status": "ready",
+      "source_status": "ready",
+      "replay_status": "verified",
+      "admission_evidence": "tasks/pytorch/132835_njt_sdpa_autocast/admission/evidence.json"
+    },
+    {
+      "task_id": "pytorch__144009__softmax_ilpreduce_size",
+      "task_path": "../../tasks/pytorch/144009_softmax_ilpreduce_size",
+      "admission_status": "verified",
+      "environment_status": "ready",
+      "source_status": "ready",
+      "replay_status": "verified",
+      "admission_evidence": "tasks/pytorch/144009_softmax_ilpreduce_size/admission/evidence.json"
+    },
+    {
+      "task_id": "pytorch__139372__histc_int8_cuda_bounds",
+      "task_path": "../../tasks/pytorch/139372_histc_int8_cuda_bounds",
+      "admission_status": "verified",
+      "environment_status": "ready",
+      "source_status": "ready",
+      "replay_status": "verified",
+      "admission_evidence": "tasks/pytorch/139372_histc_int8_cuda_bounds/admission/evidence.json"
+    }
+  ],
+  "registries": {
+    "environments": "environments/registry.json",
+    "sources": "sources/registry.json"
+  }
+}

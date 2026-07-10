@@ -1,12 +1,12 @@
-# 服务器端 Agent 环境配置
+# 远程执行环境配置
 
-本文档记录如何在远程 GPU 服务器上安装和配置实验所需的 agent CLI（Codex），使所有 tier 的实验都能在同一台机器上运行。
+本文档记录如何让本地 OpBench 控制端通过 SSH 驱动远程 Docker。Codex CLI 在本地控制端运行，只能通过 action bridge 读写和测试目标 workspace；PyTorch runtime 与 official evaluator 在远程容器中运行。
 
 ## 前置条件
 
 - 远程服务器已配置 SSH 访问（key 已在 `configs/remote_hosts.json` 注册）
 - Docker + nvidia-container-toolkit 已安装（v0.4 admission 期间已验证）
-- Python 3.11+ 可用
+- 本地控制端有 Python 3.11+、Codex CLI、SSH 和 rsync
 
 服务器需要预先构建 task registry 引用的镜像。除了基础 CPU/CUDA 镜像，
 调用 `torch.compile`/Inductor 的 CPU task 使用带 C++ 编译器和 Python headers 的
@@ -18,7 +18,7 @@ docker build \
   environments/pytorch-cpu-compile
 ```
 
-## 安装 Codex CLI
+## 在本地控制端安装 Codex CLI
 
 ```bash
 # 通过 npm 安装（需要 node 18+）
@@ -30,9 +30,9 @@ npm install -g @openai/codex
 codex --version
 ```
 
-## 配置 Codex 账号
+## 在本地控制端配置 Codex 账号
 
-Codex 使用 OpenAI API key。在服务器上：
+Codex 使用已登录账号或 OpenAI API key。若使用 API key，在本地控制端：
 
 ```bash
 # 写入 .env（codex 启动时会自动读取）
@@ -42,7 +42,7 @@ echo "OPENAI_API_KEY=<your-key>" >> ~/.env
 export OPENAI_API_KEY=<your-key>
 ```
 
-**注意**：服务器上的 Codex 和本地 Codex 共享同一账号的 API quota。并发跑多个 attempt 会加速触发 rate limit（v0.5 的 `OP_BENCH_CODEX_RATE_LIMIT_WAIT_SEC` 自动处理重试，但并发量不宜过高）。CPU tier 建议 `--max-parallel 3-5`，不超过 codex 的并发 session 限制。
+**注意**：并发 attempt 共享本地 Codex 账号 quota，也共享 SSH/rsync 链路和远端磁盘。CPU tier 从 `--max-parallel 1-3` 起步；只有在传输与 quota 稳定时再提高。
 
 ## 配置 op_bench 本地客户端指向服务器
 
@@ -78,7 +78,7 @@ PYTHONPATH=src python3 scripts/run_experiment.py \
                  pytorch__161488 pytorch__150975 pytorch__124385 pytorch__143455 \
   --agent codex_action_bridge \
   --agent-repeat 3 \
-  --max-parallel 4 \
+  --max-parallel 3 \
   --output-dir runs/v0.5_codex_cpu
 ```
 
@@ -137,4 +137,4 @@ ssh -i ~/.ssh/your_key ubuntu@<server-ip> "codex --version"
 - `OP_BENCH_FORCE_LOCAL_DOCKER=1`：临时调试用，强制所有任务走本地 Docker（需要本地有 Colima/Docker）。
 - 服务器磁盘：每个 workspace rsync 约 500MB（python_overlay），kernel_build 约 3GB。建议 `remote_workspace_root` 指向空间充裕的数据盘。
 - kernel build 的 ccache 持久化在 `<remote_workspace_root>/_cache/ccache/<environment-id>`；随机 workspace 清理不会删除它。需要强制冷编译时再手动清理对应环境目录。
-- rate-limit 行为：服务器端 Codex 触发 rate limit 后，`_run_codex` 自动 sleep `OP_BENCH_CODEX_RATE_LIMIT_WAIT_SEC`（默认 18300s）。sleep 期间 SSH 连接保活，不需要 tmux，但长期 sleep 建议用 `tmux` 包住整个实验命令以防本地客户端断开。
+- rate-limit 行为：本地控制端 Codex 触发 rate limit 后，`_run_codex` 自动 sleep `OP_BENCH_CODEX_RATE_LIMIT_WAIT_SEC`（默认 18300s）。长期 sleep 建议用 `tmux` 包住整个实验命令，避免控制端会话中断。

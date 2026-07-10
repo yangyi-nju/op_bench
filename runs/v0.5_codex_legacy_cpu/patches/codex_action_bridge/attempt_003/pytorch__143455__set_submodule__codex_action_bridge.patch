@@ -1,0 +1,16 @@
+diff --git a/torch/nn/modules/module.py b/torch/nn/modules/module.py
+index 6c74a9b..aad077e 100644
+--- a/torch/nn/modules/module.py
++++ b/torch/nn/modules/module.py
+@@ -773,6 +773,11 @@ class Module:
+             if not isinstance(mod, torch.nn.Module):
+                 raise AttributeError("`" + item + "` is not an nn.Module")
+ 
++        if not hasattr(mod, name):
++            raise AttributeError(
++                mod._get_name() + " has no attribute `" + name + "`"
++            )
++
+         setattr(mod, name, module)
+ 
+     def get_parameter(self, target: str) -> "Parameter":

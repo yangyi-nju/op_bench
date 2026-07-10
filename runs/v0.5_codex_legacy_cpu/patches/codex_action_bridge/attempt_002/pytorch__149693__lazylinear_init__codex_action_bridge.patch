@@ -1,0 +1,20 @@
+diff --git a/torch/nn/modules/linear.py b/torch/nn/modules/linear.py
+index c8a17e5e..be5bd820 100644
+--- a/torch/nn/modules/linear.py
++++ b/torch/nn/modules/linear.py
+@@ -288,7 +288,6 @@ class LazyLinear(LazyModuleMixin, Linear):
+                 self.weight.materialize((self.out_features, input.shape[-1]))
+                 if self.bias is not None:
+                     self.bias.materialize((self.out_features,))
+-                self.reset_parameters()
+         if self.in_features == 0:
+             assert input.shape[-1] == self.weight.shape[-1], (
+                 f"The in_features inferred from input: {input.shape[-1]} "
+@@ -296,6 +295,7 @@ class LazyLinear(LazyModuleMixin, Linear):
+                 f"{self.weight.shape[-1]}"
+             )
+             self.in_features = input.shape[-1]
++            self.reset_parameters()
+ 
+ 
+ # TODO: PartialLinear - maybe in sparse?

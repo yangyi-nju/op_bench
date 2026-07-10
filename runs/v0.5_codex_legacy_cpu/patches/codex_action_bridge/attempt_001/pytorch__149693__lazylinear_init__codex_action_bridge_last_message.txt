@@ -1,0 +1,5 @@
+Fixed `LazyLinear` initialization ordering in `torch/nn/modules/linear.py`: `in_features` is now inferred before `reset_parameters()`.
+
+Verified with:
+- `TestLazyModules.test_linear_state`
+- A direct lazy-linear probe confirming `in_features == 3`, weight shape `(4, 3)`, and non-zero output.

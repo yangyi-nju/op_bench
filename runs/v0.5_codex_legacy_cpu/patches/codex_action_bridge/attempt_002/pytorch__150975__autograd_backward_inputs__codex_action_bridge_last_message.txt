@@ -1,0 +1,7 @@
+Fixed `torch.autograd.backward` input normalization:
+
+- Scalar tensors passed as `inputs` are now wrapped before emptiness validation.
+- `inputs=None` still correctly means “accumulate into all leaves.”
+- Explicit empty inputs still raise the existing RuntimeError.
+
+Changed only [torch/autograd/__init__.py](/Users/yy/dev/graduate/op_bench/runs/v0.5_codex_legacy_cpu/patches/codex_action_bridge/attempt_002/codex_scratch/torch/autograd/__init__.py:330).

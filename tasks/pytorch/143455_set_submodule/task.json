@@ -7,7 +7,7 @@
   "admission": {
     "status": "verified",
     "evidence": "admission/evidence.json",
-    "verified_at": "2026-06-20T18:26:35Z"
+    "verified_at": "2026-07-10T19:11:29Z"
   },
   "patch_scope": {
     "allowed_paths": [
@@ -48,7 +48,7 @@
     ]
   },
   "environment": {
-    "backend": "docker",
+    "backend": "remote_docker",
     "tier": "cpu_python_overlay",
     "source_loading": {
       "mode": "python_overlay",

@@ -1,0 +1,1 @@
+Implemented `set_submodule` with `strict=False` support and correct handling for dotless targets by resolving the root module as their parent. It also validates replacement targets and module inputs.

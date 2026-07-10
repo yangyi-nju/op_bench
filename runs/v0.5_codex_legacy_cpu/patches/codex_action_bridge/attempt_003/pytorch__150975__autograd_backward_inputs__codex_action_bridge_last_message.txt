@@ -1,0 +1,6 @@
+Fixed `torch.autograd.backward(inputs=...)` validation by normalizing a single tensor before checking for empty inputs. This supports scalar leaf and non-leaf tensor inputs correctly while preserving the empty-input error.
+
+Verified with:
+
+- `TestAutograd.test_backward`
+- `python -m py_compile torch/autograd/__init__.py`

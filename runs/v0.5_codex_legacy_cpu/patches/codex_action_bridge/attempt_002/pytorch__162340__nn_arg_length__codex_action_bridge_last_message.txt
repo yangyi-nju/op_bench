@@ -1,0 +1,5 @@
+Implemented iterable-length validation in `torch/nn/modules/utils.py`.
+
+Invalid sequence arguments now raise `ValueError` such as `Expected sequence of length 2, got 1`, covering convolution and pooling modules that use `_ntuple`.
+
+Verified with `TestAvgPool` (7 passing).

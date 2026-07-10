@@ -1,0 +1,5 @@
+Implemented the focused `LazyLinear` fix in `torch/nn/modules/linear.py`.
+
+After loading materialized parameters, `initialize_parameters()` now derives `in_features` from `weight.shape[1]`, so the converted `Linear` reports the correct input feature count.
+
+Syntax check passed.

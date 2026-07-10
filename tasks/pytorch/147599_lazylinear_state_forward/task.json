@@ -7,7 +7,7 @@
   "admission": {
     "status": "verified",
     "evidence": "admission/evidence.json",
-    "verified_at": "2026-06-20T18:26:35Z"
+    "verified_at": "2026-07-10T18:50:57Z"
   },
   "patch_scope": {
     "allowed_paths": [
@@ -51,7 +51,7 @@
     ]
   },
   "environment": {
-    "backend": "docker",
+    "backend": "remote_docker",
     "tier": "cpu-deterministic",
     "image": "op-bench/pytorch-cpu:torch2.6.0-py311",
     "dockerfile": "../../../environments/pytorch-cpu/Dockerfile",

@@ -1,0 +1,7 @@
+Implemented the minimal fix in `torch/autograd/__init__.py`:
+
+- Materialized unused gradients now use `requires_grad=create_graph` instead of always requiring gradients.
+
+Verified with:
+
+- `TestAutograd.test_grad_materialize_grads` — passed.

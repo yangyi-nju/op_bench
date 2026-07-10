@@ -1,0 +1,16 @@
+diff --git a/torch/nn/modules/module.py b/torch/nn/modules/module.py
+index 6c74a9b..0928d4b 100644
+--- a/torch/nn/modules/module.py
++++ b/torch/nn/modules/module.py
+@@ -757,8 +757,9 @@ class Module:
+         if target == "":
+             raise ValueError("Cannot set the submodule without a target name!")
+ 
+-        atoms: list[str] = target.split(".")
+-        name = atoms.pop(-1)
++        parent, _, name = target.rpartition(".")
++        atoms: list[str] = parent.split(".") if parent else []
++
+         mod: torch.nn.Module = self
+ 
+         for item in atoms:

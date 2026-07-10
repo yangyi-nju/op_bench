@@ -1,0 +1,5 @@
+Implemented the minimal fix in `torch/cuda/memory.py`: `mem_get_info("cuda")` now resolves to the current CUDA device.
+
+Verified existing coverage passes:
+
+`TestCudaMultiGPU.test_mem_get_info` — OK.

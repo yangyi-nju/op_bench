@@ -1,0 +1,5 @@
+Implemented the shared tuple-argument length validation in `torch/nn/modules/utils.py`.
+
+Iterable conv/pooling arguments now raise `ValueError` when their length doesn’t match the module’s spatial dimension. Scalar arguments retain existing expansion behavior.
+
+Verified with `TestAvgPool` (7 tests passing).

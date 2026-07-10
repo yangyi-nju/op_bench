@@ -1,0 +1,7 @@
+Fixed `load_state_dict` strict unexpected-key detection in `torch/nn/modules/module.py`.
+
+Nested keys now must start with an actual child-module name, preventing invalid keys like `weight.corrupt` from being accepted because `weight` is a valid parameter.
+
+Verified with:
+
+`python test/nn/test_load_state_dict.py -k test_load_state_dict` — 23 passed.

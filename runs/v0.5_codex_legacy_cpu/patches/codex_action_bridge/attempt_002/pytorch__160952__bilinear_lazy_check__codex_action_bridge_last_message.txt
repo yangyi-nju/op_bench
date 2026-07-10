@@ -1,0 +1,7 @@
+Implemented the focused `Bilinear` lazy-initialization fix in `torch/nn/modules/linear.py`.
+
+- Moved the zero-`in1_features` validation from `__init__` to `reset_parameters()`.
+- This permits lazy subclasses to initialize with placeholder dimensions and replace parameters before initialization.
+- Verified module syntax with `py_compile`.
+
+The provided hidden-focused test file is not present in the repair runtime, so it could not be replayed locally.

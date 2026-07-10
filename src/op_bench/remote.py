@@ -26,6 +26,13 @@ from pathlib import Path
 from op_bench.executor import CommandResult, ensure_text
 
 
+# 23 is a partial transfer. In mutable agent workspaces Git may replace a pack
+# file between rsync's file-list scan and transfer; retrying starts from a fresh
+# file list and is safe because syncs are idempotent.
+_TRANSIENT_RSYNC_EXIT_CODES = {10, 11, 12, 20, 23, 30, 35, 255}
+_RSYNC_MAX_ATTEMPTS = 3
+
+
 @dataclass(frozen=True)
 class RemoteHost:
     """Connection info for a remote host running Docker."""
@@ -170,7 +177,7 @@ class RemoteDockerExecutor:
         if mkdir_result.exit_code != 0:
             return mkdir_result
         cmd = self._rsync_command(local_path, remote_path)
-        return _run_local(cmd, timeout_sec)
+        return self._run_rsync_with_retry(cmd, timeout_sec)
 
     def sync_from_remote(self, local_workspace: Path, timeout_sec: int = 600) -> CommandResult:
         """rsync remote workspace back to local."""
@@ -178,7 +185,33 @@ class RemoteDockerExecutor:
         remote_path = self.host.rsync_remote_path(self.remote_workspace + "/")
         local_workspace.mkdir(parents=True, exist_ok=True)
         cmd = self._rsync_command(remote_path, local_path)
-        return _run_local(cmd, timeout_sec)
+        return self._run_rsync_with_retry(cmd, timeout_sec)
+
+    def _run_rsync_with_retry(self, command: list[str], timeout_sec: int) -> CommandResult:
+        attempts: list[CommandResult] = []
+        for attempt in range(1, _RSYNC_MAX_ATTEMPTS + 1):
+            result = _run_local(command, timeout_sec)
+            attempts.append(result)
+            if result.exit_code not in _TRANSIENT_RSYNC_EXIT_CODES or result.timed_out:
+                break
+            if attempt < _RSYNC_MAX_ATTEMPTS:
+                time.sleep(2)
+        result = attempts[-1]
+        if len(attempts) == 1:
+            return result
+        prior = "\n".join(
+            f"[rsync attempt {index} exit={item.exit_code}] {item.stderr}"
+            for index, item in enumerate(attempts[:-1], start=1)
+        )
+        return CommandResult(
+            command=result.command,
+            cwd=result.cwd,
+            exit_code=result.exit_code,
+            stdout=result.stdout,
+            stderr=f"{prior}\n{result.stderr}".strip(),
+            duration_sec=sum(item.duration_sec for item in attempts),
+            timed_out=result.timed_out,
+        )
 
     def _rsync_command(self, source: str, destination: str) -> list[str]:
         ssh_parts = ["ssh"]

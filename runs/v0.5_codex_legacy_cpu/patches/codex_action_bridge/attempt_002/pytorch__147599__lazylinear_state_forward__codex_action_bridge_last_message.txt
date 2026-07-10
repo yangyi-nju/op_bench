@@ -1,0 +1,3 @@
+Fixed `LazyLinear.initialize_parameters()` to infer `in_features` from a previously loaded, materialized weight.
+
+The supplied targeted test path is unavailable in the runtime, so it could not be executed.

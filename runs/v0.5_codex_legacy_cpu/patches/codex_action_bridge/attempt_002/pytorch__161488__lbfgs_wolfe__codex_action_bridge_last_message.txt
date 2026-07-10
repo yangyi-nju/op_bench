@@ -1,0 +1,5 @@
+Implemented the scoped LBFGS fix in `torch/optim/lbfgs.py`.
+
+Strong-Wolfe now receives the remaining `max_eval` budget as `max_ls`, preventing line search from using its unrelated default of 25 iterations.
+
+Focused test discovery found no dedicated LBFGS test; an attempted `LBFGS` selector was invalid in this test runner. The final diff contains only the intended production change.

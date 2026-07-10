@@ -19,6 +19,7 @@ from op_bench.actions import WorkspaceActions
 from op_bench.dataset import DatasetManifest
 from op_bench.environment import EnvironmentManager
 from op_bench.evaluator import Evaluator
+from op_bench.integrity import replay_spec_hash
 from op_bench.progress import ProgressLogger, format_duration
 from op_bench.registry import load_resolved_task
 from op_bench.reporter import compute_extended_metrics, summarize_results, write_json, write_jsonl
@@ -99,7 +100,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help=(
             "Delete --output-dir contents before starting. Without --fresh, existing "
-            "results.jsonl / baselines.jsonl are honored and only missing attempts are run."
+            "results.jsonl is honored and only missing attempts are run."
         ),
     )
     parser.add_argument(
@@ -147,6 +148,7 @@ def main(argv: list[str] | None = None) -> int:
         agents=args.agent,
         agent_repeat=args.agent_repeat,
         only_tasks=args.only_tasks or (),
+        task_signatures=[replay_spec_hash(t) for t in tasks],
     )
     prior_state = RunState.load(output_dir / RUN_STATE_FILE)
     resuming = prior_state is not None
@@ -238,6 +240,8 @@ def main(argv: list[str] | None = None) -> int:
                 # a transient environment issue and shouldn't stick across runs.
                 baseline_cache.put(cache_key, baseline_record)
 
+        _write_summary(store, output_dir, progress, tasks)
+
         if baseline_status == "environment_unavailable":
             progress(f"task {task.task_id} skipped: environment_unavailable")
             _append_skipped_agents(
@@ -289,6 +293,7 @@ def main(argv: list[str] | None = None) -> int:
                 with store_lock:
                     store.append_result(record)
                     completed_keys.add((task.task_id, agent_name, attempt))
+                    _write_summary(store, output_dir, progress, tasks)
 
             with concurrent.futures.ThreadPoolExecutor(max_workers=args.max_parallel) as pool:
                 futures = [pool.submit(run_and_store, a, i) for a, i in pending_to_run]
@@ -309,6 +314,7 @@ def main(argv: list[str] | None = None) -> int:
                 )
                 store.append_result(record)
                 completed_keys.add((task.task_id, agent_name, attempt))
+                _write_summary(store, output_dir, progress, tasks)
 
     # --- Post-run: write summary from stored records --------------------------
 

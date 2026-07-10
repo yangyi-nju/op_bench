@@ -4,7 +4,7 @@ Language: English | [中文](README.zh-CN.md)
 
 OpBench is an operator-focused benchmark for evaluating coding agents on real framework issues. It follows the SWE-bench idea of repairing real repository snapshots, but treats the runtime environment as part of each task because operator bugs often depend on framework version, Python package layout, device availability, numerical behavior, and backend selection.
 
-v0.1 established the isolated replay/evaluation loop. v0.2 completed the platform pieces needed to scale the dataset: asset registries, formal admission evidence, dataset curation, and container/cache management. v0.3 expanded the dataset to 10 verified tasks across 5 PyTorch subsystems and added 3-repeat stability evaluation. v0.4 added CUDA runtime tiers and a remote-GPU Docker executor; its 13-task Codex run reached **84.6% resolved** (33/39). v0.5 is being built dimension by dimension: the cumulative draft manifest currently contains 17 verified tasks, and the completed precision phase covers 6 tasks with **72.2% resolved** (13/18), eight-dimensional reporting, and P1-P5 breakdowns. Boundary and compatibility dimensions will be added before the final v0.5 full run.
+v0.1 established the isolated replay/evaluation loop. v0.2 added asset registries and formal admission. v0.3 expanded the dataset to 10 verified tasks and added 3-repeat stability evaluation. v0.4 added CUDA tiers and remote Docker. v0.5 is now complete: the verified cumulative dataset contains 17 tasks, including a 6-task precision slice, and its 51-attempt Codex run reached **72.5% resolved** (37/51) with eight-dimensional reporting and hard experiment-integrity checks.
 
 ## What The Current Code Contains
 
@@ -35,7 +35,7 @@ Development-only experiment adapters have been removed from the public v0.1 surf
 | `scripts/` | CLI entry points for validation, environment preparation, source snapshots, replay, and experiments. |
 | `docs/` | Versioned design docs, experiment reports, developer guides, and historical records. |
 | `docs/v0.5/design.md` | v0.5 dimension taxonomy and extended evaluation metrics. |
-| `docs/v0.5/experiment_report.md` | v0.5 precision-phase 6-task, 18-attempt Codex evaluation. |
+| `docs/v0.5/experiment_report.md` | v0.5 full 17-task, 51-attempt Codex evaluation and precision breakdown. |
 | `docs/v0.4/design.md` | v0.4 CUDA tiers, remote GPU Docker executor over SSH, and `inplace_build` source loading. |
 | `docs/v0.4/experiment_report.md` | v0.4 13-task 3-repeat Codex evaluation: 84.6% resolved. |
 | `docs/v0.3/design.md` | v0.3 dataset expansion, multi-file overlay, public/hidden test split, and CUDA pilot design. |
@@ -160,18 +160,18 @@ PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/run_experiment.py \
 
 ## Current Dataset
 
-The cumulative [pytorch_v0.5 manifest](datasets/pytorch_v0.5/dataset.json) is a draft containing 17 verified tasks: all 13 v0.4 tasks plus four newly admitted precision tasks. Deprecated tasks #129154 and #144073 are excluded. The precision phase ran all six precision tasks, including two inherited v0.4 anchors:
+The verified [pytorch_v0.5 manifest](datasets/pytorch_v0.5/dataset.json) contains all 13 v0.4 tasks plus four newly admitted precision tasks. Deprecated tasks #129154 and #144073 are excluded. The complete run scored **37/51 (72.5%)**; the reusable [precision slice](datasets/pytorch_v0.5_precision/dataset.json) scored **13/18 (72.2%)**:
 
 | Task | PR | Subclass | Tier | Rate |
 | --- | ---: | :---: | --- | ---: |
-| `pytorch__140557__layer_norm_decomp_precision` | #140557 | P1 | cpu | 0/3 |
-| `pytorch__139999__masked_mean_bool_upcast` | #139999 | P2 | cpu | 3/3 |
+| `pytorch__140557__layer_norm_decomp_precision` | #140557 | P2 | cpu | 0/3 |
+| `pytorch__139999__masked_mean_bool_upcast` | #139999 | P1 | cpu | 3/3 |
 | `pytorch__129138__linear_add_bias_autocast` | #129138 | P3 | cpu | 3/3 |
 | `pytorch__132835__njt_sdpa_autocast` | #132835 | P3 | cuda_py | 1/3 |
 | `pytorch__144009__softmax_ilpreduce_size` | #144009 | P5 | cuda_kernel | 3/3 |
 | `pytorch__139372__histc_int8_cuda_bounds` | #139372 | P5 | cuda_kernel | 3/3 |
 
-Precision-phase result: **13/18 resolved (72.2%)**, patch conciseness 1.000, pass-to-pass kept rate 83.3%, regression rate 0%, and tier-weighted score 78.8%. P4 remains N/A because no P4 task has passed admission. See the [v0.5 precision report](docs/v0.5/experiment_report.md) for failure analysis and metric definitions.
+Full-run metrics: patch conciseness 1.000, pass-to-pass kept rate 94.1%, regression rate 0%, and tier-weighted score 76.8%. P4 remains N/A because no P4 task passed admission. See the [v0.5 experiment report](docs/v0.5/experiment_report.md) for integrity evidence, failure analysis, and metric definitions.
 
 Tier codes: `cpu` = `cpu_python_overlay`, `cuda_py` = `cuda_python_overlay`, `cuda_kernel` = `cuda_kernel_build`.
 
@@ -210,7 +210,7 @@ Read [docs/v0.2/developer_guide.md](docs/v0.2/developer_guide.md), [docs/v0.4/de
 
 - [Docs index](docs/README.md)
 - [v0.5 design](docs/v0.5/design.md)
-- [v0.5 precision experiment report](docs/v0.5/experiment_report.md)
+- [v0.5 experiment report](docs/v0.5/experiment_report.md)
 - [v0.4 design](docs/v0.4/design.md)
 - [v0.4 experiment report](docs/v0.4/experiment_report.md)
 - [v0.3 design](docs/v0.3/design.md)

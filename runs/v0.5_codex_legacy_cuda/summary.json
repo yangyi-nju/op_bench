@@ -1,0 +1,368 @@
+{
+  "agents": {
+    "codex_action_bridge": {
+      "failure_reasons": {
+        "resolved": 3
+      },
+      "median_runtime_sec": 118.54716429207474,
+      "resolved": 3,
+      "resolved_rate": 1.0,
+      "total": 3
+    }
+  },
+  "baseline_count": 1,
+  "baselines": [
+    {
+      "agent": "baseline",
+      "commands": [
+        {
+          "command": [
+            "op_bench",
+            "copy-source-snapshot",
+            "/Users/yy/dev/graduate/op_bench/.op_bench_cache/sources/pytorch/pytorch/7100c36c8a170db3b73e0c293d5366cfe6318c4d/source",
+            "/var/folders/yf/pljpbb8x7nl_crf68gh72hs00000gn/T/op-bench-pytorch__132616__cuda_mem_get_info-_3ylvy1u/workspace"
+          ],
+          "cwd": "/var/folders/yf/pljpbb8x7nl_crf68gh72hs00000gn/T/op-bench-pytorch__132616__cuda_mem_get_info-_3ylvy1u",
+          "duration_sec": 2.0631029999349266,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "copied source snapshot from /Users/yy/dev/graduate/op_bench/.op_bench_cache/sources/pytorch/pytorch/7100c36c8a170db3b73e0c293d5366cfe6318c4d/source\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "rsync",
+            "-az",
+            "--delete",
+            "--exclude=.ccache/",
+            "--exclude=build/",
+            "--exclude=torch.egg-info/",
+            "--exclude=__pycache__/",
+            "-e",
+            "ssh -p 22313 -i /Users/yy/.ssh/KeyPair-02-openssh -o StrictHostKeyChecking=accept-new",
+            "/private/var/folders/yf/pljpbb8x7nl_crf68gh72hs00000gn/T/op-bench-pytorch__132616__cuda_mem_get_info-_3ylvy1u/workspace/",
+            "root@210.28.133.13:/data/op_bench_workspaces/op-bench-pytorch__132616__cuda_mem_get_info-0dc9bece7830/"
+          ],
+          "cwd": "",
+          "duration_sec": 79.13861129200086,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "ssh",
+            "-p",
+            "22313",
+            "-i",
+            "/Users/yy/.ssh/KeyPair-02-openssh",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            "-o",
+            "ServerAliveInterval=30",
+            "-o",
+            "ServerAliveCountMax=3",
+            "root@210.28.133.13",
+            "nvidia-smi"
+          ],
+          "cwd": "",
+          "duration_sec": 1.1774250830058008,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "Fri Jul 10 19:27:20 2026       \n+---------------------------------------------------------------------------------------+\n| NVIDIA-SMI 535.247.01             Driver Version: 535.247.01   CUDA Version: 12.2     |\n|-----------------------------------------+----------------------+----------------------+\n| GPU  Name                 Persistence-M | Bus-Id        Disp.A | Volatile Uncorr. ECC |\n| Fan  Temp   Perf          Pwr:Usage/Cap |         Memory-Usage | GPU-Util  Compute M. |\n|                                         |                      |               MIG M. |\n|=========================================+======================+======================|\n|   0  Tesla V100-SXM2-32GB           Off | 00000000:00:04.0 Off |                    0 |\n| N/A   34C    P0              39W / 300W |      0MiB / 32768MiB |      0%      Default |\n|                                         |                      |                  N/A |\n+-----------------------------------------+----------------------+----------------------+\n|   1  Tesla V100-SXM2-32GB           Off | 00000000:00:05.0 Off |                    0 |\n| N/A   33C    P0              41W / 300W |      0MiB / 32768MiB |      0%      Default |\n|                                         |                      |                  N/A |\n+-----------------------------------------+----------------------+----------------------+\n|   2  Tesla V100-SXM2-32GB           Off | 00000000:00:06.0 Off |                    0 |\n| N/A   35C    P0              40W / 300W |      0MiB / 32768MiB |      0%      Default |\n|                                         |                      |                  N/A |\n+-----------------------------------------+----------------------+----------------------+\n|   3  Tesla V100-SXM2-32GB           Off | 00000000:00:07.0 Off |                    0 |\n| N/A   32C    P0              41W / 300W |      0MiB / 32768MiB |      0%      Default |\n|                                         |                      |                  N/A |\n+-----------------------------------------+----------------------+----------------------+\n                                                                                         \n+---------------------------------------------------------------------------------------+\n| Processes:                                                                            |\n|  GPU   GI   CI        PID   Type   Process name                            GPU Memory |\n|        ID   ID                                                             Usage      |\n|=======================================================================================|\n|  No running processes found                                                           |\n+---------------------------------------------------------------------------------------+\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "ssh",
+            "-p",
+            "22313",
+            "-i",
+            "/Users/yy/.ssh/KeyPair-02-openssh",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            "-o",
+            "ServerAliveInterval=30",
+            "-o",
+            "ServerAliveCountMax=3",
+            "root@210.28.133.13",
+            "docker image inspect op-bench/pytorch-cuda:torch2.6.0-cu124-py311"
+          ],
+          "cwd": "",
+          "duration_sec": 1.3491265419870615,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "[\n    {\n        \"Id\": \"sha256:8a80e989aa4493d84f26ce2206961271144efd04a047715b034e6034ef1db5aa\",\n        \"RepoTags\": [\n            \"op-bench/pytorch-cuda:torch2.6.0-cu124-py311\"\n        ],\n        \"RepoDigests\": [],\n        \"Parent\": \"\",\n        \"Comment\": \"buildkit.dockerfile.v0\",\n        \"Created\": \"2026-07-02T08:14:52.027807876Z\",\n        \"DockerVersion\": \"\",\n        \"Author\": \"\",\n        \"Architecture\": \"amd64\",\n        \"Os\": \"linux\",\n        \"Size\": 13230512985,\n        \"GraphDriver\": {\n            \"Data\": {\n                \"LowerDir\": \"/var/lib/docker/overlay2/t8ejm95g9d6zizdn56rgmuima/diff:/var/lib/docker/overlay2/7f8ae36e4cf2cf94767e3160e67d9c262b6e140aa1c323f17fc7476042360abf/diff:/var/lib/docker/overlay2/9e47561b76e67bc24314c5d6ec89cadcc3da4795ce916e9ae3a0dd99a2361ea5/diff:/var/lib/docker/overlay2/82e3241645e0372fb53c51e0647b62334dde69034cf2b86c6bffaf89e1709610/diff:/var/lib/docker/overlay2/353cdc222b06a87589d9208a44ddfcf36d0a78acc537371c4be82126e8af2cc9/diff:/var/lib/docker/overlay2/ba06d7e96c56af7c6f5bacdee1605313e4cfb136f5a1ba500bd87cd3ba40132f/diff:/var/lib/docker/overlay2/829e7c5b9ea4b03a4c2a073ec83fbd3ed2dec690560551b0210b9f628e7cf616/diff:/var/lib/docker/overlay2/fb056e838ede0b04b2f7593dd5ab3ca302db27e870f3622b13a1f401246afd3f/diff:/var/lib/docker/overlay2/169c0aaa1eb1d7487925eb52184ab3e14bc8c1a15496a67b08e8a28b38c098a6/diff:/var/lib/docker/overlay2/70b62f1c494e7f48b64a023d79666ea0e3ec4700b063398fb03cf6a746420480/diff:/var/lib/docker/overlay2/12a4f33927872f09b624d906cc5d9de2aaa69f882bc60c996eff99a02be75d6e/diff:/var/lib/docker/overlay2/d46ecb60a7ba594a45034f55dfc63ed6791a3349bea53b4f63f1bfd4a4d41682/diff:/var/lib/docker/overlay2/17478a41d5acc5d619a2fc0c273d30ad2ab569f7460fb0c2ba4e355536bd9e0b/diff:/var/lib/docker/overlay2/76f314ad1a35bca6380d6c0d389edaeffd7c03d385a4dd2f9645811209c3e63d/diff:/var/lib/docker/overlay2/b2597f36e3b4d87e3d5b06fd5d0e591be106647e6ac366682fdbea70f7be517d/diff:/var/lib/docker/overlay2/b12a6c2fafbdada11fb19d6f90fec74c8e2aeb80b1bc83d904d5aedbb41ded93/diff\",\n                \"MergedDir\": \"/var/lib/docker/overlay2/7rfpj5ko70a50r71rg72zxk43/merged\",\n                \"UpperDir\": \"/var/lib/docker/overlay2/7rfpj5ko70a50r71rg72zxk43/diff\",\n                \"WorkDir\": \"/var/lib/docker/overlay2/7rfpj5ko70a50r71rg72zxk43/work\"\n            },\n            \"Name\": \"overlay2\"\n        },\n        \"RootFS\": {\n            \"Type\": \"layers\",\n            \"Layers\": [\n                \"sha256:e0a9f5911802534ba097660206feabeb0247a81e409029167b30e2e1f2803b57\",\n                \"sha256:47654eeadbc543f1dd44ebb41c6ca0954b9f1813efabdcd46b0e7f17ac4e9fd1\",\n                \"sha256:efe2b79b53de08e199a2ce107d83adc0cbdff94f605e03f5ef51f3df3ae31cfd\",\n                \"sha256:46d54736d31f4bfeb749544e22e8611dba11128bdb2cebb820a3b452b50e7d52\",\n                \"sha256:809d3bb9c80fb3d31d4c061ba0b38ba4e83b6329e33c2cb2bbf27251a8e527c6\",\n                \"sha256:1ffbbe19418f9726ebb365371ef96637c68f9d25af3f76a4f01f760e87fb31be\",\n                \"sha256:1b30dd39de2709bc00beebf392ea1f931d5f037d08e0f675a50855385cddad93\",\n                \"sha256:89fd878224a017aead1d4c83d5c62749307aa6f1a9e22087144ef339c3df8c1e\",\n                \"sha256:2b4acda8678c6f7ae0075eabb2c0c21078b80671800996ad2cf730f15fa0ef26\",\n                \"sha256:5fb5b17c5835e3e44f7c48dfc15f29504febad945f26dcfa11470d0070b166e4\",\n                \"sha256:b7fa3c6c5beea49f65d51f65f06a4a8af32b48f128c02bea3822e5afaf4ebf23\",\n                \"sha256:0d3c87ed9708bc14b9bfa9321d26942be8c3f42f5cae65f0a0f3436699945c3d\",\n                \"sha256:cfaa2b120999931e01139be6f09d4d43af394d77a2187b103c2354770d1cc534\",\n                \"sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef\",\n                \"sha256:d8ca5faf298e0fee3c271fc39a861463f961ebf6deac8e2108cce87d34ea3c4e\",\n                \"sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef\",\n                \"sha256:5a26a6a422b1f7f0f45e003dcb5c5718f58bc86173532db3b97b1d3a4c92043d\"\n            ]\n        },\n        \"Metadata\": {\n            \"LastTagTime\": \"2026-07-02T08:14:52.366560569Z\"\n        },\n        \"Config\": {\n            \"Cmd\": null,\n            \"Entrypoint\": [\n                \"/opt/nvidia/nvidia_entrypoint.sh\"\n            ],\n            \"Env\": [\n                \"PATH=/usr/local/nvidia/bin:/usr/local/cuda/bin:/opt/conda/bin:/usr/local/nvidia/bin:/usr/local/cuda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\",\n                \"NVARCH=x86_64\",\n                \"NVIDIA_REQUIRE_CUDA=cuda\\u003e=12.4 brand=tesla,driver\\u003e=470,driver\\u003c471 brand=unknown,driver\\u003e=470,driver\\u003c471 brand=nvidia,driver\\u003e=470,driver\\u003c471 brand=nvidiartx,driver\\u003e=470,driver\\u003c471 brand=geforce,driver\\u003e=470,driver\\u003c471 brand=geforcertx,driver\\u003e=470,driver\\u003c471 brand=quadro,driver\\u003e=470,driver\\u003c471 brand=quadrortx,driver\\u003e=470,driver\\u003c471 brand=titan,driver\\u003e=470,driver\\u003c471 brand=titanrtx,driver\\u003e=470,driver\\u003c471 brand=tesla,driver\\u003e=525,driver\\u003c526 brand=unknown,driver\\u003e=525,driver\\u003c526 brand=nvidia,driver\\u003e=525,driver\\u003c526 brand=nvidiartx,driver\\u003e=525,driver\\u003c526 brand=geforce,driver\\u003e=525,driver\\u003c526 brand=geforcertx,driver\\u003e=525,driver\\u003c526 brand=quadro,driver\\u003e=525,driver\\u003c526 brand=quadrortx,driver\\u003e=525,driver\\u003c526 brand=titan,driver\\u003e=525,driver\\u003c526 brand=titanrtx,driver\\u003e=525,driver\\u003c526 brand=tesla,driver\\u003e=535,driver\\u003c536 brand=unknown,driver\\u003e=535,driver\\u003c536 brand=nvidia,driver\\u003e=535,driver\\u003c536 brand=nvidiartx,driver\\u003e=535,driver\\u003c536 brand=geforce,driver\\u003e=535,driver\\u003c536 brand=geforcertx,driver\\u003e=535,driver\\u003c536 brand=quadro,driver\\u003e=535,driver\\u003c536 brand=quadrortx,driver\\u003e=535,driver\\u003c536 brand=titan,driver\\u003e=535,driver\\u003c536 brand=titanrtx,driver\\u003e=535,driver\\u003c536\",\n                \"NV_CUDA_CUDART_VERSION=12.4.127-1\",\n                \"NV_CUDA_COMPAT_PACKAGE=cuda-compat-12-4\",\n                \"CUDA_VERSION=12.4.1\",\n                \"LD_LIBRARY_PATH=/opt/conda/lib/python3.11/site-packages/cusparselt/lib:/opt/conda/lib/python3.11/site-packages/nvidia/cublas/lib:/opt/conda/lib/python3.11/site-packages/nvidia/cuda_cupti/lib:/opt/conda/lib/python3.11/site-packages/nvidia/cuda_nvrtc/lib:/opt/conda/lib/python3.11/site-packages/nvidia/cuda_runtime/lib:/opt/conda/lib/python3.11/site-packages/nvidia/cudnn/lib:/opt/conda/lib/python3.11/site-packages/nvidia/cufft/lib:/opt/conda/lib/python3.11/site-packages/nvidia/curand/lib:/opt/conda/lib/python3.11/site-packages/nvidia/cusolver/lib:/opt/conda/lib/python3.11/site-packages/nvidia/cusparse/lib:/opt/conda/lib/python3.11/site-packages/nvidia/nccl/lib:/opt/conda/lib/python3.11/site-packages/nvidia/nvjitlink/lib:/opt/conda/lib/python3.11/site-packages/nvidia/nvtx/lib:/usr/local/nvidia/lib:/usr/local/nvidia/lib64\",\n                \"NVIDIA_VISIBLE_DEVICES=all\",\n                \"NVIDIA_DRIVER_CAPABILITIES=compute,utility\",\n                \"NV_CUDA_LIB_VERSION=12.4.1-1\",\n                \"NV_NVTX_VERSION=12.4.127-1\",\n                \"NV_LIBNPP_VERSION=12.2.5.30-1\",\n                \"NV_LIBNPP_PACKAGE=libnpp-12-4=12.2.5.30-1\",\n                \"NV_LIBCUSPARSE_VERSION=12.3.1.170-1\",\n                \"NV_LIBCUBLAS_PACKAGE_NAME=libcublas-12-4\",\n                \"NV_LIBCUBLAS_VERSION=12.4.5.8-1\",\n                \"NV_LIBCUBLAS_PACKAGE=libcublas-12-4=12.4.5.8-1\",\n                \"NV_LIBNCCL_PACKAGE_NAME=libnccl2\",\n                \"NV_LIBNCCL_PACKAGE_VERSION=2.21.5-1\",\n                \"NCCL_VERSION=2.21.5-1\",\n                \"NV_LIBNCCL_PACKAGE=libnccl2=2.21.5-1+cuda12.4\",\n                \"NVIDIA_PRODUCT_NAME=CUDA\",\n                \"NV_CUDA_CUDART_DEV_VERSION=12.4.127-1\",\n                \"NV_NVML_DEV_VERSION=12.4.127-1\",\n                \"NV_LIBCUSPARSE_DEV_VERSION=12.3.1.170-1\",\n                \"NV_LIBNPP_DEV_VERSION=12.2.5.30-1\",\n                \"NV_LIBNPP_DEV_PACKAGE=libnpp-dev-12-4=12.2.5.30-1\",\n                \"NV_LIBCUBLAS_DEV_VERSION=12.4.5.8-1\",\n                \"NV_LIBCUBLAS_DEV_PACKAGE_NAME=libcublas-dev-12-4\",\n                \"NV_LIBCUBLAS_DEV_PACKAGE=libcublas-dev-12-4=12.4.5.8-1\",\n                \"NV_CUDA_NSIGHT_COMPUTE_VERSION=12.4.1-1\",\n                \"NV_CUDA_NSIGHT_COMPUTE_DEV_PACKAGE=cuda-nsight-compute-12-4=12.4.1-1\",\n                \"NV_NVPROF_VERSION=12.4.127-1\",\n                \"NV_NVPROF_DEV_PACKAGE=cuda-nvprof-12-4=12.4.127-1\",\n                \"NV_LIBNCCL_DEV_PACKAGE_NAME=libnccl-dev\",\n                \"NV_LIBNCCL_DEV_PACKAGE_VERSION=2.21.5-1\",\n                \"NV_LIBNCCL_DEV_PACKAGE=libnccl-dev=2.21.5-1+cuda12.4\",\n                \"LIBRARY_PATH=/usr/local/cuda/lib64/stubs\",\n                \"PYTORCH_VERSION=2.6.0\",\n                \"PYTHONUNBUFFERED=1\",\n                \"PYTHONDONTWRITEBYTECODE=1\",\n                \"PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True\"\n            ],\n            \"Labels\": {\n                \"com.nvidia.volumes.needed\": \"nvidia_driver\",\n                \"maintainer\": \"NVIDIA CORPORATION \\u003ccudatools@nvidia.com\\u003e\",\n                \"org.opencontainers.image.ref.name\": \"ubuntu\",\n                \"org.opencontainers.image.version\": \"22.04\"\n            },\n            \"OnBuild\": null,\n            \"User\": \"\",\n            \"Volumes\": null,\n            \"WorkingDir\": \"/workspace\"\n        }\n    }\n]\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "ssh",
+            "-p",
+            "22313",
+            "-i",
+            "/Users/yy/.ssh/KeyPair-02-openssh",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            "-o",
+            "ServerAliveInterval=30",
+            "-o",
+            "ServerAliveCountMax=3",
+            "root@210.28.133.13",
+            "docker run --detach --name op-bench-pytorch__132616__cuda_mem_get_info-0dc9bece7830 --gpus all --label op-bench.environment-id=pytorch-cuda-torch2.6.0-py311-cu124 --label op-bench.managed=true --label op-bench.runtime-tier=cuda_python_overlay --label op-bench.task-id=pytorch__132616__cuda_mem_get_info --volume /data/op_bench_workspaces/op-bench-pytorch__132616__cuda_mem_get_info-0dc9bece7830:/workspace --workdir /workspace op-bench/pytorch-cuda:torch2.6.0-cu124-py311 tail -f /dev/null"
+          ],
+          "cwd": "",
+          "duration_sec": 5.433030499960296,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "7e4d89625f3a1bd9be6b449bb91754a5166dcc6a99e958fb7dd566bbb3269bb6\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "ssh",
+            "-p",
+            "22313",
+            "-i",
+            "/Users/yy/.ssh/KeyPair-02-openssh",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            "-o",
+            "ServerAliveInterval=30",
+            "-o",
+            "ServerAliveCountMax=3",
+            "root@210.28.133.13",
+            "docker exec --workdir /tmp op-bench-pytorch__132616__cuda_mem_get_info-0dc9bece7830 python --version"
+          ],
+          "cwd": "",
+          "duration_sec": 1.147177750011906,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "Python 3.11.11\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "ssh",
+            "-p",
+            "22313",
+            "-i",
+            "/Users/yy/.ssh/KeyPair-02-openssh",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            "-o",
+            "ServerAliveInterval=30",
+            "-o",
+            "ServerAliveCountMax=3",
+            "root@210.28.133.13",
+            "docker exec --workdir /tmp op-bench-pytorch__132616__cuda_mem_get_info-0dc9bece7830 python -c 'import torch; print(torch.__version__); print(torch.cuda.is_available())'"
+          ],
+          "cwd": "",
+          "duration_sec": 3.1377962499391288,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "2.6.0+cu124\nTrue\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "git",
+            "apply",
+            "/Users/yy/dev/graduate/op_bench/tasks/pytorch/132616_cuda_mem_get_info/artifacts/hidden_test.patch"
+          ],
+          "cwd": "/var/folders/yf/pljpbb8x7nl_crf68gh72hs00000gn/T/op-bench-pytorch__132616__cuda_mem_get_info-_3ylvy1u/workspace",
+          "duration_sec": 0.015533916070125997,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "rsync",
+            "-az",
+            "--delete",
+            "--exclude=.ccache/",
+            "--exclude=build/",
+            "--exclude=torch.egg-info/",
+            "--exclude=__pycache__/",
+            "-e",
+            "ssh -p 22313 -i /Users/yy/.ssh/KeyPair-02-openssh -o StrictHostKeyChecking=accept-new",
+            "/private/var/folders/yf/pljpbb8x7nl_crf68gh72hs00000gn/T/op-bench-pytorch__132616__cuda_mem_get_info-_3ylvy1u/workspace/",
+            "root@210.28.133.13:/data/op_bench_workspaces/op-bench-pytorch__132616__cuda_mem_get_info-0dc9bece7830/"
+          ],
+          "cwd": "",
+          "duration_sec": 2.0983964580809698,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "ssh",
+            "-p",
+            "22313",
+            "-i",
+            "/Users/yy/.ssh/KeyPair-02-openssh",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            "-o",
+            "ServerAliveInterval=30",
+            "-o",
+            "ServerAliveCountMax=3",
+            "root@210.28.133.13",
+            "docker exec --workdir /workspace op-bench-pytorch__132616__cuda_mem_get_info-0dc9bece7830 python -c 'import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('\"'\"'.'\"'\"')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))' '{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/cuda/memory.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}'"
+          ],
+          "cwd": "",
+          "duration_sec": 7.5587460830574855,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "{\"mode\": \"python_overlay\", \"overlay_files\": [{\"runtime\": \"/tmp/op_bench_runtime/site-packages/torch/cuda/memory.py\", \"sha256\": \"sha256:7f5c1fba033a93d0c118278c177314cc634efafa2bd5eb23ada326f292b41b31\", \"workspace\": \"/workspace/torch/cuda/memory.py\"}], \"package\": \"torch\"}\n",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "ssh",
+            "-p",
+            "22313",
+            "-i",
+            "/Users/yy/.ssh/KeyPair-02-openssh",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            "-o",
+            "ServerAliveInterval=30",
+            "-o",
+            "ServerAliveCountMax=3",
+            "root@210.28.133.13",
+            "docker exec --workdir /workspace op-bench-pytorch__132616__cuda_mem_get_info-0dc9bece7830 python test/test_cuda_multigpu.py TestCudaMultiGPU.test_mem_get_info"
+          ],
+          "cwd": "",
+          "duration_sec": 6.720107666915283,
+          "exit_code": 1,
+          "stderr": "E\n======================================================================\nERROR: test_mem_get_info (__main__.TestCudaMultiGPU.test_mem_get_info)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/tmp/op_bench_runtime/site-packages/torch/testing/_internal/common_utils.py\", line 3108, in wrapper\n    method(*args, **kwargs)\n  File \"/workspace/test/test_cuda_multigpu.py\", line 1026, in test_mem_get_info\n    _test(torch.device(\"cuda\"))\n  File \"/workspace/test/test_cuda_multigpu.py\", line 1012, in _test\n    before_free_bytes, before_available_bytes = torch.cuda.mem_get_info(device)\n                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/cuda/memory.py\", line 697, in mem_get_info\n    device = _get_device_index(device)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/cuda/_utils.py\", line 38, in _get_device_index\n    return _torch_get_device_index(device, optional, allow_cpu)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/_utils.py\", line 836, in _get_device_index\n    raise ValueError(\nValueError: Expected a torch.device with a specified index or an integer, but got:cuda\n\nTo execute this test, run the following from the base repo dir:\n    PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True python test/test_cuda_multigpu.py TestCudaMultiGPU.test_mem_get_info\n\nThis message can be suppressed by setting PYTORCH_PRINT_REPRO_ON_FAILURE=0\n\n----------------------------------------------------------------------\nRan 1 test in 0.111s\n\nFAILED (errors=1)\n",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "ssh",
+            "-p",
+            "22313",
+            "-i",
+            "/Users/yy/.ssh/KeyPair-02-openssh",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            "-o",
+            "ServerAliveInterval=30",
+            "-o",
+            "ServerAliveCountMax=3",
+            "root@210.28.133.13",
+            "docker exec --workdir /workspace op-bench-pytorch__132616__cuda_mem_get_info-0dc9bece7830 python test/test_cuda_multigpu.py TestCudaMultiGPU.test_rng_state_offset"
+          ],
+          "cwd": "",
+          "duration_sec": 4.89761179103516,
+          "exit_code": 0,
+          "stderr": ".\n----------------------------------------------------------------------\nRan 1 test in 0.092s\n\nOK\n",
+          "stdout": "",
+          "timed_out": false
+        },
+        {
+          "command": [
+            "ssh",
+            "-p",
+            "22313",
+            "-i",
+            "/Users/yy/.ssh/KeyPair-02-openssh",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            "-o",
+            "ServerAliveInterval=30",
+            "-o",
+            "ServerAliveCountMax=3",
+            "root@210.28.133.13",
+            "docker rm -f op-bench-pytorch__132616__cuda_mem_get_info-0dc9bece7830"
+          ],
+          "cwd": "",
+          "duration_sec": 2.35048454196658,
+          "exit_code": 0,
+          "stderr": "",
+          "stdout": "op-bench-pytorch__132616__cuda_mem_get_info-0dc9bece7830\n",
+          "timed_out": false
+        }
+      ],
+      "duration_sec": 126.38624904199969,
+      "environment": {
+        "command_workdir": "/workspace",
+        "container_name": "op-bench-pytorch__132616__cuda_mem_get_info-0dc9bece7830",
+        "digest_kind": null,
+        "environment_id": "pytorch-cuda-torch2.6.0-py311-cu124",
+        "executor": "remote_docker",
+        "gpus": "all",
+        "host_machine": "arm64",
+        "host_platform": "macOS-26.5.1-arm64-arm-64bit",
+        "image": "op-bench/pytorch-cuda:torch2.6.0-cu124-py311",
+        "image_digest": null,
+        "platform": null,
+        "preflight_command_count": 2,
+        "preflight_passed": true,
+        "preflight_workdir": "/tmp",
+        "remote_ccache_dir": null,
+        "remote_host": "210.28.133.13",
+        "remote_user": "root",
+        "remote_workspace": "/data/op_bench_workspaces/op-bench-pytorch__132616__cuda_mem_get_info-0dc9bece7830",
+        "runtime_tier": "cuda_python_overlay",
+        "workspace_dir": "/workspace"
+      },
+      "fail_to_pass_passed": 0,
+      "fail_to_pass_total": 1,
+      "mode": "baseline",
+      "pass_to_pass_passed": 1,
+      "pass_to_pass_total": 1,
+      "status": "baseline_reproduced",
+      "task_id": "pytorch__132616__cuda_mem_get_info"
+    }
+  ],
+  "extended": {
+    "codex_action_bridge": {
+      "fail_to_pass_only_rate": 1.0,
+      "pass_to_pass_kept_rate": 1.0,
+      "patch_conciseness": 1.0,
+      "per_problem_dimension": {
+        "unclassified": {
+          "resolved": 3,
+          "resolved_rate": 1.0,
+          "total": 3
+        }
+      },
+      "per_problem_subclass": {
+        "unclassified": {
+          "resolved": 3,
+          "resolved_rate": 1.0,
+          "total": 3
+        }
+      },
+      "per_problem_type": {
+        "parameter-validation": {
+          "resolved": 3,
+          "resolved_rate": 1.0,
+          "total": 3
+        }
+      },
+      "per_tier": {
+        "cuda_python_overlay": {
+          "resolved": 3,
+          "resolved_rate": 1.0,
+          "total": 3
+        }
+      },
+      "regression_rate": 0.0,
+      "resolved": 3,
+      "resolved_rate": 1.0,
+      "tier_weighted_score": 1.0,
+      "total": 3
+    }
+  },
+  "total_records": 3
+}

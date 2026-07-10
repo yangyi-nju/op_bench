@@ -1,0 +1,24 @@
+diff --git a/torch/autograd/__init__.py b/torch/autograd/__init__.py
+index c370a03..691cf36 100644
+--- a/torch/autograd/__init__.py
++++ b/torch/autograd/__init__.py
+@@ -325,9 +325,6 @@ def backward(
+                 "arguments both passed to `backward()`. Please only "
+                 "use `grad_tensors`."
+             )
+-    if inputs is not None and len(inputs) == 0:
+-        raise RuntimeError("`inputs` argument to `backward()` cannot be empty.")
+-
+     if is_tensor_like(tensors) or isinstance(tensors, graph.GradientEdge):
+         tensors = cast(
+             Union[tuple[torch.Tensor], tuple[graph.GradientEdge]], (tensors,)
+@@ -342,6 +339,9 @@ def backward(
+         else ()
+     )
+ 
++    if inputs is not None and len(inputs) == 0:
++        raise RuntimeError("`inputs` argument to `backward()` cannot be empty.")
++
+     grad_tensors_ = _tensor_or_tensors_to_tuple(grad_tensors, len(tensors))
+     grad_tensors_ = _make_grads(tensors, grad_tensors_, is_grads_batched=False)
+     if retain_graph is None:

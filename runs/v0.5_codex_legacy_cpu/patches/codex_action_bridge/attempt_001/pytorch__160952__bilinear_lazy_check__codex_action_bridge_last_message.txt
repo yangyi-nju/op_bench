@@ -1,0 +1,6 @@
+Implemented the focused `Bilinear` lazy-initialization fix in `torch/nn/modules/linear.py`.
+
+- Removed the eager `in1_features <= 0` constructor check.
+- Added a zero-width guard in `reset_parameters()` immediately before the division.
+
+Verification note: the provided benchmark file is missing from the task runtime, so it could not be run.

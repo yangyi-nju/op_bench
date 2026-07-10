@@ -1,0 +1,5 @@
+Updated `set_submodule` to resolve nested parents via `get_submodule` and explicitly handle direct, non-dot targets on the root module.
+
+Verified with:
+
+`TestNN.test_set_submodule` — passed.

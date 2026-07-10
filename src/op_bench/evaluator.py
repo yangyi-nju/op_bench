@@ -117,9 +117,6 @@ class Evaluator:
                 if test_patch_result.exit_code != 0:
                     return finish("runner_error")
 
-            if task.public_test_patch_path is not None and task.public_test_patch_path.exists():
-                pass  # public_test_patch mechanism deprecated in v0.5; field kept in schema for history
-
             if patch_path is not None and patch_path.read_text(encoding="utf-8").strip():
                 patch_text = patch_path.read_text(encoding="utf-8")
                 if task.patch_scope_paths and mode.startswith("agent:"):
@@ -446,10 +443,10 @@ class Evaluator:
             if fail_passed < fail_total and pass_passed == pass_total:
                 return "baseline_reproduced"
             return "baseline_not_reproduced"
-        if pass_passed < pass_total:
-            return "pass_to_pass_regressed"
         if fail_passed < fail_total:
             return "fail_to_pass_failed"
+        if pass_passed < pass_total:
+            return "pass_to_pass_regressed"
         return "resolved"
 
     def _result(

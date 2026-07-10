@@ -1,0 +1,3 @@
+Fixed `torch.autograd.backward` input normalization so empty validation occurs after single tensors are normalized into a tuple. This prevents erroneous `len()` failures for scalar tensor inputs while retaining the empty-input error.
+
+Verified the edited module compiles successfully.

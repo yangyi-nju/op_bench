@@ -1,0 +1,3 @@
+Implemented the scoped autograd fix.
+
+Unused materialized gradients now set `requires_grad` from `create_graph`, rather than always enabling it. Focused test `TestAutograd.test_grad_materialize_grads` passes.
