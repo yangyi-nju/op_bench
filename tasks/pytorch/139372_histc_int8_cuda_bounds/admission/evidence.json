@@ -5,45 +5,45 @@
     "verified": true
   },
   "baseline": {
-    "duration_sec": 5383.071923875001,
+    "duration_sec": 653.058471333934,
     "fail_to_pass_passed": 0,
     "fail_to_pass_total": 1,
     "mode": "baseline",
     "pass_to_pass_passed": 1,
     "pass_to_pass_total": 1,
     "status": "baseline_reproduced",
-    "task_id": "pytorch__144009__softmax_ilpreduce_size"
+    "task_id": "pytorch__139372__histc_int8_cuda_bounds"
   },
-  "created_at": "2026-07-06T06:40:50Z",
+  "created_at": "2026-07-10T10:51:34Z",
   "environment": {
     "backend": "remote_docker",
     "digest_kind": null,
     "id": "pytorch-cuda-devel-torch2.6.0-py311-cu124",
     "image": "op-bench/pytorch-cuda-devel:torch2.6.0-cu124-py311",
     "image_digest": null,
-    "platform": null,
+    "platform": "linux/amd64",
     "runtime_tier": "cuda_kernel_build"
   },
-  "evidence_id": "pytorch__144009__softmax_ilpreduce_size:61bb36cfe721:2026-07-06T06:40:50Z",
+  "evidence_id": "pytorch__139372__histc_int8_cuda_bounds:84cf38854b71:2026-07-10T10:51:34Z",
   "gold": {
-    "duration_sec": 5404.56472825,
+    "duration_sec": 554.2952391660074,
     "fail_to_pass_passed": 1,
     "fail_to_pass_total": 1,
     "mode": "gold",
     "pass_to_pass_passed": 1,
     "pass_to_pass_total": 1,
     "status": "resolved",
-    "task_id": "pytorch__144009__softmax_ilpreduce_size"
+    "task_id": "pytorch__139372__histc_int8_cuda_bounds"
   },
   "schema_version": "v1",
   "source": {
-    "base_commit": "2409b49a33c0ef594d89f9f477d56abad47e65bf",
-    "id": "pytorch-2409b49-kernel-build",
+    "base_commit": "356fc41ae04816fe137bc85ccca4087ede291e3e",
+    "id": "pytorch-356fc41-kernel-build",
     "repo_url": "https://github.com/pytorch/pytorch.git",
     "snapshot_hash": null,
     "snapshot_method": null
   },
-  "task_id": "pytorch__144009__softmax_ilpreduce_size",
-  "task_manifest_hash": "sha256:9eec76fadaa4fcaacc820e4faa9ddcadb64d777e906980119ee1d6a4c63b5d7a",
+  "task_id": "pytorch__139372__histc_int8_cuda_bounds",
+  "task_manifest_hash": "sha256:84cf38854b715a289faab72ef70f4225c37a0bf9bdab3da8d5b8d61755ffdac4",
   "task_manifest_hash_kind": "replay_spec_v1"
 }

@@ -10,14 +10,14 @@ v0.1 established the isolated replay/evaluation loop. v0.2 completed the platfor
 
 - A two-layer dataset model: `datasets/<slice>/dataset.json` points to task bundles under `tasks/`.
 - Real PyTorch task bundles with PR/issue metadata, hidden test patches, gold patches, source snapshots, and environment declarations.
-- Reusable Docker environments: `environments/pytorch-cpu/` (CPU), `environments/pytorch-cuda/` (CUDA Python overlay), `environments/pytorch-cuda-devel/` (CUDA + nvcc/ccache/cmake for kernel builds).
+- Reusable Docker environments: `environments/pytorch-cpu/` (CPU), `environments/pytorch-cpu-compile/` (CPU + Inductor toolchain), `environments/pytorch-cuda/` (CUDA Python overlay), `environments/pytorch-cuda-devel/` (CUDA + nvcc/ccache/cmake for kernel builds).
 - Environment and source registries under `environments/registry.json` and `sources/registry.json`.
 - Three runtime tiers: `cpu_python_overlay`, `cuda_python_overlay`, `cuda_kernel_build` (last two use `remote_docker` backend over SSH).
 - Formal admission evidence through `scripts/run_admission.py`, offline preflight through `scripts/preflight_task.py`.
 - Dataset curation through `scripts/curate_dataset.py`.
 - Asset and container inspection through `scripts/inspect_assets.py` and `scripts/manage_containers.py`.
 - A replay evaluator that checks baseline failure, gold success, agent patch success, and pass-to-pass regressions; supports `python_overlay` and `inplace_build` source loading modes.
-- A remote GPU Docker executor (`src/op_bench/remote.py`) that runs `docker` on an SSH host, rsyncs workspaces both ways, and reuses ccache/build cache across attempts.
+- A remote GPU Docker executor (`src/op_bench/remote.py`) that runs `docker` on an SSH host, rsyncs workspaces both ways, and persists an environment-scoped ccache across isolated workspaces.
 - A standardized workspace action interface for file operations, patch application, command execution, tests, and diff export.
 - `codex_action_bridge`, the reference real-agent adapter with automatic rate-limit-aware retry. Codex runs on the host in a scratch workspace and can operate on the target repository only through OpBench actions.
 

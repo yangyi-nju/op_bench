@@ -8,6 +8,16 @@
 - Docker + nvidia-container-toolkit 已安装（v0.4 admission 期间已验证）
 - Python 3.11+ 可用
 
+服务器需要预先构建 task registry 引用的镜像。除了基础 CPU/CUDA 镜像，
+调用 `torch.compile`/Inductor 的 CPU task 使用带 C++ 编译器和 Python headers 的
+`op-bench/pytorch-cpu-compile:torch2.6.0-py311`：
+
+```bash
+docker build \
+  -t op-bench/pytorch-cpu-compile:torch2.6.0-py311 \
+  environments/pytorch-cpu-compile
+```
+
 ## 安装 Codex CLI
 
 ```bash
@@ -115,6 +125,9 @@ ssh -i ~/.ssh/your_key ubuntu@<server-ip> "docker run --rm --gpus all nvidia/cud
 # CPU image 可用
 ssh -i ~/.ssh/your_key ubuntu@<server-ip> "docker image inspect op-bench/pytorch-cpu:torch2.6.0-py311 | jq '.[0].Id'"
 
+# torch.compile CPU image 可用
+ssh -i ~/.ssh/your_key ubuntu@<server-ip> "docker image inspect op-bench/pytorch-cpu-compile:torch2.6.0-py311 | jq '.[0].Id'"
+
 # Codex CLI 可用
 ssh -i ~/.ssh/your_key ubuntu@<server-ip> "codex --version"
 ```
@@ -123,4 +136,5 @@ ssh -i ~/.ssh/your_key ubuntu@<server-ip> "codex --version"
 
 - `OP_BENCH_FORCE_LOCAL_DOCKER=1`：临时调试用，强制所有任务走本地 Docker（需要本地有 Colima/Docker）。
 - 服务器磁盘：每个 workspace rsync 约 500MB（python_overlay），kernel_build 约 3GB。建议 `remote_workspace_root` 指向空间充裕的数据盘。
+- kernel build 的 ccache 持久化在 `<remote_workspace_root>/_cache/ccache/<environment-id>`；随机 workspace 清理不会删除它。需要强制冷编译时再手动清理对应环境目录。
 - rate-limit 行为：服务器端 Codex 触发 rate limit 后，`_run_codex` 自动 sleep `OP_BENCH_CODEX_RATE_LIMIT_WAIT_SEC`（默认 18300s）。sleep 期间 SSH 连接保活，不需要 tmux，但长期 sleep 建议用 `tmux` 包住整个实验命令以防本地客户端断开。

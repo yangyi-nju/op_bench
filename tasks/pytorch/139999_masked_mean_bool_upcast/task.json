@@ -4,7 +4,11 @@
   "environment_ref": "pytorch-cpu-torch2.6.0-py311",
   "runtime_tier": "cpu_python_overlay",
   "source_ref": "pytorch-60a5050-python-overlay",
-  "admission": {"status": "draft"},
+  "admission": {
+    "status": "verified",
+    "evidence": "admission/evidence.json",
+    "verified_at": "2026-07-10T05:41:22Z"
+  },
   "patch_scope": {
     "allowed_paths": ["torch/masked/_ops.py"],
     "mode": "enforced"
@@ -90,10 +94,10 @@
   },
   "metadata": {
     "difficulty": "easy",
-    "curation_status": "draft",
+    "curation_status": "verified",
     "deterministic": true,
     "estimated_runtime_min": 10,
     "layer": "A",
-    "admission_status": "draft"
+    "admission_status": "verified"
   }
 }

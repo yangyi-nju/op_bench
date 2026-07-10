@@ -158,6 +158,34 @@ class RemoteDockerExecutorTests(unittest.TestCase):
         cmd = executor.command_for_start()
         self.assertNotIn("--gpus", cmd[-1])
 
+    def test_command_for_start_mounts_persistent_ccache(self):
+        executor = RemoteDockerExecutor(
+            host=self.host,
+            image="op-bench/cuda-devel:latest",
+            workspace_dir="/workspace",
+            container_name="c",
+            persistent_ccache_key="pytorch-cuda-devel",
+        )
+
+        remote_command = executor.command_for_start()[-1]
+
+        self.assertIn(
+            "--volume /tmp/op_bench_workspaces/_cache/ccache/pytorch-cuda-devel:/workspace/.ccache",
+            remote_command,
+        )
+        self.assertEqual(
+            executor.remote_ccache_dir,
+            "/tmp/op_bench_workspaces/_cache/ccache/pytorch-cuda-devel",
+        )
+
+    def test_persistent_ccache_key_rejects_path_traversal(self):
+        with self.assertRaises(ValueError):
+            RemoteDockerExecutor(
+                host=self.host,
+                image="op-bench/cuda-devel:latest",
+                persistent_ccache_key="../shared",
+            )
+
     def test_collect_environment_records_remote_host(self):
         evidence = self.executor.collect_environment()
         self.assertEqual(evidence["executor"], "remote_docker")

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import json
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
@@ -8,6 +7,7 @@ from pathlib import Path
 from typing import Callable
 
 from op_bench.evaluator import EvaluationResult, Evaluator
+from op_bench.integrity import REPLAY_SPEC_HASH_KIND, replay_spec_hash
 from op_bench.patch_scope import validate_patch_scope
 from op_bench.progress import Progress, noop_progress
 from op_bench.task import TaskManifest
@@ -19,6 +19,7 @@ class AdmissionEvidence:
     evidence_id: str
     task_id: str
     task_manifest_hash: str
+    task_manifest_hash_kind: str
     created_at: str
     source: dict[str, object]
     environment: dict[str, object]
@@ -76,7 +77,7 @@ class AdmissionRunner:
 
     def run(self, task: TaskManifest) -> AdmissionEvidence:
         created_at = self._format_timestamp(self.now())
-        task_manifest_hash = self._manifest_hash(task)
+        task_manifest_hash = replay_spec_hash(task)
         self.progress(f"admission baseline start: task={task.task_id}")
         baseline = self.evaluator.evaluate_baseline(task)
         self.progress(f"admission baseline done: task={task.task_id}, status={baseline.status}")
@@ -121,6 +122,7 @@ class AdmissionRunner:
             evidence_id=evidence_id,
             task_id=task.task_id,
             task_manifest_hash=task_manifest_hash,
+            task_manifest_hash_kind=REPLAY_SPEC_HASH_KIND,
             created_at=created_at,
             source=source,
             environment=environment,
@@ -145,10 +147,6 @@ class AdmissionRunner:
         output = task.task_dir / "admission" / "evidence.json"
         self._write_json(output, evidence.summary_dict())
         return output
-
-    def _manifest_hash(self, task: TaskManifest) -> str:
-        digest = hashlib.sha256(task.task_json_path.read_bytes()).hexdigest()
-        return f"sha256:{digest}"
 
     def _baseline_decision(self, status: str) -> tuple[str, str | None]:
         if status == "baseline_reproduced":

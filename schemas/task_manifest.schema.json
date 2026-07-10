@@ -335,6 +335,19 @@
             },
             "sync_before_tests": {
               "type": "boolean"
+            },
+            "build_command": {
+              "type": "string",
+              "minLength": 1
+            },
+            "build_environment": {
+              "type": "object",
+              "propertyNames": {
+                "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+              },
+              "additionalProperties": {
+                "type": ["string", "number", "boolean"]
+              }
             }
           },
           "allOf": [

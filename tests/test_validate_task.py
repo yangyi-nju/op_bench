@@ -2,10 +2,38 @@ from __future__ import annotations
 
 import unittest
 
-from scripts.validate_task import validate_manifest
+from scripts.validate_task import validate_manifest, validate_source_loading
 
 
 class ValidateTaskTests(unittest.TestCase):
+    def test_rejects_invalid_inplace_build_environment(self) -> None:
+        errors = validate_source_loading(
+            {
+                "mode": "inplace_build",
+                "build_environment": {"../BAD": "1", "GOOD": ["not-scalar"]},
+            }
+        )
+
+        self.assertIn(
+            "environment.source_loading.build_environment keys must be shell variable names",
+            errors,
+        )
+        self.assertIn(
+            "environment.source_loading.build_environment values must be scalar",
+            errors,
+        )
+
+    def test_rejects_artifact_path_traversal(self) -> None:
+        manifest = self._manifest()
+        manifest["artifacts"]["gold_patch"] = "../gold.patch"
+
+        errors = validate_manifest(manifest)
+
+        self.assertIn(
+            "artifacts.gold_patch must be a task-relative path without '..': '../gold.patch'",
+            errors,
+        )
+
     def test_accepts_v02_runtime_tier_and_admission(self) -> None:
         manifest = self._manifest()
         manifest["environment_ref"] = "pytorch-cpu"

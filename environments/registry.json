@@ -35,6 +35,41 @@
       "host": "gpu-a10"
     },
     {
+      "id": "pytorch-cpu-compile-torch2.6.0-py311",
+      "framework": "pytorch",
+      "runtime_tier": "cpu_python_overlay",
+      "backend": "remote_docker",
+      "docker": {
+        "image": "op-bench/pytorch-cpu-compile:torch2.6.0-py311",
+        "digest": "sha256:baa57df9fec9d6e15fbe7d8f6e2d19ff162d90c91a3aa8d48d874a02f9c663bc",
+        "digest_kind": "local_image_id",
+        "dockerfile": "pytorch-cpu-compile/Dockerfile",
+        "build_context": "pytorch-cpu-compile"
+      },
+      "python": "3.11",
+      "packages": {
+        "torch": "2.6.0"
+      },
+      "hardware": {
+        "requires_gpu": false,
+        "cuda": null
+      },
+      "preflight": {
+        "workdir": "/tmp",
+        "commands": [
+          "g++ --version",
+          "bash -lc \"test -f /usr/include/python3.11/Python.h\"",
+          "python --version",
+          "python -c \"import torch; print(torch.__version__); print(torch.__file__)\""
+        ]
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "cache_policy": "remote_build",
+      "host": "gpu-a10"
+    },
+    {
       "id": "pytorch-cuda-torch2.6.0-py311-cu124",
       "framework": "pytorch",
       "runtime_tier": "cuda_python_overlay",

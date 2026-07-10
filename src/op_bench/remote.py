@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import os
 import platform
+import re
 import shlex
 import shutil
 import subprocess
@@ -114,6 +115,7 @@ class RemoteDockerExecutor:
         labels: dict[str, str] | None = None,
         gpus: str | None = None,
         remote_workspace: str | None = None,
+        persistent_ccache_key: str | None = None,
     ) -> None:
         self.host = host
         self.image = image
@@ -123,6 +125,13 @@ class RemoteDockerExecutor:
         self.labels = dict(labels or {})
         self.gpus = gpus
         self._remote_workspace = remote_workspace
+        if persistent_ccache_key and not re.fullmatch(
+            r"[A-Za-z0-9][A-Za-z0-9._-]*", persistent_ccache_key
+        ):
+            raise ValueError(
+                "persistent_ccache_key must contain only letters, digits, '.', '_', or '-'"
+            )
+        self.persistent_ccache_key = persistent_ccache_key
 
     @property
     def remote_workspace(self) -> str:
@@ -131,6 +140,15 @@ class RemoteDockerExecutor:
         if self.container_name:
             return f"{self.host.remote_workspace_root}/{self.container_name}"
         return f"{self.host.remote_workspace_root}/default"
+
+    @property
+    def remote_ccache_dir(self) -> str | None:
+        if not self.persistent_ccache_key:
+            return None
+        return (
+            f"{self.host.remote_workspace_root}/_cache/ccache/"
+            f"{self.persistent_ccache_key}"
+        )
 
     def _ssh(self, remote_command: list[str], timeout_sec: int) -> CommandResult:
         full_command = self._ssh_command(remote_command)
@@ -145,7 +163,10 @@ class RemoteDockerExecutor:
         local_path = str(local_workspace.resolve()) + "/"
         remote_path = self.host.rsync_remote_path(self.remote_workspace + "/")
         # Pre-create remote directory
-        mkdir_result = self._ssh(["mkdir", "-p", self.remote_workspace], timeout_sec=30)
+        directories = [self.remote_workspace]
+        if self.remote_ccache_dir:
+            directories.append(self.remote_ccache_dir)
+        mkdir_result = self._ssh(["mkdir", "-p", *directories], timeout_sec=30)
         if mkdir_result.exit_code != 0:
             return mkdir_result
         cmd = self._rsync_command(local_path, remote_path)
@@ -167,9 +188,9 @@ class RemoteDockerExecutor:
             ssh_parts.extend(["-i", os.path.expanduser(self.host.identity_file)])
         ssh_parts.extend(["-o", "StrictHostKeyChecking=accept-new"])
         ssh_command = " ".join(ssh_parts)
-        # Preserve build artefacts and ccache between syncs. Without these
-        # excludes, --delete wipes the remote build/ and .ccache/ on every
-        # workspace re-sync, forcing a cold rebuild each time.
+        # Preserve generated files during repeated syncs of one workspace.
+        # Cross-workspace compiler reuse is provided by the separate ccache
+        # bind mount; build/ deliberately remains workspace-local.
         return [
             "rsync",
             "-az",
@@ -197,6 +218,12 @@ class RemoteDockerExecutor:
             remote_command.extend(["--label", f"{key}={value}"])
         remote_command.extend([
             "--volume", f"{self.remote_workspace}:{self.workspace_dir}",
+        ])
+        if self.remote_ccache_dir:
+            remote_command.extend([
+                "--volume", f"{self.remote_ccache_dir}:{self.workspace_dir}/.ccache",
+            ])
+        remote_command.extend([
             "--workdir", self.command_workdir,
             self.image,
             "tail", "-f", "/dev/null",
@@ -265,6 +292,7 @@ class RemoteDockerExecutor:
             "remote_host": self.host.hostname,
             "remote_user": self.host.user,
             "remote_workspace": self.remote_workspace,
+            "remote_ccache_dir": self.remote_ccache_dir,
             "host_platform": platform.platform(),
             "host_machine": platform.machine(),
         }

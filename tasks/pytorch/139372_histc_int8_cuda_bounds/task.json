@@ -4,7 +4,11 @@
   "environment_ref": "pytorch-cuda-devel-torch2.6.0-py311-cu124",
   "runtime_tier": "cuda_kernel_build",
   "source_ref": "pytorch-356fc41-kernel-build",
-  "admission": {"status": "draft"},
+  "admission": {
+    "status": "verified",
+    "evidence": "admission/evidence.json",
+    "verified_at": "2026-07-10T10:51:34Z"
+  },
   "patch_scope": {
     "allowed_paths": [
       "aten/src/ATen/native/cuda/SummaryOps.cu",
@@ -26,7 +30,7 @@
   },
   "statement": {
     "title": "CUDA histc does not check min > max for int8 tensors due to low-precision bounds storage",
-    "body": "In `_histc_cuda_template`, min/max bounds are stored in `input_t` (the input element type). For `int8`, this means the bounds comparison is done at int8 precision — values can silently wrap or overflow. The expected `RuntimeError` 'max must be larger than min' is never raised for int8 when `min=5, max=1`. Fix: use `at::acc_type<input_t, true>` (a wider type) for the bounds variables so the comparison is numerically correct.",
+    "body": "In `_histc_cuda_template`, min/max bounds are stored in `input_t` (the input element type). For `int8`, this means the bounds comparison is done at int8 precision: `min=256` wraps to 0, so the invalid range `min=256, max=1` is silently accepted. Fix: use `at::acc_type<input_t, true>` (a wider type) for the bounds variables so the comparison is numerically correct.",
     "labels": ["module: cuda", "topic: bug fixes", "module: histc"]
   },
   "operator": {
@@ -55,6 +59,10 @@
     "dependencies": ["full PyTorch source build via setup.py develop"],
     "source_loading": {
       "mode": "inplace_build",
+      "build_environment": {
+        "BUILD_TEST": "0",
+        "TORCH_CUDA_ARCH_LIST": "7.0"
+      },
       "sync_before_tests": true
     },
     "preflight_commands": [
@@ -93,11 +101,11 @@
   },
   "metadata": {
     "difficulty": "hard",
-    "curation_status": "draft",
+    "curation_status": "verified",
     "deterministic": true,
     "estimated_runtime_min": 90,
     "layer": "A",
-    "admission_status": "draft",
+    "admission_status": "verified",
     "notes": "kernel_build tier. Gold: 6 lines widening bounds_t to at::acc_type<input_t,true> in SummaryOps.cu, plus adding uint8 to dtypesIfCUDA in common_methods_invocations. Hidden test: test_histc_int8_bounds_overflow — @onlyCUDA + @dtypes(int8), runtime name test_histc_int8_bounds_overflow_cuda_int8 (avoiding the earlier _cuda_cuda_int8 collision). pass_to_pass: TestReductionsCUDA.test_histc_cuda (plain test_histc(self, device), no decorators)."
   }
 }

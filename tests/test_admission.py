@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import deepcopy
 import json
 import tempfile
 import textwrap
@@ -8,6 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from op_bench.admission import AdmissionRunner
+from op_bench.integrity import REPLAY_SPEC_HASH_KIND, replay_spec_hash
 from op_bench.evaluator import EvaluationResult
 from op_bench.task import TaskManifest
 from scripts.run_admission import main as run_admission_main
@@ -61,7 +63,46 @@ class AdmissionRunnerTests(unittest.TestCase):
             self.assertEqual(evidence.environment["runtime_tier"], "cpu_python_overlay")
             self.assertEqual(evidence.source["id"], "pytorch-base")
             self.assertTrue(evidence.task_manifest_hash.startswith("sha256:"))
+            self.assertEqual(evidence.task_manifest_hash_kind, REPLAY_SPEC_HASH_KIND)
             self.assertEqual(evaluator.gold_calls, 1)
+
+    def test_replay_hash_ignores_curation_state_but_tracks_artifacts(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            task = self._task(Path(tmp))
+            artifact_dir = task.task_dir / "artifacts"
+            artifact_dir.mkdir()
+            gold_path = artifact_dir / "gold.patch"
+            test_path = artifact_dir / "test.patch"
+            gold_path.write_text("gold-v1\n", encoding="utf-8")
+            test_path.write_text("test-v1\n", encoding="utf-8")
+            initial_hash = replay_spec_hash(TaskManifest.load(task.task_json_path))
+
+            manifest = json.loads(task.task_json_path.read_text(encoding="utf-8"))
+            manifest["admission"] = {
+                "status": "verified",
+                "evidence": "admission/evidence.json",
+                "verified_at": "2026-06-04T00:00:00Z",
+            }
+            manifest["metadata"]["curation_status"] = "verified"
+            task.task_json_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+            self.assertEqual(
+                replay_spec_hash(TaskManifest.load(task.task_json_path)),
+                initial_hash,
+            )
+
+            resolved_data = deepcopy(TaskManifest.load(task.task_json_path).data)
+            resolved_data["environment"]["registry_only_default"] = True
+            self.assertEqual(
+                replay_spec_hash(TaskManifest(task.task_dir, resolved_data)),
+                initial_hash,
+            )
+
+            test_path.write_text("test-v2\n", encoding="utf-8")
+            self.assertNotEqual(
+                replay_spec_hash(TaskManifest.load(task.task_json_path)),
+                initial_hash,
+            )
 
     def test_environment_failure_blocks_without_running_gold(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -18,6 +18,7 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from op_bench.task import TaskManifest
+from op_bench.integrity import REPLAY_SPEC_HASH_KIND, replay_spec_hash
 from op_bench.registry import EnvironmentRegistry, RegistryError, SourceRegistry
 from scripts.validate_task import validate_manifest
 
@@ -261,9 +262,16 @@ def _validate_admission_evidence(
         return
     if evidence.get("task_id") != task_id:
         errors.append(f"{task_id}: admission evidence task_id mismatch: {evidence.get('task_id')}")
-    expected_hash = f"sha256:{hashlib.sha256(task.task_json_path.read_bytes()).hexdigest()}"
-    if evidence.get("task_manifest_hash") != expected_hash:
-        errors.append(f"{task_id}: admission evidence task_manifest_hash does not match current task.json")
+    hash_kind = evidence.get("task_manifest_hash_kind")
+    if hash_kind == REPLAY_SPEC_HASH_KIND:
+        expected_hash = replay_spec_hash(task)
+    elif hash_kind is None:
+        expected_hash = f"sha256:{hashlib.sha256(task.task_json_path.read_bytes()).hexdigest()}"
+    else:
+        expected_hash = None
+        errors.append(f"{task_id}: unsupported admission evidence hash kind: {hash_kind!r}")
+    if expected_hash is not None and evidence.get("task_manifest_hash") != expected_hash:
+        errors.append(f"{task_id}: admission evidence replay hash does not match current task bundle")
 
     admission = evidence.get("admission", {})
     if admission_status == "verified":

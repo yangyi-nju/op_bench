@@ -44,5 +44,6 @@
     "snapshot_method": null
   },
   "task_id": "pytorch__132835__njt_sdpa_autocast",
-  "task_manifest_hash": "sha256:e112b7270161dc01f7a3e61aa4f5d3504493f7fcc77d746ec575c71cccb4a737"
+  "task_manifest_hash": "sha256:7630dfa7cf208950cd1db53865b847fd964c1c8d7e4daf30e6fb9e45c63f9493",
+  "task_manifest_hash_kind": "replay_spec_v1"
 }

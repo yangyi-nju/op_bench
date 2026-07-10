@@ -1,10 +1,14 @@
 {
   "task_id": "pytorch__129138__linear_add_bias_autocast",
   "version": "v1",
-  "environment_ref": "pytorch-cpu-torch2.6.0-py311",
+  "environment_ref": "pytorch-cpu-compile-torch2.6.0-py311",
   "runtime_tier": "cpu_python_overlay",
   "source_ref": "pytorch-5d8e23b-python-overlay",
-  "admission": {"status": "draft"},
+  "admission": {
+    "status": "verified",
+    "evidence": "admission/evidence.json",
+    "verified_at": "2026-07-10T11:18:41Z"
+  },
   "patch_scope": {
     "allowed_paths": ["torch/_inductor/fx_passes/mkldnn_fusion.py"],
     "mode": "enforced"
@@ -23,7 +27,7 @@
   },
   "statement": {
     "title": "Inductor linear_add_bias fusion wrongly folds fp32 bias when autocast selects bf16 weights",
-    "body": "Under `torch.autocast('cpu', dtype=torch.bfloat16)`, the `linear_add_bias` fusion pass in `mkldnn_fusion.py` assumes the bias already has the same dtype as the (autocasted) weight. When the bias is fp32 and the weight is bf16, the pass incorrectly folds the bias, producing wrong dtype/values in the fused kernel. Fix: check that `bias_meta.dtype == weight_meta.dtype` before allowing the fusion.",
+    "body": "Under `torch.autocast('cpu', dtype=torch.bfloat16)`, the `linear_add_bias` fusion pass in `mkldnn_fusion.py` assumes the bias already has the same dtype as the (autocasted) weight. When the bias is fp32 and the weight is bf16, the pass creates an invalid mixed-dtype fused graph; on the pinned runtime Inductor lowering fails instead of matching eager output. Fix: check that `bias_meta.dtype == weight_meta.dtype` before allowing the fusion.",
     "labels": ["module: inductor", "module: mkldnn", "topic: numerical"]
   },
   "operator": {
@@ -39,11 +43,11 @@
     "backend": "remote_docker",
     "host": "gpu-a10",
     "tier": "cpu-deterministic",
-    "image": "op-bench/pytorch-cpu:torch2.6.0-py311",
-    "image_digest": "sha256:9507757065fd73fa7a958cd13f01de163a3fa46d826c09142f9522eda0f1e400",
+    "image": "op-bench/pytorch-cpu-compile:torch2.6.0-py311",
+    "image_digest": "sha256:baa57df9fec9d6e15fbe7d8f6e2d19ff162d90c91a3aa8d48d874a02f9c663bc",
     "digest_kind": "local_image_id",
-    "dockerfile": "../../../environments/pytorch-cpu/Dockerfile",
-    "build_context": "../../../environments/pytorch-cpu",
+    "dockerfile": "../../../environments/pytorch-cpu-compile/Dockerfile",
+    "build_context": "../../../environments/pytorch-cpu-compile",
     "workspace_dir": "/workspace",
     "preflight_workdir": "/tmp",
     "python_executable": "python",
@@ -53,7 +57,10 @@
     "build_mode": "prebuilt-wheel",
     "hardware": {"device": "cpu", "min_memory_gb": 8},
     "resource_requirements": {"cpu": true, "gpu": false},
-    "dependencies": ["pytorch wheel with selected Python source overlay"],
+    "dependencies": [
+      "pytorch wheel with selected Python source overlay",
+      "GCC/G++ toolchain and Python headers for torch.compile CPU code generation"
+    ],
     "source_loading": {
       "mode": "python_overlay",
       "installed_package": "torch",
@@ -62,6 +69,8 @@
       "sync_before_tests": true
     },
     "preflight_commands": [
+      "g++ --version",
+      "bash -lc \"test -f /usr/include/python3.11/Python.h\"",
       "{python} --version",
       "{python} -c \"import torch; print(torch.__version__); print(torch.__file__)\""
     ]
@@ -90,10 +99,10 @@
   },
   "metadata": {
     "difficulty": "easy",
-    "curation_status": "draft",
+    "curation_status": "verified",
     "deterministic": true,
     "estimated_runtime_min": 10,
     "layer": "A",
-    "admission_status": "draft"
+    "admission_status": "verified"
   }
 }

@@ -35,13 +35,22 @@ docker run --rm --gpus all op-bench/pytorch-cuda-devel:torch2.6.0-cu124-py311 \
 
 1. Workspace is rsynced to remote (full PyTorch source tree)
 2. Agent modifies `.cpp` / `.cu` / `.h` files via the action interface
-3. Before each test, `source_loading.build_command` runs (default:
+3. Once before the evaluation's fail-to-pass and pass-to-pass tests,
+   `source_loading.build_command` runs (default:
    `cd {workspace_dir} && python setup.py develop --no-deps`)
-4. ccache makes second-onward builds fast (only changed files recompile)
+4. The remote executor bind-mounts `/workspace/.ccache` from
+   `<remote_workspace_root>/_cache/ccache/<environment-id>`, so baseline, gold,
+   and later attempts share compiler outputs without sharing mutable build trees
+
+Tasks may set `source_loading.build_environment` for build-only overrides. For
+example, a V100 admission can set `TORCH_CUDA_ARCH_LIST` to `7.0` instead of
+compiling every architecture supported by the reusable image. Kernel tasks
+that run Python tests should also set `BUILD_TEST=0` to avoid building PyTorch's
+unrelated C++ test binaries.
 
 Typical timing on A10G:
 - First build: 30-60 min
-- Incremental build (single .cu file change): 2-5 min
+- Warm-cache build (single `.cu` file change): 2-5 min, plus linking
 
 ## Hardware Requirements
 

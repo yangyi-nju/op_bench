@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import shutil
 import tempfile
 import time
@@ -153,17 +154,33 @@ class Evaluator:
                 if sync_result.exit_code != 0:
                     return finish("environment_unavailable")
 
-            fail_commands, fail_results = self._run_tests(task.fail_to_pass_tests, task, workspace, runtime_executor)
+            source_loading_result = self._load_source(task, workspace, runtime_executor)
+            if source_loading_result is not None:
+                command_log.append(source_loading_result)
+                if source_loading_result.timed_out:
+                    return finish("timeout")
+                if source_loading_result.exit_code != 0:
+                    if self._has_environment_error([source_loading_result]):
+                        return finish("environment_error")
+                    return finish("setup_failed")
+
+            fail_commands, fail_results = self._run_tests(
+                task.fail_to_pass_tests, task, workspace, runtime_executor
+            )
             command_log.extend(fail_commands)
             if any(result.timed_out for result in fail_results):
                 return finish("timeout")
 
-            pass_commands, pass_results = self._run_tests(task.pass_to_pass_tests, task, workspace, runtime_executor)
+            pass_commands, pass_results = self._run_tests(
+                task.pass_to_pass_tests, task, workspace, runtime_executor
+            )
             command_log.extend(pass_commands)
             if any(result.timed_out for result in pass_results):
                 return finish("timeout")
             if self._has_environment_error(fail_results + pass_results):
                 return finish("environment_error")
+            if self._has_runner_error(fail_results + pass_results):
+                return finish("runner_error")
 
             fail_passed = sum(1 for result in fail_results if result.exit_code == 0)
             pass_passed = sum(1 for result in pass_results if result.exit_code == 0)
@@ -345,20 +362,7 @@ class Evaluator:
     ) -> tuple[list[CommandResult], list[CommandResult]]:
         command_results: list[CommandResult] = []
         test_results: list[CommandResult] = []
-        source_loading_command = build_source_loading_command(task)
         for test_name in tests:
-            if source_loading_command is not None:
-                source_result = self._run_logged(
-                    executor,
-                    source_loading_command,
-                    workspace,
-                    task.build_timeout_sec,
-                    label=f"sync source overlay for {test_name}",
-                )
-                command_results.append(source_result)
-                if source_result.timed_out or source_result.exit_code != 0:
-                    test_results.append(source_result)
-                    continue
             test_result = self._run_logged(
                 executor,
                 task.command_for_test(test_name, python_executable=task.environment_python_executable),
@@ -369,6 +373,23 @@ class Evaluator:
             command_results.append(test_result)
             test_results.append(test_result)
         return command_results, test_results
+
+    def _load_source(
+        self,
+        task: TaskManifest,
+        workspace: Path,
+        executor: CommandExecutor,
+    ) -> CommandResult | None:
+        command = build_source_loading_command(task)
+        if command is None:
+            return None
+        return self._run_logged(
+            executor,
+            command,
+            workspace,
+            task.build_timeout_sec,
+            label="load patched source",
+        )
 
     def _has_environment_error(self, results: list[CommandResult]) -> bool:
         if not results:
@@ -391,11 +412,26 @@ class Evaluator:
             "CUDA is not available",
             "Found no NVIDIA driver",
             "No CUDA GPUs are available",
+            "InvalidCxxCompiler:",
+            "No working C++ compiler found",
+            "fatal error: Python.h: No such file or directory",
         )
         return any(
             any(marker in output for marker in environment_markers)
             for output in failed_outputs
         )
+
+    def _has_runner_error(self, results: list[CommandResult]) -> bool:
+        for result in results:
+            output = f"{result.stdout}\n{result.stderr}"
+            if "_FailedTest" in output or "Ran 0 tests" in output:
+                return True
+            ran_match = re.search(r"Ran (\d+) tests?", output)
+            skipped_match = re.search(r"OK \(skipped=(\d+)\)", output)
+            if ran_match and skipped_match:
+                if int(skipped_match.group(1)) >= int(ran_match.group(1)):
+                    return True
+        return False
 
     def _classify(
         self,

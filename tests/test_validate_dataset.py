@@ -7,6 +7,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from op_bench.integrity import REPLAY_SPEC_HASH_KIND, replay_spec_hash
+from op_bench.task import TaskManifest
 from scripts.validate_dataset import validate_dataset
 
 
@@ -46,7 +48,50 @@ class ValidateDatasetTests(unittest.TestCase):
 
             errors = validate_dataset(dataset, dataset_dir, require_verified=True)
 
-            self.assertIn("fixture: admission evidence task_manifest_hash does not match current task.json", errors)
+            self.assertIn("fixture: admission evidence replay hash does not match current task bundle", errors)
+
+    def test_replay_spec_hash_ignores_description_but_rejects_test_changes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            dataset, dataset_dir = self._verified_dataset(root)
+            task_path = root / "tasks/fixture/task.json"
+            evidence_path = root / "tasks/fixture/admission/evidence.json"
+            evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+            evidence["task_manifest_hash_kind"] = REPLAY_SPEC_HASH_KIND
+            evidence["task_manifest_hash"] = replay_spec_hash(TaskManifest.load(task_path))
+            evidence_path.write_text(json.dumps(evidence), encoding="utf-8")
+
+            manifest = json.loads(task_path.read_text(encoding="utf-8"))
+            manifest["statement"]["body"] = "description updated after admission"
+            task_path.write_text(json.dumps(manifest), encoding="utf-8")
+            self.assertEqual(
+                validate_dataset(dataset, dataset_dir, require_verified=True),
+                [],
+            )
+
+            manifest["evaluation"]["fail_to_pass"] = ["different_test"]
+            task_path.write_text(json.dumps(manifest), encoding="utf-8")
+            errors = validate_dataset(dataset, dataset_dir, require_verified=True)
+            self.assertIn(
+                "fixture: admission evidence replay hash does not match current task bundle",
+                errors,
+            )
+
+    def test_unknown_evidence_hash_kind_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            dataset, dataset_dir = self._verified_dataset(root)
+            evidence_path = root / "tasks/fixture/admission/evidence.json"
+            evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+            evidence["task_manifest_hash_kind"] = "future_hash_v9"
+            evidence_path.write_text(json.dumps(evidence), encoding="utf-8")
+
+            errors = validate_dataset(dataset, dataset_dir, require_verified=True)
+
+            self.assertIn(
+                "fixture: unsupported admission evidence hash kind: 'future_hash_v9'",
+                errors,
+            )
 
     def test_verified_task_requires_resolvable_asset_references(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

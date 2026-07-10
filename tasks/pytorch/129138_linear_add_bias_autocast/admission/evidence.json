@@ -5,45 +5,45 @@
     "verified": true
   },
   "baseline": {
-    "duration_sec": 72.731294167,
+    "duration_sec": 82.0666623750003,
     "fail_to_pass_passed": 0,
     "fail_to_pass_total": 1,
     "mode": "baseline",
     "pass_to_pass_passed": 1,
     "pass_to_pass_total": 1,
     "status": "baseline_reproduced",
-    "task_id": "pytorch__140557__layer_norm_decomp_precision"
+    "task_id": "pytorch__129138__linear_add_bias_autocast"
   },
-  "created_at": "2026-07-09T03:31:09Z",
+  "created_at": "2026-07-10T11:18:41Z",
   "environment": {
     "backend": "remote_docker",
     "digest_kind": "local_image_id",
-    "id": "pytorch-cpu-torch2.6.0-py311",
-    "image": "op-bench/pytorch-cpu:torch2.6.0-py311",
-    "image_digest": "sha256:9507757065fd73fa7a958cd13f01de163a3fa46d826c09142f9522eda0f1e400",
+    "id": "pytorch-cpu-compile-torch2.6.0-py311",
+    "image": "op-bench/pytorch-cpu-compile:torch2.6.0-py311",
+    "image_digest": "sha256:baa57df9fec9d6e15fbe7d8f6e2d19ff162d90c91a3aa8d48d874a02f9c663bc",
     "platform": "linux/amd64",
     "runtime_tier": "cpu_python_overlay"
   },
-  "evidence_id": "pytorch__140557__layer_norm_decomp_precision:78344a0bdd0b:2026-07-09T03:31:09Z",
+  "evidence_id": "pytorch__129138__linear_add_bias_autocast:a690e16edf49:2026-07-10T11:18:41Z",
   "gold": {
-    "duration_sec": 71.919533958,
+    "duration_sec": 82.77913058397826,
     "fail_to_pass_passed": 1,
     "fail_to_pass_total": 1,
     "mode": "gold",
     "pass_to_pass_passed": 1,
     "pass_to_pass_total": 1,
     "status": "resolved",
-    "task_id": "pytorch__140557__layer_norm_decomp_precision"
+    "task_id": "pytorch__129138__linear_add_bias_autocast"
   },
   "schema_version": "v1",
   "source": {
-    "base_commit": "240aa77ad01c4f0cd9b2417748272f2f617c112f",
-    "id": "pytorch-240aa77-python-overlay",
+    "base_commit": "5d8e23b49c5327590fb32b28309c41129e2b3f08",
+    "id": "pytorch-5d8e23b-python-overlay",
     "repo_url": "https://github.com/pytorch/pytorch.git",
     "snapshot_hash": null,
     "snapshot_method": null
   },
-  "task_id": "pytorch__140557__layer_norm_decomp_precision",
-  "task_manifest_hash": "sha256:0f732fc9e0d23f751c17635c7cc4d2adbc59abe5b7a5f68b96381af0d9a92e39",
+  "task_id": "pytorch__129138__linear_add_bias_autocast",
+  "task_manifest_hash": "sha256:a690e16edf496489efdc584c9f6fcc00967b477a80c4624ab6168559a6ff978e",
   "task_manifest_hash_kind": "replay_spec_v1"
 }

@@ -5,14 +5,15 @@ Issue: [pytorch/pytorch#139360](https://github.com/pytorch/pytorch/issues/139360
 
 ## Symptom
 
-`torch.histc` on CUDA with `int8` input and `min > max` should raise
-`RuntimeError: max must be larger than min`. Instead it silently computes garbage:
+`torch.histc` on CUDA with `int8` input and out-of-range bounds should raise
+`RuntimeError: max must be larger than min`. Instead the `min` value wraps to
+int8 and the invalid range is silently accepted:
 
 ```python
 import torch
 t = torch.tensor([1., 2, 1], dtype=torch.int8, device='cuda')
-# Should raise RuntimeError, but doesn't on base commit
-torch.histc(t, bins=4, min=5, max=1)
+# 256 wraps to 0 when stored in int8, so base incorrectly sees 0 < 1.
+torch.histc(t, bins=4, min=256, max=1)
 ```
 
 The root cause is in `_histc_cuda_template` in `SummaryOps.cu`: the `minvalue`

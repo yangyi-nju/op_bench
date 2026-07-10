@@ -2,15 +2,31 @@ diff --git a/test/test_op_bench_linear_add_bias_autocast.py b/test/test_op_bench
 new file mode 100644
 --- /dev/null
 +++ b/test/test_op_bench_linear_add_bias_autocast.py
-@@ -0,0 +1,45 @@
+@@ -0,0 +1,62 @@
 +# OpBench regression test for pytorch/pytorch#129138.
 +#
 +# Bug: torch._inductor.fx_passes.mkldnn_fusion.linear_add_bias fuses a fp32
-+# bias into a bf16-weight linear under autocast, producing wrong output values.
++# bias into a bf16-weight linear under autocast, producing an invalid mixed-
++# dtype fused graph (a lowering error on the pinned runtime).
 +# Gold fix rejects the fusion when bias.dtype != weight.dtype.
 +import unittest
 +
 +import torch
++from torch._inductor import config
++from torch._inductor.pattern_matcher import Match
++
++
++# The PR base predates Match.erase_nodes dropping its graph argument. Keep the
++# old mkldnn_fusion call compatible with the 2.6 runtime without replacing the
++# rest of pattern_matcher.py.
++_runtime_erase_nodes = Match.erase_nodes
++
++
++def _erase_nodes_compat(self, _graph=None):
++    return _runtime_erase_nodes(self)
++
++
++Match.erase_nodes = _erase_nodes_compat
 +
 +
 +class LinearAddBias(torch.nn.Module):
@@ -23,6 +39,7 @@ new file mode 100644
 +        return self.linear(x) + self.bias
 +
 +
++@config.patch({"freezing": True})
 +class TestLinearAddBiasAutocast(unittest.TestCase):
 +    def setUp(self):
 +        torch.manual_seed(0)

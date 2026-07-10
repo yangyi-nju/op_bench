@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import shlex
 
 from op_bench.task import TaskManifest
@@ -130,4 +131,18 @@ def _build_inplace_build_command(task: TaskManifest, source_loading: dict) -> li
         .replace("{workspace_dir}", task.environment_workspace_dir)
         .replace("{python}", shlex.quote(task.environment_python_executable))
     )
+    build_environment = source_loading.get("build_environment", {})
+    if build_environment:
+        invalid_keys = [
+            key
+            for key in build_environment
+            if not isinstance(key, str) or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", key)
+        ]
+        if invalid_keys:
+            raise ValueError(f"invalid build environment keys: {invalid_keys}")
+        exports = " ".join(
+            f"export {key}={shlex.quote(str(value))};"
+            for key, value in sorted(build_environment.items())
+        )
+        rendered = f"{exports} {rendered}"
     return ["bash", "-lc", rendered]

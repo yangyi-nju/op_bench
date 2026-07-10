@@ -44,5 +44,6 @@
     "snapshot_method": null
   },
   "task_id": "pytorch__139999__masked_mean_bool_upcast",
-  "task_manifest_hash": "sha256:c54fed349c3845c2a17e248990be05531481925b81f0fc1db2052a4a99d8a444"
+  "task_manifest_hash": "sha256:9c54fecdb3a018b0c9c64b64bd5b38a72fda2e98eb2e647048f8889a8025bc44",
+  "task_manifest_hash_kind": "replay_spec_v1"
 }

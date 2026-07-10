@@ -15,8 +15,10 @@ from op_bench.task import TaskManifest
 class _FakeRemoteExecutor:
     name = "remote_docker"
 
-    def __init__(self) -> None:
+    def __init__(self, source_load_exit_code: int = 0) -> None:
         self.sync_count = 0
+        self.source_load_count = 0
+        self.source_load_exit_code = source_load_exit_code
 
     def sync_to_remote(self, workspace: Path, timeout_sec: int = 600) -> CommandResult:
         self.sync_count += 1
@@ -31,7 +33,10 @@ class _FakeRemoteExecutor:
 
     def run(self, command: list[str], cwd: Path, timeout_sec: int) -> CommandResult:
         command_text = " ".join(command)
-        if "test_failing" in command_text:
+        if len(command) > 2 and command[1] == "-c" and "overlay_paths" in command[2]:
+            self.source_load_count += 1
+            exit_code = self.source_load_exit_code
+        elif "test_failing" in command_text:
             exit_code = 1 if self.sync_count >= 2 else 0
         else:
             exit_code = 0
@@ -72,6 +77,54 @@ class _FakeRemoteEnvironmentManager:
 
 
 class EvaluatorTests(unittest.TestCase):
+    def test_invalid_cxx_compiler_is_environment_error(self) -> None:
+        result = CommandResult(
+            command=["python", "test.py"],
+            cwd="",
+            exit_code=1,
+            stdout="",
+            stderr="InvalidCxxCompiler: No working C++ compiler found",
+            duration_sec=0,
+        )
+
+        self.assertTrue(Evaluator()._has_environment_error([result]))
+
+    def test_missing_python_headers_is_environment_error(self) -> None:
+        result = CommandResult(
+            command=["g++", "wrapper.cpp"],
+            cwd="",
+            exit_code=1,
+            stdout="",
+            stderr="fatal error: Python.h: No such file or directory",
+            duration_sec=0,
+        )
+
+        self.assertTrue(Evaluator()._has_environment_error([result]))
+
+    def test_fully_skipped_test_is_runner_error(self) -> None:
+        result = CommandResult(
+            command=["python", "test.py"],
+            cwd="",
+            exit_code=0,
+            stdout="",
+            stderr="Ran 1 test in 0.1s\n\nOK (skipped=1)\n",
+            duration_sec=0,
+        )
+
+        self.assertTrue(Evaluator()._has_runner_error([result]))
+
+    def test_unittest_loader_failure_is_runner_error(self) -> None:
+        result = CommandResult(
+            command=["python", "test.py"],
+            cwd="",
+            exit_code=1,
+            stdout="",
+            stderr="ERROR: test_missing (unittest.loader._FailedTest.test_missing)",
+            duration_sec=0,
+        )
+
+        self.assertTrue(Evaluator()._has_runner_error([result]))
+
     def test_baseline_reproduces_failure(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             result = Evaluator().evaluate_baseline(TaskManifest.load(self._fixable_task(Path(tmp)) / "task.json"))
@@ -172,7 +225,21 @@ class EvaluatorTests(unittest.TestCase):
             )
 
             self.assertEqual(executor.sync_count, 2)
+            self.assertEqual(executor.source_load_count, 1)
             self.assertEqual(result.status, "baseline_reproduced")
+
+    def test_source_loading_failure_is_setup_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            task_dir = self._remote_patch_sync_task(root)
+            executor = _FakeRemoteExecutor(source_load_exit_code=2)
+
+            result = Evaluator(
+                environment_manager=_FakeRemoteEnvironmentManager(executor)
+            ).evaluate_baseline(TaskManifest.load(task_dir / "task.json"))
+
+            self.assertEqual(executor.source_load_count, 1)
+            self.assertEqual(result.status, "setup_failed")
 
     def _fixable_task(self, root: Path) -> Path:
         source = root / "source"
@@ -320,6 +387,12 @@ class EvaluatorTests(unittest.TestCase):
                 "image": "op-bench/pytorch-cuda:torch2.6.0-cu124-py311",
                 "python_executable": "python",
                 "hardware": {"requires_gpu": True},
+                "source_loading": {
+                    "mode": "python_overlay",
+                    "installed_package": "torch",
+                    "overlay_paths": ["test_remote.py"],
+                    "runtime_site_packages": "/tmp/op_bench_runtime/site-packages",
+                },
             },
             "evaluation": {
                 "setup_commands": [],

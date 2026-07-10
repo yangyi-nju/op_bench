@@ -9,13 +9,13 @@ diff --git a/test/test_reductions.py b/test/test_reductions.py
 +    @dtypes(torch.int8)
 +    def test_histc_int8_bounds_overflow(self, device, dtype):
 +        # Regression test for #139360: on base commit, histc CUDA stores
-+        # min/max in input_t (int8), so min=5, max=1 is silently wrapped
-+        # into int8 range and the min>max check does not fire. On gold,
++        # min/max in input_t (int8), so min=256 wraps to 0 and the invalid
++        # range is silently accepted. On gold,
 +        # bounds use the wider acc_type and the RuntimeError is raised.
 +        with self.assertRaisesRegex(RuntimeError, "max must be larger than min"):
 +            torch.histc(
 +                torch.tensor([1, 2, 3], dtype=dtype, device=device),
-+                bins=4, min=5, max=1)
++                bins=4, min=256, max=1)
 +
      """
      Runs torch.histogram and numpy.histogram on the specified input parameters

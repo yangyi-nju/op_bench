@@ -243,6 +243,11 @@ class EnvironmentManager:
                 "op-bench.environment-id": task.environment_ref or "inline",
                 "op-bench.runtime-tier": task.runtime_tier or "unspecified",
             },
+            persistent_ccache_key=(
+                (task.environment_ref or task.runtime_tier)
+                if task.source_loading_mode == "inplace_build"
+                else None
+            ),
         )
 
         # Sync workspace to remote
@@ -293,6 +298,7 @@ class EnvironmentManager:
                 gpus=task.environment_gpus,
                 labels=executor.labels,
                 remote_workspace=executor.remote_workspace,
+                persistent_ccache_key=executor.persistent_ccache_key,
             )
             result = preflight_executor.run(rendered, workspace, task.timeout_sec)
             commands.append(result)

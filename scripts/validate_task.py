@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -277,6 +278,15 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
                     if p_path.is_absolute() or ".." in p_path.parts:
                         errors.append(f"patch_scope.allowed_paths entries must be relative without '..': {p!r}")
 
+    artifacts = data.get("artifacts", {})
+    if isinstance(artifacts, dict):
+        for name, value in artifacts.items():
+            artifact_path = Path(str(value))
+            if artifact_path.is_absolute() or ".." in artifact_path.parts:
+                errors.append(
+                    f"artifacts.{name} must be a task-relative path without '..': {value!r}"
+                )
+
     public_tests = data.get("evaluation", {}).get("public_tests")
     if public_tests is not None:
         if not isinstance(public_tests, list):
@@ -318,6 +328,20 @@ def validate_source_loading(source_loading: Any) -> list[str]:
         build_command = source_loading.get("build_command")
         if build_command is not None and not isinstance(build_command, str):
             errors.append("environment.source_loading.build_command must be a string when provided")
+        build_environment = source_loading.get("build_environment")
+        if build_environment is not None:
+            if not isinstance(build_environment, dict):
+                errors.append("environment.source_loading.build_environment must be an object when provided")
+            else:
+                for key, value in build_environment.items():
+                    if not isinstance(key, str) or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", key):
+                        errors.append(
+                            "environment.source_loading.build_environment keys must be shell variable names"
+                        )
+                    if not isinstance(value, (str, int, float, bool)):
+                        errors.append(
+                            "environment.source_loading.build_environment values must be scalar"
+                        )
         if not isinstance(source_loading.get("sync_before_tests", True), bool):
             errors.append("environment.source_loading.sync_before_tests must be a boolean for inplace_build")
     return errors
