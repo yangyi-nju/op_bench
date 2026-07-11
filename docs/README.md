@@ -6,15 +6,15 @@ Documents are archived by version. The docs root keeps only indexes; new version
 
 Use these documents in this order:
 
-1. [v0.5 experiment report](v0.5/experiment_report.md): verified 17-task dataset, 51-attempt full results, precision breakdown, and eight-dimensional metrics.
-2. [v0.5 design](v0.5/design.md): problem-dimension taxonomy, precision subclasses, candidate policy, and extended metrics.
-3. [v0.5 candidate search](v0.5/candidate_search.md): ghstack-aware PyTorch PR discovery and precision screening rules.
-4. [v0.5 remote agent setup](v0.5/setup_remote_agent.md): remote images, host configuration, and admission execution.
-5. [v0.5 admission prompt](v0.5/admission_prompt.md): batch admission handoff for precision tasks.
-6. [v0.4 design](v0.4/design.md): CUDA runtime tiers, remote GPU Docker executor over SSH, `inplace_build` source loading, and planned public test ablation.
-7. [v0.4 experiment report](v0.4/experiment_report.md): 13-task 3-repeat Codex CLI evaluation, 84.6% resolved rate, tier breakdown.
-8. [v0.4 CUDA task candidates](v0.4/candidate_tasks_cuda.md): screening criteria and PR pool for CUDA tasks.
-9. [v0.4 public test ablation notes](v0.4/public_test_ablation.md): design notes; experiment deferred to v0.5.
+1. [v0.6 design](v0.6/design.md): boundary taxonomy, matched-runtime recovery track, admission rules, and cumulative experiment contract.
+2. [v0.5 experiment report](v0.5/experiment_report.md): verified 17-task dataset, 51-attempt full results, precision breakdown, and eight-dimensional metrics.
+3. [v0.5 design](v0.5/design.md): problem-dimension taxonomy, precision subclasses, candidate policy, and extended metrics.
+4. [v0.5 candidate search](v0.5/candidate_search.md): ghstack-aware PyTorch PR discovery and precision screening rules.
+5. [v0.5 remote agent setup](v0.5/setup_remote_agent.md): remote images, host configuration, and admission execution.
+6. [v0.5 admission prompt](v0.5/admission_prompt.md): batch admission handoff for precision tasks.
+7. [v0.4 design](v0.4/design.md): CUDA runtime tiers, remote GPU Docker executor over SSH, `inplace_build` source loading, and planned public test ablation.
+8. [v0.4 experiment report](v0.4/experiment_report.md): 13-task 3-repeat Codex CLI evaluation, 84.6% resolved rate, tier breakdown.
+9. [v0.4 CUDA task candidates](v0.4/candidate_tasks_cuda.md): screening criteria and PR pool for CUDA tasks.
 10. [v0.3 design](v0.3/design.md): 10-task PyTorch expansion, public/hidden test split, multi-file overlay, and CUDA pilot plan.
 11. [v0.3 experiment report](v0.3/experiment_report.md): 10-task evaluation results, 76.7% resolved rate, stability analysis.
 12. [v0.2 design](v0.2/design.md): approved requirements and architecture for the environment-management and dataset-admission release.

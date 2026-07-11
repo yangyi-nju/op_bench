@@ -34,6 +34,7 @@ Development-only experiment adapters have been removed from the public v0.1 surf
 | `src/op_bench/` | Core implementation: task model, environment preparation, evaluator, actions, agent bridges, reporting. |
 | `scripts/` | CLI entry points for validation, environment preparation, source snapshots, replay, and experiments. |
 | `docs/` | Versioned design docs, experiment reports, developer guides, and historical records. |
+| `docs/v0.6/design.md` | v0.6 boundary dimension and matched-runtime recovery design. |
 | `docs/v0.5/design.md` | v0.5 dimension taxonomy and extended evaluation metrics. |
 | `docs/v0.5/experiment_report.md` | v0.5 full 17-task, 51-attempt Codex evaluation and precision breakdown. |
 | `docs/v0.4/design.md` | v0.4 CUDA tiers, remote GPU Docker executor over SSH, and `inplace_build` source loading. |
