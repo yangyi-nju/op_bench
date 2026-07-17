@@ -11,8 +11,8 @@
 | 正式实验 | 51 次真实 Codex attempt，37/51 resolved |
 | 当前开发版本 | `opbench-v0.6.0` |
 | 当前目标 | Demo → 规范 Agent 评测平台 |
-| 当前阶段 | M1–M3 已完成，准备 M4 AttemptSession/Budget/Trajectory/Resume |
-| v0.6 产品代码 | Contracts/Manifest、AgentTaskView、Authoritative Workspace、Patch Freeze、Canonical Action Service、CLI/MCP 与标准 Adapter 边界已实现 |
+| 当前阶段 | M1–M4 已完成，准备 M5 Fresh Evaluator/Artifact/Integrity/Summary |
+| v0.6 产品代码 | Contracts/Manifest、AgentTaskView、Authoritative Workspace、Patch Freeze、Canonical Action Service、AttemptSession、hash-chain Trajectory、Public Artifact 与 append-only Resume Ledger 已实现 |
 | 正式新实验 | 尚未启动 |
 
 ## Current decisions
@@ -35,14 +35,15 @@
 | V06-M1 | Passed | 协议、Schema、Run Manifest 与兼容策略 | C-01～C-08 已通过；60 focused tests、229 full tests、17-task migration 与示例重建通过 |
 | V06-M2 | Passed | AgentTaskView、Authoritative Workspace 与 Patch Freeze | T-01～T-07、W-01～W-10 已通过；43 core、87 focused/compat、274 full tests、17-task migration、Schema/示例重建与 Legacy Action Bridge 回归通过 |
 | V06-M3 | Passed | Canonical Action Service、CLI/MCP 与标准 Adapter 边界 | A-01～A-12 已通过；28 focused、302 full tests、17-task Dataset、示例 Manifest、tracked JSON 与 Legacy Action Bridge 回归通过；真实 Codex 标准 canary 保留为 M6 gate |
+| V06-M4 | Passed | AttemptSession、Budget、Trajectory、Public Artifact 与 Resume Ledger | S-01～S-10、E-02～E-04 已通过；61 focused、194 runtime、363 full tests、17-task Dataset、示例 Manifest 与 tracked JSON 通过；审查 Critical/Important/Minor 均为 0；E-01 evaluation 与 E-05 private artifact 保留为 M5 gate |
 | REMOTE-CLEANUP | Backlog | RemoteDocker timeout/cleanup 需要收敛到 Attempt-owned container/process | v0.6 M6 Conformance 通过 |
 
 ## Next actions
 
-1. 从 M4 开始实现 AttemptSession、终止竞争和唯一 terminal；
-2. 将 M3 ActionExchange 写入连续、可重算的 hash-chain EventRecord；
-3. 实现 append-only trajectory、budget exhaustion 和稳定 resume identity；
-4. 为 M5 Fresh Evaluator 提供冻结 SessionResult 与 Artifact handoff；
+1. 从 M5 开始实现 Fresh Evaluator，并保证不读取 Agent Workspace；
+2. 建立 private artifact 分层并补齐 evaluation_started/evaluation_completed；
+3. 校验 Manifest→Session→Patch→Evaluation→Result→Summary 引用闭合；
+4. 从原始 Artifact 重建 results.jsonl 与 summary.json；
 5. v0.6 完成前不启动 v0.7 正式 Admission。
 
 ## Status rules

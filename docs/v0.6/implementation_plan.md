@@ -2,7 +2,7 @@
 
 日期：2026-07-17
 
-状态：实施中（M1–M3 已完成，M4 待开始）
+状态：实施中（M1–M4 已完成，准备 M5）
 
 目标版本：`opbench-v0.6.0`
 
@@ -179,6 +179,17 @@ launcher 向标准 Adapter 的迁移和真实 canary 在 M6 完成，仍是 v0.6
 - Legacy Bridge 回归通过且没有复制一套 Action 规则。
 
 ## 7. M4：AttemptSession、Budget、Termination、Trajectory 与 Resume
+
+状态：已完成（2026-07-17）。S-01～S-10、E-02～E-04 已通过；
+AttemptSession 以 active-action、pending-publisher 和 lifecycle 顺序屏障保证 Freeze
+前收敛，固定优先级只产生一个 Terminal。EventJournal 与 AttemptLedger 使用
+绑定 regular-file descriptor、`O_APPEND`、跨实例锁、严格 tail/session/public
+重校验和 uncertain-commit 对账，无法解释的尾部 fail closed。Public Artifact
+使用内容寻址和绑定 dirfd，写入/读取均重跑 public scanner。61 项 M4 focused、
+194 项 runtime、363 项全量测试以及 17-task Dataset、示例 Manifest、tracked JSON
+和 diff check 均通过；最终审查 Critical/Important/Minor 均为 0。E-01 的
+evaluation events 与 E-05 的 private artifact 分层按设计保留给 M5。本阶段未启动
+Agent、Docker、SSH、远程 Runtime 或网络探针。
 
 ### 7.1 交付
 

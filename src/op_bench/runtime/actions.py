@@ -17,6 +17,7 @@ from op_bench.runtime.contracts import (
     CapabilityPolicy,
     ContentIdentity,
 )
+from op_bench.runtime.events import EventJournal
 from op_bench.runtime.task_view import assert_public_artifact_safe
 from op_bench.runtime.validation import ContractError, require_bool, require_int, require_str
 from op_bench.runtime.workspace import (
@@ -133,6 +134,7 @@ class CanonicalActionService:
         command_backend: CommandBackend,
         test_registry: Mapping[str, RegisteredTest],
         clock_ms: Callable[[], int],
+        event_journal: EventJournal | None = None,
     ) -> None:
         require_str(session_id, "session_id")
         if not isinstance(workspace, AuthoritativeWorkspace):
@@ -145,6 +147,10 @@ class CanonicalActionService:
             raise ContractError("command_backend: expected run method")
         if not callable(clock_ms):
             raise ContractError("clock_ms: expected callable")
+        if event_journal is not None and not isinstance(event_journal, EventJournal):
+            raise ContractError("event_journal: expected EventJournal")
+        if event_journal is not None and event_journal.session_id != session_id:
+            raise ContractError("event_journal: session does not match service")
         registry: dict[str, RegisteredTest] = {}
         for selector_id, registered in test_registry.items():
             if not isinstance(selector_id, str) or not isinstance(registered, RegisteredTest):
@@ -189,6 +195,7 @@ class CanonicalActionService:
                     f"writable_paths[{index}]: expected canonical workspace scope"
                 )
         self._clock_ms = clock_ms
+        self._event_journal = event_journal
         self._started_at_ms = self._now()
         self._lock = threading.RLock()
         self._running = True
@@ -206,6 +213,10 @@ class CanonicalActionService:
     @property
     def workspace_identity(self) -> ContentIdentity:
         return self._workspace.identity
+
+    @property
+    def event_journal(self) -> EventJournal | None:
+        return self._event_journal
 
     @property
     def usage(self) -> ActionUsage:
@@ -241,6 +252,16 @@ class CanonicalActionService:
                     "session_not_running",
                     "request session does not match active session",
                 )
+            if self._event_journal is not None:
+                try:
+                    self._event_journal.record_action_requested(request)
+                except Exception:  # noqa: BLE001 - fixed public persistence boundary.
+                    self._running = False
+                    return self._uncached_failure(
+                        request,
+                        "platform_error",
+                        "action trajectory persistence failed",
+                    )
             if request.deadline_ms <= started_at:
                 return self._record_failure(
                     request,
@@ -296,10 +317,8 @@ class CanonicalActionService:
                             exc.message,
                             count_action=True,
                         )
-                    return self._uncached_failure(
-                        request,
-                        exc.error_code,
-                        exc.message,
+                    return self._complete_uncached_failure(
+                        request, exc.error_code, exc.message
                     )
             if not self._running and request.action_name != "session_finish":
                 return self._record_failure(
@@ -403,9 +422,7 @@ class CanonicalActionService:
                 ),
                 mutation_state=outcome.mutation_state,
             )
-            self._cache[request.action_id] = (request.content_hash, observation)
-            self._audit.append(ActionExchange(request=request, observation=observation))
-            return observation
+            return self._complete_observation(request, observation)
 
     def invalid_request_observation(
         self,
@@ -945,6 +962,69 @@ class CanonicalActionService:
             ),
             mutation_state="none",
         )
+        return self._complete_observation(request, observation)
+
+    def _complete_observation(
+        self,
+        request: ActionRequest,
+        observation: ActionObservation,
+    ) -> ActionObservation:
+        final_observation = observation
+        if self._event_journal is not None:
+            try:
+                self._event_journal.record_action_observed(request, observation)
+            except Exception:  # noqa: BLE001 - fixed public persistence boundary.
+                self._running = False
+                final_observation = ActionObservation(
+                    session_id=observation.session_id,
+                    action_id=observation.action_id,
+                    ok=False,
+                    error_code="platform_error",
+                    message="action trajectory persistence failed",
+                    data={},
+                    started_at_ms=observation.started_at_ms,
+                    ended_at_ms=observation.ended_at_ms,
+                    budget_delta=observation.budget_delta,
+                    mutation_state=observation.mutation_state,
+                )
+                try:
+                    self._event_journal.record_action_observed(
+                        request,
+                        final_observation,
+                    )
+                except Exception:  # noqa: BLE001 - persistence remains unavailable.
+                    pass
+        self._cache[request.action_id] = (request.content_hash, final_observation)
+        self._audit.append(
+            ActionExchange(request=request, observation=final_observation)
+        )
+        return final_observation
+
+    def _complete_uncached_failure(
+        self,
+        request: ActionRequest,
+        error_code: str,
+        message: str,
+    ) -> ActionObservation:
+        observation = self._uncached_failure(request, error_code, message)
+        if self._event_journal is None:
+            return observation
+        try:
+            self._event_journal.record_action_observed(request, observation)
+        except Exception:  # noqa: BLE001 - fixed public persistence boundary.
+            self._running = False
+            return ActionObservation(
+                session_id=observation.session_id,
+                action_id=observation.action_id,
+                ok=False,
+                error_code="platform_error",
+                message="action trajectory persistence failed",
+                data={},
+                started_at_ms=observation.started_at_ms,
+                ended_at_ms=observation.ended_at_ms,
+                budget_delta=observation.budget_delta,
+                mutation_state=observation.mutation_state,
+            )
         self._cache[request.action_id] = (request.content_hash, observation)
         self._audit.append(ActionExchange(request=request, observation=observation))
         return observation
