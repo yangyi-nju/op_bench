@@ -2,7 +2,7 @@
 
 日期：2026-07-18
 
-状态：验收执行中（M1–M6 已执行，M7 待执行；Remote Replay/CUDA 证据 Blocked）
+状态：M1–M7 验收已执行；统一发布因 Remote Replay/CUDA Must 证据 Blocked
 
 目标版本：`opbench-v0.6.0`
 
@@ -229,16 +229,24 @@ Remote CPU/CUDA 的 R-10 保持 `Blocked`；没有探测或搜索替代目标，
 
 | ID | 级别 | 验收要求 | 必需证据 | 状态 |
 | --- | --- | --- | --- | --- |
-| D-01 | Must/P1 | README、设计、实施计划、CLI help、Schema 和 Artifact layout 一致 | Link/command review | Pending |
-| D-02 | Must/P1 | v0.5 默认路径在迁移期兼容，新 Runtime 显式选择 | Legacy CLI tests | Pending |
-| D-03 | Must/P1 | 旧 results.jsonl/summary 保持可读，Legacy 与新 Cohort 分离 | Compatibility tests | Pending |
-| D-04 | Must/P2 | 提供离线 Scripted smoke、真实 Codex canary、resume、verify、rebuild 示例 | Executed quickstart | Pending |
-| D-05 | Must/P1 | 新环境可完成安装、全量测试和 v0.5 Dataset Validation | Clean environment record | Pending |
-| D-06 | Must/P1 | 全量测试、focused tests、Schema 和 Artifact validation 全通过 | Verification record | Pending |
-| D-07 | Must/P1 | 发布时没有开放 P0/P1 | Issue/finding review | Pending |
-| D-08 | Must/P1 | 发布说明不把 v0.5 结果标记为 v0.6，不声称正式排名或反馈因果结论 | Release wording review | Pending |
-| D-09 | Must/P2 | 支持矩阵、已知限制和阻塞项准确记录 | Documentation review | Pending |
-| D-10 | Must/P1 | `project_state.md`、CHANGELOG 和版本状态同步 | Final diff review | Pending |
+| D-01 | Must/P1 | README、设计、实施计划、CLI help、Schema 和 Artifact layout 一致 | Link/command review | Passed |
+| D-02 | Must/P1 | v0.5 默认路径在迁移期兼容，新 Runtime 显式选择 | Legacy CLI tests | Passed |
+| D-03 | Must/P1 | 旧 results.jsonl/summary 保持可读，Legacy 与新 Cohort 分离 | Compatibility tests | Passed |
+| D-04 | Must/P2 | 提供离线 Scripted smoke、真实 Codex canary、resume、verify、rebuild 示例 | Executed quickstart | Passed |
+| D-05 | Must/P1 | 新环境可完成安装、全量测试和 v0.5 Dataset Validation | Clean environment record | Passed |
+| D-06 | Must/P1 | 全量测试、focused tests、Schema 和 Artifact validation 全通过 | Verification record | Passed |
+| D-07 | Must/P1 | 发布时没有开放 P0/P1 | Issue/finding review | Passed |
+| D-08 | Must/P1 | 发布说明不把 v0.5 结果标记为 v0.6，不声称正式排名或反馈因果结论 | Release wording review | Passed |
+| D-09 | Must/P2 | 支持矩阵、已知限制和阻塞项准确记录 | Documentation review | Passed |
+| D-10 | Must/P1 | `project_state.md`、CHANGELOG 和版本状态同步 | Final diff review | Passed |
+
+M7 证据（2026-07-18）：公开 preparer 生成确定性一任务 synthetic Dataset，正式
+v1 Scripted 首跑 `ran=1/skipped=0`、原样 resume `ran=0/skipped=1`，运行树 hash
+不变；RunManifest、14 项 Integrity、资源所有权/清理均通过。全新 Python 3.12.13
+venv 无需安装依赖即通过 527/527 全量 tests 与 17-task verified Dataset Validation；
+25/25 release-focused tests、85 个版本化 JSON、compileall、CLI help、双语链接/命令、
+支持矩阵和 release wording review 通过。没有开放实现 P0/P1 finding。D-01～D-10
+全部通过不改变 R-05～R-08、R-10 的 `Blocked` 状态，也不满足统一发布条件。
 
 ## 11. 最终验收记录模板
 
@@ -263,3 +271,23 @@ Release decision:
 ```
 
 在这些字段和所有 Must 证据未完成前，v0.6 状态保持 `In Progress`。
+
+## 12. M7 最终验收记录
+
+```text
+Platform commit-under-test: 00f2f30c69307caed284b8c8defc2d2dff3cab62 + M7 public working tree
+Dataset identity: pytorch_v0.5 / sha256:ff9d0c2999d1175a45165b387e0731dcaa211a190d994b176441ce81a0382abc
+Action protocol: action-v1
+Evaluation protocol: evaluation-v1 / sha256:93a4bf18b30a97ca2f9d3b488c4db51e7d37a6987d2663c29efbd6ed8bade55e
+Scoring specification: scoring-v1 / legacy-v0.5-resolved-v1 / sha256:46bc9d38fb4bc66cdafe1a4aae6112e53d50dcd66b24991507fedc07f9ba7f95
+Agent/model/adapter: codex-v1 / codex-cli-configured / codex_canonical
+Runtime profiles: configs/runtime_profiles.v1.json / sha256:673ba5349912883953742de6de4851eece8b8bb48fdadd79b6cbf3b313b314ea
+Full test command/result: clean Python 3.12.13 venv; unittest discover test_*.py; 527 passed, 0 failed/error/skipped
+Dataset validation command/result: validate_dataset.py --require-verified; 17 valid tasks
+Replay 17+17+51 result: inventory complete; 85 Blocked(connection_timeout), no inferred success
+Real Codex canary/cohort: M6 local single valid; two-repeat manifest sha256:71f4a0438ad5b0bacdceec2c2c2b0c95688f67b65aac495ea1d0e28c02e80913
+Artifact root and manifest hash: synthetic public index sha256:4a95ff7ecfe17d51c070a4f4baf653bbb5b71814296ef4c3121d39c45d172b86; Demo RunManifest sha256:185d780e3257df46a1ba15046cf0eeb5f549255aaaf95509e7cd29efc70e6ad8
+Open P0/P1: none found in implementation/release review
+Blocked items: R-05, R-06, R-07, R-08, R-10
+Release decision: Blocked — M7 Passed, opbench-v0.6.0 not Completed or tagged
+```

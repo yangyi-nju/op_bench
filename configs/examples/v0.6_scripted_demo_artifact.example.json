@@ -1,0 +1,45 @@
+{
+  "action_sequence": [
+    "workspace_list",
+    "test_run",
+    "vcs_diff",
+    "session_finish"
+  ],
+  "artifact_hashes": {
+    "integrity.json": "sha256:c01020288e0608659c2b4bfbe689762cf35baafce45108c9cf7cb3f590d36afe",
+    "results.jsonl": "sha256:8fd5dfb168af31f00c88249c5697d29cc1946ebb94367c38953b09c6c9ff63bd",
+    "run_manifest.json": "sha256:185d780e3257df46a1ba15046cf0eeb5f549255aaaf95509e7cd29efc70e6ad8",
+    "summary.json": "sha256:48c765470f635bd0b3931c8aeb4b1b9a04fa9407234dd2e0ddb72eac69ff103c"
+  },
+  "artifact_paths": {
+    "attempt_ledger": "attempts.jsonl",
+    "attempt_retry": "attempts/attempt:v1:da4a7389ed6b94f7f85e42c230425fbec261376b2c894ce2dd577b00637d6773/retries/retry-0001/",
+    "integrity": "integrity.json",
+    "results": "results.jsonl",
+    "run_manifest": "run_manifest.json",
+    "summary": "summary.json"
+  },
+  "claim": "Controller/artifact lifecycle demonstration only; not a benchmark score.",
+  "identities": {
+    "attempt_id": "attempt:v1:da4a7389ed6b94f7f85e42c230425fbec261376b2c894ce2dd577b00637d6773",
+    "comparability_key": "sha256:24277c28399f44f92025b96900c9142c60034a67d4f9503aaec0c9ecde012f72",
+    "run_id": "cohort:v1:24277c28399f44f92025b96900c9142c60034a67d4f9503aaec0c9ecde012f72",
+    "runtime_profile": "local-cpu-process-v1",
+    "runtime_profile_hash": "sha256:8a16099f3abfb35db078ba06e414e40f95030bcc0df91301f4e46aa707497738"
+  },
+  "result_axes": {
+    "agent_terminal": "finished",
+    "attempt_validity": "valid",
+    "evaluation_outcome": "no_patch"
+  },
+  "schema_version": "opbench.v0.6.demo_artifact.v1",
+  "selected_retry": 1,
+  "synthetic_demo": true,
+  "totals": {
+    "expected": 1,
+    "infrastructure_invalid": 0,
+    "observed": 1,
+    "resolved": 0,
+    "valid": 1
+  }
+}
