@@ -96,18 +96,34 @@ M2 Workspace/Freeze 本地证据（2026-07-17）：
 
 | ID | 级别 | 验收要求 | 必需证据 | 状态 |
 | --- | --- | --- | --- | --- |
-| A-01 | Must/P1 | 所有 Action 使用版本化 Request/Observation 和稳定 Error Code | Contract tests | Pending |
-| A-02 | Must/P1 | Service 对每次请求重新验证 session、capability、path、selector、budget 和 state | Authority negative tests | Pending |
-| A-03 | Must/P1 | 重复 action_id 返回同一结果且不重复副作用 | Idempotency tests | Pending |
-| A-04 | Must/P1 | list/search/read 有确定的范围、数量和输出字节限制 | Boundary tests | Pending |
-| A-05 | Must/P1 | write/apply_patch 原子执行，失败不留下部分 mutation | Failure injection tests | Pending |
-| A-06 | Must/P0 | command_run 只执行 Capability Policy 允许的命令、cwd 和参数形态 | Allow/deny matrix | Pending |
-| A-07 | Must/P0 | test_run 只接受 Test Registry 中的 selector | Selector tests | Pending |
-| A-08 | Must/P1 | vcs_diff 输出 canonical patch，session_finish 幂等 | Action tests | Pending |
-| A-09 | Must/P1 | CLI 与 MCP 调用同一 Canonical Action Service | Dependency/API assertion | Pending |
-| A-10 | Must/P1 | 相同 Scripted Sequence 经 CLI/MCP 得到等价 Patch、Error、Budget 和 Event | Conformance test | Pending |
-| A-11 | Must/P1 | Codex Adapter 不实现 Workspace、Evaluator 或 Scoring 规则 | Boundary tests/review | Pending |
-| A-12 | Must/P1 | 现有 codex_action_bridge 在迁移期保持 Legacy 可用 | Legacy regression | Pending |
+| A-01 | Must/P1 | 所有 Action 使用版本化 Request/Observation 和稳定 Error Code | Contract tests | Passed |
+| A-02 | Must/P1 | Service 对每次请求重新验证 session、capability、path、selector、budget 和 state | Authority negative tests | Passed |
+| A-03 | Must/P1 | 重复 action_id 返回同一结果且不重复副作用 | Idempotency tests | Passed |
+| A-04 | Must/P1 | list/search/read 有确定的范围、数量和输出字节限制 | Boundary tests | Passed |
+| A-05 | Must/P1 | write/apply_patch 原子执行，失败不留下部分 mutation | Failure injection tests | Passed |
+| A-06 | Must/P0 | command_run 只执行 Capability Policy 允许的命令、cwd 和参数形态 | Allow/deny matrix | Passed |
+| A-07 | Must/P0 | test_run 只接受 Test Registry 中的 selector | Selector tests | Passed |
+| A-08 | Must/P1 | vcs_diff 输出 canonical patch，session_finish 幂等 | Action tests | Passed |
+| A-09 | Must/P1 | CLI 与 MCP 调用同一 Canonical Action Service | Dependency/API assertion | Passed |
+| A-10 | Must/P1 | 相同 Scripted Sequence 经 CLI/MCP 得到等价 Patch、Error、Budget 和 Event | Conformance test | Passed |
+| A-11 | Must/P1 | Codex Adapter 不实现 Workspace、Evaluator 或 Scoring 规则 | Boundary tests/review | Passed |
+| A-12 | Must/P1 | 现有 codex_action_bridge 在迁移期保持 Legacy 可用 | Legacy regression | Passed |
+
+M3 证据（2026-07-17）：九个 Action 全部经同一 `CanonicalActionService`
+执行；CLI/MCP scripted sequence 的 Observation、Error、Budget、canonical
+Patch 与 ActionExchange 审计流精确等价。ActionExchange 是本阶段 transport
+conformance 的 action event 证据，M4 再将其绑定到 append-only、hash-chained
+`EventRecord` 生命周期流。命令策略按最长 argv prefix 选择后使用
+command-specific schema，cwd/path/selector/deadline/budget/state 每次服务端重验；
+backend 无法改写授权 command/cwd，也无法把异常、宿主路径或注册测试命令元数据
+传给 Adapter。首次 finish 使用一次性控制面 reservation，后续 finish 仍受预算和
+幂等约束。标准 Adapter 只获得重新扫描的 `AgentLaunchInput` 与 JSON-only client；
+同进程 queue 是 API/data-minimization boundary，不是不可信 Python 的安全沙箱，
+不可信 Adapter 必须使用保持相同 JSON 合同的进程/IPC 隔离。现有 v0.5
+`codex_action_bridge` 回归保持通过，真实 Codex 到标准 Adapter 的迁移和 canary
+保留为 M6 release gate。本阶段 28/28 focused、302/302 full tests、17-task
+Dataset、示例 Manifest、tracked JSON 和 diff check 全部通过；最终审查为
+Critical 0 / Important 0，且未启动 Agent、Docker、SSH、远程 Runtime 或网络探针。
 
 ## 6. S — AttemptSession、Budget、Termination 与 Resume
 

@@ -101,6 +101,23 @@ class WorkspaceRead:
 
 
 @dataclass(frozen=True)
+class WorkspaceEntry:
+    workspace: ContentIdentity
+    path: str
+    entry_type: str
+    mode: int
+    size_bytes: int
+
+    def __post_init__(self) -> None:
+        _require_identity(self.workspace, "workspace", "workspace")
+        _normalize_relative_path(self.path)
+        if self.entry_type not in {"file", "directory"}:
+            raise ContractError("entry_type: expected file or directory")
+        require_int(self.mode, "mode", minimum=0)
+        require_int(self.size_bytes, "size_bytes", minimum=0)
+
+
+@dataclass(frozen=True)
 class WorkspaceMutation:
     workspace: ContentIdentity
     path: str
@@ -378,6 +395,35 @@ class AuthoritativeWorkspace:
         if len(content) > limit:
             raise WorkspacePolicyError(f"path {normalized!r}: content exceeds read limit {limit}")
         return WorkspaceRead(self.identity, normalized, content, mode)
+
+    def list_entries(
+        self,
+        path: str,
+        *,
+        recursive: bool,
+        max_entries: int,
+        max_depth: int,
+    ) -> tuple[WorkspaceEntry, ...]:
+        try:
+            require_bool(recursive, "recursive")
+            require_int(max_entries, "max_entries", minimum=1)
+            require_int(max_depth, "max_depth", minimum=1)
+        except ContractError as exc:
+            raise WorkspacePolicyError(str(exc)) from exc
+        normalized = "." if path == "." else _normalize_relative_path(path)
+        entries: list[WorkspaceEntry] = []
+        with self._directory(normalized) as directory_fd:
+            self._collect_entries(
+                directory_fd,
+                prefix=normalized,
+                recursive=recursive,
+                max_entries=max_entries,
+                max_depth=max_depth,
+                depth=1,
+                entries=entries,
+            )
+        self._assert_root_binding()
+        return tuple(entries)
 
     def write(
         self,
@@ -952,6 +998,119 @@ class AuthoritativeWorkspace:
         finally:
             os.close(descriptor)
 
+    @contextmanager
+    def _directory(self, path: str) -> Iterator[int]:
+        self._assert_root_binding()
+        if path == ".":
+            descriptor = os.dup(self._root_fd)
+            try:
+                yield descriptor
+            finally:
+                os.close(descriptor)
+            return
+        with self._parent_directory(path) as (normalized, parent_fd, name):
+            try:
+                descriptor = os.open(
+                    name,
+                    os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+                    dir_fd=parent_fd,
+                )
+            except OSError as exc:
+                if exc.errno in {errno.ELOOP, errno.ENOTDIR}:
+                    reason = "symlink, special file, or non-directory is denied"
+                else:
+                    reason = exc.strerror or "cannot open directory"
+                raise WorkspacePolicyError(f"path {normalized!r}: {reason}") from exc
+            try:
+                opened = os.fstat(descriptor)
+                self._assert_entry_binding(parent_fd, name, opened, normalized)
+                yield descriptor
+                self._assert_entry_binding(parent_fd, name, opened, normalized)
+                self._assert_parent_binding(normalized, parent_fd)
+            finally:
+                os.close(descriptor)
+
+    def _collect_entries(
+        self,
+        directory_fd: int,
+        *,
+        prefix: str,
+        recursive: bool,
+        max_entries: int,
+        max_depth: int,
+        depth: int,
+        entries: list[WorkspaceEntry],
+    ) -> None:
+        try:
+            names = sorted(os.listdir(directory_fd))
+        except OSError as exc:
+            raise WorkspacePolicyError("workspace directory cannot be enumerated") from exc
+        for name in names:
+            if prefix == "." and name == ".git":
+                continue
+            candidate = name if prefix == "." else f"{prefix}/{name}"
+            normalized = _normalize_relative_path(candidate)
+            metadata = _lstat_at(directory_fd, name, normalized, missing_ok=False)
+            assert metadata is not None
+            if stat.S_ISLNK(metadata.st_mode):
+                raise WorkspacePolicyError(f"path {normalized!r}: symlink is denied")
+            if stat.S_ISDIR(metadata.st_mode):
+                entry = WorkspaceEntry(
+                    workspace=self.identity,
+                    path=normalized,
+                    entry_type="directory",
+                    mode=stat.S_IMODE(metadata.st_mode),
+                    size_bytes=0,
+                )
+            elif stat.S_ISREG(metadata.st_mode):
+                mode = _validate_regular_metadata(metadata, self.policy, normalized)
+                entry = WorkspaceEntry(
+                    workspace=self.identity,
+                    path=normalized,
+                    entry_type="file",
+                    mode=mode,
+                    size_bytes=metadata.st_size,
+                )
+            else:
+                raise WorkspacePolicyError(
+                    f"path {normalized!r}: special file is denied"
+                )
+            entries.append(entry)
+            if len(entries) > max_entries:
+                raise WorkspacePolicyError(
+                    f"workspace listing exceeds max_entries {max_entries}"
+                )
+            if not recursive or not stat.S_ISDIR(metadata.st_mode) or depth >= max_depth:
+                continue
+            try:
+                child_fd = os.open(
+                    name,
+                    os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+                    dir_fd=directory_fd,
+                )
+            except OSError as exc:
+                raise WorkspacePolicyError(
+                    f"path {normalized!r}: directory binding changed"
+                ) from exc
+            try:
+                opened = os.fstat(child_fd)
+                if not _same_inode(metadata, opened):
+                    raise WorkspacePolicyError(
+                        f"path {normalized!r}: directory binding changed"
+                    )
+                self._collect_entries(
+                    child_fd,
+                    prefix=normalized,
+                    recursive=True,
+                    max_entries=max_entries,
+                    max_depth=max_depth,
+                    depth=depth + 1,
+                    entries=entries,
+                )
+                self._assert_entry_binding(directory_fd, name, opened, normalized)
+            finally:
+                os.close(child_fd)
+
     def _assert_root_binding(self) -> None:
         if self._root_fd < 0:
             raise WorkspaceStateError("workspace authority is closed")
@@ -1457,6 +1616,7 @@ __all__ = [
     "PatchArtifact",
     "WorkspaceBinding",
     "WorkspaceDiff",
+    "WorkspaceEntry",
     "WorkspaceError",
     "WorkspaceMutation",
     "WorkspacePatchMutation",
