@@ -4,6 +4,24 @@ This file records user-visible OpBench version milestones. Detailed design,
 implementation, and experiment evidence remain in the versioned documents
 under `docs/`.
 
+## Unreleased
+
+Planned direction as of 2026-07-17:
+
+- v0.6 upgrades the existing real-Codex benchmark demo into a standardized Agent evaluation platform with versioned contracts, canonical CLI/MCP actions, explicit AttemptSession lifecycle and budgets, trajectory artifacts, patch freeze, fresh evaluation, failure attribution, replay, and rebuildable summaries.
+- v0.6 is one platform release with M1–M7 internal milestones. It does not expand the dataset or run the formal multi-Agent study.
+- v0.7 builds the reusable Dataset Factory, adds the Boundary Slice, and revisits the two matched-runtime Precision candidates.
+- v0.8 adds Device/API Compatibility and freezes Evaluation/Scoring Specification RC; v0.9 runs the formal multi-Agent and feedback-ablation cohorts.
+
+Planning documents:
+
+- `docs/project_plan.md`
+- `docs/project_state.md`
+- `docs/v0.6/design.md`
+- `docs/v0.6/implementation_plan.md`
+- `docs/v0.6/acceptance_matrix.md`
+- `docs/v0.7/design.md`
+
 ## v0.5 - Completed
 
 Development and the full experiment completed on 2026-07-11. v0.5 establishes
@@ -36,8 +54,8 @@ Full experiment result (Codex CLI 0.144.0-alpha.4, 17 tasks x 3 repeats):
 Deferred to later versions:
 
 - Admit a real P4 numerical-instability task; P4 remains N/A rather than being filled with a non-matching task.
-- v0.6 adds boundary tasks; v0.7 adds device/API compatibility tasks.
-- #129154 and #144073 require a matched wheel or source-build environment and remain v0.6 backlog candidates.
+- v0.6 standardizes the Agent evaluation platform; v0.7 adds boundary tasks; v0.8 adds device/API compatibility tasks.
+- #129154 and #144073 require a matched wheel or source-build environment and remain v0.7 backlog candidates.
 
 Documents:
 

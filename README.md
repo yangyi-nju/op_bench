@@ -6,6 +6,8 @@ OpBench is an operator-focused benchmark for evaluating coding agents on real fr
 
 v0.1 established the isolated replay/evaluation loop. v0.2 added asset registries and formal admission. v0.3 expanded the dataset to 10 verified tasks and added 3-repeat stability evaluation. v0.4 added CUDA tiers and remote Docker. v0.5 is now complete: the verified cumulative dataset contains 17 tasks, including a 6-task precision slice, and its 51-attempt Codex run reached **72.5% resolved** (37/51) with eight-dimensional reporting and hard experiment-integrity checks.
 
+The next release, v0.6, upgrades this working real-Codex benchmark demo into a standardized Agent evaluation platform. It unifies versioned task views, canonical actions with CLI/MCP adapters, attempt lifecycle and budgets, feedback trajectories, patch freezing, fresh evaluation, failure attribution, replay, and rebuildable artifacts. Boundary-task expansion follows in v0.7 after the platform contract is stable. See the [global project plan](docs/project_plan.md) and [current project state](docs/project_state.md).
+
 ## What The Current Code Contains
 
 - A two-layer dataset model: `datasets/<slice>/dataset.json` points to task bundles under `tasks/`.
@@ -34,7 +36,10 @@ Development-only experiment adapters have been removed from the public v0.1 surf
 | `src/op_bench/` | Core implementation: task model, environment preparation, evaluator, actions, agent bridges, reporting. |
 | `scripts/` | CLI entry points for validation, environment preparation, source snapshots, replay, and experiments. |
 | `docs/` | Versioned design docs, experiment reports, developer guides, and historical records. |
-| `docs/v0.6/design.md` | v0.6 boundary dimension and matched-runtime recovery design. |
+| `docs/project_plan.md` | Global mission, principles, roadmap, release gates, and research targets. |
+| `docs/project_state.md` | Current baseline, active version, decisions, and next actions. |
+| `docs/v0.6/` | v0.6 standardized Agent evaluation platform design, implementation plan, and acceptance matrix. |
+| `docs/v0.7/design.md` | v0.7 Dataset Factory, Boundary Slice, and matched-runtime recovery design. |
 | `docs/v0.5/design.md` | v0.5 dimension taxonomy and extended evaluation metrics. |
 | `docs/v0.5/experiment_report.md` | v0.5 full 17-task, 51-attempt Codex evaluation and precision breakdown. |
 | `docs/v0.4/design.md` | v0.4 CUDA tiers, remote GPU Docker executor over SSH, and `inplace_build` source loading. |
@@ -197,7 +202,7 @@ For Docker tasks, preflight commands, setup commands, test commands, and action-
 
 ## Adding More Work
 
-Read [docs/v0.2/developer_guide.md](docs/v0.2/developer_guide.md), [docs/v0.4/design.md](docs/v0.4/design.md), and [docs/v0.5/design.md](docs/v0.5/design.md) for the current expansion workflow. The usual path is:
+Platform development should follow the [v0.6 design](docs/v0.6/design.md), [implementation plan](docs/v0.6/implementation_plan.md), and [acceptance matrix](docs/v0.6/acceptance_matrix.md). Dataset expansion follows the existing admission workflow below and the [v0.7 design](docs/v0.7/design.md):
 
 1. Add or curate task bundles under `tasks/<framework>/`.
 2. Register reusable environment/source assets under `environments/registry.json` and `sources/registry.json`.
@@ -210,6 +215,12 @@ Read [docs/v0.2/developer_guide.md](docs/v0.2/developer_guide.md), [docs/v0.4/de
 ## References
 
 - [Docs index](docs/README.md)
+- [Global project plan](docs/project_plan.md)
+- [Current project state](docs/project_state.md)
+- [v0.6 platform design](docs/v0.6/design.md)
+- [v0.6 implementation plan](docs/v0.6/implementation_plan.md)
+- [v0.6 acceptance matrix](docs/v0.6/acceptance_matrix.md)
+- [v0.7 Dataset Factory and Boundary design](docs/v0.7/design.md)
 - [v0.5 design](docs/v0.5/design.md)
 - [v0.5 experiment report](docs/v0.5/experiment_report.md)
 - [v0.4 design](docs/v0.4/design.md)
