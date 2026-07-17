@@ -509,7 +509,7 @@ class CanonicalActionServiceTests(unittest.TestCase):
         )
 
         self.assertEqual(unknown.error_code, "invalid_request")
-        self.assertEqual(bad_patch.error_code, "workspace_error")
+        self.assertEqual(bad_patch.error_code, "invalid_request")
         self.assertEqual((self.root / "src" / "operator.py").read_text(), "VALUE = 1\n")
 
     def test_patch_capability_is_checked_before_workspace_mutation(self) -> None:

@@ -10,6 +10,12 @@ from op_bench.runtime.canonical import canonical_json
 from op_bench.runtime.contracts import EvaluationResultV06, TestExecutionSummary
 from op_bench.runtime.evaluation import CompletedEvaluation, PrivateEvaluationEvidence
 from op_bench.runtime.events import EventJournal
+from op_bench.runtime.resources import (
+    AttemptResourceLedger,
+    RuntimeCleanupEntry,
+    RuntimeCleanupReport,
+    RuntimeLeaseStore,
+)
 from op_bench.runtime.run_artifacts import AttemptArtifactStore
 from op_bench.runtime.validation import ContractError
 from op_bench.runtime.workspace import FrozenPatch, build_patch_artifact, raw_patch_identity
@@ -139,6 +145,55 @@ class AttemptArtifactStoreTests(unittest.TestCase):
             self.expected.attempt_id,
             completed,
         )
+        profile_hash = self.task.runtime.content_hash
+        resource_ledger = AttemptResourceLedger(
+            self.store.runtime_resources_path(self.expected.attempt_id),
+            attempt_id=self.expected.attempt_id,
+            retry_index=1,
+            runtime_profile_hash=profile_hash,
+            clock_ms=StepClock(),
+        )
+        lease_store = RuntimeLeaseStore(
+            self.store.private_runtime_resources_path(self.expected.attempt_id),
+            attempt_id=self.expected.attempt_id,
+            retry_index=1,
+            runtime_profile_hash=profile_hash,
+        )
+        declared = resource_ledger.declare("workspace", 1)
+        handle = lease_store.put_exact(
+            declared.resource_id,
+            "workspace",
+            1,
+            "/private/controller/runtime-workspace",
+        )
+        resource_ledger.created(declared.resource_id, handle.raw_handle_hash)
+        resource_ledger.released(declared.resource_id)
+        cleanup = RuntimeCleanupReport(
+            attempt_id=self.expected.attempt_id,
+            retry_index=1,
+            runtime_profile_hash=profile_hash,
+            entries=(
+                RuntimeCleanupEntry(
+                    resource_id=declared.resource_id,
+                    resource_type="workspace",
+                    status="released",
+                    error_code=None,
+                ),
+            ),
+            all_released=True,
+        )
+        self.store.write_runtime_cleanup(self.expected.attempt_id, cleanup)
+        self.store.write_runtime_conformance(
+            self.expected.attempt_id,
+            {
+                "report_type": "runtime_conformance",
+                "schema_version": "v1",
+                "status": "not_applicable",
+                "entries": [],
+            },
+        )
+        resource_ledger.close()
+        lease_store.close()
         return frozen, artifact, result, completed, hashes
 
     def test_writes_canonical_retry_layout_idempotently(self) -> None:
@@ -152,6 +207,10 @@ class AttemptArtifactStoreTests(unittest.TestCase):
             "final.patch",
             "public_evaluation.json",
             "private_evaluation.json",
+            "runtime_resources.jsonl",
+            "private_runtime_resources.json",
+            "runtime_cleanup.json",
+            "runtime_conformance.json",
         }
 
         self.assertEqual({item.name for item in attempt_root.iterdir()}, {"retries"})
@@ -172,6 +231,16 @@ class AttemptArtifactStoreTests(unittest.TestCase):
         )
         self.assertRegex(hashes.public_evaluation_hash, r"^sha256:[0-9a-f]{64}$")
         self.assertRegex(hashes.private_evaluation_hash, r"^sha256:[0-9a-f]{64}$")
+        cleanup = self.store.read_runtime_cleanup(self.expected.attempt_id)
+        self.assertTrue(cleanup.all_released)
+        private_runtime = (attempt / "private_runtime_resources.json").read_text(
+            encoding="utf-8"
+        )
+        public_runtime = (attempt / "runtime_resources.jsonl").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("/private/controller/runtime-workspace", private_runtime)
+        self.assertNotIn("/private/controller/runtime-workspace", public_runtime)
 
         before = {path.name: path.read_bytes() for path in attempt.iterdir()}
         self.store.write_run_manifest()

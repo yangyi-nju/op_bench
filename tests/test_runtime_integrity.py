@@ -19,6 +19,12 @@ from op_bench.runtime.integrity import (
     verify_run_artifacts,
 )
 from op_bench.runtime.resume import AttemptLedger
+from op_bench.runtime.resources import (
+    AttemptResourceLedger,
+    RuntimeCleanupEntry,
+    RuntimeCleanupReport,
+    RuntimeLeaseStore,
+)
 from op_bench.runtime.run_artifacts import AttemptArtifactStore
 from op_bench.runtime.session import termination_attribution
 from op_bench.runtime.summary import SelectedAttempt, write_rebuilt_outputs
@@ -42,6 +48,8 @@ CHECK_IDS = (
     "event_chain",
     "action_pairing",
     "lifecycle_terminal",
+    "runtime_resource_ownership",
+    "runtime_cleanup",
     "session_patch_evaluation_identity",
     "public_private_evaluation_identity",
     "evaluation_protocol_scoring_identity",
@@ -72,6 +80,67 @@ class EvidenceBackend:
             ),
             cleanup_completed=True,
         )
+
+
+def write_runtime_resource_evidence(
+    store: AttemptArtifactStore,
+    *,
+    attempt_id: str,
+    retry_index: int,
+    runtime_profile_hash: str,
+) -> None:
+    ledger = AttemptResourceLedger(
+        store.runtime_resources_path(attempt_id, retry_index=retry_index),
+        attempt_id=attempt_id,
+        retry_index=retry_index,
+        runtime_profile_hash=runtime_profile_hash,
+        clock_ms=StepClock(4_000 + retry_index * 10),
+    )
+    lease_store = RuntimeLeaseStore(
+        store.private_runtime_resources_path(attempt_id, retry_index=retry_index),
+        attempt_id=attempt_id,
+        retry_index=retry_index,
+        runtime_profile_hash=runtime_profile_hash,
+    )
+    declared = ledger.declare("workspace", 1)
+    handle = lease_store.put_exact(
+        declared.resource_id,
+        "workspace",
+        1,
+        f"/private/runtime/{attempt_id[-12:]}/retry-{retry_index:04d}",
+    )
+    ledger.created(declared.resource_id, handle.raw_handle_hash)
+    ledger.released(declared.resource_id)
+    store.write_runtime_cleanup(
+        attempt_id,
+        RuntimeCleanupReport(
+            attempt_id=attempt_id,
+            retry_index=retry_index,
+            runtime_profile_hash=runtime_profile_hash,
+            entries=(
+                RuntimeCleanupEntry(
+                    resource_id=declared.resource_id,
+                    resource_type="workspace",
+                    status="released",
+                    error_code=None,
+                ),
+            ),
+            all_released=True,
+        ),
+        retry_index=retry_index,
+    )
+    store.write_runtime_conformance(
+        attempt_id,
+        {
+            "report_type": "runtime_conformance",
+            "schema_version": "v1",
+            "status": "not_applicable",
+            "entries": [],
+        },
+        retry_index=retry_index,
+    )
+    ledger.close()
+    lease_store.close()
 
 
 def append_runtime_evidence(
@@ -249,6 +318,12 @@ def build_complete_run(
         clock_ms=StepClock(2_000),
     )
     completed = coordinator.complete(session, spec, frozen, patch_artifact)
+    write_runtime_resource_evidence(
+        store,
+        attempt_id=expected.attempt_id,
+        retry_index=1,
+        runtime_profile_hash=task.runtime.content_hash,
+    )
 
     ledger = AttemptLedger(root / "attempts.jsonl")
     ledger.append(
@@ -406,6 +481,12 @@ def build_retry_run(root: Path) -> CompleteRun:
             clock_ms=StepClock(2_000 * retry_index),
         )
         completed = coordinator.complete(session, spec, frozen, patch_artifact)
+        write_runtime_resource_evidence(
+            store,
+            attempt_id=expected.attempt_id,
+            retry_index=retry_index,
+            runtime_profile_hash=task.runtime.content_hash,
+        )
         ledger.append(
             session_result=session,
             evaluation_result=completed.result,

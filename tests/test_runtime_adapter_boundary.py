@@ -5,6 +5,7 @@ import unittest
 from dataclasses import replace
 
 from op_bench.runtime.adapters import AdapterActionChannel, AdapterActionClient, AdapterContext
+from op_bench.runtime.codex_adapter import CodexCanonicalAdapter
 from op_bench.runtime.task_view import (
     AgentLaunchInput,
     agent_task_view_identity,
@@ -69,6 +70,16 @@ class AdapterBoundaryTests(unittest.TestCase):
             "/Users/",
         ):
             self.assertNotIn(forbidden, encoded)
+
+    def test_canonical_codex_adapter_only_retains_runner_and_public_configuration(self) -> None:
+        runner = lambda *args, **kwargs: None
+        adapter = CodexCanonicalAdapter(command_runner=runner, codex_binary="codex-fixture")
+
+        self.assertEqual(set(vars(adapter)), {"command_runner", "codex_binary"})
+        self.assertIs(adapter.command_runner, runner)
+        self.assertFalse(hasattr(adapter, "workspace"))
+        self.assertFalse(hasattr(adapter, "evaluator"))
+        self.assertFalse(hasattr(adapter, "target_binding"))
 
     def test_adapter_context_rejects_full_task_workspace_like_and_invalid_client_inputs(self) -> None:
         with self.assertRaisesRegex(ContractError, "launch_input"):

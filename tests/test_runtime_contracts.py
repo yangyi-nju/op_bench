@@ -4,6 +4,7 @@ import copy
 from dataclasses import replace
 import unittest
 
+import op_bench.runtime.contracts as runtime_contracts
 from op_bench.runtime.contracts import (
     AgentSpec,
     AgentTaskView,
@@ -57,6 +58,38 @@ def budget_policy() -> BudgetPolicy:
     )
 
 
+def mount_policy():
+    return runtime_contracts.MountPolicy(
+        policy_id="remote-sync-readonly-v1",
+        workspace_target="/workspace",
+        source_access="remote_sync",
+        artifact_access="controller_only",
+        root_filesystem="read_only_container",
+    )
+
+
+def resource_policy():
+    return runtime_contracts.ResourcePolicy(
+        policy_id="cpu-standard-v1",
+        cpu_millis=4_000,
+        memory_bytes=8 * 1024 * 1024 * 1024,
+        pids_limit=512,
+        gpu_count=0,
+    )
+
+
+def cleanup_policy():
+    return runtime_contracts.CleanupPolicy(
+        policy_id="attempt-owned-v1",
+        scope="attempt_owned_only",
+        grace_ms=5_000,
+        timeout_ms=30_000,
+        remove_workspace=True,
+        remove_process=True,
+        remove_container=True,
+    )
+
+
 def runtime_profile() -> RuntimeProfile:
     return RuntimeProfile(
         profile_id="cpu-overlay-v1",
@@ -65,9 +98,13 @@ def runtime_profile() -> RuntimeProfile:
         source_loading_mode="python_overlay",
         platform="linux/amd64",
         image=identity("image", "op-bench/pytorch-cpu:torch2.6", SHA_B),
+        hardware=identity("hardware", "linux-amd64-cpu-v1", SHA_C),
         requires_gpu=False,
         network_policy="denied",
         timeout_ms=900_000,
+        mount_policy=mount_policy(),
+        resource_policy=resource_policy(),
+        cleanup_policy=cleanup_policy(),
     )
 
 
@@ -137,11 +174,63 @@ def agent_spec() -> AgentSpec:
 
 
 class RuntimeContractRoundTripTests(unittest.TestCase):
+    def test_complete_runtime_policy_contracts_are_public(self) -> None:
+        required = {"MountPolicy", "ResourcePolicy", "CleanupPolicy"}
+
+        missing = {
+            name for name in required if not hasattr(runtime_contracts, name)
+        }
+
+        self.assertEqual(missing, set())
+
+    def test_complete_runtime_policies_round_trip(self) -> None:
+        values = (mount_policy(), resource_policy(), cleanup_policy())
+
+        for value in values:
+            with self.subTest(contract=value.contract_type):
+                encoded = value.to_dict()
+                self.assertEqual(type(value).from_dict(encoded), value)
+                self.assertEqual(type(value).from_dict(encoded).content_hash, value.content_hash)
+
+    def test_every_runtime_policy_axis_changes_profile_identity(self) -> None:
+        profile = runtime_profile()
+        mutations = (
+            replace(profile.mount_policy, source_access="authoritative_workspace"),
+            replace(profile.mount_policy, workspace_target="/runtime-workspace"),
+            replace(profile.resource_policy, cpu_millis=2_000),
+            replace(profile.resource_policy, memory_bytes=4 * 1024 * 1024 * 1024),
+            replace(profile.resource_policy, pids_limit=256),
+            replace(profile.cleanup_policy, timeout_ms=60_000),
+            replace(profile.cleanup_policy, remove_process=False),
+        )
+
+        changed_profiles = (
+            replace(profile, mount_policy=mutations[0]),
+            replace(profile, mount_policy=mutations[1]),
+            replace(profile, resource_policy=mutations[2]),
+            replace(profile, resource_policy=mutations[3]),
+            replace(profile, resource_policy=mutations[4]),
+            replace(profile, cleanup_policy=mutations[5]),
+            replace(profile, cleanup_policy=mutations[6]),
+            replace(profile, hardware=identity("hardware", "linux-amd64-cpu-v2", SHA_A)),
+            replace(profile, network_policy="task_runtime"),
+            replace(profile, source_loading_mode="inplace_build"),
+            replace(profile, image=identity("image", "other-image", SHA_A)),
+            replace(profile, timeout_ms=600_000),
+        )
+
+        for changed in changed_profiles:
+            with self.subTest(profile=changed):
+                self.assertNotEqual(changed.content_hash, profile.content_hash)
+
     def test_every_core_contract_round_trips_with_a_stable_hash(self) -> None:
         values = (
             identity("dataset", "pytorch_v0.5"),
             capability_policy(),
             budget_policy(),
+            mount_policy(),
+            resource_policy(),
+            cleanup_policy(),
             runtime_profile(),
             public_test(),
             full_task_spec(),
@@ -172,6 +261,9 @@ class RuntimeContractNegativeTests(unittest.TestCase):
             identity("dataset", "pytorch_v0.5"),
             capability_policy(),
             budget_policy(),
+            mount_policy(),
+            resource_policy(),
+            cleanup_policy(),
             runtime_profile(),
             public_test(),
             full_task_spec(),
@@ -212,6 +304,26 @@ class RuntimeContractNegativeTests(unittest.TestCase):
 
         with self.assertRaisesRegex(ContractError, "backend: unsupported value"):
             RuntimeProfile.from_dict(encoded)
+
+    def test_rejects_private_or_invalid_runtime_policy_values(self) -> None:
+        with self.assertRaisesRegex(ContractError, "workspace_target: host path is not public"):
+            replace(mount_policy(), workspace_target="/Users/example/workspace")
+        with self.assertRaisesRegex(ContractError, "scope: unsupported value"):
+            replace(cleanup_policy(), scope="all_matching_resources")
+        with self.assertRaisesRegex(ContractError, "cpu_millis: must be >= 1"):
+            replace(resource_policy(), cpu_millis=0)
+        with self.assertRaisesRegex(ContractError, "gpu_count: must be >= 0"):
+            replace(resource_policy(), gpu_count=-1)
+
+    def test_requires_gpu_and_gpu_count_are_consistent(self) -> None:
+        profile = runtime_profile()
+        with self.assertRaisesRegex(ContractError, "requires_gpu: requires gpu_count >= 1"):
+            replace(profile, requires_gpu=True)
+        with self.assertRaisesRegex(ContractError, "gpu_count: requires requires_gpu=true"):
+            replace(
+                profile,
+                resource_policy=replace(profile.resource_policy, gpu_count=1),
+            )
 
     def test_rejects_invalid_action_and_network_policy(self) -> None:
         encoded = capability_policy().to_dict()

@@ -28,6 +28,7 @@ IDENTITY_TYPES = (
     "source",
     "environment",
     "image",
+    "hardware",
     "agent",
     "model",
     "adapter",
@@ -71,6 +72,10 @@ RUNTIME_TIERS = (
     "cuda_kernel_build",
 )
 SOURCE_LOADING_MODES = ("none", "python_overlay", "inplace_build")
+MOUNT_SOURCE_ACCESS_MODES = ("authoritative_workspace", "remote_sync")
+ARTIFACT_ACCESS_MODES = ("controller_only",)
+ROOT_FILESYSTEM_MODES = ("host", "mutable_container", "read_only_container")
+CLEANUP_SCOPES = ("attempt_owned_only",)
 TEST_VISIBILITIES = ("public", "registered", "hidden", "evaluation_only")
 FEEDBACK_POLICIES = ("visible", "none")
 ERROR_CODES = (
@@ -356,6 +361,142 @@ class BudgetPolicy(Contract):
 
 
 @dataclass(frozen=True)
+class MountPolicy(Contract):
+    contract_type: ClassVar[str] = "mount_policy"
+
+    policy_id: str
+    workspace_target: str
+    source_access: str
+    artifact_access: str
+    root_filesystem: str
+
+    def __post_init__(self) -> None:
+        require_str(self.policy_id, "policy_id")
+        _validate_logical_workspace_target(self.workspace_target)
+        require_enum(
+            self.source_access,
+            "source_access",
+            MOUNT_SOURCE_ACCESS_MODES,
+        )
+        require_enum(
+            self.artifact_access,
+            "artifact_access",
+            ARTIFACT_ACCESS_MODES,
+        )
+        require_enum(
+            self.root_filesystem,
+            "root_filesystem",
+            ROOT_FILESYSTEM_MODES,
+        )
+
+    @classmethod
+    def from_dict(cls, value: object, *, path: str | None = None) -> "MountPolicy":
+        data = _contract_data(
+            value,
+            contract_type=cls.contract_type,
+            field_names=tuple(item.name for item in fields(cls)),
+            path=path,
+        )
+        return cls(
+            policy_id=require_str(data["policy_id"], "policy_id"),
+            workspace_target=require_str(data["workspace_target"], "workspace_target"),
+            source_access=require_enum(
+                data["source_access"],
+                "source_access",
+                MOUNT_SOURCE_ACCESS_MODES,
+            ),
+            artifact_access=require_enum(
+                data["artifact_access"],
+                "artifact_access",
+                ARTIFACT_ACCESS_MODES,
+            ),
+            root_filesystem=require_enum(
+                data["root_filesystem"],
+                "root_filesystem",
+                ROOT_FILESYSTEM_MODES,
+            ),
+        )
+
+
+@dataclass(frozen=True)
+class ResourcePolicy(Contract):
+    contract_type: ClassVar[str] = "resource_policy"
+
+    policy_id: str
+    cpu_millis: int | None
+    memory_bytes: int | None
+    pids_limit: int | None
+    gpu_count: int
+
+    def __post_init__(self) -> None:
+        require_str(self.policy_id, "policy_id")
+        require_optional_int(self.cpu_millis, "cpu_millis", minimum=1)
+        require_optional_int(self.memory_bytes, "memory_bytes", minimum=1)
+        require_optional_int(self.pids_limit, "pids_limit", minimum=1)
+        require_int(self.gpu_count, "gpu_count", minimum=0)
+
+    @classmethod
+    def from_dict(cls, value: object, *, path: str | None = None) -> "ResourcePolicy":
+        data = _contract_data(
+            value,
+            contract_type=cls.contract_type,
+            field_names=tuple(item.name for item in fields(cls)),
+            path=path,
+        )
+        return cls(
+            policy_id=require_str(data["policy_id"], "policy_id"),
+            cpu_millis=require_optional_int(data["cpu_millis"], "cpu_millis", minimum=1),
+            memory_bytes=require_optional_int(
+                data["memory_bytes"],
+                "memory_bytes",
+                minimum=1,
+            ),
+            pids_limit=require_optional_int(data["pids_limit"], "pids_limit", minimum=1),
+            gpu_count=require_int(data["gpu_count"], "gpu_count", minimum=0),
+        )
+
+
+@dataclass(frozen=True)
+class CleanupPolicy(Contract):
+    contract_type: ClassVar[str] = "cleanup_policy"
+
+    policy_id: str
+    scope: str
+    grace_ms: int
+    timeout_ms: int
+    remove_workspace: bool
+    remove_process: bool
+    remove_container: bool
+
+    def __post_init__(self) -> None:
+        require_str(self.policy_id, "policy_id")
+        require_enum(self.scope, "scope", CLEANUP_SCOPES)
+        require_int(self.grace_ms, "grace_ms", minimum=0)
+        require_int(self.timeout_ms, "timeout_ms", minimum=1)
+        require_bool(self.remove_workspace, "remove_workspace")
+        require_bool(self.remove_process, "remove_process")
+        require_bool(self.remove_container, "remove_container")
+
+    @classmethod
+    def from_dict(cls, value: object, *, path: str | None = None) -> "CleanupPolicy":
+        data = _contract_data(
+            value,
+            contract_type=cls.contract_type,
+            field_names=tuple(item.name for item in fields(cls)),
+            path=path,
+        )
+        return cls(
+            policy_id=require_str(data["policy_id"], "policy_id"),
+            scope=require_enum(data["scope"], "scope", CLEANUP_SCOPES),
+            grace_ms=require_int(data["grace_ms"], "grace_ms", minimum=0),
+            timeout_ms=require_int(data["timeout_ms"], "timeout_ms", minimum=1),
+            remove_workspace=require_bool(data["remove_workspace"], "remove_workspace"),
+            remove_process=require_bool(data["remove_process"], "remove_process"),
+            remove_container=require_bool(data["remove_container"], "remove_container"),
+        )
+
+
+@dataclass(frozen=True)
 class RuntimeProfile(Contract):
     contract_type: ClassVar[str] = "runtime_profile"
 
@@ -365,9 +506,13 @@ class RuntimeProfile(Contract):
     source_loading_mode: str
     platform: str
     image: ContentIdentity
+    hardware: ContentIdentity
     requires_gpu: bool
     network_policy: str
     timeout_ms: int
+    mount_policy: MountPolicy
+    resource_policy: ResourcePolicy
+    cleanup_policy: CleanupPolicy
 
     def __post_init__(self) -> None:
         require_str(self.profile_id, "profile_id")
@@ -377,9 +522,18 @@ class RuntimeProfile(Contract):
         require_str(self.platform, "platform")
         _require_instance(self.image, ContentIdentity, "image")
         _require_identity_type(self.image, "image", "image")
+        _require_instance(self.hardware, ContentIdentity, "hardware")
+        _require_identity_type(self.hardware, "hardware", "hardware")
         require_bool(self.requires_gpu, "requires_gpu")
         require_enum(self.network_policy, "network_policy", NETWORK_POLICIES)
         require_int(self.timeout_ms, "timeout_ms", minimum=1)
+        _require_instance(self.mount_policy, MountPolicy, "mount_policy")
+        _require_instance(self.resource_policy, ResourcePolicy, "resource_policy")
+        _require_instance(self.cleanup_policy, CleanupPolicy, "cleanup_policy")
+        if self.requires_gpu and self.resource_policy.gpu_count < 1:
+            raise ContractError("requires_gpu: requires gpu_count >= 1")
+        if not self.requires_gpu and self.resource_policy.gpu_count != 0:
+            raise ContractError("gpu_count: requires requires_gpu=true")
 
     @classmethod
     def from_dict(cls, value: object, *, path: str | None = None) -> "RuntimeProfile":
@@ -393,9 +547,13 @@ class RuntimeProfile(Contract):
                 "source_loading_mode",
                 "platform",
                 "image",
+                "hardware",
                 "requires_gpu",
                 "network_policy",
                 "timeout_ms",
+                "mount_policy",
+                "resource_policy",
+                "cleanup_policy",
             ),
             path=path,
         )
@@ -408,9 +566,21 @@ class RuntimeProfile(Contract):
             ),
             platform=require_str(data["platform"], "platform"),
             image=ContentIdentity.from_dict(data["image"], path="runtime_profile.image"),
+            hardware=ContentIdentity.from_dict(
+                data["hardware"], path="runtime_profile.hardware"
+            ),
             requires_gpu=require_bool(data["requires_gpu"], "requires_gpu"),
             network_policy=require_enum(data["network_policy"], "network_policy", NETWORK_POLICIES),
             timeout_ms=require_int(data["timeout_ms"], "timeout_ms", minimum=1),
+            mount_policy=MountPolicy.from_dict(
+                data["mount_policy"], path="runtime_profile.mount_policy"
+            ),
+            resource_policy=ResourcePolicy.from_dict(
+                data["resource_policy"], path="runtime_profile.resource_policy"
+            ),
+            cleanup_policy=CleanupPolicy.from_dict(
+                data["cleanup_policy"], path="runtime_profile.cleanup_policy"
+            ),
         )
 
 
@@ -1284,6 +1454,27 @@ def _require_optional_hash(value: object, path: str) -> str | None:
     if value is None:
         return None
     return require_str(value, path, pattern=SHA256_PATTERN)
+
+
+def _validate_logical_workspace_target(value: object) -> str:
+    target = require_str(value, "workspace_target")
+    private_prefixes = (
+        "/Users/",
+        "/home/",
+        "/private/",
+        "/tmp/",
+        "~/",
+    )
+    if target.startswith(private_prefixes) or ":\\" in target:
+        raise ContractError("workspace_target: host path is not public")
+    if target == "workspace":
+        return target
+    if not target.startswith("/"):
+        raise ContractError("workspace_target: expected canonical logical path")
+    parts = target.split("/")[1:]
+    if not parts or any(part in {"", ".", ".."} for part in parts):
+        raise ContractError("workspace_target: expected canonical logical path")
+    return target
 
 
 def _validate_time_range(started_at_ms: object, ended_at_ms: object) -> None:

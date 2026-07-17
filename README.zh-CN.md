@@ -6,7 +6,7 @@ OpBench 是一个面向算子问题的 benchmark，用于评测 coding agent 解
 
 v0.1 建立隔离 replay/evaluation 闭环，v0.2 加入资产 registry 和正式 admission，v0.3 扩展到 10 条 verified task 并加入 3-repeat，v0.4 加入 CUDA tier 和 remote Docker。v0.5 现已完成：verified 累计数据集包含 17 条 task，其中 precision slice 为 6 条；51-attempt Codex 全量实验达到 **72.5% resolved**（37/51），并落地 8 维指标与实验完整性硬校验。
 
-下一版本 v0.6 将把这个已经可以运行真实 Codex 的评测集 Demo 升级为规范 Agent 评测平台。M1～M5 已完成：严格合同与确定性身份显式包含 AgentTaskView；唯一 Authoritative Workspace 生成唯一不可变、可在干净 base 上严格应用的 patch；九个 Action 共享同一服务端权威 CLI/MCP Service 和只含公开数据的 Adapter 边界；AttemptSession 收敛预算、终止、Patch Freeze 与 hash-chain Trajectory；M5 加入 evaluator-owned 结构化测试证据、retry-specific 不可变 Artifact、完整 Evaluation identity/spec/evidence closure、state-dependent lifecycle integrity 与确定性结果重建。M6 将继续完成 Runtime Conformance、Legacy Replay 与真实 Codex 标准 Adapter 验证。Boundary Task 扩充在平台合同稳定后由 v0.7 完成。详见[全局项目方案](docs/project_plan.md)和[当前项目状态](docs/project_state.md)。
+下一版本 v0.6 将把这个已经可以运行真实 Codex 的评测集 Demo 升级为规范 Agent 评测平台。M1～M6 已完成：平台现在具备严格版本化合同、唯一 Authoritative Workspace 与不可变 Patch、服务端权威 CLI/MCP Action Service、确定性的 Attempt/Trajectory/Evaluation/Artifact 语义、版本化 Runtime Profile、精确 Attempt-owned Local/Docker/Remote 资源、Conformance 与 Legacy Replay 机制，以及支持 Resume 和 Integrity 校验的进程隔离 Canonical Codex Adapter。真实 Codex 本地 CPU canary 已通过；精确 Remote Replay 与 CUDA 证据因已配置目标连接超时而明确保持 Blocked。下一步是 M7 文档、Demo 打包与发布审查。Boundary Task 扩充在平台合同稳定后由 v0.7 完成。详见[全局项目方案](docs/project_plan.md)和[当前项目状态](docs/project_state.md)。
 
 ## 当前代码包含什么
 

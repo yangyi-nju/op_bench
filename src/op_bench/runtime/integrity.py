@@ -35,6 +35,15 @@ from op_bench.runtime.resume import (
     AttemptLedgerRecord,
     parse_attempt_ledger,
 )
+from op_bench.runtime.resources import (
+    RuntimeCleanupReport,
+    RuntimeResourceHandle,
+    RuntimeResourceRecord,
+    parse_runtime_lease_store,
+    parse_runtime_resource_ledger,
+    verify_runtime_cleanup,
+    verify_runtime_resource_ownership,
+)
 from op_bench.runtime.run_artifacts import retry_directory_name
 from op_bench.runtime.session import TERMINATION_PRIORITY, termination_attribution
 from op_bench.runtime.summary import SelectedAttempt, rebuild_results, rebuild_summary
@@ -51,6 +60,8 @@ _CHECK_IDS = (
     "event_chain",
     "action_pairing",
     "lifecycle_terminal",
+    "runtime_resource_ownership",
+    "runtime_cleanup",
     "session_patch_evaluation_identity",
     "public_private_evaluation_identity",
     "evaluation_protocol_scoring_identity",
@@ -64,6 +75,8 @@ _ATTEMPT_CHECK_IDS = frozenset(
         "event_chain",
         "action_pairing",
         "lifecycle_terminal",
+        "runtime_resource_ownership",
+        "runtime_cleanup",
         "session_patch_evaluation_identity",
         "public_private_evaluation_identity",
         "evaluation_protocol_scoring_identity",
@@ -343,6 +356,7 @@ class _IntegrityState:
         self.expected = {
             item.attempt_id: item for item in manifest.expected_attempts
         }
+        self.tasks = {item.task.identifier: item for item in manifest.tasks}
 
     def ledger_records(self) -> tuple[AttemptLedgerRecord, ...]:
         return parse_attempt_ledger(self.reader.root_file("attempts.jsonl"))
@@ -377,6 +391,53 @@ class _IntegrityState:
         if any(record.session_id != session_id for record in records):
             raise ContractError("events.jsonl: session_id mismatch")
         return records
+
+    def runtime_profile_hash(self, attempt_id: str) -> str:
+        expected = self.expected[attempt_id]
+        return self.tasks[expected.task.identifier].runtime.content_hash
+
+    def runtime_resource_evidence(
+        self,
+        attempt_id: str,
+        retry_index: int,
+    ) -> tuple[
+        tuple[RuntimeResourceRecord, ...],
+        tuple[RuntimeResourceHandle, ...],
+        RuntimeCleanupReport,
+    ]:
+        profile_hash = self.runtime_profile_hash(attempt_id)
+        records = parse_runtime_resource_ledger(
+            self.reader.retry_file(
+                attempt_id,
+                retry_index,
+                "runtime_resources.jsonl",
+            ),
+            attempt_id=attempt_id,
+            retry_index=retry_index,
+            runtime_profile_hash=profile_hash,
+        )
+        handles = parse_runtime_lease_store(
+            self.reader.retry_file(
+                attempt_id,
+                retry_index,
+                "private_runtime_resources.json",
+            ),
+            attempt_id=attempt_id,
+            retry_index=retry_index,
+            runtime_profile_hash=profile_hash,
+        )
+        cleanup = RuntimeCleanupReport.from_dict(
+            _canonical_json_object(
+                self.reader.retry_file(
+                    attempt_id,
+                    retry_index,
+                    "runtime_cleanup.json",
+                ),
+                "runtime_cleanup.json",
+                public=True,
+            )
+        )
+        return records, handles, cleanup
 
     def evaluations(
         self,
@@ -429,6 +490,20 @@ def selected_attempts_from_ledger(
     return _selected_attempts_from_records(ledger.records(), manifest)
 
 
+def load_run_manifest_artifact(run_root: Path) -> RunManifest:
+    """Read one descriptor-bound run Manifest without mutating its run root."""
+    reader = _ReadOnlyRun(run_root)
+    try:
+        payload = _canonical_json_object(
+            reader.root_file("run_manifest.json"),
+            "run_manifest.json",
+            public=False,
+        )
+        return RunManifest.from_dict(payload, path="run_manifest.json")
+    finally:
+        reader.close()
+
+
 def verify_run_artifacts(
     run_root: Path,
     expected_manifest: RunManifest,
@@ -454,6 +529,11 @@ def verify_run_artifacts(
             ("event_chain", lambda: _check_event_chains(state)),
             ("action_pairing", lambda: _check_action_pairing(state)),
             ("lifecycle_terminal", lambda: _check_lifecycle(state)),
+            (
+                "runtime_resource_ownership",
+                lambda: _check_runtime_resource_ownership(state),
+            ),
+            ("runtime_cleanup", lambda: _check_runtime_cleanup(state)),
             (
                 "session_patch_evaluation_identity",
                 lambda: _check_session_patch_evaluation(state),
@@ -647,6 +727,28 @@ def _check_lifecycle(state: _IntegrityState) -> _CheckEvidence:
         ):
             raise ContractError("final terminal binding mismatch")
     return _CheckEvidence("session, evaluation, and final terminals are bound")
+
+
+def _check_runtime_resource_ownership(
+    state: _IntegrityState,
+) -> _CheckEvidence:
+    for ledger_record in state.ledger_records():
+        records, handles, _ = state.runtime_resource_evidence(
+            ledger_record.attempt_id,
+            ledger_record.retry_index,
+        )
+        verify_runtime_resource_ownership(records, handles)
+    return _CheckEvidence("all runtime resources have exact private ownership evidence")
+
+
+def _check_runtime_cleanup(state: _IntegrityState) -> _CheckEvidence:
+    for ledger_record in state.ledger_records():
+        records, _, cleanup = state.runtime_resource_evidence(
+            ledger_record.attempt_id,
+            ledger_record.retry_index,
+        )
+        verify_runtime_cleanup(records, cleanup)
+    return _CheckEvidence("all runtime resources have terminal cleanup evidence")
 
 
 def _verify_runtime_event_grammar(
@@ -1264,6 +1366,7 @@ def _raw_hash(raw: bytes) -> str:
 
 
 __all__ = [
+    "load_run_manifest_artifact",
     "persist_integrity_reports",
     "selected_attempts_from_ledger",
     "verify_run_artifacts",

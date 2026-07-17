@@ -8,6 +8,10 @@ import unittest
 from op_bench.runtime.canonical import canonical_json, canonical_sha256
 from op_bench.runtime.events import EventJournal
 from op_bench.runtime.integrity import verify_run_artifacts
+from op_bench.runtime.resources import (
+    runtime_raw_handle_hash,
+    runtime_resource_id,
+)
 from tests.test_runtime_integrity import (
     CompleteRun,
     build_complete_run,
@@ -254,6 +258,117 @@ class RuntimeIntegrityMutationTests(unittest.TestCase):
         ):
             with self.subTest(name=name):
                 self.assert_mutation_fails(check, mutate)
+
+    def test_runtime_resource_ownership_and_cleanup_mutations_fail_closed(self) -> None:
+        def missing_public_ledger(complete: CompleteRun) -> None:
+            attempt_path(complete, "runtime_resources.jsonl").unlink()
+
+        def changed_private_handle(complete: CompleteRun) -> None:
+            path = attempt_path(complete, "private_runtime_resources.json")
+            payload = read_json(path)
+            payload["handles"][0]["raw_handle"] += "-changed"
+            write_json(path, payload)
+
+        def cross_profile_private_store(complete: CompleteRun) -> None:
+            path = attempt_path(complete, "private_runtime_resources.json")
+            payload = read_json(path)
+            payload["runtime_profile_hash"] = "sha256:" + "f" * 64
+            write_json(path, payload)
+
+        def cross_attempt_private_store(complete: CompleteRun) -> None:
+            path = attempt_path(complete, "private_runtime_resources.json")
+            payload = read_json(path)
+            payload["attempt_id"] = "attempt:v1:" + "f" * 64
+            write_json(path, payload)
+
+        def unreferenced_private_handle(complete: CompleteRun) -> None:
+            path = attempt_path(complete, "private_runtime_resources.json")
+            payload = read_json(path)
+            profile_hash = payload["runtime_profile_hash"]
+            raw_handle = "pid:unreferenced-fixture"
+            payload["handles"].append(
+                {
+                    "resource_id": runtime_resource_id(
+                        complete.attempt_id,
+                        1,
+                        profile_hash,
+                        "process",
+                        1,
+                    ),
+                    "resource_type": "process",
+                    "ordinal": 1,
+                    "raw_handle": raw_handle,
+                    "raw_handle_hash": runtime_raw_handle_hash(raw_handle),
+                }
+            )
+            payload["handles"].sort(key=lambda item: item["resource_id"])
+            write_json(path, payload)
+
+        def active_resource(complete: CompleteRun) -> None:
+            path = attempt_path(complete, "runtime_resources.jsonl")
+            lines = path.read_bytes().splitlines(keepends=True)
+            path.write_bytes(b"".join(lines[:-1]))
+
+        def cleanup_failed(complete: CompleteRun) -> None:
+            ledger_path = attempt_path(complete, "runtime_resources.jsonl")
+            records = [
+                json.loads(line)
+                for line in ledger_path.read_text(encoding="utf-8").splitlines()
+            ]
+            final = records[-1]
+            final["transition"] = "cleanup_failed"
+            unhashed = dict(final)
+            del unhashed["record_hash"]
+            final["record_hash"] = canonical_sha256(unhashed)
+            ledger_path.write_text(
+                "".join(canonical_json(record) + "\n" for record in records),
+                encoding="utf-8",
+            )
+
+            cleanup_path = attempt_path(complete, "runtime_cleanup.json")
+            cleanup = read_json(cleanup_path)
+            cleanup["entries"][0].update(
+                {
+                    "status": "cleanup_failed",
+                    "error_code": "runtime_cleanup_failed",
+                }
+            )
+            cleanup["all_released"] = False
+            write_json(cleanup_path, cleanup)
+
+        def missing_cleanup_report(complete: CompleteRun) -> None:
+            attempt_path(complete, "runtime_cleanup.json").unlink()
+
+        for name, check, mutate in (
+            ("missing-ledger", "runtime_resource_ownership", missing_public_ledger),
+            ("private-handle", "runtime_resource_ownership", changed_private_handle),
+            ("cross-profile", "runtime_resource_ownership", cross_profile_private_store),
+            ("cross-attempt", "runtime_resource_ownership", cross_attempt_private_store),
+            ("unreferenced", "runtime_resource_ownership", unreferenced_private_handle),
+            ("active", "runtime_cleanup", active_resource),
+            ("cleanup-failed", "runtime_cleanup", cleanup_failed),
+            ("missing-cleanup", "runtime_cleanup", missing_cleanup_report),
+        ):
+            with self.subTest(name=name):
+                self.assert_mutation_fails(check, mutate)
+
+    def test_runtime_resource_evidence_is_required_for_every_retry(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            complete = build_retry_run(Path(temporary) / "run")
+            attempt_path(
+                complete,
+                "runtime_resources.jsonl",
+                retry_index=1,
+            ).unlink()
+
+            report = verify_run_artifacts(complete.root, complete.manifest)
+            checks = {check.check_id: check for check in report.checks}
+
+            self.assertEqual(report.status, "failed")
+            self.assertEqual(
+                checks["runtime_resource_ownership"].status,
+                "failed",
+            )
 
     def test_task_view_event_and_patch_mutations_fail_closed(self) -> None:
         def changed_task_view(complete: CompleteRun) -> None:

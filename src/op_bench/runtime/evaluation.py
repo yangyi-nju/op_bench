@@ -249,6 +249,23 @@ class CompletedEvaluation:
         return self.evaluation_spec.content_hash
 
 
+@dataclass(frozen=True)
+class ReplayEvaluationEvidence:
+    observed_outcome: str
+    invalid_reason: str | None
+    private_evidence: PrivateEvaluationEvidence | None
+
+    def __post_init__(self) -> None:
+        require_str(self.observed_outcome, "observed_outcome")
+        if self.invalid_reason is not None:
+            require_str(self.invalid_reason, "invalid_reason")
+        if self.private_evidence is not None and not isinstance(
+            self.private_evidence,
+            PrivateEvaluationEvidence,
+        ):
+            raise ContractError("private_evidence: expected PrivateEvaluationEvidence")
+
+
 class FreshEvaluationBackend(Protocol):
     def evaluate(
         self,
@@ -377,6 +394,68 @@ class FreshEvaluator:
             pass_to_pass=pass_to_pass,
             private_evidence=evidence,
         )
+
+    def evaluate_replay(
+        self,
+        evaluation_spec: EvaluationSpec,
+        frozen_patch: FrozenPatch | None,
+        patch_artifact: PatchArtifact | None,
+    ) -> ReplayEvaluationEvidence:
+        if not isinstance(evaluation_spec, EvaluationSpec):
+            raise ContractError("evaluation_spec: expected EvaluationSpec")
+        if frozen_patch is None:
+            if patch_artifact is not None:
+                raise ContractError("replay patch handoff: unexpected patch artifact")
+        else:
+            if not isinstance(frozen_patch, FrozenPatch):
+                raise ContractError("frozen_patch: expected FrozenPatch")
+            if not isinstance(patch_artifact, PatchArtifact):
+                raise ContractError("patch_artifact: expected PatchArtifact")
+            if frozen_patch.source != evaluation_spec.source:
+                raise ContractError("replay source identity mismatch")
+            if frozen_patch.patch != evaluation_spec.frozen_patch:
+                raise ContractError("replay patch identity mismatch")
+            if patch_artifact.patch != frozen_patch.patch:
+                raise ContractError("replay patch artifact identity mismatch")
+            if (
+                patch_artifact.size_bytes != len(frozen_patch.patch_bytes)
+                or patch_artifact.changed_paths != frozen_patch.changed_paths
+                or patch_artifact.workspace != frozen_patch.workspace
+            ):
+                raise ContractError("replay patch artifact metadata mismatch")
+        try:
+            replay_method = getattr(self._backend, "evaluate_replay", None)
+            if callable(replay_method):
+                evidence = replay_method(evaluation_spec, frozen_patch)
+            elif frozen_patch is not None:
+                evidence = self._backend.evaluate(evaluation_spec, frozen_patch)
+            else:
+                raise EvaluationInfrastructureError(
+                    "baseline_replay_not_supported"
+                )
+            fail_to_pass, pass_to_pass = _validate_replay_evidence(
+                evaluation_spec,
+                evidence,
+                expected_patch=(
+                    None if frozen_patch is None else frozen_patch.patch
+                ),
+            )
+        except StrictPatchApplyError:
+            return ReplayEvaluationEvidence("invalid_patch", None, None)
+        except EvaluationInfrastructureError as exc:
+            return ReplayEvaluationEvidence(
+                "evaluation_error",
+                exc.invalid_reason,
+                None,
+            )
+        outcome = (
+            "f2p_failed"
+            if fail_to_pass.failed
+            else "p2p_regression"
+            if pass_to_pass.failed
+            else "resolved"
+        )
+        return ReplayEvaluationEvidence(outcome, None, evidence)
 
     def _validate_optional_patch_handoff(
         self,
@@ -592,13 +671,26 @@ def _validate_evidence(
     spec: EvaluationSpec,
     evidence: PrivateEvaluationEvidence,
 ) -> tuple[TestExecutionSummary, TestExecutionSummary]:
+    return _validate_replay_evidence(
+        spec,
+        evidence,
+        expected_patch=spec.frozen_patch,
+    )
+
+
+def _validate_replay_evidence(
+    spec: EvaluationSpec,
+    evidence: PrivateEvaluationEvidence,
+    *,
+    expected_patch: ContentIdentity | None,
+) -> tuple[TestExecutionSummary, TestExecutionSummary]:
     if not isinstance(evidence, PrivateEvaluationEvidence):
         raise EvaluationInfrastructureError("invalid_evaluation_evidence")
     if not evidence.cleanup_completed:
         raise EvaluationInfrastructureError("evaluation_cleanup_failed")
     if evidence.source != spec.source:
         raise EvaluationInfrastructureError("source_identity_mismatch")
-    if evidence.patch != spec.frozen_patch:
+    if evidence.patch != expected_patch:
         raise EvaluationInfrastructureError("patch_identity_mismatch")
     if evidence.hidden_test_asset != spec.hidden_test_asset:
         raise EvaluationInfrastructureError("hidden_test_identity_mismatch")
@@ -791,6 +883,7 @@ __all__ = [
     "FreshEvaluationBackend",
     "FreshEvaluator",
     "PrivateEvaluationEvidence",
+    "ReplayEvaluationEvidence",
     "SelectorExecution",
     "StrictPatchApplyError",
     "validate_evaluation_semantics",

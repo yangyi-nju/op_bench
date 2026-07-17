@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import replace
 import json
 import shutil
 import sys
+import time
 from pathlib import Path
 
 
@@ -109,11 +111,51 @@ def build_parser() -> argparse.ArgumentParser:
         help="Disable the cross-run baseline cache (runs/_baseline_cache/).",
     )
     parser.add_argument("--quiet", action="store_true", help="Suppress terminal progress logs.")
+    parser.add_argument(
+        "--runtime-protocol",
+        choices=("legacy", "v1"),
+        default="legacy",
+        help="Runtime protocol. The default preserves the legacy runner.",
+    )
+    parser.add_argument(
+        "--runtime-profile",
+        default=None,
+        metavar="PROFILE_ID",
+        help="Exact Runtime Profile ID; required with --runtime-protocol v1.",
+    )
+    parser.add_argument(
+        "--runtime-profile-registry",
+        default=str(ROOT / "configs" / "runtime_profiles.v1.json"),
+        metavar="PATH",
+        help="Versioned Runtime Profile registry used only by the v1 runner.",
+    )
+    parser.add_argument(
+        "--target-config",
+        default=None,
+        metavar="PATH",
+        help="Private exact runtime target config. No target discovery is performed.",
+    )
+    parser.add_argument(
+        "--enable-external-canary",
+        action="store_true",
+        help="Explicitly permit the v1 codex_canonical adapter.",
+    )
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    if args.runtime_protocol == "v1":
+        return _main_v1(args)
+    default_registry = str(ROOT / "configs" / "runtime_profiles.v1.json")
+    if (
+        args.runtime_profile is not None
+        or args.target_config is not None
+        or args.enable_external_canary
+        or args.runtime_profile_registry != default_registry
+    ):
+        print("v1 runtime controls require --runtime-protocol v1", file=sys.stderr)
+        return 2
     if not args.task and not args.dataset:
         print("at least one --task or --dataset is required", file=sys.stderr)
         return 2
@@ -320,6 +362,244 @@ def main(argv: list[str] | None = None) -> int:
 
     _write_summary(store, output_dir, progress, tasks)
     print(output_dir / "summary.json")
+    return 0
+
+
+def _main_v1(args: argparse.Namespace) -> int:
+    """Validate explicit v1 selection before creating output or runtime resources."""
+
+    from op_bench.runtime.backends import load_runtime_target_binding
+    from op_bench.runtime.profiles import load_runtime_profile_registry
+    from op_bench.runtime.validation import ContractError
+
+    if args.runtime_profile is None:
+        print("--runtime-profile is required with --runtime-protocol v1", file=sys.stderr)
+        return 2
+    if args.task:
+        print("--task is a legacy-only input", file=sys.stderr)
+        return 2
+    if len(args.dataset) != 1:
+        print("v1 requires exactly one --dataset", file=sys.stderr)
+        return 2
+    if args.fresh:
+        print("--fresh is not supported by the v1 resume protocol", file=sys.stderr)
+        return 2
+    if args.no_baseline_cache:
+        print("--no-baseline-cache is a legacy-only input", file=sys.stderr)
+        return 2
+    if args.max_parallel != 1:
+        print("--max-parallel is not supported by the v1 runner", file=sys.stderr)
+        return 2
+    if args.agent_repeat < 1:
+        print("--agent-repeat must be >= 1", file=sys.stderr)
+        return 2
+    if len(args.agent) != 1 or args.agent[0] not in {
+        "scripted_canonical",
+        "codex_canonical",
+    }:
+        print(
+            "v1 --agent must explicitly select scripted_canonical or codex_canonical",
+            file=sys.stderr,
+        )
+        return 2
+    adapter_id = args.agent[0]
+    if adapter_id == "codex_canonical" and not args.enable_external_canary:
+        print(
+            "--enable-external-canary is required for codex_canonical",
+            file=sys.stderr,
+        )
+        return 2
+    try:
+        registry = load_runtime_profile_registry(
+            Path(args.runtime_profile_registry).resolve()
+        )
+        try:
+            profile = registry.get(args.runtime_profile)
+        except ContractError as exc:
+            raise ContractError("unknown Runtime Profile") from exc
+    except (ContractError, OSError, ValueError):
+        print("cannot load Runtime Profile registry or unknown Runtime Profile", file=sys.stderr)
+        return 2
+    if profile.backend == "remote_docker" and args.target_config is None:
+        print("--target-config is required for a Remote Runtime Profile", file=sys.stderr)
+        return 2
+    if args.target_config is None:
+        target = None
+    else:
+        try:
+            target = load_runtime_target_binding(
+                Path(args.target_config).resolve(strict=True),
+                local_workspace_parent=Path(args.output_dir).resolve().parent,
+            )
+        except (ContractError, OSError, ValueError):
+            print("invalid private target config", file=sys.stderr)
+            return 2
+        if target.backend != profile.backend:
+            print("private target backend does not match Runtime Profile", file=sys.stderr)
+            return 2
+
+    return _execute_v1(args, registry, profile, target)
+
+
+def _execute_v1(args, registry, profile, target) -> int:
+    """Build one frozen v1 request and dispatch it without legacy fallback."""
+
+    from op_bench.runtime.adapters import ScriptedCanonicalAdapter
+    from op_bench.runtime.backends import (
+        DockerRuntimeBackend,
+        LocalProcessBackend,
+        RemoteDockerRuntimeBackend,
+        RuntimeTargetBinding,
+    )
+    from op_bench.runtime.codex_adapter import (
+        CodexCanonicalAdapter,
+        subprocess_command_runner,
+    )
+    from op_bench.runtime.legacy import (
+        LegacyV05Defaults,
+        agent_spec_for_v1_adapter,
+        runtime_bundle_from_v05_dataset,
+    )
+    from op_bench.runtime.orchestrator import V06Orchestrator, V06RunRequest
+    from op_bench.runtime.validation import ContractError
+
+    dataset_path = Path(args.dataset[0]).resolve()
+    try:
+        dataset = DatasetManifest.load(dataset_path)
+        task_ids = [task.task_id for task in dataset.load_tasks(verified_only=True)]
+        if args.filter_tasks:
+            task_ids = [
+                task_id
+                for task_id in task_ids
+                if any(pattern in task_id for pattern in args.filter_tasks)
+            ]
+        if args.only_tasks:
+            exact = set(args.only_tasks)
+            task_ids = [task_id for task_id in task_ids if task_id in exact]
+        if not task_ids:
+            print("no verified v1 tasks matched filters", file=sys.stderr)
+            return 2
+        agent = agent_spec_for_v1_adapter(args.agent[0])
+        defaults = LegacyV05Defaults.standard()
+        defaults = replace(
+            defaults,
+            budget_policy=replace(
+                defaults.budget_policy,
+                wall_clock_ms=profile.timeout_ms,
+            ),
+        )
+        bundle = runtime_bundle_from_v05_dataset(
+            dataset_path,
+            agents=(agent,),
+            repeat=args.agent_repeat,
+            created_at="1970-01-01T00:00:00Z",
+            defaults=defaults,
+            selected_task_ids=tuple(task_ids),
+        )
+    except (ContractError, OSError, ValueError, KeyError):
+        print("cannot construct frozen v1 runtime inputs", file=sys.stderr)
+        return 2
+
+    if any(task.runtime != profile for task in bundle.manifest.tasks):
+        print("selected Task Runtime Profile does not match --runtime-profile", file=sys.stderr)
+        return 2
+
+    output_root = Path(args.output_dir).resolve()
+    if output_root.is_symlink() or (output_root.exists() and not output_root.is_dir()):
+        print("v1 --output-dir must be a real directory or an absent path", file=sys.stderr)
+        return 2
+    if target is None:
+        if profile.backend != "local":
+            print("explicit target is required for this Runtime Profile", file=sys.stderr)
+            return 2
+        try:
+            output_root.mkdir(parents=True, exist_ok=True)
+            target = RuntimeTargetBinding(
+                backend="local",
+                local_workspace_parent=output_root,
+            )
+        except (ContractError, OSError):
+            print("cannot prepare local v1 output binding", file=sys.stderr)
+            return 1
+
+    backend_types = {
+        "local": LocalProcessBackend,
+        "docker": DockerRuntimeBackend,
+        "remote_docker": RemoteDockerRuntimeBackend,
+    }
+
+    def backend_factory(selected_profile, target_binding, phase):
+        del target_binding, phase
+        try:
+            backend_type = backend_types[selected_profile.backend]
+        except KeyError as exc:
+            raise ContractError("Runtime Profile backend is not executable") from exc
+        return backend_type()
+
+    def adapter_factory(agent_spec, adapter_id):
+        del agent_spec
+        if adapter_id == "scripted_canonical":
+            return ScriptedCanonicalAdapter()
+        if adapter_id == "codex_canonical":
+            return CodexCanonicalAdapter(subprocess_command_runner)
+        raise ContractError("unsupported v1 Adapter")
+
+    origin_ns = time.monotonic_ns()
+
+    def clock_ms() -> int:
+        return max(1, (time.monotonic_ns() - origin_ns) // 1_000_000 + 1)
+
+    orchestrator = V06Orchestrator(
+        source_resolver=bundle.source_for,
+        hidden_asset_resolver=bundle.hidden_asset_for,
+        backend_factory=backend_factory,
+        adapter_factory=adapter_factory,
+        python_executable=(sys.executable if profile.backend == "local" else "python"),
+    )
+    try:
+        result = orchestrator.run(
+            V06RunRequest(
+                manifest=bundle.manifest,
+                selected_attempt_ids=tuple(
+                    attempt.attempt_id
+                    for attempt in bundle.manifest.expected_attempts
+                ),
+                runtime_profile_registry=registry,
+                runtime_profile_id=profile.profile_id,
+                target_binding=target,
+                output_root=output_root,
+                resume_policy="retry_infrastructure",
+                adapter_id=args.agent[0],
+                enable_external_canary=args.enable_external_canary,
+                clock_ms=clock_ms,
+            )
+        )
+    except (ContractError, OSError, ValueError):
+        print("v1 orchestration failed before a valid run result", file=sys.stderr)
+        return 1
+
+    if result.integrity.status != "passed" or result.blocked_attempt_ids:
+        print("v1 run did not pass Integrity", file=sys.stderr)
+        return 1
+    try:
+        with (output_root / "summary.json").open("r", encoding="utf-8") as handle:
+            summary = json.load(handle)
+        totals = summary["totals"]
+        infrastructure_invalid = int(totals["infrastructure_invalid"])
+        valid = int(totals["valid"])
+        expected = int(totals["expected"])
+    except (OSError, ValueError, KeyError, TypeError):
+        print("v1 summary is unavailable or invalid", file=sys.stderr)
+        return 1
+    if infrastructure_invalid or valid != expected:
+        print("v1 run completed with infrastructure-invalid Attempts", file=sys.stderr)
+        return 1
+    if not args.quiet:
+        print(
+            f"v1 run complete: ran={len(result.ran_attempt_ids)}, "
+            f"skipped={len(result.skipped_attempt_ids)}, output={output_root}"
+        )
+    print(output_root / "summary.json")
     return 0
 
 

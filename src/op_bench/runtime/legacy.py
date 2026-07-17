@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from functools import lru_cache
 import hashlib
 from pathlib import Path
 import re
@@ -21,6 +22,11 @@ from op_bench.runtime.contracts import (
     TestSelector,
 )
 from op_bench.runtime.manifest import RunManifest, build_run_manifest
+from op_bench.runtime.local_evaluation import (
+    EvaluationOnlyTestAsset,
+    LocalGitSource,
+)
+from op_bench.runtime.profiles import load_runtime_profile_registry
 from op_bench.runtime.validation import ContractError, require_bool, require_int, require_str
 from op_bench.task import TaskManifest
 
@@ -90,11 +96,55 @@ class LegacyV05Defaults:
         )
 
 
+@dataclass(frozen=True)
+class LegacyV05PrivateTaskBinding:
+    task_id: str
+    source: LocalGitSource
+    hidden_asset: EvaluationOnlyTestAsset
+
+    def __post_init__(self) -> None:
+        require_str(self.task_id, "task_id")
+        if not isinstance(self.source, LocalGitSource):
+            raise ContractError("source: expected LocalGitSource")
+        if not isinstance(self.hidden_asset, EvaluationOnlyTestAsset):
+            raise ContractError("hidden_asset: expected EvaluationOnlyTestAsset")
+
+
+@dataclass(frozen=True)
+class LegacyV05RuntimeBundle:
+    manifest: RunManifest
+    private_tasks: tuple[LegacyV05PrivateTaskBinding, ...]
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.manifest, RunManifest):
+            raise ContractError("manifest: expected RunManifest")
+        if not isinstance(self.private_tasks, tuple) or not self.private_tasks:
+            raise ContractError("private_tasks: expected non-empty tuple")
+        manifest_ids = tuple(task.task.identifier for task in self.manifest.tasks)
+        private_ids = tuple(binding.task_id for binding in self.private_tasks)
+        if private_ids != manifest_ids:
+            raise ContractError("private_tasks: must match Manifest Task order")
+
+    def source_for(self, task: FullTaskSpec) -> LocalGitSource:
+        return self._binding_for(task).source
+
+    def hidden_asset_for(self, task: FullTaskSpec) -> EvaluationOnlyTestAsset:
+        return self._binding_for(task).hidden_asset
+
+    def _binding_for(self, task: FullTaskSpec) -> LegacyV05PrivateTaskBinding:
+        if not isinstance(task, FullTaskSpec):
+            raise ContractError("task: expected FullTaskSpec")
+        for binding in self.private_tasks:
+            if binding.task_id == task.task.identifier:
+                return binding
+        raise ContractError("task: not present in private runtime bundle")
+
+
 def full_task_spec_from_v05(task: TaskManifest) -> FullTaskSpec:
     _require_v05_task_shape(task)
     source = _source_identity(task)
-    image = _image_identity(task)
-    runtime = _runtime_profile(task, image)
+    runtime = _runtime_profile(task)
+    image = runtime.image
     environment = _environment_identity(task, image, runtime)
     public_tests, hidden_tests = _test_selectors(task)
     statement = _mapping(task.data.get("statement"))
@@ -156,11 +206,28 @@ def run_manifest_from_v05_dataset(
     repeat: int,
     created_at: str,
     defaults: LegacyV05Defaults | None = None,
+    selected_task_ids: tuple[str, ...] | None = None,
 ) -> RunManifest:
     selected_defaults = defaults or LegacyV05Defaults.standard()
     dataset = DatasetManifest.load(dataset_path)
     _require_verified_dataset(dataset)
-    tasks = tuple(full_task_spec_from_v05(task) for task in dataset.load_tasks(verified_only=True))
+    legacy_tasks = _select_v05_tasks(dataset, selected_task_ids)
+    tasks = tuple(full_task_spec_from_v05(task) for task in legacy_tasks)
+    capability = replace(
+        selected_defaults.capability_policy,
+        writable_paths=tuple(
+            sorted({path for task in tasks for path in task.patch_scope})
+        ),
+        registered_tests=tuple(
+            sorted(
+                {
+                    selector.selector_id
+                    for task in tasks
+                    for selector in task.public_tests
+                }
+            )
+        ),
+    )
     return build_run_manifest(
         platform_version=selected_defaults.platform_version,
         action_protocol=selected_defaults.action_protocol,
@@ -170,7 +237,7 @@ def run_manifest_from_v05_dataset(
         dataset=_dataset_identity(dataset),
         tasks=tasks,
         agents=agents,
-        capability_policy=selected_defaults.capability_policy,
+        capability_policy=capability,
         budget_policy=selected_defaults.budget_policy,
         retry_policy=selected_defaults.retry_policy,
         termination_policy=selected_defaults.termination_policy,
@@ -178,6 +245,126 @@ def run_manifest_from_v05_dataset(
         repeat_count=repeat,
         created_at=created_at,
     )
+
+
+def runtime_bundle_from_v05_dataset(
+    dataset_path: Path | str,
+    *,
+    agents: tuple[AgentSpec, ...],
+    repeat: int,
+    created_at: str,
+    defaults: LegacyV05Defaults | None = None,
+    selected_task_ids: tuple[str, ...] | None = None,
+) -> LegacyV05RuntimeBundle:
+    """Bind an offline v0.6 Manifest to exact local evaluator-only inputs."""
+
+    dataset = DatasetManifest.load(dataset_path)
+    _require_verified_dataset(dataset)
+    legacy_tasks = _select_v05_tasks(dataset, selected_task_ids)
+    manifest = run_manifest_from_v05_dataset(
+        dataset_path,
+        agents=agents,
+        repeat=repeat,
+        created_at=created_at,
+        defaults=defaults,
+        selected_task_ids=tuple(task.task_id for task in legacy_tasks),
+    )
+    specs = {task.task.identifier: task for task in manifest.tasks}
+    legacy_by_id = {task.task_id: task for task in legacy_tasks}
+    bindings: list[LegacyV05PrivateTaskBinding] = []
+    for spec in manifest.tasks:
+        legacy_task = legacy_by_id[spec.task.identifier]
+        source_path = legacy_task.source_snapshot_path
+        if source_path is None:
+            raise ContractError("source snapshot is required for v1 runtime")
+        hidden_path = _checked_task_file(
+            legacy_task,
+            _hidden_test_path(_mapping(legacy_task.data.get("artifacts"))),
+            "hidden_test",
+        )
+        try:
+            hidden_bytes = hidden_path.read_bytes()
+        except OSError as exc:
+            raise ContractError("hidden_test: cannot read exact file") from exc
+        bindings.append(
+            LegacyV05PrivateTaskBinding(
+                task_id=legacy_task.task_id,
+                source=LocalGitSource(
+                    identity=spec.source,
+                    repository=source_path,
+                    revision=legacy_task.base_commit,
+                ),
+                hidden_asset=EvaluationOnlyTestAsset(
+                    identity=spec.hidden_test_asset,
+                    patch_bytes=hidden_bytes,
+                    selectors=spec.hidden_tests,
+                ),
+            )
+        )
+    return LegacyV05RuntimeBundle(
+        manifest=manifest,
+        private_tasks=tuple(bindings),
+    )
+
+
+def agent_spec_for_v1_adapter(adapter_id: str) -> AgentSpec:
+    selected = require_str(adapter_id, "adapter_id")
+    if selected not in {"scripted_canonical", "codex_canonical"}:
+        raise ContractError("adapter_id: unsupported v1 Adapter")
+    agent_id = "opbench-scripted-v1" if selected == "scripted_canonical" else "codex-v1"
+    model_id = "deterministic-script-v1" if selected == "scripted_canonical" else "codex-cli-configured"
+    agent = _config_identity("agent", agent_id, {"adapter_id": selected})
+    model = _config_identity("model", model_id, {"adapter_id": selected})
+    adapter = _config_identity("adapter", selected, {"protocol": "action-v1"})
+    system_prompt = _config_identity(
+        "prompt",
+        "opbench-v0.6-system-prompt-v1",
+        {"visibility": "public-task-view-only"},
+    )
+    task_prompt = _config_identity(
+        "prompt",
+        "opbench-v0.6-task-prompt-v1",
+        {"transport": "canonical-json-actions"},
+    )
+    config = _config_identity(
+        "agent_config",
+        f"{agent_id}:{model_id}:{selected}:visible",
+        {
+            "agent": agent.to_dict(),
+            "model": model.to_dict(),
+            "adapter": adapter.to_dict(),
+            "system_prompt": system_prompt.to_dict(),
+            "task_prompt": task_prompt.to_dict(),
+            "feedback_policy": "visible",
+        },
+    )
+    return AgentSpec(
+        agent=agent,
+        model=model,
+        adapter=adapter,
+        system_prompt=system_prompt,
+        task_prompt=task_prompt,
+        config=config,
+        feedback_policy="visible",
+    )
+
+
+def _select_v05_tasks(
+    dataset: DatasetManifest,
+    selected_task_ids: tuple[str, ...] | None,
+) -> tuple[TaskManifest, ...]:
+    tasks = tuple(dataset.load_tasks(verified_only=True))
+    if selected_task_ids is None:
+        return tasks
+    if not isinstance(selected_task_ids, tuple) or not selected_task_ids:
+        raise ContractError("selected_task_ids: expected non-empty tuple")
+    if len(set(selected_task_ids)) != len(selected_task_ids):
+        raise ContractError("selected_task_ids: duplicate Task")
+    by_id = {task.task_id: task for task in tasks}
+    unknown = [task_id for task_id in selected_task_ids if task_id not in by_id]
+    if unknown:
+        raise ContractError("selected_task_ids: unknown verified Task")
+    return tuple(by_id[task_id] for task_id in selected_task_ids)
 
 
 def _dataset_identity(dataset: DatasetManifest) -> ContentIdentity:
@@ -228,32 +415,41 @@ def _image_identity(task: TaskManifest) -> ContentIdentity:
     )
 
 
-def _runtime_profile(task: TaskManifest, image: ContentIdentity) -> RuntimeProfile:
-    environment = _mapping(task.data.get("environment"))
-    source_loading = _mapping(environment.get("source_loading"))
-    mode = str(source_loading.get("mode", "none"))
-    profile_payload = {
-        "environment_ref": task.environment_ref,
-        "backend": str(environment.get("backend", "local")),
-        "runtime_tier": task.runtime_tier,
-        "source_loading_mode": mode,
-        "platform": task.environment_platform or "unspecified",
-        "image": image.to_dict(),
-        "requires_gpu": task.requires_gpu,
-        "timeout_ms": task.timeout_sec * 1000,
-    }
-    suffix = canonical_sha256(profile_payload).removeprefix("sha256:")[:16]
-    return RuntimeProfile(
-        profile_id=f"legacy-v0.5:{task.environment_ref or 'inline'}:{suffix}",
-        backend=str(environment.get("backend", "local")),
-        runtime_tier=task.runtime_tier,
-        source_loading_mode=mode,
-        platform=task.environment_platform or "unspecified",
-        image=image,
-        requires_gpu=task.requires_gpu,
-        network_policy="denied",
-        timeout_ms=task.timeout_sec * 1000,
-    )
+def _runtime_profile(task: TaskManifest) -> RuntimeProfile:
+    environment_ref = task.environment_ref
+    try:
+        profile_id = _PROFILE_BY_ENVIRONMENT[environment_ref]
+    except KeyError as exc:
+        raise ContractError(
+            f"environment_ref: no v0.6 Runtime Profile for {environment_ref!r}"
+        ) from exc
+    profile = _v06_profiles()[profile_id]
+    if profile.runtime_tier != task.runtime_tier:
+        raise ContractError(
+            f"runtime_tier: task {task.runtime_tier!r} does not match Profile "
+            f"{profile.runtime_tier!r}"
+        )
+    if profile.requires_gpu != task.requires_gpu:
+        raise ContractError("requires_gpu: task does not match Runtime Profile")
+    if profile.timeout_ms != task.timeout_sec * 1000:
+        raise ContractError("timeout_ms: task does not match Runtime Profile")
+    return profile
+
+
+_PROFILE_BY_ENVIRONMENT = {
+    "opbench-local-cpu-process-v1": "local-cpu-process-v1",
+    "pytorch-cpu-torch2.6.0-py311": "remote-cpu-pytorch-2.6-py311-v1",
+    "pytorch-cpu-compile-torch2.6.0-py311": "remote-cpu-compile-pytorch-2.6-py311-v1",
+    "pytorch-cuda-torch2.6.0-py311-cu124": "remote-cuda-overlay-pytorch-2.6-cu124-v1",
+    "pytorch-cuda-devel-torch2.6.0-py311-cu124": "remote-cuda-kernel-pytorch-2.6-cu124-v1",
+}
+
+
+@lru_cache(maxsize=1)
+def _v06_profiles() -> dict[str, RuntimeProfile]:
+    registry_path = Path(__file__).resolve().parents[3] / "configs" / "runtime_profiles.v1.json"
+    registry = load_runtime_profile_registry(registry_path)
+    return {profile.profile_id: profile for profile in registry.profiles}
 
 
 def _environment_identity(

@@ -1512,6 +1512,14 @@ def _patch_paths_from_bytes(patch_bytes: bytes) -> tuple[str, ...]:
     return tuple(sorted(paths))
 
 
+def patch_paths_from_bytes(patch_bytes: bytes) -> tuple[str, ...]:
+    """Return the canonical changed-path set encoded by a unified diff."""
+
+    if not isinstance(patch_bytes, bytes):
+        raise WorkspacePolicyError("patch_bytes: expected bytes")
+    return _patch_paths_from_bytes(patch_bytes)
+
+
 def _materialize_snapshots(
     root: Path,
     snapshots: Mapping[str, _FileSnapshot],
@@ -1626,5 +1634,6 @@ __all__ = [
     "WorkspaceStateError",
     "assert_patch_identity_handoff",
     "build_patch_artifact",
+    "patch_paths_from_bytes",
     "raw_patch_identity",
 ]

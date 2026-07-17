@@ -15,6 +15,7 @@ from op_bench.runtime.legacy import (
     full_task_spec_from_v05,
     run_manifest_from_v05_dataset,
 )
+from op_bench.runtime.profiles import load_runtime_profile_registry
 from op_bench.runtime.validation import ContractError
 from op_bench.task import TaskManifest
 from tests.test_runtime_contracts import agent_spec
@@ -22,12 +23,21 @@ from tests.test_runtime_contracts import agent_spec
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DATASET_PATH = REPO_ROOT / "datasets" / "pytorch_v0.5" / "dataset.json"
+PROFILE_REGISTRY_PATH = REPO_ROOT / "configs" / "runtime_profiles.v1.json"
+PROFILE_BY_ENVIRONMENT = {
+    "pytorch-cpu-torch2.6.0-py311": "remote-cpu-pytorch-2.6-py311-v1",
+    "pytorch-cpu-compile-torch2.6.0-py311": "remote-cpu-compile-pytorch-2.6-py311-v1",
+    "pytorch-cuda-torch2.6.0-py311-cu124": "remote-cuda-overlay-pytorch-2.6-cu124-v1",
+    "pytorch-cuda-devel-torch2.6.0-py311-cu124": "remote-cuda-kernel-pytorch-2.6-cu124-v1",
+}
 
 
 class LegacyV05ProjectionTests(unittest.TestCase):
     def test_projects_all_17_verified_tasks_with_explicit_identity_kinds(self) -> None:
         dataset = DatasetManifest.load(DATASET_PATH)
         tasks = dataset.load_tasks(verified_only=True)
+        registry = load_runtime_profile_registry(PROFILE_REGISTRY_PATH)
+        profiles = {profile.profile_id: profile for profile in registry.profiles}
 
         specs = tuple(full_task_spec_from_v05(task) for task in tasks)
 
@@ -47,16 +57,21 @@ class LegacyV05ProjectionTests(unittest.TestCase):
                 self.assertEqual(spec.runtime.image.identity_type, "image")
                 self.assertIn(
                     spec.runtime.image.digest_kind,
-                    {"image_id", "content_sha256", "canonical_config"},
+                    {"image_id", "content_sha256", "canonical_config", "declared"},
                 )
                 self.assertEqual(spec.runtime.backend, "remote_docker")
+                expected_profile_id = PROFILE_BY_ENVIRONMENT[task.environment_ref]
+                self.assertEqual(spec.runtime, profiles[expected_profile_id])
+                self.assertEqual(spec.runtime.hardware.identity_type, "hardware")
+                self.assertEqual(spec.runtime.mount_policy.source_access, "remote_sync")
+                self.assertEqual(spec.runtime.cleanup_policy.scope, "attempt_owned_only")
                 self.assertTrue(spec.fail_to_pass)
                 self.assertTrue(spec.pass_to_pass)
                 self.assertTrue(spec.patch_scope)
 
         self.assertTrue(any(spec.runtime.image.digest_kind == "image_id" for spec in specs))
         self.assertTrue(
-            any(spec.runtime.image.digest_kind == "canonical_config" for spec in specs)
+            any(spec.runtime.image.digest_kind == "declared" for spec in specs)
         )
 
     def test_builds_a_deterministic_17_by_agent_by_repeat_manifest_offline(self) -> None:

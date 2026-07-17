@@ -9,6 +9,7 @@ from op_bench.runtime.contracts import ContentIdentity
 from op_bench.runtime.schema import (
     SchemaValidationError,
     load_runtime_schema,
+    parse_runtime_contract,
     validate_schema_instance,
 )
 from tests.test_runtime_contracts import (
@@ -16,9 +17,12 @@ from tests.test_runtime_contracts import (
     agent_task_view,
     budget_policy,
     capability_policy,
+    cleanup_policy,
     full_task_spec,
     identity,
+    mount_policy,
     public_test,
+    resource_policy,
     runtime_profile,
 )
 from tests.test_runtime_manifest import manifest
@@ -46,6 +50,9 @@ def contract_fixtures():
         identity("dataset", "pytorch_v0.5"),
         capability_policy(),
         budget_policy(),
+        mount_policy(),
+        resource_policy(),
+        cleanup_policy(),
         runtime_profile(),
         public_test(),
         full_task_spec(),
@@ -68,6 +75,13 @@ def contract_fixtures():
 
 
 class RuntimeSchemaTests(unittest.TestCase):
+    def test_schema_parser_round_trips_every_runtime_contract(self) -> None:
+        schema = load_runtime_schema(SCHEMA_PATH)
+
+        for value in contract_fixtures():
+            with self.subTest(contract=value.contract_type):
+                self.assertEqual(parse_runtime_contract(value.to_dict(), schema), value)
+
     def test_schema_has_and_independently_validates_every_m1_contract(self) -> None:
         schema = load_runtime_schema(SCHEMA_PATH)
         expected = {value.contract_type for value in contract_fixtures()}

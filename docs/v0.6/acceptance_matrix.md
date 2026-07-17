@@ -1,8 +1,8 @@
 # OpBench v0.6 验收矩阵
 
-日期：2026-07-17
+日期：2026-07-18
 
-状态：验收执行中（M1–M5 Passed，M6–M7 待执行）
+状态：验收执行中（M1–M6 已执行，M7 待执行；Remote Replay/CUDA 证据 Blocked）
 
 目标版本：`opbench-v0.6.0`
 
@@ -204,18 +204,26 @@ Docker、SSH、远程 Runtime 或网络探针。
 
 | ID | 级别 | 验收要求 | 必需证据 | 状态 |
 | --- | --- | --- | --- | --- |
-| R-01 | Must/P1 | Local CPU、Remote CPU、CUDA Overlay、CUDA Kernel Build 有版本化 Runtime Profile | Profile schemas/configs | Pending |
-| R-02 | Must/P1 | Profile 冻结 source loading、image、mount、timeout、resource、network 和 cleanup policy | Manifest assertions | Pending |
-| R-03 | Must/P0 | 只管理当前 Attempt 创建并持有 identity 的容器、子进程和文件 | Fixture/integration tests | Pending |
-| R-04 | Must/P1 | Local/Remote 对相同 Canonical Sequence 保持 Action、Patch、Result 语义 | Conformance matrix | Pending |
-| R-05 | Must/P1 | v0.5 17/17 Baseline Failure Replay | Replay artifact | Pending |
-| R-06 | Must/P1 | v0.5 17/17 Gold Success Replay | Replay artifact | Pending |
-| R-07 | Must/P1 | v0.5 51/51 Legacy Final Patch Replay | Replay artifact | Pending |
-| R-08 | Must/P1 | Replay 差异逐 Task/Environment/Protocol 归因，不改写历史成绩 | Difference report | Pending |
-| R-09 | Must/P1 | 至少一个真实 Codex CPU Attempt 经标准 Adapter 完成 read/edit/test/finish | Manifest + trajectory + result | Pending |
-| R-10 | Must/P1 | 代表性 Remote CPU、CUDA Overlay、CUDA Kernel Profile 完成 canary | Runtime artifacts | Pending |
-| R-11 | Must/P1 | 小规模真实 Codex 批量验证 resume、integrity、summary 和 attribution | Cohort artifact | Pending |
-| R-12 | Must/P0 | 验收命令只覆盖 OpBench 合同和当前 Attempt 持有的资源 | Test/command scope review | Pending |
+| R-01 | Must/P1 | Local CPU、Remote CPU、CUDA Overlay、CUDA Kernel Build 有版本化 Runtime Profile | Profile schemas/configs | Passed |
+| R-02 | Must/P1 | Profile 冻结 source loading、image、mount、timeout、resource、network 和 cleanup policy | Manifest assertions | Passed |
+| R-03 | Must/P0 | 只管理当前 Attempt 创建并持有 identity 的容器、子进程和文件 | Fixture/integration tests | Passed |
+| R-04 | Must/P1 | Local/Remote 对相同 Canonical Sequence 保持 Action、Patch、Result 语义 | Conformance matrix | Passed |
+| R-05 | Must/P1 | v0.5 17/17 Baseline Failure Replay | Replay artifact | Blocked |
+| R-06 | Must/P1 | v0.5 17/17 Gold Success Replay | Replay artifact | Blocked |
+| R-07 | Must/P1 | v0.5 51/51 Legacy Final Patch Replay | Replay artifact | Blocked |
+| R-08 | Must/P1 | Replay 差异逐 Task/Environment/Protocol 归因，不改写历史成绩 | Difference report | Blocked |
+| R-09 | Must/P1 | 至少一个真实 Codex CPU Attempt 经标准 Adapter 完成 read/edit/test/finish | Manifest + trajectory + result | Passed |
+| R-10 | Must/P1 | 代表性 Remote CPU、CUDA Overlay、CUDA Kernel Profile 完成 canary | Runtime artifacts | Blocked |
+| R-11 | Must/P1 | 小规模真实 Codex 批量验证 resume、integrity、summary 和 attribution | Cohort artifact | Passed |
+| R-12 | Must/P0 | 验收命令只覆盖 OpBench 合同和当前 Attempt 持有的资源 | Test/command scope review | Passed |
+
+M6 证据（2026-07-18）：84 项 focused、348 项 runtime、517 项全量测试通过；
+CLI/MCP × Local/Scripted-Remote 四路 conformance 通过。真实 Codex 标准 Adapter
+完成 list/read/search/test/apply/test/diff/finish，单例与双重复 resume 产物的 14 项
+Integrity 和资源所有权/清理检查通过。17+17+51 清单已完整冻结，但唯一精确 Remote
+目标在直接 workspace-create 操作稳定 `connection_timeout`，所以 R-05～R-08 和
+Remote CPU/CUDA 的 R-10 保持 `Blocked`；没有探测或搜索替代目标，v0.5 历史结果与
+摘要哈希前后完全一致。详见 [M6 verification](m6_verification.md)。
 
 ## 10. D — 文档、兼容与发布
 

@@ -197,6 +197,20 @@ class RunManifestTests(unittest.TestCase):
             "runtime": {
                 "tasks": (replace(task, runtime=replace(task.runtime, timeout_ms=899_000)),)
             },
+            "cleanup_policy": {
+                "tasks": (
+                    replace(
+                        task,
+                        runtime=replace(
+                            task.runtime,
+                            cleanup_policy=replace(
+                                task.runtime.cleanup_policy,
+                                timeout_ms=31_000,
+                            ),
+                        ),
+                    ),
+                )
+            },
             "action_protocol": {"action_protocol": "action-v2"},
             "evaluation_protocol": {"evaluation_protocol": "evaluation-v2"},
             "scoring_protocol": {"scoring_protocol": "scoring-v2"},

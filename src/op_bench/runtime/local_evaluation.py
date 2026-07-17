@@ -412,8 +412,24 @@ def _structured_unittest_summary(
         raise EvaluationInfrastructureError("test_runner_evidence_invalid")
     try:
         raw = result_path.read_bytes()
+    except OSError as exc:
+        raise EvaluationInfrastructureError(
+            "test_runner_evidence_invalid"
+        ) from exc
+    return structured_unittest_summary(raw, exit_code=result.returncode)
+
+
+def structured_unittest_summary(
+    raw: bytes,
+    *,
+    exit_code: int,
+) -> TestExecutionSummary:
+    if not isinstance(raw, bytes) or len(raw) > 4096:
+        raise EvaluationInfrastructureError("test_runner_evidence_invalid")
+    require_int(exit_code, "exit_code")
+    try:
         payload = json.loads(raw.decode("utf-8"))
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise EvaluationInfrastructureError(
             "test_runner_evidence_invalid"
         ) from exc
@@ -453,7 +469,7 @@ def _structured_unittest_summary(
         raise EvaluationInfrastructureError(
             "test_runner_evidence_invalid"
         ) from exc
-    if (result.returncode == 0) != (summary.failed == 0):
+    if (exit_code == 0) != (summary.failed == 0):
         raise EvaluationInfrastructureError("test_runner_evidence_invalid")
     return summary
 
@@ -502,4 +518,5 @@ __all__ = [
     "LocalGitEvaluationBackend",
     "LocalGitSource",
     "git_archive_source_identity",
+    "structured_unittest_summary",
 ]

@@ -618,14 +618,14 @@ class CanonicalActionService:
         try:
             paths = _patch_paths_from_bytes(patch.encode("utf-8"))
         except WorkspacePolicyError as exc:
-            raise _ActionFailure("workspace_error", str(exc)) from exc
+            raise _ActionFailure("invalid_request", str(exc)) from exc
         for path in paths:
             self._require_capability_write_path(path)
         try:
             mutation = self._workspace.apply_patch(patch)
         except WorkspacePolicyError as exc:
             message = str(exc)
-            error_code = "path_denied" if "scope" in message else "workspace_error"
+            error_code = "path_denied" if "scope" in message else "invalid_request"
             raise _ActionFailure(error_code, message) from exc
         return _Outcome(
             data={"paths": list(mutation.paths), "changed": mutation.changed},

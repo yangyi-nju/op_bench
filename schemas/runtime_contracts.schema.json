@@ -5,6 +5,9 @@
     {"$ref": "#/$defs/content_identity"},
     {"$ref": "#/$defs/capability_policy"},
     {"$ref": "#/$defs/budget_policy"},
+    {"$ref": "#/$defs/mount_policy"},
+    {"$ref": "#/$defs/resource_policy"},
+    {"$ref": "#/$defs/cleanup_policy"},
     {"$ref": "#/$defs/runtime_profile"},
     {"$ref": "#/$defs/test_selector"},
     {"$ref": "#/$defs/full_task_spec"},
@@ -45,7 +48,7 @@
       "properties": {
         "contract_type": {"const": "content_identity"},
         "schema_version": {"const": "v1"},
-        "identity_type": {"enum": ["dataset", "task", "source", "environment", "image", "agent", "model", "adapter", "prompt", "policy", "runtime", "patch", "test", "admission", "attachment", "agent_config", "evaluation", "scoring", "workspace", "task_view"]},
+        "identity_type": {"enum": ["dataset", "task", "source", "environment", "image", "hardware", "agent", "model", "adapter", "prompt", "policy", "runtime", "patch", "test", "admission", "attachment", "agent_config", "evaluation", "scoring", "workspace", "task_view"]},
         "identifier": {"type": "string", "minLength": 1},
         "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
         "digest_kind": {"enum": ["content_sha256", "canonical_config", "replay_spec_v1", "image_id", "declared"]}
@@ -86,9 +89,58 @@
       },
       "additionalProperties": false
     },
+    "mount_policy": {
+      "type": "object",
+      "required": ["contract_type", "schema_version", "policy_id", "workspace_target", "source_access", "artifact_access", "root_filesystem"],
+      "properties": {
+        "contract_type": {"const": "mount_policy"},
+        "schema_version": {"const": "v1"},
+        "policy_id": {"type": "string", "minLength": 1},
+        "workspace_target": {
+          "oneOf": [
+            {"const": "workspace"},
+            {"type": "string", "pattern": "^/(?!Users/|home/|private/|tmp/)(?:[^/.][^/]*/)*[^/.][^/]*$"}
+          ]
+        },
+        "source_access": {"enum": ["authoritative_workspace", "remote_sync"]},
+        "artifact_access": {"const": "controller_only"},
+        "root_filesystem": {"enum": ["host", "mutable_container", "read_only_container"]}
+      },
+      "additionalProperties": false
+    },
+    "resource_policy": {
+      "type": "object",
+      "required": ["contract_type", "schema_version", "policy_id", "cpu_millis", "memory_bytes", "pids_limit", "gpu_count"],
+      "properties": {
+        "contract_type": {"const": "resource_policy"},
+        "schema_version": {"const": "v1"},
+        "policy_id": {"type": "string", "minLength": 1},
+        "cpu_millis": {"oneOf": [{"type": "null"}, {"type": "integer", "minimum": 1}]},
+        "memory_bytes": {"oneOf": [{"type": "null"}, {"type": "integer", "minimum": 1}]},
+        "pids_limit": {"oneOf": [{"type": "null"}, {"type": "integer", "minimum": 1}]},
+        "gpu_count": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
+    },
+    "cleanup_policy": {
+      "type": "object",
+      "required": ["contract_type", "schema_version", "policy_id", "scope", "grace_ms", "timeout_ms", "remove_workspace", "remove_process", "remove_container"],
+      "properties": {
+        "contract_type": {"const": "cleanup_policy"},
+        "schema_version": {"const": "v1"},
+        "policy_id": {"type": "string", "minLength": 1},
+        "scope": {"const": "attempt_owned_only"},
+        "grace_ms": {"type": "integer", "minimum": 0},
+        "timeout_ms": {"type": "integer", "minimum": 1},
+        "remove_workspace": {"type": "boolean"},
+        "remove_process": {"type": "boolean"},
+        "remove_container": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    },
     "runtime_profile": {
       "type": "object",
-      "required": ["contract_type", "schema_version", "profile_id", "backend", "runtime_tier", "source_loading_mode", "platform", "image", "requires_gpu", "network_policy", "timeout_ms"],
+      "required": ["contract_type", "schema_version", "profile_id", "backend", "runtime_tier", "source_loading_mode", "platform", "image", "hardware", "requires_gpu", "network_policy", "timeout_ms", "mount_policy", "resource_policy", "cleanup_policy"],
       "properties": {
         "contract_type": {"const": "runtime_profile"},
         "schema_version": {"const": "v1"},
@@ -98,9 +150,13 @@
         "source_loading_mode": {"enum": ["none", "python_overlay", "inplace_build"]},
         "platform": {"type": "string", "minLength": 1},
         "image": {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "image"}}},
+        "hardware": {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "hardware"}}},
         "requires_gpu": {"type": "boolean"},
         "network_policy": {"enum": ["denied", "provider_only", "task_runtime"]},
-        "timeout_ms": {"type": "integer", "minimum": 1}
+        "timeout_ms": {"type": "integer", "minimum": 1},
+        "mount_policy": {"$ref": "#/$defs/mount_policy"},
+        "resource_policy": {"$ref": "#/$defs/resource_policy"},
+        "cleanup_policy": {"$ref": "#/$defs/cleanup_policy"}
       },
       "additionalProperties": false
     },

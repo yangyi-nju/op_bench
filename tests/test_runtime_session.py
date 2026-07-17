@@ -198,6 +198,37 @@ class AttemptSessionTests(unittest.TestCase):
             1,
         )
 
+    def test_agent_rejected_patch_is_nonterminal_and_can_be_corrected(self) -> None:
+        self.session.prepare()
+        self.session.mark_ready()
+        self.session.start()
+        rejected = self.session.execute_action(
+            self.request(
+                "bad-patch",
+                "workspace_apply_patch",
+                {
+                    "patch": (
+                        "diff --git a/src/operator.py b/src/operator.py\n"
+                        "--- a/src/operator.py\n"
+                        "+++ b/src/operator.py\n"
+                        "@@ -1 +1 @@\n"
+                        "-NOT CURRENT\n"
+                        "+VALUE = 2\n"
+                    )
+                },
+                1,
+            )
+        )
+
+        self.assertFalse(rejected.ok)
+        self.assertEqual(rejected.error_code, "invalid_request")
+        self.assertEqual(self.session.state, "running")
+        finished = self.session.execute_action(
+            self.request("finish-after-rejection", "session_finish", {}, 2)
+        )
+        self.assertTrue(finished.ok)
+        self.assertEqual(self.session.finalize().terminal_reason, "agent_finished")
+
     def test_budget_and_deadline_observations_request_server_owned_stop(self) -> None:
         zero_budget = replace(self.budget, max_actions=0)
         budget_session = self.make_session(

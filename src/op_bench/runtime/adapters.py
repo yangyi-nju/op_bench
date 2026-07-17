@@ -8,6 +8,7 @@ from typing import Protocol
 import uuid
 
 from op_bench.runtime.task_view import AgentLaunchInput
+from op_bench.runtime.contracts import ActionRequest
 from op_bench.runtime.validation import ContractError, require_str
 
 
@@ -26,6 +27,64 @@ class _ChannelCall:
 @dataclass(frozen=True)
 class _ChannelFailure:
     pass
+
+
+@dataclass(frozen=True)
+class ScriptedAdapterResult:
+    terminal_reason: str
+    observation_count: int
+    finish_count: int
+
+
+class ScriptedCanonicalAdapter:
+    """A deterministic no-edit Adapter used for offline controller smoke runs."""
+
+    def run(self, context: "AdapterContext") -> ScriptedAdapterResult:
+        if not isinstance(context, AdapterContext):
+            raise ContractError("context: expected AdapterContext")
+        task_view = context.launch_input.task_view
+        allowed = set(task_view.capability_policy.allowed_actions)
+        actions: list[tuple[str, dict[str, object]]] = []
+        if "workspace_list" in allowed:
+            actions.append(("workspace_list", {"path": ".", "recursive": False}))
+        if "test_run" in allowed:
+            registered = set(task_view.capability_policy.registered_tests)
+            selector = next(
+                (
+                    item.selector_id
+                    for item in task_view.public_tests
+                    if item.selector_id in registered
+                ),
+                None,
+            )
+            if selector is not None:
+                actions.append(("test_run", {"selector_id": selector}))
+        if "vcs_diff" in allowed:
+            actions.append(("vcs_diff", {}))
+        if "session_finish" not in allowed:
+            raise ContractError("scripted Adapter requires session_finish capability")
+        actions.append(("session_finish", {}))
+
+        finish_count = 0
+        for sequence, (action_name, arguments) in enumerate(actions, start=1):
+            request = ActionRequest(
+                session_id=context.session_id,
+                action_id=f"scripted-{sequence:04d}",
+                action_name=action_name,
+                arguments=arguments,
+                client_sequence=sequence,
+                deadline_ms=task_view.budget_policy.wall_clock_ms,
+            )
+            observation = context.action_client.execute(request.to_dict())
+            if not isinstance(observation, dict):
+                raise ContractError("scripted Adapter received invalid observation")
+            if action_name == "session_finish":
+                finish_count += 1
+        return ScriptedAdapterResult(
+            terminal_reason="agent_finished",
+            observation_count=len(actions),
+            finish_count=finish_count,
+        )
 
 
 class AdapterActionClient:
@@ -180,4 +239,6 @@ __all__ = [
     "AdapterActionClient",
     "AdapterContext",
     "CanonicalAgentAdapter",
+    "ScriptedAdapterResult",
+    "ScriptedCanonicalAdapter",
 ]

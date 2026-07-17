@@ -28,11 +28,14 @@ from op_bench.runtime.evaluation import (
     validate_session_evaluation_binding,
 )
 from op_bench.runtime.manifest import ExpectedAttempt, RunManifest
+from op_bench.runtime.resources import RuntimeCleanupReport
 from op_bench.runtime.task_view import agent_task_view_identity, assert_public_artifact_safe
 from op_bench.runtime.validation import (
     ContractError,
+    require_enum,
     require_exact_fields,
     require_int,
+    require_list,
     require_str,
 )
 from op_bench.runtime.workspace import FrozenPatch, PatchArtifact
@@ -147,6 +150,97 @@ class AttemptArtifactStore:
                 / retry_directory_name(retry_index)
                 / "events.jsonl"
             )
+
+    def runtime_resources_path(
+        self,
+        attempt_id: str,
+        *,
+        retry_index: int = 1,
+    ) -> Path:
+        return self._retry_path(attempt_id, retry_index, "runtime_resources.jsonl")
+
+    def private_runtime_resources_path(
+        self,
+        attempt_id: str,
+        *,
+        retry_index: int = 1,
+    ) -> Path:
+        return self._retry_path(
+            attempt_id,
+            retry_index,
+            "private_runtime_resources.json",
+        )
+
+    def write_runtime_cleanup(
+        self,
+        attempt_id: str,
+        report: RuntimeCleanupReport,
+        *,
+        retry_index: int = 1,
+    ) -> None:
+        if not isinstance(report, RuntimeCleanupReport):
+            raise ContractError("report: expected RuntimeCleanupReport")
+        if report.attempt_id != attempt_id or report.retry_index != retry_index:
+            raise ContractError("runtime cleanup: attempt/retry identity mismatch")
+        if report.runtime_profile_hash != self._runtime_profile_hash(attempt_id):
+            raise ContractError("runtime cleanup: Runtime Profile identity mismatch")
+        payload = report.to_dict()
+        assert_public_artifact_safe(payload)
+        self._atomic_write(
+            self._retry_fd(attempt_id, retry_index),
+            "runtime_cleanup.json",
+            _json_bytes(payload),
+            label="runtime_cleanup.json",
+        )
+
+    def read_runtime_cleanup(
+        self,
+        attempt_id: str,
+        *,
+        retry_index: int = 1,
+    ) -> RuntimeCleanupReport:
+        payload = self._read_attempt_json(
+            attempt_id,
+            retry_index,
+            "runtime_cleanup.json",
+            public=True,
+        )
+        report = RuntimeCleanupReport.from_dict(payload)
+        if report.attempt_id != attempt_id or report.retry_index != retry_index:
+            raise ContractError("runtime cleanup: attempt/retry identity mismatch")
+        if report.runtime_profile_hash != self._runtime_profile_hash(attempt_id):
+            raise ContractError("runtime cleanup: Runtime Profile identity mismatch")
+        return report
+
+    def write_runtime_conformance(
+        self,
+        attempt_id: str,
+        payload: object,
+        *,
+        retry_index: int = 1,
+    ) -> None:
+        encoded = _runtime_conformance_payload(payload)
+        assert_public_artifact_safe(encoded)
+        self._atomic_write(
+            self._retry_fd(attempt_id, retry_index),
+            "runtime_conformance.json",
+            _json_bytes(encoded),
+            label="runtime_conformance.json",
+        )
+
+    def read_runtime_conformance(
+        self,
+        attempt_id: str,
+        *,
+        retry_index: int = 1,
+    ) -> dict[str, object]:
+        payload = self._read_attempt_json(
+            attempt_id,
+            retry_index,
+            "runtime_conformance.json",
+            public=True,
+        )
+        return _runtime_conformance_payload(payload)
 
     def write_run_manifest(self) -> None:
         payload = self.manifest.to_dict()
@@ -513,6 +607,7 @@ class AttemptArtifactStore:
             "integrity.json",
             _json_bytes(payload),
             label="integrity.json",
+            replace_existing=True,
         )
 
     def write_run_integrity(self, report: IntegrityReport) -> None:
@@ -520,7 +615,11 @@ class AttemptArtifactStore:
             raise ContractError("report: expected IntegrityReport")
         payload = report.to_dict()
         assert_public_artifact_safe(payload)
-        self._write_root("integrity.json", _json_bytes(payload))
+        self._write_root(
+            "integrity.json",
+            _json_bytes(payload),
+            replace_existing=True,
+        )
 
     def write_results_bytes(self, raw: bytes) -> None:
         if not isinstance(raw, bytes):
@@ -539,7 +638,7 @@ class AttemptArtifactStore:
                     f"results.jsonl line {line_number}: expected canonical JSON"
                 )
             assert_public_artifact_safe(payload)
-        self._write_root("results.jsonl", raw)
+        self._write_root("results.jsonl", raw, replace_existing=True)
 
     def write_summary_bytes(self, raw: bytes) -> None:
         if not isinstance(raw, bytes):
@@ -553,7 +652,7 @@ class AttemptArtifactStore:
         if _json_bytes(payload) != raw:
             raise ContractError("summary.json: expected canonical JSON")
         assert_public_artifact_safe(payload)
-        self._write_root("summary.json", raw)
+        self._write_root("summary.json", raw, replace_existing=True)
 
     def read_results_bytes(self) -> bytes:
         self._ensure_open()
@@ -605,6 +704,31 @@ class AttemptArtifactStore:
                 self._attempts_fd = None
             os.close(self._root_fd)
             self._closed = True
+
+    def _retry_path(
+        self,
+        attempt_id: str,
+        retry_index: int,
+        name: str,
+    ) -> Path:
+        with self._lock:
+            self._ensure_open()
+            self._retry_fd(attempt_id, retry_index)
+            return (
+                self.run_root
+                / "attempts"
+                / attempt_id
+                / "retries"
+                / retry_directory_name(retry_index)
+                / name
+            )
+
+    def _runtime_profile_hash(self, attempt_id: str) -> str:
+        expected = self._expected_attempt(attempt_id)
+        for task in self.manifest.tasks:
+            if task.task == expected.task:
+                return task.runtime.content_hash
+        raise ContractError("attempt_id: Task Runtime Profile is missing")
 
     def _expected_attempt(self, attempt_id: str) -> ExpectedAttempt:
         require_str(attempt_id, "attempt_id")
@@ -723,10 +847,22 @@ class AttemptArtifactStore:
             raise
         return descriptor
 
-    def _write_root(self, name: str, raw: bytes) -> None:
+    def _write_root(
+        self,
+        name: str,
+        raw: bytes,
+        *,
+        replace_existing: bool = False,
+    ) -> None:
         self._ensure_open()
         self._assert_root_binding()
-        self._atomic_write(self._root_fd, name, raw, label=name)
+        self._atomic_write(
+            self._root_fd,
+            name,
+            raw,
+            label=name,
+            replace_existing=replace_existing,
+        )
 
     def _read_attempt_json(
         self,
@@ -758,6 +894,7 @@ class AttemptArtifactStore:
         raw: bytes,
         *,
         label: str,
+        replace_existing: bool = False,
     ) -> None:
         with self._lock:
             self._ensure_open()
@@ -768,7 +905,10 @@ class AttemptArtifactStore:
                 if existing is not None:
                     if existing == raw:
                         return
-                    raise ContractError(f"{label}: conflicting artifact already exists")
+                    if not replace_existing:
+                        raise ContractError(
+                            f"{label}: conflicting artifact already exists"
+                        )
                 temporary = f".{name}.{secrets.token_hex(12)}.tmp"
                 flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
                 if hasattr(os, "O_NOFOLLOW"):
@@ -901,6 +1041,31 @@ class AttemptArtifactStore:
 
 def _json_bytes(value: object) -> bytes:
     return (canonical_json(value) + "\n").encode("utf-8")
+
+
+def _runtime_conformance_payload(value: object) -> dict[str, object]:
+    data = require_exact_fields(
+        value,
+        "runtime_conformance",
+        ("report_type", "schema_version", "status", "entries"),
+    )
+    if require_str(data["report_type"], "report_type") != "runtime_conformance":
+        raise ContractError("report_type: expected 'runtime_conformance'")
+    if require_str(data["schema_version"], "schema_version") != SCHEMA_VERSION:
+        raise ContractError(f"schema_version: expected {SCHEMA_VERSION!r}")
+    status = require_enum(
+        data["status"],
+        "status",
+        ("not_applicable", "passed", "failed", "blocked"),
+    )
+    entries = require_list(data["entries"], "entries")
+    canonical_json(entries)
+    return {
+        "report_type": "runtime_conformance",
+        "schema_version": SCHEMA_VERSION,
+        "status": status,
+        "entries": entries,
+    }
 
 
 def retry_directory_name(retry_index: int) -> str:
