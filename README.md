@@ -6,7 +6,7 @@ OpBench is an operator-focused benchmark for evaluating coding agents on real fr
 
 v0.1 established the isolated replay/evaluation loop. v0.2 added asset registries and formal admission. v0.3 expanded the dataset to 10 verified tasks and added 3-repeat stability evaluation. v0.4 added CUDA tiers and remote Docker. v0.5 is now complete: the verified cumulative dataset contains 17 tasks, including a 6-task precision slice, and its 51-attempt Codex run reached **72.5% resolved** (37/51) with eight-dimensional reporting and hard experiment-integrity checks.
 
-The next release, v0.6, upgrades this working real-Codex benchmark demo into a standardized Agent evaluation platform. M1 is complete: strict versioned runtime contracts, canonical JSON identities, deterministic RunManifest/cohort/attempt construction, v0.5 compatibility projection, an independent JSON Schema validator, and offline manifest CLIs are now implemented. Canonical actions, lifecycle, patch freezing, fresh evaluation, and conformance follow in M2-M7. Boundary-task expansion follows in v0.7 after the platform contract is stable. See the [global project plan](docs/project_plan.md) and [current project state](docs/project_state.md).
+The next release, v0.6, upgrades this working real-Codex benchmark demo into a standardized Agent evaluation platform. M1 and M2 are complete: strict versioned contracts and deterministic Manifest identities now include an explicitly projected AgentTaskView; one authoritative workspace enforces path, file, mode, size, symlink, binary, and writable-scope policy; concurrent freeze produces one immutable, strictly clean-applicable patch identity. Canonical actions, lifecycle, fresh evaluation, and runtime conformance follow in M3-M7. Boundary-task expansion follows in v0.7 after the platform contract is stable. See the [global project plan](docs/project_plan.md) and [current project state](docs/project_state.md).
 
 ## What The Current Code Contains
 
@@ -23,6 +23,8 @@ The next release, v0.6, upgrades this working real-Codex benchmark demo into a s
 - A standardized workspace action interface for file operations, patch application, command execution, tests, and diff export.
 - `codex_action_bridge`, the reference real-agent adapter with automatic rate-limit-aware retry. Codex runs on the host in a scratch workspace and can operate on the target repository only through OpBench actions.
 - Strict v0.6 runtime contracts and canonical SHA-256 identities under `src/op_bench/runtime/`, including deterministic RunManifest, Cohort ID, Attempt ID, and frozen task × agent × repeat matrices.
+- An explicit FullTaskSpec → AgentTaskView public whitelist with recursive answer-source, credential, private-output, and machine-local-path rejection; each projected view is frozen into Manifest and Attempt identity.
+- A path-independent Authoritative Workspace identity with bounded regular-file access, atomic scoped writes, symlink/special-file rejection, deterministic add/modify/delete/empty patches, concurrent Freeze convergence, and strict clean-base `git apply --check --index` verification.
 - An independent zero-dependency JSON Schema validator, a strict schema artifact under `schemas/`, and offline build/validation CLIs that do not launch an Agent or contact a runtime.
 
 Development-only experiment adapters have been removed from the public v0.1 surface. Future agents should integrate by implementing the same action-interface boundary used by `codex_action_bridge`.

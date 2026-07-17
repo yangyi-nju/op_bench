@@ -7,6 +7,7 @@ from typing import Any, ClassVar
 
 from op_bench.runtime.canonical import canonical_sha256
 from op_bench.runtime.contracts import (
+    AgentTaskView,
     AgentSpec,
     BudgetPolicy,
     CapabilityPolicy,
@@ -20,6 +21,11 @@ from op_bench.runtime.contracts import (
     _require_identity_type,
     _require_instance,
     _validate_contract_values,
+)
+from op_bench.runtime.task_view import (
+    TaskViewPolicy,
+    agent_task_view_identity,
+    project_agent_task_view,
 )
 from op_bench.runtime.validation import (
     ContractError,
@@ -39,6 +45,7 @@ class ExpectedAttempt(Contract):
 
     attempt_id: str
     task: ContentIdentity
+    task_view: ContentIdentity
     agent: ContentIdentity
     repeat: int
     effective_config_hash: str
@@ -47,6 +54,8 @@ class ExpectedAttempt(Contract):
         require_str(self.attempt_id, "attempt_id", pattern=ATTEMPT_PATTERN)
         _require_instance(self.task, ContentIdentity, "task")
         _require_identity_type(self.task, "task", "task")
+        _require_instance(self.task_view, ContentIdentity, "task_view")
+        _require_identity_type(self.task_view, "task_view", "task_view")
         _require_instance(self.agent, ContentIdentity, "agent")
         _require_identity_type(self.agent, "agent", "agent")
         require_int(self.repeat, "repeat", minimum=1)
@@ -63,6 +72,9 @@ class ExpectedAttempt(Contract):
         return cls(
             attempt_id=require_str(data["attempt_id"], "attempt_id", pattern=ATTEMPT_PATTERN),
             task=ContentIdentity.from_dict(data["task"], path="expected_attempt.task"),
+            task_view=ContentIdentity.from_dict(
+                data["task_view"], path="expected_attempt.task_view"
+            ),
             agent=ContentIdentity.from_dict(data["agent"], path="expected_attempt.agent"),
             repeat=require_int(data["repeat"], "repeat", minimum=1),
             effective_config_hash=require_str(
@@ -83,6 +95,7 @@ class RunManifest(Contract):
     scoring_protocol: str
     dataset: ContentIdentity
     tasks: tuple[FullTaskSpec, ...]
+    task_views: tuple[AgentTaskView, ...]
     agents: tuple[AgentSpec, ...]
     capability_policy: CapabilityPolicy
     budget_policy: BudgetPolicy
@@ -119,6 +132,19 @@ class RunManifest(Contract):
             identifier_key=lambda item: item.agent.identifier,
         )
         _require_sorted(self.tasks, "tasks", lambda item: item.task.identifier)
+        _validate_nonempty_contracts(
+            self.task_views,
+            AgentTaskView,
+            "task_views",
+            identifier_key=lambda item: item.task.identifier,
+        )
+        _require_sorted(self.task_views, "task_views", lambda item: item.task.identifier)
+        _validate_task_views(
+            self.tasks,
+            self.task_views,
+            self.capability_policy,
+            self.budget_policy,
+        )
         _require_sorted(self.agents, "agents", lambda item: item.agent.identifier)
         _require_instance(self.capability_policy, CapabilityPolicy, "capability_policy")
         _require_instance(self.budget_policy, BudgetPolicy, "budget_policy")
@@ -173,6 +199,7 @@ class RunManifest(Contract):
             scoring_protocol=require_str(data["scoring_protocol"], "scoring_protocol"),
             dataset=ContentIdentity.from_dict(data["dataset"], path="run_manifest.dataset"),
             tasks=_parse_contract_tuple(data["tasks"], FullTaskSpec, "tasks"),
+            task_views=_parse_contract_tuple(data["task_views"], AgentTaskView, "task_views"),
             agents=_parse_contract_tuple(data["agents"], AgentSpec, "agents"),
             capability_policy=CapabilityPolicy.from_dict(
                 data["capability_policy"], path="run_manifest.capability_policy"
@@ -210,6 +237,7 @@ def build_run_manifest(
     scoring_protocol: str,
     dataset: ContentIdentity,
     tasks: tuple[FullTaskSpec, ...],
+    task_views: tuple[AgentTaskView, ...] | None = None,
     agents: tuple[AgentSpec, ...],
     capability_policy: CapabilityPolicy,
     budget_policy: BudgetPolicy,
@@ -252,6 +280,25 @@ def build_run_manifest(
     require_int(repeat_count, "repeat_count", minimum=1)
     _validate_created_at(created_at)
     sorted_tasks = tuple(sorted(tasks, key=lambda item: item.task.identifier))
+    if task_views is None:
+        sorted_task_views = tuple(
+            project_agent_task_view(task, capability_policy, budget_policy)
+            for task in sorted_tasks
+        )
+    else:
+        _validate_nonempty_contracts(
+            task_views,
+            AgentTaskView,
+            "task_views",
+            identifier_key=lambda item: item.task.identifier,
+        )
+        sorted_task_views = tuple(sorted(task_views, key=lambda item: item.task.identifier))
+    _validate_task_views(
+        sorted_tasks,
+        sorted_task_views,
+        capability_policy,
+        budget_policy,
+    )
     sorted_agents = tuple(sorted(agents, key=lambda item: item.agent.identifier))
     runtime_profiles = _unique_runtime_profiles(sorted_tasks)
     common: dict[str, Any] = {
@@ -261,6 +308,7 @@ def build_run_manifest(
         "scoring_protocol": scoring_protocol,
         "dataset": dataset,
         "tasks": sorted_tasks,
+        "task_views": sorted_task_views,
         "agents": sorted_agents,
         "capability_policy": capability_policy,
         "budget_policy": budget_policy,
@@ -324,6 +372,7 @@ def comparability_key(manifest: RunManifest) -> str:
         scoring_protocol=manifest.scoring_protocol,
         dataset=manifest.dataset,
         tasks=manifest.tasks,
+        task_views=manifest.task_views,
         agents=manifest.agents,
         capability_policy=manifest.capability_policy,
         budget_policy=manifest.budget_policy,
@@ -344,6 +393,7 @@ def _comparability_key_from_parts(
     scoring_protocol: str,
     dataset: ContentIdentity,
     tasks: tuple[FullTaskSpec, ...],
+    task_views: tuple[AgentTaskView, ...],
     agents: tuple[AgentSpec, ...],
     capability_policy: CapabilityPolicy,
     budget_policy: BudgetPolicy,
@@ -364,6 +414,7 @@ def _comparability_key_from_parts(
             "scoring_protocol": scoring_protocol,
             "dataset": dataset.to_dict(),
             "tasks": [task.to_dict() for task in tasks],
+            "task_views": [task_view.to_dict() for task_view in task_views],
             "agents": [agent.to_dict() for agent in agents],
             "capability_policy": capability_policy.to_dict(),
             "budget_policy": budget_policy.to_dict(),
@@ -383,7 +434,10 @@ def cohort_id(comparability_key_value: str) -> str:
 
 def _expected_attempts_for(manifest: RunManifest) -> tuple[ExpectedAttempt, ...]:
     attempts: list[ExpectedAttempt] = []
+    views_by_task = {view.task.identifier: view for view in manifest.task_views}
     for task in manifest.tasks:
+        task_view = views_by_task[task.task.identifier]
+        task_view_identity = agent_task_view_identity(task_view)
         for agent in manifest.agents:
             effective_hash = canonical_sha256(
                 {
@@ -393,6 +447,7 @@ def _expected_attempts_for(manifest: RunManifest) -> tuple[ExpectedAttempt, ...]
                     "evaluation_protocol": manifest.evaluation_protocol,
                     "scoring_protocol": manifest.scoring_protocol,
                     "task": task.to_dict(),
+                    "task_view": task_view.to_dict(),
                     "agent": agent.to_dict(),
                     "capability_policy": manifest.capability_policy.to_dict(),
                     "budget_policy": manifest.budget_policy.to_dict(),
@@ -413,12 +468,48 @@ def _expected_attempts_for(manifest: RunManifest) -> tuple[ExpectedAttempt, ...]
                             effective_hash,
                         ),
                         task=task.task,
+                        task_view=task_view_identity,
                         agent=agent.agent,
                         repeat=repeat,
                         effective_config_hash=effective_hash,
                     )
                 )
     return tuple(attempts)
+
+
+def _validate_task_views(
+    tasks: tuple[FullTaskSpec, ...],
+    task_views: tuple[AgentTaskView, ...],
+    capability_policy: CapabilityPolicy,
+    budget_policy: BudgetPolicy,
+) -> None:
+    if len(task_views) != len(tasks):
+        raise ContractError("task_views: must contain exactly one view per task")
+    views_by_task = {view.task.identifier: view for view in task_views}
+    if len(views_by_task) != len(task_views):
+        raise ContractError("task_views: duplicate task identity")
+    for task in tasks:
+        view = views_by_task.get(task.task.identifier)
+        if view is None or view.task != task.task:
+            raise ContractError(
+                f"task_views: missing exact task identity for {task.task.identifier!r}"
+            )
+        try:
+            expected = project_agent_task_view(
+                task,
+                capability_policy,
+                budget_policy,
+                policy=TaskViewPolicy(
+                    termination_notes=view.termination_notes,
+                    attachments=view.attachments,
+                ),
+            )
+        except ContractError as exc:
+            raise ContractError(f"task_views: invalid public projection: {exc}") from exc
+        if view != expected:
+            raise ContractError(
+                f"task_views: view for {task.task.identifier!r} is not the canonical projection"
+            )
 
 
 def _unique_runtime_profiles(tasks: tuple[FullTaskSpec, ...]) -> tuple[RuntimeProfile, ...]:

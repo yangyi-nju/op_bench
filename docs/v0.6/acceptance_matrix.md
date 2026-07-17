@@ -53,28 +53,44 @@ M1 本地证据（2026-07-17）：
 
 | ID | 级别 | 验收要求 | 必需证据 | 状态 |
 | --- | --- | --- | --- | --- |
-| T-01 | Must/P0 | Adapter 只接收 AgentTaskView，不接收 FullTaskSpec | Type/API tests | Pending |
-| T-02 | Must/P0 | Gold Patch、Hidden Test 内容、Admission 证据和答案来源字段不可见 | Projection/deny tests | Pending |
-| T-03 | Must/P0 | PR/Issue 中直接泄漏修复答案的字段按 policy 清理或拒绝 | Sanitization fixtures | Pending |
-| T-04 | Must/P1 | AgentTaskView 只使用显式白名单投影，新增 FullTask 字段不会自动透传 | Forward-field test | Pending |
-| T-05 | Must/P1 | AgentTaskView、Capability、Budget 和公开 Test 描述通过 Schema 校验 | Schema tests | Pending |
-| T-06 | Must/P1 | AgentTaskView 内容进入 Attempt/Manifest identity | Mutation/hash test | Pending |
-| T-07 | Must/P0 | Public Artifact 不含 Credential、本机路径、Hidden/Gold 或私有输出 | Artifact scanner fixtures | Pending |
+| T-01 | Must/P0 | Adapter 只接收 AgentTaskView，不接收 FullTaskSpec | Type/API tests | Passed |
+| T-02 | Must/P0 | Gold Patch、Hidden Test 内容、Admission 证据和答案来源字段不可见 | Projection/deny tests | Passed |
+| T-03 | Must/P0 | PR/Issue 中直接泄漏修复答案的字段按 policy 清理或拒绝 | Sanitization fixtures | Passed |
+| T-04 | Must/P1 | AgentTaskView 只使用显式白名单投影，新增 FullTask 字段不会自动透传 | Forward-field test | Passed |
+| T-05 | Must/P1 | AgentTaskView、Capability、Budget 和公开 Test 描述通过 Schema 校验 | Schema tests | Passed |
+| T-06 | Must/P1 | AgentTaskView 内容进入 Attempt/Manifest identity | Mutation/hash test | Passed |
+| T-07 | Must/P0 | Public Artifact 不含 Credential、本机路径、Hidden/Gold 或私有输出 | Artifact scanner fixtures | Passed |
+
+M2 TaskView 本地证据（2026-07-17）：
+
+- Agent Adapter 的完整 task-bearing 输入类型只有 `AgentTaskView` 与其 `task_view` identity；构造器拒绝 `FullTaskSpec`、不匹配 identity 和绕过投影直接构造的敏感 View；
+- 投影只复制固定字段，新增 `future_answer` 不进入公开对象；Gold/Hidden/Admission、PR/commit/diff/issue-comment 答案链接、Credential、Unix/Windows 本机绝对路径、Private Output、camelCase 敏感键与非 JSON opaque bytes 均被递归拒绝；
+- AgentTaskView、Capability、Budget、Public Test 由独立 Schema 校验；RunManifest 冻结每个完整 AgentTaskView，ExpectedAttempt 记录其 identity，公开内容变化会改变 Comparability Key、Cohort ID 和 Attempt ID；
+- 17 条 v0.5 verified task 均可离线生成并扫描 AgentTaskView；未启动 Agent、Docker、SSH、远程 Runtime 或网络探针。
 
 ## 4. W — Workspace 与 Patch Freeze
 
 | ID | 级别 | 验收要求 | 必需证据 | 状态 |
 | --- | --- | --- | --- | --- |
-| W-01 | Must/P1 | 同一 Attempt 的 Action、Test、Diff 和 Freeze 绑定同一 Workspace ID | End-to-end assertion | Pending |
-| W-02 | Must/P0 | path traversal、workspace 外路径和 symlink escape 被拒绝 | Negative tests | Pending |
-| W-03 | Must/P1 | read/write/apply 支持受控 regular file，拒绝非法类型和 mode | File policy tests | Pending |
-| W-04 | Must/P1 | Freeze 开始后不再接受 mutation | Race/state tests | Pending |
-| W-05 | Must/P1 | Freeze 收敛 in-flight Action 后只生成一个 final patch | Concurrency tests | Pending |
-| W-06 | Must/P1 | Patch 正确表示 add/modify/delete，空补丁有显式语义 | Patch fixtures | Pending |
-| W-07 | Must/P0 | Patch 通过 scope、size、mode、symlink 和 binary policy | Policy matrix tests | Pending |
-| W-08 | Must/P1 | Frozen Patch 可在干净 base 上严格应用，不使用 fuzz | Clean apply test | Pending |
-| W-09 | Must/P0 | Session Result、Patch Artifact、EvaluationSpec 三方 hash 一致 | Identity integration test | Pending |
-| W-10 | Must/P1 | Agent Workspace 中未进入 Patch 的缓存、测试改动和未跟踪状态不影响评分 | Contamination test | Pending |
+| W-01 | Must/P1 | 同一 Attempt 的 Action、Test、Diff 和 Freeze 绑定同一 Workspace ID | End-to-end assertion | Passed |
+| W-02 | Must/P0 | path traversal、workspace 外路径和 symlink escape 被拒绝 | Negative tests | Passed |
+| W-03 | Must/P1 | read/write/apply 支持受控 regular file，拒绝非法类型和 mode | File policy tests | Passed |
+| W-04 | Must/P1 | Freeze 开始后不再接受 mutation | Race/state tests | Passed |
+| W-05 | Must/P1 | Freeze 收敛 in-flight Action 后只生成一个 final patch | Concurrency tests | Passed |
+| W-06 | Must/P1 | Patch 正确表示 add/modify/delete，空补丁有显式语义 | Patch fixtures | Passed |
+| W-07 | Must/P0 | Patch 通过 scope、size、mode、symlink 和 binary policy | Policy matrix tests | Passed |
+| W-08 | Must/P1 | Frozen Patch 可在干净 base 上严格应用，不使用 fuzz | Clean apply test | Passed |
+| W-09 | Must/P0 | Session Result、Patch Artifact、EvaluationSpec 三方 hash 一致 | Identity integration test | Passed |
+| W-10 | Must/P1 | Agent Workspace 中未进入 Patch 的缓存、测试改动和未跟踪状态不影响评分 | Contamination test | Passed |
+
+M2 Workspace/Freeze 本地证据（2026-07-17）：
+
+- Workspace identity 由 Source、Base Commit、materialization mode 与完整 policy 确定，不含本机路径；read/write/delete/test binding/diff/freeze 结果引用同一 identity；
+- traversal、absolute/backslash、Git pathspec magic、symlink parent/final、directory/FIFO、非法 mode、越界/超限/二进制写入均 fail closed；写入使用同一 mutation authority 和原子 replace；
+- Freeze 先关闭新 mutation，再等待并串行收敛 in-flight mutation；并发与重复调用返回同一个不可变 FrozenPatch，失败后 workspace 保持 `freeze_failed` 且不重新开放；
+- add/modify/delete/empty、patch/file size、mode、symlink、binary 和 scope fixture 均通过；base snapshots 从 recorded HEAD tree/blob 独立构造并与 root-fd 工作树快照核对，拒绝 staged、assume-unchanged 与 skip-worktree 偏差；patch 在隔离且无全局/仓库 diff 配置的临时 Git stage 中生成，精确路径由独立 parser 复核，再对提交基线快照执行 `git apply --check --index`，不使用 fuzz；
+- FrozenPatch 原始 bytes 的 SHA-256 在 SessionResult、PatchArtifact metadata 与 EvaluationSpec 中一致；篡改任一方或原始 bytes 均失败；scope 外 tracked test 改动、未跟踪 cache 和二进制状态不改变 patch bytes/hash；
+- M2 核心 focused tests 43/43、包含 Manifest/Schema/Legacy/Action Bridge 的 focused/兼容回归 87/87、全量回归 274/274、17-task Dataset Validation、示例 Manifest 重建与 JSON 语法校验全部通过。
 
 ## 5. A — Canonical Actions、Adapter 与 MCP
 

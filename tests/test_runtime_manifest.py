@@ -22,6 +22,7 @@ from tests.test_runtime_contracts import (
     full_task_spec,
     identity,
 )
+from op_bench.runtime.task_view import agent_task_view_identity, project_agent_task_view
 
 
 def manifest(
@@ -40,8 +41,9 @@ def manifest(
     action_protocol: str = "action-v1",
     evaluation_protocol: str = "evaluation-v1",
     scoring_protocol: str = "scoring-v1",
+    task_views=None,
 ) -> RunManifest:
-    return build_run_manifest(
+    arguments = dict(
         platform_version=platform_version,
         action_protocol=action_protocol,
         evaluation_protocol=evaluation_protocol,
@@ -61,6 +63,9 @@ def manifest(
         repeat_count=repeat_count,
         created_at=created_at,
     )
+    if task_views is not None:
+        arguments["task_views"] = task_views
+    return build_run_manifest(**arguments)
 
 
 class RunManifestTests(unittest.TestCase):
@@ -206,6 +211,40 @@ class RunManifestTests(unittest.TestCase):
         self.assertRegex(baseline, r"^attempt:v1:[0-9a-f]{64}$")
         self.assertEqual(len(set((baseline, *variants))), 6)
 
+    def test_agent_task_view_is_frozen_into_manifest_and_attempt_identity(self) -> None:
+        base = manifest()
+        view = base.task_views[0]
+        changed_view = replace(
+            view,
+            termination_notes="Finish only after one final registered test.",
+        )
+        changed = manifest(task_views=(changed_view,))
+
+        self.assertEqual(view, project_agent_task_view(full_task_spec(), capability_policy(), budget_policy()))
+        self.assertEqual(
+            base.expected_attempts[0].task_view,
+            agent_task_view_identity(view),
+        )
+        self.assertNotEqual(base.comparability_key, changed.comparability_key)
+        self.assertNotEqual(base.cohort_id, changed.cohort_id)
+        self.assertNotEqual(
+            base.expected_attempts[0].attempt_id,
+            changed.expected_attempts[0].attempt_id,
+        )
+
+    def test_manifest_rejects_task_view_not_matching_full_task_or_public_policy(self) -> None:
+        projected = project_agent_task_view(full_task_spec(), capability_policy(), budget_policy())
+        cases = (
+            replace(projected, statement_body="Unrelated issue"),
+            replace(projected, capability_policy=replace(capability_policy(), max_read_bytes=99)),
+            replace(projected, task=identity("task", "other-task", SHA_B)),
+        )
+
+        for task_view in cases:
+            with self.subTest(task_view=task_view):
+                with self.assertRaisesRegex(ContractError, "task_views"):
+                    manifest(task_views=(task_view,))
+
 
 class RunManifestNegativeTests(unittest.TestCase):
     def test_rejects_empty_or_duplicate_inputs_and_invalid_repeat(self) -> None:
@@ -250,6 +289,7 @@ class RunManifestNegativeTests(unittest.TestCase):
             ExpectedAttempt(
                 attempt_id="attempt:v1:" + "0" * 64,
                 task=identity("task", "task-a", SHA_A),
+                task_view=identity("task_view", "task-a:view", SHA_A),
                 agent=identity("agent", "agent-a", SHA_B),
                 repeat=0,
                 effective_config_hash=SHA_C,
