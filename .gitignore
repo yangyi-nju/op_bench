@@ -10,3 +10,6 @@ __pycache__/
 *.pyc
 .DS_Store
 configs/agents/*.local.json
+configs/remote_hosts.json
+docs/interview/opbench_agent_interview_knowledge_base.md
+docs/superpowers/plans/2026-07-16-opbench-interview-knowledge-base.md
