@@ -1,0 +1,289 @@
+{
+  "action_protocol": "action-v1",
+  "agents": [
+    {
+      "adapter": {
+        "contract_type": "content_identity",
+        "digest": "sha256:3784ada09d4c5202fd7f38eecf57e3000cc4430031e13baa14cfd4e08fb016bb",
+        "digest_kind": "canonical_config",
+        "identifier": "canonical-cli-v1",
+        "identity_type": "adapter",
+        "schema_version": "v1"
+      },
+      "agent": {
+        "contract_type": "content_identity",
+        "digest": "sha256:5b7e6ee9422a52dae7e0005fa5819c55cdc5eaf48c942a29970912e22e6051d0",
+        "digest_kind": "canonical_config",
+        "identifier": "example-agent",
+        "identity_type": "agent",
+        "schema_version": "v1"
+      },
+      "config": {
+        "contract_type": "content_identity",
+        "digest": "sha256:e4e30cc956739f1b6d9806ba09fed8f1a078953423f4e9d0d18173a90b066716",
+        "digest_kind": "canonical_config",
+        "identifier": "example-agent:example-model:canonical-cli-v1:visible",
+        "identity_type": "agent_config",
+        "schema_version": "v1"
+      },
+      "contract_type": "agent_spec",
+      "feedback_policy": "visible",
+      "model": {
+        "contract_type": "content_identity",
+        "digest": "sha256:d7cc4815962035459930ae89817482d9b0176044de2555bb5f2858abb810ccaf",
+        "digest_kind": "canonical_config",
+        "identifier": "example-model",
+        "identity_type": "model",
+        "schema_version": "v1"
+      },
+      "schema_version": "v1",
+      "system_prompt": {
+        "contract_type": "content_identity",
+        "digest": "sha256:f49c283c8094e2b21270287e2ce206a6945647c17c5f407a8b66f553292e2337",
+        "digest_kind": "canonical_config",
+        "identifier": "example-system-prompt-v1",
+        "identity_type": "prompt",
+        "schema_version": "v1"
+      },
+      "task_prompt": {
+        "contract_type": "content_identity",
+        "digest": "sha256:11e80a8de121c200bc6238603741deff9cb4cb3c9673710169c3c9295798526c",
+        "digest_kind": "canonical_config",
+        "identifier": "example-task-prompt-v1",
+        "identity_type": "prompt",
+        "schema_version": "v1"
+      }
+    }
+  ],
+  "budget_policy": {
+    "contract_type": "budget_policy",
+    "max_actions": 200,
+    "max_commands": 50,
+    "max_output_bytes": 10000000,
+    "max_tests": 20,
+    "policy_id": "standard-v1",
+    "provider_token_limit": null,
+    "schema_version": "v1",
+    "wall_clock_ms": 1200000
+  },
+  "capability_policy": {
+    "allowed_actions": [
+      "workspace_read",
+      "workspace_write",
+      "test_run",
+      "session_finish"
+    ],
+    "allowed_command_prefixes": [
+      "python",
+      "rg"
+    ],
+    "contract_type": "capability_policy",
+    "max_output_bytes": 2000000,
+    "max_read_bytes": 1000000,
+    "max_write_bytes": 1000000,
+    "network_access": "provider_only",
+    "policy_id": "controlled-v1",
+    "registered_tests": [
+      "public::smoke"
+    ],
+    "schema_version": "v1",
+    "writable_paths": [
+      "torch/"
+    ]
+  },
+  "cohort_id": "cohort:v1:f04e1f30f542dc60884dee684f9ba3525b20f9a1a2b7c6e6c50985a1235c98d3",
+  "comparability_key": "sha256:f04e1f30f542dc60884dee684f9ba3525b20f9a1a2b7c6e6c50985a1235c98d3",
+  "contract_type": "run_manifest",
+  "created_at": "2026-07-17T10:00:00Z",
+  "dataset": {
+    "contract_type": "content_identity",
+    "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "digest_kind": "content_sha256",
+    "identifier": "pytorch_v0.5",
+    "identity_type": "dataset",
+    "schema_version": "v1"
+  },
+  "evaluation_protocol": "evaluation-v1",
+  "expected_attempts": [
+    {
+      "agent": {
+        "contract_type": "content_identity",
+        "digest": "sha256:5b7e6ee9422a52dae7e0005fa5819c55cdc5eaf48c942a29970912e22e6051d0",
+        "digest_kind": "canonical_config",
+        "identifier": "example-agent",
+        "identity_type": "agent",
+        "schema_version": "v1"
+      },
+      "attempt_id": "attempt:v1:02375b47699b1efe1022e3cc850d41ab16a068a29f630fe466aed17a3ad150fd",
+      "contract_type": "expected_attempt",
+      "effective_config_hash": "sha256:376947373596dfd4d8d90a9e031588f53324c362abc46e311e999164385cae39",
+      "repeat": 1,
+      "schema_version": "v1",
+      "task": {
+        "contract_type": "content_identity",
+        "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "digest_kind": "content_sha256",
+        "identifier": "pytorch__example",
+        "identity_type": "task",
+        "schema_version": "v1"
+      }
+    }
+  ],
+  "platform_version": "opbench-v0.6.0",
+  "repeat_count": 1,
+  "retry_policy": {
+    "contract_type": "content_identity",
+    "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "digest_kind": "content_sha256",
+    "identifier": "retry-v1",
+    "identity_type": "policy",
+    "schema_version": "v1"
+  },
+  "runtime_profiles": [
+    {
+      "backend": "remote_docker",
+      "contract_type": "runtime_profile",
+      "image": {
+        "contract_type": "content_identity",
+        "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "digest_kind": "content_sha256",
+        "identifier": "op-bench/pytorch-cpu:torch2.6",
+        "identity_type": "image",
+        "schema_version": "v1"
+      },
+      "network_policy": "denied",
+      "platform": "linux/amd64",
+      "profile_id": "cpu-overlay-v1",
+      "requires_gpu": false,
+      "runtime_tier": "cpu_python_overlay",
+      "schema_version": "v1",
+      "source_loading_mode": "python_overlay",
+      "timeout_ms": 900000
+    }
+  ],
+  "schema_version": "v1",
+  "scoring": {
+    "contract_type": "content_identity",
+    "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "digest_kind": "content_sha256",
+    "identifier": "opbench-scoring-v1",
+    "identity_type": "scoring",
+    "schema_version": "v1"
+  },
+  "scoring_protocol": "scoring-v1",
+  "tasks": [
+    {
+      "admission": {
+        "contract_type": "content_identity",
+        "digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "digest_kind": "content_sha256",
+        "identifier": "evidence.json",
+        "identity_type": "admission",
+        "schema_version": "v1"
+      },
+      "contract_type": "full_task_spec",
+      "environment": {
+        "contract_type": "content_identity",
+        "digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "digest_kind": "content_sha256",
+        "identifier": "pytorch-cpu",
+        "identity_type": "environment",
+        "schema_version": "v1"
+      },
+      "fail_to_pass": [
+        "hidden::f2p"
+      ],
+      "framework": "pytorch",
+      "gold_patch": {
+        "contract_type": "content_identity",
+        "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "digest_kind": "content_sha256",
+        "identifier": "gold.patch",
+        "identity_type": "patch",
+        "schema_version": "v1"
+      },
+      "hidden_test_asset": {
+        "contract_type": "content_identity",
+        "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "digest_kind": "content_sha256",
+        "identifier": "hidden.patch",
+        "identity_type": "test",
+        "schema_version": "v1"
+      },
+      "hidden_tests": [
+        {
+          "command_template": "{python} test/test_hidden.py {test}",
+          "contract_type": "test_selector",
+          "description": "Evaluator-only selector",
+          "schema_version": "v1",
+          "selector_id": "hidden::f2p",
+          "visibility": "hidden"
+        }
+      ],
+      "operator_name": "aten.example.default",
+      "pass_to_pass": [
+        "public::smoke"
+      ],
+      "patch_scope": [
+        "torch/example.py"
+      ],
+      "public_tests": [
+        {
+          "command_template": "{python} test/test_nn.py {test}",
+          "contract_type": "test_selector",
+          "description": "Public smoke selector",
+          "schema_version": "v1",
+          "selector_id": "public::smoke",
+          "visibility": "public"
+        }
+      ],
+      "runtime": {
+        "backend": "remote_docker",
+        "contract_type": "runtime_profile",
+        "image": {
+          "contract_type": "content_identity",
+          "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "digest_kind": "content_sha256",
+          "identifier": "op-bench/pytorch-cpu:torch2.6",
+          "identity_type": "image",
+          "schema_version": "v1"
+        },
+        "network_policy": "denied",
+        "platform": "linux/amd64",
+        "profile_id": "cpu-overlay-v1",
+        "requires_gpu": false,
+        "runtime_tier": "cpu_python_overlay",
+        "schema_version": "v1",
+        "source_loading_mode": "python_overlay",
+        "timeout_ms": 900000
+      },
+      "schema_version": "v1",
+      "source": {
+        "contract_type": "content_identity",
+        "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "digest_kind": "content_sha256",
+        "identifier": "pytorch@abc",
+        "identity_type": "source",
+        "schema_version": "v1"
+      },
+      "statement_body": "Repair the operator behavior.",
+      "statement_title": "Operator returns the wrong value",
+      "task": {
+        "contract_type": "content_identity",
+        "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "digest_kind": "content_sha256",
+        "identifier": "pytorch__example",
+        "identity_type": "task",
+        "schema_version": "v1"
+      }
+    }
+  ],
+  "termination_policy": {
+    "contract_type": "content_identity",
+    "digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "digest_kind": "content_sha256",
+    "identifier": "termination-v1",
+    "identity_type": "policy",
+    "schema_version": "v1"
+  }
+}

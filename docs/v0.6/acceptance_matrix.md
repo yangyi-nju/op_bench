@@ -32,14 +32,22 @@
 
 | ID | 级别 | 验收要求 | 必需证据 | 状态 |
 | --- | --- | --- | --- | --- |
-| C-01 | Must/P1 | RunManifest、TaskView、Action、Session、Evaluation、Event、Result、Integrity 均有显式 schema version | Schema 文件与 valid/invalid tests | Pending |
-| C-02 | Must/P1 | wire object 严格拒绝未知版本、缺失身份、非法枚举和非规范值 | Negative tests | Pending |
-| C-03 | Must/P1 | canonical JSON 与 SHA-256 可跨进程确定性重建 | Round-trip/hash tests | Pending |
-| C-04 | Must/P1 | Dataset、Task、Source、Environment、Agent、Prompt、Policy、Runtime 和 Scoring 身份进入 Manifest | Manifest fixture 与字段断言 | Pending |
-| C-05 | Must/P1 | Comparability Key 对影响可比性的配置变化敏感 | Mutation matrix tests | Pending |
-| C-06 | Must/P1 | Attempt Identity 由 Cohort、Task、Agent、Repeat 和有效配置确定 | Identity tests | Pending |
-| C-07 | Must/P1 | expected task × agent × repeat matrix 在运行前冻结 | Manifest/integrity test | Pending |
-| C-08 | Must/P1 | v0.5 Dataset/Task/Environment 可被兼容层读取，默认值确定 | 17-task migration test | Pending |
+| C-01 | Must/P1 | RunManifest、TaskView、Action、Session、Evaluation、Event、Result、Integrity 均有显式 schema version | Schema 文件与 valid/invalid tests | Passed |
+| C-02 | Must/P1 | wire object 严格拒绝未知版本、缺失身份、非法枚举和非规范值 | Negative tests | Passed |
+| C-03 | Must/P1 | canonical JSON 与 SHA-256 可跨进程确定性重建 | Round-trip/hash tests | Passed |
+| C-04 | Must/P1 | Dataset、Task、Source、Environment、Agent、Prompt、Policy、Runtime 和 Scoring 身份进入 Manifest | Manifest fixture 与字段断言 | Passed |
+| C-05 | Must/P1 | Comparability Key 对影响可比性的配置变化敏感 | Mutation matrix tests | Passed |
+| C-06 | Must/P1 | Attempt Identity 由 Cohort、Task、Agent、Repeat 和有效配置确定 | Identity tests | Passed |
+| C-07 | Must/P1 | expected task × agent × repeat matrix 在运行前冻结 | Manifest/integrity test | Passed |
+| C-08 | Must/P1 | v0.5 Dataset/Task/Environment 可被兼容层读取，默认值确定 | 17-task migration test | Passed |
+
+M1 本地证据（2026-07-17）：
+
+- `python -m unittest tests.test_runtime_canonical ... tests.test_runtime_manifest_cli -v`：60/60 通过；
+- `python -m unittest discover tests -v`：229/229 通过；
+- `scripts/validate_dataset.py datasets/pytorch_v0.5/dataset.json --require-verified`：17 条 task 通过；
+- `scripts/validate_runtime_contract.py configs/examples/v0.6_run_manifest.example.json`：Schema 与 RunManifest 派生身份重建通过；
+- 兼容测试显式断言不调用 `subprocess.run` 或 `socket.create_connection`，拒绝未 verified Dataset、artifact traversal/symlink 和 task 根外文件；Schema 拒绝嵌套身份角色互换，语义分派拒绝跨字段非法状态，identity-bearing JSON payload 构造后不可变；示例不包含本机路径或远程 host；M1 未执行 Agent、Docker、SSH 或远程 Runtime 验证。
 
 ## 3. T — AgentTaskView 与信息边界
 

@@ -9,6 +9,7 @@ under `docs/`.
 Planned direction as of 2026-07-17:
 
 - v0.6 upgrades the existing real-Codex benchmark demo into a standardized Agent evaluation platform with versioned contracts, canonical CLI/MCP actions, explicit AttemptSession lifecycle and budgets, trajectory artifacts, patch freeze, fresh evaluation, failure attribution, replay, and rebuildable summaries.
+- v0.6 M1 is complete: strict versioned runtime contracts, canonical JSON/SHA-256, deterministic RunManifest/Cohort/Attempt identities, a frozen expected matrix, v0.5 compatibility projection, independent JSON Schema validation, and offline manifest CLIs are implemented. This is platform evidence, not a new benchmark score.
 - v0.6 is one platform release with M1–M7 internal milestones. It does not expand the dataset or run the formal multi-Agent study.
 - v0.7 builds the reusable Dataset Factory, adds the Boundary Slice, and revisits the two matched-runtime Precision candidates.
 - v0.8 adds Device/API Compatibility and freezes Evaluation/Scoring Specification RC; v0.9 runs the formal multi-Agent and feedback-ablation cohorts.

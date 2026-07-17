@@ -11,8 +11,8 @@
 | 正式实验 | 51 次真实 Codex attempt，37/51 resolved |
 | 当前开发版本 | `opbench-v0.6.0` |
 | 当前目标 | Demo → 规范 Agent 评测平台 |
-| 当前阶段 | 设计与实施规划 |
-| v0.6 产品代码 | 尚未在当前基线开始实现 |
+| 当前阶段 | M1 已完成，准备 M2 TaskView/Workspace/Freeze |
+| v0.6 产品代码 | M1 Contracts、Schema、RunManifest 与 v0.5 Compatibility 已实现 |
 | 正式新实验 | 尚未启动 |
 
 ## Current decisions
@@ -32,15 +32,16 @@
 | ID | 状态 | 内容 | 关闭条件 |
 | --- | --- | --- | --- |
 | V06-DOCS | Passed | 全局方案与 v0.6/v0.7 文档重写 | 入口一致、链接有效、回归验证通过 |
-| V06-M1 | Pending | 协议、Schema、Run Manifest 与兼容策略 | M1 Acceptance 全部通过 |
+| V06-M1 | Passed | 协议、Schema、Run Manifest 与兼容策略 | C-01～C-08 已通过；60 focused tests、229 full tests、17-task migration 与示例重建通过 |
+| V06-M2 | Pending | AgentTaskView、Authoritative Workspace 与 Patch Freeze | T-*、W-* 对应验收全部通过 |
 | REMOTE-CLEANUP | Backlog | RemoteDocker timeout/cleanup 需要收敛到 Attempt-owned container/process | v0.6 M6 Conformance 通过 |
 
 ## Next actions
 
-1. 审阅本地未提交的全局方案、v0.6 和 v0.7 文档；
-2. 确认 v0.6 Acceptance Matrix 作为实现完成标准；
-3. 从 v0.6 M1 Contracts、Schema 与 RunManifest 开始产品实现；
-4. M1 通过 focused/full tests 后更新本状态文件；
+1. 从 M2 开始实现 FullTaskSpec → AgentTaskView 白名单投影和敏感字段扫描；
+2. 建立唯一 Authoritative Workspace Identity、路径/文件策略与一致读写/测试/diff 边界；
+3. 实现并验证并发安全的 Patch Freeze、canonical patch 与 clean-apply；
+4. M2 通过 focused/full tests 后更新本状态文件；
 5. v0.6 完成前不启动 v0.7 正式 Admission。
 
 ## Status rules

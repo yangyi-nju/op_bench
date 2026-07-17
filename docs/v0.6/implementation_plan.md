@@ -2,7 +2,7 @@
 
 日期：2026-07-17
 
-状态：待实施
+状态：实施中（M1 已完成，M2 待开始）
 
 目标版本：`opbench-v0.6.0`
 
@@ -82,6 +82,8 @@ M7 Documentation/Demo/Release Review
 M1–M5 不得为了提前跑通真实 Agent 而绕过合同。M6 发现的语义差异回到对应模块修复，不在 Adapter 中增加特殊分支掩盖。
 
 ## 4. M1：Contracts、Schema 与 RunManifest
+
+状态：已完成（2026-07-17）。C-01～C-08、60 项 M1 focused tests、229 项全量测试、17-task v0.5 migration 和离线示例重建均通过；代码审查发现的 Schema 语义分派、Legacy 类型与路径安全、payload 不可变性、结果轴和公共身份 API 问题已修复并回归。本里程碑未启动 Agent、Docker、SSH 或远程 Runtime。
 
 ### 4.1 交付
 

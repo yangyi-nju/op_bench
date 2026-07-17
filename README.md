@@ -6,7 +6,7 @@ OpBench is an operator-focused benchmark for evaluating coding agents on real fr
 
 v0.1 established the isolated replay/evaluation loop. v0.2 added asset registries and formal admission. v0.3 expanded the dataset to 10 verified tasks and added 3-repeat stability evaluation. v0.4 added CUDA tiers and remote Docker. v0.5 is now complete: the verified cumulative dataset contains 17 tasks, including a 6-task precision slice, and its 51-attempt Codex run reached **72.5% resolved** (37/51) with eight-dimensional reporting and hard experiment-integrity checks.
 
-The next release, v0.6, upgrades this working real-Codex benchmark demo into a standardized Agent evaluation platform. It unifies versioned task views, canonical actions with CLI/MCP adapters, attempt lifecycle and budgets, feedback trajectories, patch freezing, fresh evaluation, failure attribution, replay, and rebuildable artifacts. Boundary-task expansion follows in v0.7 after the platform contract is stable. See the [global project plan](docs/project_plan.md) and [current project state](docs/project_state.md).
+The next release, v0.6, upgrades this working real-Codex benchmark demo into a standardized Agent evaluation platform. M1 is complete: strict versioned runtime contracts, canonical JSON identities, deterministic RunManifest/cohort/attempt construction, v0.5 compatibility projection, an independent JSON Schema validator, and offline manifest CLIs are now implemented. Canonical actions, lifecycle, patch freezing, fresh evaluation, and conformance follow in M2-M7. Boundary-task expansion follows in v0.7 after the platform contract is stable. See the [global project plan](docs/project_plan.md) and [current project state](docs/project_state.md).
 
 ## What The Current Code Contains
 
@@ -22,6 +22,8 @@ The next release, v0.6, upgrades this working real-Codex benchmark demo into a s
 - A remote GPU Docker executor (`src/op_bench/remote.py`) that runs `docker` on an SSH host, rsyncs workspaces both ways, and persists an environment-scoped ccache across isolated workspaces.
 - A standardized workspace action interface for file operations, patch application, command execution, tests, and diff export.
 - `codex_action_bridge`, the reference real-agent adapter with automatic rate-limit-aware retry. Codex runs on the host in a scratch workspace and can operate on the target repository only through OpBench actions.
+- Strict v0.6 runtime contracts and canonical SHA-256 identities under `src/op_bench/runtime/`, including deterministic RunManifest, Cohort ID, Attempt ID, and frozen task × agent × repeat matrices.
+- An independent zero-dependency JSON Schema validator, a strict schema artifact under `schemas/`, and offline build/validation CLIs that do not launch an Agent or contact a runtime.
 
 Development-only experiment adapters have been removed from the public v0.1 surface. Future agents should integrate by implementing the same action-interface boundary used by `codex_action_bridge`.
 
@@ -35,6 +37,8 @@ Development-only experiment adapters have been removed from the public v0.1 surf
 | `sources/` | Source snapshot registry metadata. |
 | `src/op_bench/` | Core implementation: task model, environment preparation, evaluator, actions, agent bridges, reporting. |
 | `scripts/` | CLI entry points for validation, environment preparation, source snapshots, replay, and experiments. |
+| `schemas/` | Strict v0.6 runtime wire-contract JSON Schema. |
+| `configs/examples/` | Public synthetic v0.6 configuration and manifest examples. |
 | `docs/` | Versioned design docs, experiment reports, developer guides, and historical records. |
 | `docs/project_plan.md` | Global mission, principles, roadmap, release gates, and research targets. |
 | `docs/project_state.md` | Current baseline, active version, decisions, and next actions. |
@@ -74,6 +78,22 @@ Validate the current dataset:
 ```bash
 PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/validate_dataset.py \
   datasets/pytorch_v0.5/dataset.json
+```
+
+Build and validate an offline v0.6 RunManifest (this does not launch an Agent or validate a remote runtime):
+
+```bash
+PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/build_run_manifest.py \
+  --dataset datasets/pytorch_v0.5/dataset.json \
+  --output /tmp/opbench-v0.6-manifest.json \
+  --agent example-agent \
+  --model example-model \
+  --adapter canonical-cli-v1 \
+  --repeat 1 \
+  --created-at 2026-07-17T10:00:00Z
+
+PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/validate_runtime_contract.py \
+  /tmp/opbench-v0.6-manifest.json
 ```
 
 Run offline preflight (patches apply, test names resolve, no docker/GPU needed):

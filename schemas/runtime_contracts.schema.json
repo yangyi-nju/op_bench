@@ -1,0 +1,403 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opbench.dev/schemas/runtime-contracts-v1.json",
+  "oneOf": [
+    {"$ref": "#/$defs/content_identity"},
+    {"$ref": "#/$defs/capability_policy"},
+    {"$ref": "#/$defs/budget_policy"},
+    {"$ref": "#/$defs/runtime_profile"},
+    {"$ref": "#/$defs/test_selector"},
+    {"$ref": "#/$defs/full_task_spec"},
+    {"$ref": "#/$defs/agent_task_view"},
+    {"$ref": "#/$defs/agent_spec"},
+    {"$ref": "#/$defs/action_request"},
+    {"$ref": "#/$defs/budget_delta"},
+    {"$ref": "#/$defs/action_observation"},
+    {"$ref": "#/$defs/event_record"},
+    {"$ref": "#/$defs/session_spec"},
+    {"$ref": "#/$defs/evaluation_spec"},
+    {"$ref": "#/$defs/session_result"},
+    {"$ref": "#/$defs/test_execution_summary"},
+    {"$ref": "#/$defs/evaluation_result"},
+    {"$ref": "#/$defs/integrity_check"},
+    {"$ref": "#/$defs/integrity_report"},
+    {"$ref": "#/$defs/expected_attempt"},
+    {"$ref": "#/$defs/run_manifest"}
+  ],
+  "$defs": {
+    "JsonValue": {
+      "oneOf": [
+        {"type": "null"},
+        {"type": "boolean"},
+        {"type": "integer"},
+        {"type": "string"},
+        {"type": "array", "items": {"$ref": "#/$defs/JsonValue"}},
+        {"type": "object", "additionalProperties": {"$ref": "#/$defs/JsonValue"}}
+      ]
+    },
+    "JsonObject": {
+      "type": "object",
+      "additionalProperties": {"$ref": "#/$defs/JsonValue"}
+    },
+    "content_identity": {
+      "type": "object",
+      "required": ["contract_type", "schema_version", "identity_type", "identifier", "digest", "digest_kind"],
+      "properties": {
+        "contract_type": {"const": "content_identity"},
+        "schema_version": {"const": "v1"},
+        "identity_type": {"enum": ["dataset", "task", "source", "environment", "image", "agent", "model", "adapter", "prompt", "policy", "runtime", "patch", "test", "admission", "attachment", "agent_config", "evaluation", "scoring", "workspace", "task_view"]},
+        "identifier": {"type": "string", "minLength": 1},
+        "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "digest_kind": {"enum": ["content_sha256", "canonical_config", "replay_spec_v1", "image_id", "declared"]}
+      },
+      "additionalProperties": false
+    },
+    "capability_policy": {
+      "type": "object",
+      "required": ["contract_type", "schema_version", "policy_id", "allowed_actions", "writable_paths", "allowed_command_prefixes", "registered_tests", "max_read_bytes", "max_write_bytes", "max_output_bytes", "network_access"],
+      "properties": {
+        "contract_type": {"const": "capability_policy"},
+        "schema_version": {"const": "v1"},
+        "policy_id": {"type": "string", "minLength": 1},
+        "allowed_actions": {"type": "array", "uniqueItems": true, "items": {"enum": ["workspace_list", "workspace_search", "workspace_read", "workspace_write", "workspace_apply_patch", "command_run", "test_run", "vcs_diff", "session_finish"]}},
+        "writable_paths": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "allowed_command_prefixes": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "registered_tests": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "max_read_bytes": {"type": "integer", "minimum": 1},
+        "max_write_bytes": {"type": "integer", "minimum": 1},
+        "max_output_bytes": {"type": "integer", "minimum": 1},
+        "network_access": {"enum": ["denied", "provider_only", "task_runtime"]}
+      },
+      "additionalProperties": false
+    },
+    "budget_policy": {
+      "type": "object",
+      "required": ["contract_type", "schema_version", "policy_id", "wall_clock_ms", "max_actions", "max_tests", "max_commands", "max_output_bytes", "provider_token_limit"],
+      "properties": {
+        "contract_type": {"const": "budget_policy"},
+        "schema_version": {"const": "v1"},
+        "policy_id": {"type": "string", "minLength": 1},
+        "wall_clock_ms": {"type": "integer", "minimum": 1},
+        "max_actions": {"type": "integer", "minimum": 0},
+        "max_tests": {"type": "integer", "minimum": 0},
+        "max_commands": {"type": "integer", "minimum": 0},
+        "max_output_bytes": {"type": "integer", "minimum": 0},
+        "provider_token_limit": {"oneOf": [{"type": "null"}, {"type": "integer", "minimum": 1}]}
+      },
+      "additionalProperties": false
+    },
+    "runtime_profile": {
+      "type": "object",
+      "required": ["contract_type", "schema_version", "profile_id", "backend", "runtime_tier", "source_loading_mode", "platform", "image", "requires_gpu", "network_policy", "timeout_ms"],
+      "properties": {
+        "contract_type": {"const": "runtime_profile"},
+        "schema_version": {"const": "v1"},
+        "profile_id": {"type": "string", "minLength": 1},
+        "backend": {"enum": ["local", "docker", "remote_docker"]},
+        "runtime_tier": {"enum": ["local_fixture", "cpu_python_overlay", "cuda_python_overlay", "cuda_kernel_build"]},
+        "source_loading_mode": {"enum": ["none", "python_overlay", "inplace_build"]},
+        "platform": {"type": "string", "minLength": 1},
+        "image": {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "image"}}},
+        "requires_gpu": {"type": "boolean"},
+        "network_policy": {"enum": ["denied", "provider_only", "task_runtime"]},
+        "timeout_ms": {"type": "integer", "minimum": 1}
+      },
+      "additionalProperties": false
+    },
+    "test_selector": {
+      "type": "object",
+      "required": ["contract_type", "schema_version", "selector_id", "visibility", "command_template", "description"],
+      "properties": {
+        "contract_type": {"const": "test_selector"},
+        "schema_version": {"const": "v1"},
+        "selector_id": {"type": "string", "minLength": 1},
+        "visibility": {"enum": ["public", "registered", "hidden", "evaluation_only"]},
+        "command_template": {"type": "string", "minLength": 1},
+        "description": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "full_task_spec": {
+      "type": "object",
+      "required": ["contract_type", "schema_version", "task", "source", "environment", "runtime", "statement_title", "statement_body", "framework", "operator_name", "public_tests", "hidden_tests", "fail_to_pass", "pass_to_pass", "patch_scope", "gold_patch", "hidden_test_asset", "admission"],
+      "properties": {
+        "contract_type": {"const": "full_task_spec"},
+        "schema_version": {"const": "v1"},
+        "task": {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "task"}}},
+        "source": {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "source"}}},
+        "environment": {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "environment"}}},
+        "runtime": {"$ref": "#/$defs/runtime_profile"},
+        "statement_title": {"type": "string", "minLength": 1},
+        "statement_body": {"type": "string", "minLength": 1},
+        "framework": {"type": "string", "minLength": 1},
+        "operator_name": {"type": "string", "minLength": 1},
+        "public_tests": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/test_selector"}},
+        "hidden_tests": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/test_selector"}},
+        "fail_to_pass": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "pass_to_pass": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "patch_scope": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "gold_patch": {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "patch"}}},
+        "hidden_test_asset": {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "test"}}},
+        "admission": {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "admission"}}}
+      },
+      "additionalProperties": false
+    },
+    "agent_task_view": {
+      "type": "object",
+      "required": ["contract_type", "schema_version", "task", "statement_title", "statement_body", "framework", "operator_name", "runtime_hint", "public_tests", "capability_policy", "budget_policy", "termination_notes", "attachments"],
+      "properties": {
+        "contract_type": {"const": "agent_task_view"},
+        "schema_version": {"const": "v1"},
+        "task": {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "task"}}},
+        "statement_title": {"type": "string", "minLength": 1},
+        "statement_body": {"type": "string", "minLength": 1},
+        "framework": {"type": "string", "minLength": 1},
+        "operator_name": {"type": "string", "minLength": 1},
+        "runtime_hint": {"type": "string", "minLength": 1},
+        "public_tests": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/test_selector"}},
+        "capability_policy": {"$ref": "#/$defs/capability_policy"},
+        "budget_policy": {"$ref": "#/$defs/budget_policy"},
+        "termination_notes": {"type": "string", "minLength": 1},
+        "attachments": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "attachment"}}}}
+      },
+      "additionalProperties": false
+    },
+    "agent_spec": {
+      "type": "object",
+      "required": ["contract_type", "schema_version", "agent", "model", "adapter", "system_prompt", "task_prompt", "config", "feedback_policy"],
+      "properties": {
+        "contract_type": {"const": "agent_spec"},
+        "schema_version": {"const": "v1"},
+        "agent": {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "agent"}}},
+        "model": {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "model"}}},
+        "adapter": {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "adapter"}}},
+        "system_prompt": {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "prompt"}}},
+        "task_prompt": {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "prompt"}}},
+        "config": {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "agent_config"}}},
+        "feedback_policy": {"enum": ["visible", "none"]}
+      },
+      "additionalProperties": false
+    },
+    "action_request": {
+      "type": "object",
+      "required": ["contract_type", "schema_version", "session_id", "action_id", "action_name", "arguments", "client_sequence", "deadline_ms"],
+      "properties": {
+        "contract_type": {"const": "action_request"},
+        "schema_version": {"const": "v1"},
+        "session_id": {"type": "string", "minLength": 1},
+        "action_id": {"type": "string", "minLength": 1},
+        "action_name": {"enum": ["workspace_list", "workspace_search", "workspace_read", "workspace_write", "workspace_apply_patch", "command_run", "test_run", "vcs_diff", "session_finish"]},
+        "arguments": {"$ref": "#/$defs/JsonObject"},
+        "client_sequence": {"type": "integer", "minimum": 1},
+        "deadline_ms": {"type": "integer", "minimum": 1}
+      },
+      "additionalProperties": false
+    },
+    "budget_delta": {
+      "type": "object",
+      "required": ["contract_type", "schema_version", "wall_clock_ms", "actions", "tests", "commands", "output_bytes", "provider_tokens"],
+      "properties": {
+        "contract_type": {"const": "budget_delta"},
+        "schema_version": {"const": "v1"},
+        "wall_clock_ms": {"type": "integer", "minimum": 0},
+        "actions": {"type": "integer", "minimum": 0},
+        "tests": {"type": "integer", "minimum": 0},
+        "commands": {"type": "integer", "minimum": 0},
+        "output_bytes": {"type": "integer", "minimum": 0},
+        "provider_tokens": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
+    },
+    "action_observation": {
+      "type": "object",
+      "required": ["contract_type", "schema_version", "session_id", "action_id", "ok", "error_code", "message", "data", "started_at_ms", "ended_at_ms", "budget_delta", "mutation_state"],
+      "properties": {
+        "contract_type": {"const": "action_observation"},
+        "schema_version": {"const": "v1"},
+        "session_id": {"type": "string", "minLength": 1},
+        "action_id": {"type": "string", "minLength": 1},
+        "ok": {"type": "boolean"},
+        "error_code": {"enum": ["ok", "invalid_request", "unsupported_action", "session_not_running", "capability_denied", "path_denied", "selector_denied", "budget_exhausted", "timeout", "conflict", "workspace_error", "runtime_error", "platform_error"]},
+        "message": {"type": "string"},
+        "data": {"$ref": "#/$defs/JsonObject"},
+        "started_at_ms": {"type": "integer", "minimum": 0},
+        "ended_at_ms": {"type": "integer", "minimum": 0},
+        "budget_delta": {"$ref": "#/$defs/budget_delta"},
+        "mutation_state": {"enum": ["none", "unchanged", "mutated", "frozen"]}
+      },
+      "additionalProperties": false
+    },
+    "event_record": {
+      "type": "object",
+      "required": ["contract_type", "schema_version", "session_id", "sequence", "occurred_at_ms", "event_type", "public_payload", "previous_event_hash", "event_hash"],
+      "properties": {
+        "contract_type": {"const": "event_record"},
+        "schema_version": {"const": "v1"},
+        "session_id": {"type": "string", "minLength": 1},
+        "sequence": {"type": "integer", "minimum": 1},
+        "occurred_at_ms": {"type": "integer", "minimum": 0},
+        "event_type": {"enum": ["session_created", "session_prepared", "session_started", "agent_launched", "agent_exited", "action_requested", "action_observed", "test_started", "test_completed", "budget_updated", "budget_exhausted", "finish_requested", "timeout_requested", "cancel_requested", "patch_freeze_started", "patch_freeze_completed", "patch_freeze_failed", "evaluation_started", "evaluation_completed", "terminal_emitted"]},
+        "public_payload": {"$ref": "#/$defs/JsonObject"},
+        "previous_event_hash": {"oneOf": [{"type": "null"}, {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}]},
+        "event_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+      },
+      "additionalProperties": false
+    },
+    "session_spec": {
+      "type": "object",
+      "required": ["contract_type", "schema_version", "session_id", "attempt_id", "workspace", "agent_task_view", "capability_policy", "budget_policy", "deadline_ms", "adapter_config", "runtime", "artifact_root_id", "resume_policy"],
+      "properties": {
+        "contract_type": {"const": "session_spec"},
+        "schema_version": {"const": "v1"},
+        "session_id": {"type": "string", "minLength": 1},
+        "attempt_id": {"type": "string", "minLength": 1},
+        "workspace": {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "workspace"}}},
+        "agent_task_view": {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "task_view"}}},
+        "capability_policy": {"$ref": "#/$defs/capability_policy"},
+        "budget_policy": {"$ref": "#/$defs/budget_policy"},
+        "deadline_ms": {"type": "integer", "minimum": 1},
+        "adapter_config": {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "agent_config"}}},
+        "runtime": {"$ref": "#/$defs/runtime_profile"},
+        "artifact_root_id": {"type": "string", "minLength": 1},
+        "resume_policy": {"enum": ["skip_valid", "retry_infrastructure", "never"]}
+      },
+      "additionalProperties": false
+    },
+    "evaluation_spec": {
+      "type": "object",
+      "required": ["contract_type", "schema_version", "session_id", "attempt_id", "task", "source", "frozen_patch", "hidden_test_asset", "public_tests", "fail_to_pass", "pass_to_pass", "runtime", "timeout_ms", "scoring"],
+      "properties": {
+        "contract_type": {"const": "evaluation_spec"},
+        "schema_version": {"const": "v1"},
+        "session_id": {"type": "string", "minLength": 1},
+        "attempt_id": {"type": "string", "minLength": 1},
+        "task": {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "task"}}},
+        "source": {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "source"}}},
+        "frozen_patch": {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "patch"}}},
+        "hidden_test_asset": {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "test"}}},
+        "public_tests": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/test_selector"}},
+        "fail_to_pass": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "pass_to_pass": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "runtime": {"$ref": "#/$defs/runtime_profile"},
+        "timeout_ms": {"type": "integer", "minimum": 1},
+        "scoring": {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "scoring"}}}
+      },
+      "additionalProperties": false
+    },
+    "session_result": {
+      "type": "object",
+      "required": ["contract_type", "schema_version", "session_id", "attempt_id", "terminal_reason", "final_patch", "started_at_ms", "ended_at_ms"],
+      "properties": {
+        "contract_type": {"const": "session_result"},
+        "schema_version": {"const": "v1"},
+        "session_id": {"type": "string", "minLength": 1},
+        "attempt_id": {"type": "string", "minLength": 1},
+        "terminal_reason": {"enum": ["agent_finished", "agent_exited", "budget_exhausted", "timeout", "cancelled", "workspace_error", "runtime_error", "provider_error", "platform_error"]},
+        "final_patch": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "patch"}}}]},
+        "started_at_ms": {"type": "integer", "minimum": 0},
+        "ended_at_ms": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
+    },
+    "test_execution_summary": {
+      "type": "object",
+      "required": ["contract_type", "schema_version", "collected", "executed", "passed", "failed", "skipped"],
+      "properties": {
+        "contract_type": {"const": "test_execution_summary"},
+        "schema_version": {"const": "v1"},
+        "collected": {"type": "integer", "minimum": 0},
+        "executed": {"type": "integer", "minimum": 0},
+        "passed": {"type": "integer", "minimum": 0},
+        "failed": {"type": "integer", "minimum": 0},
+        "skipped": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
+    },
+    "evaluation_result": {
+      "type": "object",
+      "required": ["contract_type", "schema_version", "session_id", "attempt_id", "attempt_validity", "agent_terminal", "evaluation_outcome", "invalid_reason", "patch", "fail_to_pass", "pass_to_pass", "duration_ms"],
+      "properties": {
+        "contract_type": {"const": "evaluation_result"},
+        "schema_version": {"const": "v1"},
+        "session_id": {"type": "string", "minLength": 1},
+        "attempt_id": {"type": "string", "minLength": 1},
+        "attempt_validity": {"enum": ["valid", "infrastructure_invalid"]},
+        "agent_terminal": {"enum": ["finished", "exited", "timeout", "budget", "cancelled"]},
+        "evaluation_outcome": {"enum": ["resolved", "f2p_failed", "p2p_regression", "invalid_patch", "no_patch", "evaluation_error", "not_evaluated"]},
+        "invalid_reason": {"oneOf": [{"type": "null"}, {"type": "string", "minLength": 1}]},
+        "patch": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "patch"}}}]},
+        "fail_to_pass": {"$ref": "#/$defs/test_execution_summary"},
+        "pass_to_pass": {"$ref": "#/$defs/test_execution_summary"},
+        "duration_ms": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
+    },
+    "integrity_check": {
+      "type": "object",
+      "required": ["contract_type", "schema_version", "check_id", "status", "message", "expected_hash", "actual_hash"],
+      "properties": {
+        "contract_type": {"const": "integrity_check"},
+        "schema_version": {"const": "v1"},
+        "check_id": {"type": "string", "minLength": 1},
+        "status": {"enum": ["passed", "failed"]},
+        "message": {"type": "string", "minLength": 1},
+        "expected_hash": {"oneOf": [{"type": "null"}, {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}]},
+        "actual_hash": {"oneOf": [{"type": "null"}, {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}]}
+      },
+      "additionalProperties": false
+    },
+    "integrity_report": {
+      "type": "object",
+      "required": ["contract_type", "schema_version", "run_id", "status", "checks"],
+      "properties": {
+        "contract_type": {"const": "integrity_report"},
+        "schema_version": {"const": "v1"},
+        "run_id": {"type": "string", "minLength": 1},
+        "status": {"enum": ["passed", "failed"]},
+        "checks": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/integrity_check"}}
+      },
+      "additionalProperties": false
+    },
+    "expected_attempt": {
+      "type": "object",
+      "required": ["contract_type", "schema_version", "attempt_id", "task", "agent", "repeat", "effective_config_hash"],
+      "properties": {
+        "contract_type": {"const": "expected_attempt"},
+        "schema_version": {"const": "v1"},
+        "attempt_id": {"type": "string", "pattern": "^attempt:v1:[0-9a-f]{64}$"},
+        "task": {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "task"}}},
+        "agent": {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "agent"}}},
+        "repeat": {"type": "integer", "minimum": 1},
+        "effective_config_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+      },
+      "additionalProperties": false
+    },
+    "run_manifest": {
+      "type": "object",
+      "required": ["contract_type", "schema_version", "platform_version", "action_protocol", "evaluation_protocol", "scoring_protocol", "dataset", "tasks", "agents", "capability_policy", "budget_policy", "runtime_profiles", "retry_policy", "termination_policy", "scoring", "repeat_count", "created_at", "comparability_key", "cohort_id", "expected_attempts"],
+      "properties": {
+        "contract_type": {"const": "run_manifest"},
+        "schema_version": {"const": "v1"},
+        "platform_version": {"type": "string", "minLength": 1},
+        "action_protocol": {"type": "string", "minLength": 1},
+        "evaluation_protocol": {"type": "string", "minLength": 1},
+        "scoring_protocol": {"type": "string", "minLength": 1},
+        "dataset": {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "dataset"}}},
+        "tasks": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/full_task_spec"}},
+        "agents": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/agent_spec"}},
+        "capability_policy": {"$ref": "#/$defs/capability_policy"},
+        "budget_policy": {"$ref": "#/$defs/budget_policy"},
+        "runtime_profiles": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/runtime_profile"}},
+        "retry_policy": {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "policy"}}},
+        "termination_policy": {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "policy"}}},
+        "scoring": {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "scoring"}}},
+        "repeat_count": {"type": "integer", "minimum": 1},
+        "created_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
+        "comparability_key": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "cohort_id": {"type": "string", "pattern": "^cohort:v1:[0-9a-f]{64}$"},
+        "expected_attempts": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/expected_attempt"}}
+      },
+      "additionalProperties": false
+    }
+  }
+}
