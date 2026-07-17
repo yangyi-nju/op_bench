@@ -11,8 +11,8 @@
 | 正式实验 | 51 次真实 Codex attempt，37/51 resolved |
 | 当前开发版本 | `opbench-v0.6.0` |
 | 当前目标 | Demo → 规范 Agent 评测平台 |
-| 当前阶段 | M1–M4 已完成，准备 M5 Fresh Evaluator/Artifact/Integrity/Summary |
-| v0.6 产品代码 | Contracts/Manifest、AgentTaskView、Authoritative Workspace、Patch Freeze、Canonical Action Service、AttemptSession、hash-chain Trajectory、Public Artifact 与 append-only Resume Ledger 已实现 |
+| 当前阶段 | M1–M5 已完成，准备 M6 Runtime Conformance/Replay/真实 Agent 验证 |
+| v0.6 产品代码 | Contracts/Manifest、AgentTaskView、Authoritative Workspace、Patch Freeze、Canonical Action Service、AttemptSession、hash-chain Trajectory、Fresh Evaluation、public/private Artifact、Evaluation-aware Resume、Integrity 与确定性 Summary 已实现 |
 | 正式新实验 | 尚未启动 |
 
 ## Current decisions
@@ -36,15 +36,15 @@
 | V06-M2 | Passed | AgentTaskView、Authoritative Workspace 与 Patch Freeze | T-01～T-07、W-01～W-10 已通过；43 core、87 focused/compat、274 full tests、17-task migration、Schema/示例重建与 Legacy Action Bridge 回归通过 |
 | V06-M3 | Passed | Canonical Action Service、CLI/MCP 与标准 Adapter 边界 | A-01～A-12 已通过；28 focused、302 full tests、17-task Dataset、示例 Manifest、tracked JSON 与 Legacy Action Bridge 回归通过；真实 Codex 标准 canary 保留为 M6 gate |
 | V06-M4 | Passed | AttemptSession、Budget、Trajectory、Public Artifact 与 Resume Ledger | S-01～S-10、E-02～E-04 已通过；61 focused、194 runtime、363 full tests、17-task Dataset、示例 Manifest 与 tracked JSON 通过；审查 Critical/Important/Minor 均为 0；E-01 evaluation 与 E-05 private artifact 保留为 M5 gate |
+| V06-M5 | Passed | Fresh Evaluator、private Artifact、Integrity 与 Summary | 62 focused、252 runtime、421 full tests，17-task Dataset、示例 Manifest、tracked JSON、compileall 与 diff check 通过；独立复审 Critical/Important/Minor 0/0/0；仅使用本地确定性 fixture，未启动 Agent、Docker、SSH、远程 Runtime 或网络探针 |
 | REMOTE-CLEANUP | Backlog | RemoteDocker timeout/cleanup 需要收敛到 Attempt-owned container/process | v0.6 M6 Conformance 通过 |
 
 ## Next actions
 
-1. 从 M5 开始实现 Fresh Evaluator，并保证不读取 Agent Workspace；
-2. 建立 private artifact 分层并补齐 evaluation_started/evaluation_completed；
-3. 校验 Manifest→Session→Patch→Evaluation→Result→Summary 引用闭合；
-4. 从原始 Artifact 重建 results.jsonl 与 summary.json；
-5. v0.6 完成前不启动 v0.7 正式 Admission。
+1. 启动 M6 Runtime Profile 与 Local/Remote Canonical Sequence Conformance；
+2. 回放 v0.5 Baseline、Gold 与 51 个 Legacy Final Patch；
+3. 在 M6 合同与本地验证通过后执行真实 Codex CPU Canary；
+4. v0.6 完成前不启动 v0.7 正式 Admission。
 
 ## Status rules
 

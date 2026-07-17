@@ -80,6 +80,25 @@ class EventJournalTests(unittest.TestCase):
         self.assertEqual(journal.records[-1], terminal)
         self.assertEqual(len(journal.records), 2)
 
+    def test_session_terminal_allows_evaluation_before_final_attempt_terminal(self) -> None:
+        journal = EventJournal("session-001", clock_ms=StepClock())
+        journal.append("session_created", {"attempt_id": "attempt-001"})
+        journal.append(
+            "session_terminal_emitted",
+            {"session_result_hash": "sha256:" + "a" * 64},
+        )
+        journal.append(
+            "evaluation_started",
+            {"evaluation_spec_hash": "sha256:" + "b" * 64},
+        )
+        journal.append("evaluation_completed", {"outcome": "resolved"})
+        terminal = journal.append("terminal_emitted", {"attempt_id": "attempt-001"})
+
+        self.assertEqual(journal.records[-1], terminal)
+        self.assertEqual(verify_event_chain(journal.records), ())
+        with self.assertRaisesRegex(ContractError, "terminal event already exists"):
+            journal.append("evaluation_completed", {"outcome": "changed"})
+
     def test_durable_journal_reopens_and_fails_closed_on_a_corrupt_tail(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "events.jsonl"

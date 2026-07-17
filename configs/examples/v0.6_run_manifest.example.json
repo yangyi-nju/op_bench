@@ -96,8 +96,8 @@
             "task-patch-scope"
         ]
     },
-    "cohort_id": "cohort:v1:c5e79021897aaa7f8cdd084ca5aabdd9242bbaa677bca703db8ba577c982d3e1",
-    "comparability_key": "sha256:c5e79021897aaa7f8cdd084ca5aabdd9242bbaa677bca703db8ba577c982d3e1",
+    "cohort_id": "cohort:v1:fde12413a9b4df4260a5d4ae0c6da23bcf7ee58d78c4fef0ef9df81db4bccb4e",
+    "comparability_key": "sha256:fde12413a9b4df4260a5d4ae0c6da23bcf7ee58d78c4fef0ef9df81db4bccb4e",
     "contract_type": "run_manifest",
     "created_at": "2026-07-17T10:00:00Z",
     "dataset": {
@@ -109,6 +109,14 @@
         "schema_version": "v1"
     },
     "evaluation_protocol": "evaluation-v1",
+    "evaluation": {
+        "contract_type": "content_identity",
+        "digest": "sha256:93a4bf18b30a97ca2f9d3b488c4db51e7d37a6987d2663c29efbd6ed8bade55e",
+        "digest_kind": "canonical_config",
+        "identifier": "evaluation-v1",
+        "identity_type": "evaluation",
+        "schema_version": "v1"
+    },
     "expected_attempts": [
         {
             "agent": {
@@ -119,9 +127,9 @@
                 "identity_type": "agent",
                 "schema_version": "v1"
             },
-            "attempt_id": "attempt:v1:ab7dfe6c7b329a2f02cd2ab53cab914a1b600f05c96d5ea06ee0d1576d74f960",
+            "attempt_id": "attempt:v1:3ffd82524c29e53e1078c55da7a3304c0eaafa741ed95a562c593067bb041d8f",
             "contract_type": "expected_attempt",
-            "effective_config_hash": "sha256:3e081108b9b18cf5f5f29c897b6743a4dfbb553eb321dc99078f5e2fca6e5e92",
+            "effective_config_hash": "sha256:a63b3e5d5a0bf9bc2c666b34812142ffd1922bd1b9620433bb5a9d8d868edf1a",
             "repeat": 1,
             "schema_version": "v1",
             "task": {
@@ -150,9 +158,9 @@
                 "identity_type": "agent",
                 "schema_version": "v1"
             },
-            "attempt_id": "attempt:v1:3a7d0cc8d66da9fd0a6248db15613956d6b1a6ce071c4ec2c3f6c3e5ccc4d58e",
+            "attempt_id": "attempt:v1:11bf1a8bd967f3fd5edaa7ac06558cc0273a213e9b54848f729f87e77ab93b24",
             "contract_type": "expected_attempt",
-            "effective_config_hash": "sha256:195af148c697518739227ef0006d90b584ab9e90680ff6cd0c5d201db37497a0",
+            "effective_config_hash": "sha256:1276f50cf2ffc3272c72082173325d7ac4011b32f0daab69027179006f482ced",
             "repeat": 1,
             "schema_version": "v1",
             "task": {
@@ -181,9 +189,9 @@
                 "identity_type": "agent",
                 "schema_version": "v1"
             },
-            "attempt_id": "attempt:v1:7e0240e8cbe006e18549079c9f5729240390cda60e5c3f2a6ec2b0cc2d7cb892",
+            "attempt_id": "attempt:v1:a0d4762759089c875f0d9e657ad05847b10655975c7e263d32186dc4fe494712",
             "contract_type": "expected_attempt",
-            "effective_config_hash": "sha256:7f7080ab248a57f09bb84906f2b4e8624db0010f99ad875c3fd1727badc6f01c",
+            "effective_config_hash": "sha256:372a435aee6dd0719635148f47f42cb21126ecdbc3d777623516d9302486a74e",
             "repeat": 1,
             "schema_version": "v1",
             "task": {
@@ -212,9 +220,9 @@
                 "identity_type": "agent",
                 "schema_version": "v1"
             },
-            "attempt_id": "attempt:v1:9f6cccf57a1e4332d093eee7906211bbde10712c65b91e115a53d039f391397b",
+            "attempt_id": "attempt:v1:596b74adc21863823d74187f8ad7c9c985d8f54c16c73571b131288f3a678053",
             "contract_type": "expected_attempt",
-            "effective_config_hash": "sha256:0d96243d26f4a5b5d42cc37fd8295d1fc85bdb6b11d45926d208ceca18aabac3",
+            "effective_config_hash": "sha256:93cdcb25ae6097785333ff0fcc45b2d24bd7184bce4ea4b6e5ab0086ffe62134",
             "repeat": 1,
             "schema_version": "v1",
             "task": {
@@ -243,9 +251,9 @@
                 "identity_type": "agent",
                 "schema_version": "v1"
             },
-            "attempt_id": "attempt:v1:e205607dcaca243e2f1468be27fd263453cfd9cce05a6f9bb0fed0a1c0cd32d0",
+            "attempt_id": "attempt:v1:4d74f25a58cba38b56bd63764a5e945448b76c998328e74c0e5571c1ad9000b4",
             "contract_type": "expected_attempt",
-            "effective_config_hash": "sha256:64f2a5494925015f1984c0694b92174d186e04b3cc8c32e34dc8e0ed54c2c6c6",
+            "effective_config_hash": "sha256:917cf2a84167f3d822651f9a895875890711d7f0b120ec07d7935da6c30ac735",
             "repeat": 1,
             "schema_version": "v1",
             "task": {
@@ -274,9 +282,9 @@
                 "identity_type": "agent",
                 "schema_version": "v1"
             },
-            "attempt_id": "attempt:v1:3a79bb2425df7192fa35f3e390ab6c76b66e7bb94904ea6a8df35ed5fed4f6df",
+            "attempt_id": "attempt:v1:77fca380e7418617ce8205fc77d22427e9737c8d2c5aea51b33d89ce275ce61b",
             "contract_type": "expected_attempt",
-            "effective_config_hash": "sha256:8c7304bf1e895bda0718b9f361ef702ae010df1354d4e2e8fd295721d35cc93f",
+            "effective_config_hash": "sha256:69a811cec74f2831ceec3fc96f3ffb5c35fb043d8c88e46f770ac9fc5b13f623",
             "repeat": 1,
             "schema_version": "v1",
             "task": {
@@ -305,9 +313,9 @@
                 "identity_type": "agent",
                 "schema_version": "v1"
             },
-            "attempt_id": "attempt:v1:ff3224ab6d411954a21e31f380cfbee3cce40dcc49f809ea587b431c94b82e1a",
+            "attempt_id": "attempt:v1:533f96713e4c8ae2e3e0e23851248bebdd12fbc324db22b24c286e28dc5c5e32",
             "contract_type": "expected_attempt",
-            "effective_config_hash": "sha256:9b7fed06875dfb979b242ee70bd3b8a2bd83ec884deb8ef9e1f771b56f27a8f0",
+            "effective_config_hash": "sha256:3c84b4ba2ad35dc2311ebe63f6d86814a84742e3eb20dc83149ea4357be0e206",
             "repeat": 1,
             "schema_version": "v1",
             "task": {
@@ -336,9 +344,9 @@
                 "identity_type": "agent",
                 "schema_version": "v1"
             },
-            "attempt_id": "attempt:v1:b77ac8ec0a40e11138ee8045ff0414e661e3fed68f6d4b8a6b40d936bdb5bff9",
+            "attempt_id": "attempt:v1:85fd5a9e6182f825a5c6374d0793ce1c4f4d7a6bf2b751a6ad6b96c8ea38bc42",
             "contract_type": "expected_attempt",
-            "effective_config_hash": "sha256:18644fa9f38269d18b4ac1066e7acbcea236f0f4f9bbd31671ec54eec547a210",
+            "effective_config_hash": "sha256:0ab02f12ac411ae184cf8c6b4ea19afa792405eb5ea6d1a07e6a4b11d15e00bb",
             "repeat": 1,
             "schema_version": "v1",
             "task": {
@@ -367,9 +375,9 @@
                 "identity_type": "agent",
                 "schema_version": "v1"
             },
-            "attempt_id": "attempt:v1:f66b8602badd4834230d577c26ac7ab9e3f4b108866e52eb8f3049c545dde144",
+            "attempt_id": "attempt:v1:775d98e4292c06961a5d7822098349bc818f5feab876f398ee038c0e06c82c17",
             "contract_type": "expected_attempt",
-            "effective_config_hash": "sha256:68dc0085cfdd07cd168f1c1297ee7c856ce01993cb25b02070568e7b3d60889d",
+            "effective_config_hash": "sha256:306a84563630eb08664f5f46e6eb1b63a2d3bbd35903b3399e04bdce96b1aed7",
             "repeat": 1,
             "schema_version": "v1",
             "task": {
@@ -398,9 +406,9 @@
                 "identity_type": "agent",
                 "schema_version": "v1"
             },
-            "attempt_id": "attempt:v1:4c5969854e6f06bb8f85b2b16988d71e3a5f4f8a4c2602ebe53269368f5b65d6",
+            "attempt_id": "attempt:v1:ac4255a9fb67bf45982f8cc96fba240f24b50c2dfc8b864cfe4cdc70cf22dd00",
             "contract_type": "expected_attempt",
-            "effective_config_hash": "sha256:b4871c09a2d63bfe01f7a4231e4ae5920198d598a2f1101cf27ccda8068024b4",
+            "effective_config_hash": "sha256:04154388b2006e0733c7a2c6b8550fc389fed1ec3ddeda37c6d90989707ec1a9",
             "repeat": 1,
             "schema_version": "v1",
             "task": {
@@ -429,9 +437,9 @@
                 "identity_type": "agent",
                 "schema_version": "v1"
             },
-            "attempt_id": "attempt:v1:cc830f18baa3ddf009adadcef05e4a9b99f2480963cedfaa8fc9eb9ebbec0ab8",
+            "attempt_id": "attempt:v1:21d649070d7b70760e4927177e239013b71ea60419b1178b96d724dc0b771ea0",
             "contract_type": "expected_attempt",
-            "effective_config_hash": "sha256:e6a4c25aaaaebf566cdea8d91d1334e581d446a31ed5e16e5a4f3c0848bff86a",
+            "effective_config_hash": "sha256:dc9d03064e9a70e6928df80b075774d44072d13775532d11bcc5b9149aec93a3",
             "repeat": 1,
             "schema_version": "v1",
             "task": {
@@ -460,9 +468,9 @@
                 "identity_type": "agent",
                 "schema_version": "v1"
             },
-            "attempt_id": "attempt:v1:ab46f0479726e5da97a34eaf24483a24963045e8643a6303702b7dc5aeb6cfcd",
+            "attempt_id": "attempt:v1:4699951365cf5051716466571117d3f316d5ace8cbbbe5cd70490b14d6b979a7",
             "contract_type": "expected_attempt",
-            "effective_config_hash": "sha256:64207635040e2d6f892c498b490a4b56fdd6d58736edf6299c8b45138f5d996c",
+            "effective_config_hash": "sha256:553f874ec76e38d8243de7abd5c09b3b2584f6ba24e09856651db184933fa004",
             "repeat": 1,
             "schema_version": "v1",
             "task": {
@@ -491,9 +499,9 @@
                 "identity_type": "agent",
                 "schema_version": "v1"
             },
-            "attempt_id": "attempt:v1:a8eb966e7d621dd68622f9bf658a3ca8ad4a55e0c184806ef4924e9bcebd5b7b",
+            "attempt_id": "attempt:v1:4e416b4fc4aca4584852f18339a578ebac8eb19dc3d70b81dab06f75f40e1447",
             "contract_type": "expected_attempt",
-            "effective_config_hash": "sha256:3d27601e763be3785b94dc0e7390f7bd5f32367aa22502dd2f9f0b5891b7a7d5",
+            "effective_config_hash": "sha256:556763f407cd957a2c87fe0419f3d3da8a037271abac64ca014360c242f89af3",
             "repeat": 1,
             "schema_version": "v1",
             "task": {
@@ -522,9 +530,9 @@
                 "identity_type": "agent",
                 "schema_version": "v1"
             },
-            "attempt_id": "attempt:v1:cb3c8c17d7733bd128e8e8b50de484ee2f7d6d0cf19a2f8c3801ca0cbb9468e0",
+            "attempt_id": "attempt:v1:514280c249ca1f90a5a0bd2a1cc005641e9a1ccf749011b9c4606179e30e4452",
             "contract_type": "expected_attempt",
-            "effective_config_hash": "sha256:a28775eaf5ceb8171a231aba921c310805fd15ab592a940280a52ebe8bfd81fa",
+            "effective_config_hash": "sha256:ff51dcd3df6aec87ab0c2ce411ca18ba79bcb3db79d4bb6df54ce401aab3a5f0",
             "repeat": 1,
             "schema_version": "v1",
             "task": {
@@ -553,9 +561,9 @@
                 "identity_type": "agent",
                 "schema_version": "v1"
             },
-            "attempt_id": "attempt:v1:7177c47a20fc7179b7d706d198cffd82c7980be92047c874cd49add4e74a969f",
+            "attempt_id": "attempt:v1:24f80536a26e3389723587e50db3f49b25ae2508a51ed462a95f85c7908957a1",
             "contract_type": "expected_attempt",
-            "effective_config_hash": "sha256:88fc426111dd4186fe6e3a0ddceb8ae52e05c13f3535e706d3b693a0057d3c66",
+            "effective_config_hash": "sha256:2be662b86e6229560df927d55eb731c1b1d022049b1e8790533d9ac545af12c0",
             "repeat": 1,
             "schema_version": "v1",
             "task": {
@@ -584,9 +592,9 @@
                 "identity_type": "agent",
                 "schema_version": "v1"
             },
-            "attempt_id": "attempt:v1:c113047ed90677bc91dc10012f5c0450a0f740edc5a008d4826d8c4949c1cea3",
+            "attempt_id": "attempt:v1:448a369aee2616cd5676d18e86fd290221866da13a0a7d543444739ed756d342",
             "contract_type": "expected_attempt",
-            "effective_config_hash": "sha256:a195ab6743ad53a1a5ba017010212af6a2589bbf953608b5eaa27852c741ffe8",
+            "effective_config_hash": "sha256:50f3564a2b22c55000da48a844ef0f1a3ce72637c9d5a296ed0fe0ce14de0376",
             "repeat": 1,
             "schema_version": "v1",
             "task": {
@@ -615,9 +623,9 @@
                 "identity_type": "agent",
                 "schema_version": "v1"
             },
-            "attempt_id": "attempt:v1:4782bc76b72ef090d8d881442cac2ae6727977408f94c42325266e0b96e6d09b",
+            "attempt_id": "attempt:v1:a35c0b9ffb776d5d66c296526a0999cc5ae95ac59f0d9d52dea3819b01e9bedf",
             "contract_type": "expected_attempt",
-            "effective_config_hash": "sha256:1769838416b8c02ddb66cdfa6769543b9d86e6aab6a2e51366d9e4f0dd7f0436",
+            "effective_config_hash": "sha256:6f7ab33dd2fa76151242cbb45a08003213b3a3f9e6f6839d1a93b82a3dced674",
             "repeat": 1,
             "schema_version": "v1",
             "task": {

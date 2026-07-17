@@ -34,6 +34,7 @@ def manifest(
     budget=None,
     retry=None,
     termination=None,
+    evaluation=None,
     scoring=None,
     repeat_count: int = 2,
     created_at: str = "2026-07-17T10:00:00Z",
@@ -58,6 +59,11 @@ def manifest(
             termination
             if termination is not None
             else identity("policy", "termination-v1", SHA_C)
+        ),
+        evaluation=(
+            evaluation
+            if evaluation is not None
+            else identity("evaluation", evaluation_protocol, SHA_B)
         ),
         scoring=scoring if scoring is not None else identity("scoring", "opbench-scoring-v1", SHA_A),
         repeat_count=repeat_count,
@@ -117,6 +123,20 @@ class RunManifestTests(unittest.TestCase):
         self.assertRegex(value.comparability_key, r"^sha256:[0-9a-f]{64}$")
         self.assertRegex(value.cohort_id, r"^cohort:v1:[0-9a-f]{64}$")
         self.assertEqual(len(value.expected_attempts), 2)
+
+    def test_exact_evaluation_identity_is_frozen_and_changes_attempt_identity(self) -> None:
+        base = manifest()
+        changed = manifest(
+            evaluation=replace(base.evaluation, digest=SHA_C),
+        )
+
+        self.assertEqual(base.evaluation.identity_type, "evaluation")
+        self.assertEqual(base.evaluation.identifier, base.evaluation_protocol)
+        self.assertNotEqual(changed.comparability_key, base.comparability_key)
+        self.assertNotEqual(
+            changed.expected_attempts[0].attempt_id,
+            base.expected_attempts[0].attempt_id,
+        )
 
     def test_public_comparability_and_cohort_apis_rebuild_manifest_identity(self) -> None:
         value = manifest()

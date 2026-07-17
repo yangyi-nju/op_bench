@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+from dataclasses import replace
 import unittest
 
 from op_bench.runtime.contracts import (
@@ -237,6 +238,32 @@ class RuntimeContractNegativeTests(unittest.TestCase):
 
         with self.assertRaisesRegex(ContractError, "writable_paths: duplicate value 'torch/'"):
             CapabilityPolicy.from_dict(encoded)
+
+    def test_full_task_rejects_selector_in_both_scoring_groups(self) -> None:
+        with self.assertRaisesRegex(
+            ContractError,
+            "fail_to_pass and pass_to_pass must be disjoint",
+        ):
+            replace(
+                full_task_spec(),
+                pass_to_pass=("hidden::f2p",),
+            )
+
+    def test_full_task_rejects_duplicate_selector_ids_across_visibilities(self) -> None:
+        task = full_task_spec()
+        conflicting_hidden = replace(
+            task.hidden_tests[0],
+            selector_id=task.public_tests[0].selector_id,
+        )
+
+        with self.assertRaisesRegex(
+            ContractError,
+            "duplicate selector_id across public_tests and hidden_tests",
+        ):
+            replace(
+                task,
+                hidden_tests=(task.hidden_tests[0], conflicting_hidden),
+            )
 
     def test_direct_constructor_is_also_validated(self) -> None:
         with self.assertRaisesRegex(ContractError, "wall_clock_ms: must be >= 1"):

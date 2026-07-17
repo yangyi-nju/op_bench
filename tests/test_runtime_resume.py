@@ -8,19 +8,21 @@ import threading
 import unittest
 from unittest import mock
 
-from op_bench.runtime.contracts import SessionResult
+from op_bench.runtime.contracts import EvaluationResultV06, SessionResult
 from op_bench.runtime.resume import (
     AttemptLedger,
     AttemptLedgerRecord,
     ResumeDecision,
 )
+from op_bench.runtime.session import termination_attribution
 from op_bench.runtime.validation import ContractError
 from tests.test_runtime_manifest import manifest
-from tests.test_runtime_wire_contracts import session_result
+from tests.test_runtime_wire_contracts import evaluation_result, session_result
 
 
 ATTEMPT_A = "attempt:v1:" + "a" * 64
 ATTEMPT_B = "attempt:v1:" + "b" * 64
+EVALUATION_SPEC_HASH = "sha256:" + "e" * 64
 
 
 def result(
@@ -38,6 +40,60 @@ def result(
     )
 
 
+def evaluated(
+    session: SessionResult,
+    *,
+    attempt_validity: str | None = None,
+) -> EvaluationResultV06:
+    attribution = termination_attribution(session.terminal_reason)
+    validity = attempt_validity or attribution.attempt_validity
+    if validity == "valid":
+        outcome = "no_patch" if session.final_patch is None else "resolved"
+        invalid_reason = None
+    else:
+        outcome = (
+            "not_evaluated"
+            if attribution.attempt_validity == "infrastructure_invalid"
+            else "evaluation_error"
+        )
+        invalid_reason = (
+            f"session_{session.terminal_reason}"
+            if attribution.attempt_validity == "infrastructure_invalid"
+            else "fixture_evaluation_infrastructure_error"
+        )
+    return replace(
+        evaluation_result(),
+        session_id=session.session_id,
+        attempt_id=session.attempt_id,
+        attempt_validity=validity,
+        agent_terminal=attribution.agent_terminal,
+        evaluation_outcome=outcome,
+        invalid_reason=invalid_reason,
+        patch=session.final_patch,
+    )
+
+
+def append_evaluated(
+    ledger: AttemptLedger,
+    *,
+    session_result: SessionResult,
+    retry_index: int,
+    recorded_at_ms: int,
+    attempt_validity: str | None = None,
+    evaluation_spec_hash: str = EVALUATION_SPEC_HASH,
+) -> AttemptLedgerRecord:
+    return ledger.append(
+        session_result=session_result,
+        evaluation_result=evaluated(
+            session_result,
+            attempt_validity=attempt_validity,
+        ),
+        evaluation_spec_hash=evaluation_spec_hash,
+        retry_index=retry_index,
+        recorded_at_ms=recorded_at_ms,
+    )
+
+
 class AttemptLedgerTests(unittest.TestCase):
     def test_append_is_fsynced_canonical_idempotent_and_strictly_monotonic(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -46,7 +102,8 @@ class AttemptLedgerTests(unittest.TestCase):
             first_result = result()
 
             with mock.patch("op_bench.runtime.resume.os.fsync") as fsync:
-                first = ledger.append(
+                first = append_evaluated(
+                    ledger,
                     session_result=first_result,
                     attempt_validity="infrastructure_invalid",
                     retry_index=1,
@@ -60,7 +117,8 @@ class AttemptLedgerTests(unittest.TestCase):
                 + "\n",
             )
 
-            duplicate = ledger.append(
+            duplicate = append_evaluated(
+                ledger,
                 session_result=first_result,
                 attempt_validity="infrastructure_invalid",
                 retry_index=1,
@@ -70,14 +128,27 @@ class AttemptLedgerTests(unittest.TestCase):
             self.assertEqual(len(path.read_text(encoding="utf-8").splitlines()), 1)
 
             with self.assertRaisesRegex(ContractError, "session_id.*conflicting"):
-                ledger.append(
+                append_evaluated(
+                    ledger,
                     session_result=first_result,
                     attempt_validity="infrastructure_invalid",
                     retry_index=1,
                     recorded_at_ms=1_001,
                 )
-            with self.assertRaisesRegex(ContractError, "retry_index.*expected 2"):
+            with self.assertRaisesRegex(ContractError, "session attribution"):
                 ledger.append(
+                    session_result=first_result,
+                    evaluation_result=replace(
+                        evaluated(first_result),
+                        invalid_reason="different_evaluation_failure",
+                    ),
+                    evaluation_spec_hash=EVALUATION_SPEC_HASH,
+                    retry_index=1,
+                    recorded_at_ms=1_000,
+                )
+            with self.assertRaisesRegex(ContractError, "retry_index.*expected 2"):
+                append_evaluated(
+                    ledger,
                     session_result=result(session_id="session-retry-3"),
                     attempt_validity="infrastructure_invalid",
                     retry_index=3,
@@ -88,7 +159,8 @@ class AttemptLedgerTests(unittest.TestCase):
                 session_id="session-retry-2",
                 terminal_reason="agent_finished",
             )
-            valid = ledger.append(
+            valid = append_evaluated(
+                ledger,
                 session_result=valid_result,
                 attempt_validity="valid",
                 retry_index=2,
@@ -98,7 +170,8 @@ class AttemptLedgerTests(unittest.TestCase):
             self.assertEqual(len(ledger.records(ATTEMPT_A)), 2)
 
             with self.assertRaisesRegex(ContractError, "valid result already exists"):
-                ledger.append(
+                append_evaluated(
+                    ledger,
                     session_result=result(session_id="session-retry-3"),
                     attempt_validity="infrastructure_invalid",
                     retry_index=3,
@@ -127,8 +200,9 @@ class AttemptLedgerTests(unittest.TestCase):
             )
 
             invalid = AttemptLedger(root / "invalid.jsonl")
-            invalid.append(
-                session_result=result(),
+            append_evaluated(
+                invalid,
+                session_result=result(terminal_reason="agent_finished"),
                 attempt_validity="infrastructure_invalid",
                 retry_index=1,
                 recorded_at_ms=1_000,
@@ -141,7 +215,8 @@ class AttemptLedgerTests(unittest.TestCase):
             self.assertEqual((root / "invalid.jsonl").read_bytes(), before)
 
             valid = AttemptLedger(root / "valid.jsonl")
-            valid.append(
+            append_evaluated(
+                valid,
                 session_result=result(terminal_reason="agent_finished"),
                 attempt_validity="valid",
                 retry_index=1,
@@ -158,17 +233,19 @@ class AttemptLedgerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "attempts.jsonl"
             ledger = AttemptLedger(path)
-            for retry, reason in ((1, "provider_error"), (2, "runtime_error")):
-                ledger.append(
+            for retry in (1, 2):
+                append_evaluated(
+                    ledger,
                     session_result=result(
                         session_id=f"session-retry-{retry}",
-                        terminal_reason=reason,
+                        terminal_reason="agent_finished",
                     ),
                     attempt_validity="infrastructure_invalid",
                     retry_index=retry,
                     recorded_at_ms=1_000 + retry,
                 )
-            final = ledger.append(
+            final = append_evaluated(
+                ledger,
                 session_result=result(
                     session_id="session-retry-3",
                     terminal_reason="agent_finished",
@@ -187,15 +264,32 @@ class AttemptLedgerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             ledger = AttemptLedger(root / "attempts.jsonl")
-            with self.assertRaisesRegex(ContractError, "attempt_validity.*terminal_reason"):
+            session = result(terminal_reason="agent_finished")
+            with self.assertRaisesRegex(ContractError, "agent_terminal.*SessionResult"):
                 ledger.append(
-                    session_result=result(terminal_reason="agent_finished"),
-                    attempt_validity="infrastructure_invalid",
+                    session_result=session,
+                    evaluation_result=replace(evaluated(session), agent_terminal=None),
+                    evaluation_spec_hash=EVALUATION_SPEC_HASH,
+                    retry_index=1,
+                    recorded_at_ms=1_000,
+                )
+            with self.assertRaisesRegex(
+                ContractError,
+                "patch.*SessionResult.*EvaluationResult",
+            ):
+                ledger.append(
+                    session_result=session,
+                    evaluation_result=replace(
+                        evaluated(session),
+                        patch=evaluation_result().patch,
+                    ),
+                    evaluation_spec_hash=EVALUATION_SPEC_HASH,
                     retry_index=1,
                     recorded_at_ms=1_000,
                 )
             with self.assertRaisesRegex(ContractError, "attempt_id"):
-                ledger.append(
+                append_evaluated(
+                    ledger,
                     session_result=result(attempt_id="not-an-attempt"),
                     attempt_validity="infrastructure_invalid",
                     retry_index=1,
@@ -218,7 +312,8 @@ class AttemptLedgerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "attempts.jsonl"
             ledger = AttemptLedger(path)
-            ledger.append(
+            append_evaluated(
+                ledger,
                 session_result=result(),
                 attempt_validity="infrastructure_invalid",
                 retry_index=1,
@@ -242,7 +337,8 @@ class AttemptLedgerTests(unittest.TestCase):
                 barrier.wait()
                 try:
                     successes.append(
-                        ledger.append(
+                        append_evaluated(
+                            ledger,
                             session_result=result(session_id=session_id),
                             attempt_validity="infrastructure_invalid",
                             retry_index=1,
@@ -274,7 +370,8 @@ class AttemptLedgerTests(unittest.TestCase):
             left = AttemptLedger(path)
             right = AttemptLedger(path)
             unseen = AttemptLedger(path)
-            left.append(
+            append_evaluated(
+                left,
                 session_result=result(terminal_reason="agent_finished"),
                 attempt_validity="valid",
                 retry_index=1,
@@ -294,7 +391,8 @@ class AttemptLedgerTests(unittest.TestCase):
             with self.assertRaisesRegex(ContractError, "closed"):
                 ledger.records()
             with self.assertRaisesRegex(ContractError, "closed"):
-                ledger.append(
+                append_evaluated(
+                    ledger,
                     session_result=result(),
                     attempt_validity="infrastructure_invalid",
                     retry_index=1,
@@ -334,7 +432,8 @@ class AttemptLedgerTests(unittest.TestCase):
                     side_effect=OSError("fixture rollback failure"),
                 ),
             ):
-                record = committed.append(
+                record = append_evaluated(
+                    committed,
                     session_result=result(),
                     attempt_validity="infrastructure_invalid",
                     retry_index=1,
@@ -364,14 +463,16 @@ class AttemptLedgerTests(unittest.TestCase):
                 ),
             ):
                 with self.assertRaisesRegex(ContractError, "uncertain|poison"):
-                    poisoned.append(
+                    append_evaluated(
+                        poisoned,
                         session_result=result(session_id="session-poisoned-1"),
                         attempt_validity="infrastructure_invalid",
                         retry_index=1,
                         recorded_at_ms=1_000,
                     )
             with self.assertRaisesRegex(ContractError, "poison"):
-                poisoned.append(
+                append_evaluated(
+                    poisoned,
                     session_result=result(session_id="session-poisoned-2"),
                     attempt_validity="infrastructure_invalid",
                     retry_index=1,
@@ -390,7 +491,8 @@ class AttemptLedgerTests(unittest.TestCase):
 
             bound.rename(moved)
             bound.symlink_to(outside, target_is_directory=True)
-            ledger.append(
+            append_evaluated(
+                ledger,
                 session_result=result(),
                 attempt_validity="infrastructure_invalid",
                 retry_index=1,
@@ -429,6 +531,9 @@ class AttemptLedgerTests(unittest.TestCase):
             attempt_validity="infrastructure_invalid",
             session_result=result(),
             session_result_hash=result().content_hash,
+            evaluation_result=evaluated(result()),
+            evaluation_result_hash=evaluated(result()).content_hash,
+            evaluation_spec_hash=EVALUATION_SPEC_HASH,
             recorded_at_ms=1_000,
         )
         self.assertEqual(AttemptLedgerRecord.from_dict(record.to_dict()), record)
@@ -442,6 +547,34 @@ class AttemptLedgerTests(unittest.TestCase):
         changed_session["session_id"] = "other-session"
         with self.assertRaisesRegex(ContractError, "session_id.*SessionResult"):
             AttemptLedgerRecord.from_dict(changed_session)
+
+        changed_evaluation_hash = record.to_dict()
+        changed_evaluation_hash["evaluation_result_hash"] = "sha256:" + "f" * 64
+        with self.assertRaisesRegex(ContractError, "evaluation_result_hash"):
+            AttemptLedgerRecord.from_dict(changed_evaluation_hash)
+
+        changed_spec_hash = record.to_dict()
+        changed_spec_hash["evaluation_spec_hash"] = "not-a-hash"
+        with self.assertRaisesRegex(ContractError, "evaluation_spec_hash"):
+            AttemptLedgerRecord.from_dict(changed_spec_hash)
+
+    def test_infrastructure_session_cannot_be_recorded_as_valid(self) -> None:
+        session = result(terminal_reason="platform_error")
+        fabricated = evaluated(session, attempt_validity="valid")
+
+        with self.assertRaisesRegex(ContractError, "session attribution"):
+            AttemptLedgerRecord(
+                attempt_id=ATTEMPT_A,
+                session_id=session.session_id,
+                retry_index=1,
+                attempt_validity="valid",
+                session_result=session,
+                session_result_hash=session.content_hash,
+                evaluation_result=fabricated,
+                evaluation_result_hash=fabricated.content_hash,
+                evaluation_spec_hash=EVALUATION_SPEC_HASH,
+                recorded_at_ms=1_000,
+            )
 
 
 if __name__ == "__main__":

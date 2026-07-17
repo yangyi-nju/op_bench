@@ -93,6 +93,7 @@ class RunManifest(Contract):
     action_protocol: str
     evaluation_protocol: str
     scoring_protocol: str
+    evaluation: ContentIdentity
     dataset: ContentIdentity
     tasks: tuple[FullTaskSpec, ...]
     task_views: tuple[AgentTaskView, ...]
@@ -117,6 +118,12 @@ class RunManifest(Contract):
             ("scoring_protocol", self.scoring_protocol),
         ):
             require_str(value, path)
+        _require_instance(self.evaluation, ContentIdentity, "evaluation")
+        _require_identity_type(self.evaluation, "evaluation", "evaluation")
+        if self.evaluation.identifier != self.evaluation_protocol:
+            raise ContractError(
+                "evaluation: identifier must match evaluation_protocol"
+            )
         _require_instance(self.dataset, ContentIdentity, "dataset")
         _require_identity_type(self.dataset, "dataset", "dataset")
         _validate_nonempty_contracts(
@@ -197,6 +204,9 @@ class RunManifest(Contract):
             action_protocol=require_str(data["action_protocol"], "action_protocol"),
             evaluation_protocol=require_str(data["evaluation_protocol"], "evaluation_protocol"),
             scoring_protocol=require_str(data["scoring_protocol"], "scoring_protocol"),
+            evaluation=ContentIdentity.from_dict(
+                data["evaluation"], path="run_manifest.evaluation"
+            ),
             dataset=ContentIdentity.from_dict(data["dataset"], path="run_manifest.dataset"),
             tasks=_parse_contract_tuple(data["tasks"], FullTaskSpec, "tasks"),
             task_views=_parse_contract_tuple(data["task_views"], AgentTaskView, "task_views"),
@@ -235,6 +245,7 @@ def build_run_manifest(
     action_protocol: str,
     evaluation_protocol: str,
     scoring_protocol: str,
+    evaluation: ContentIdentity,
     dataset: ContentIdentity,
     tasks: tuple[FullTaskSpec, ...],
     task_views: tuple[AgentTaskView, ...] | None = None,
@@ -256,6 +267,10 @@ def build_run_manifest(
         require_str(value, path)
     _require_instance(dataset, ContentIdentity, "dataset")
     _require_identity_type(dataset, "dataset", "dataset")
+    _require_instance(evaluation, ContentIdentity, "evaluation")
+    _require_identity_type(evaluation, "evaluation", "evaluation")
+    if evaluation.identifier != evaluation_protocol:
+        raise ContractError("evaluation: identifier must match evaluation_protocol")
     _validate_nonempty_contracts(
         tasks,
         FullTaskSpec,
@@ -306,6 +321,7 @@ def build_run_manifest(
         "action_protocol": action_protocol,
         "evaluation_protocol": evaluation_protocol,
         "scoring_protocol": scoring_protocol,
+        "evaluation": evaluation,
         "dataset": dataset,
         "tasks": sorted_tasks,
         "task_views": sorted_task_views,
@@ -370,6 +386,7 @@ def comparability_key(manifest: RunManifest) -> str:
         action_protocol=manifest.action_protocol,
         evaluation_protocol=manifest.evaluation_protocol,
         scoring_protocol=manifest.scoring_protocol,
+        evaluation=manifest.evaluation,
         dataset=manifest.dataset,
         tasks=manifest.tasks,
         task_views=manifest.task_views,
@@ -391,6 +408,7 @@ def _comparability_key_from_parts(
     action_protocol: str,
     evaluation_protocol: str,
     scoring_protocol: str,
+    evaluation: ContentIdentity,
     dataset: ContentIdentity,
     tasks: tuple[FullTaskSpec, ...],
     task_views: tuple[AgentTaskView, ...],
@@ -412,6 +430,7 @@ def _comparability_key_from_parts(
             "action_protocol": action_protocol,
             "evaluation_protocol": evaluation_protocol,
             "scoring_protocol": scoring_protocol,
+            "evaluation": evaluation.to_dict(),
             "dataset": dataset.to_dict(),
             "tasks": [task.to_dict() for task in tasks],
             "task_views": [task_view.to_dict() for task_view in task_views],
@@ -446,6 +465,7 @@ def _expected_attempts_for(manifest: RunManifest) -> tuple[ExpectedAttempt, ...]
                     "action_protocol": manifest.action_protocol,
                     "evaluation_protocol": manifest.evaluation_protocol,
                     "scoring_protocol": manifest.scoring_protocol,
+                    "evaluation": manifest.evaluation.to_dict(),
                     "task": task.to_dict(),
                     "task_view": task_view.to_dict(),
                     "agent": agent.to_dict(),

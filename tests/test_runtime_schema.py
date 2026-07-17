@@ -149,6 +149,20 @@ class RuntimeSchemaTests(unittest.TestCase):
                 with self.assertRaises(SchemaValidationError):
                     validate_schema_instance(encoded, schema, definition=definition)
 
+    def test_schema_accepts_nullable_patch_and_agent_terminal_axes(self) -> None:
+        schema = load_runtime_schema(SCHEMA_PATH)
+        spec = evaluation_spec().to_dict()
+        spec["frozen_patch"] = None
+        validate_schema_instance(spec, schema, definition="evaluation_spec")
+
+        result = evaluation_result().to_dict()
+        result["attempt_validity"] = "infrastructure_invalid"
+        result["agent_terminal"] = None
+        result["evaluation_outcome"] = "not_evaluated"
+        result["invalid_reason"] = "session_platform_error"
+        result["patch"] = None
+        validate_schema_instance(result, schema, definition="evaluation_result")
+
     def test_validator_rejects_unsupported_schema_keywords(self) -> None:
         schema = {"type": "string", "format": "hostname"}
 

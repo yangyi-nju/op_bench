@@ -13,13 +13,52 @@ from op_bench.runtime.adapters import (
 )
 from op_bench.runtime.artifacts import ArtifactReference, PublicArtifactStore
 from op_bench.runtime.events import EventJournal, verify_action_pairing, verify_event_chain
+from op_bench.runtime.evaluation import (
+    AttemptEvaluationCoordinator,
+    CompletedEvaluation,
+    EvaluationInfrastructureError,
+    FreshEvaluationBackend,
+    FreshEvaluator,
+    PrivateEvaluationEvidence,
+    SelectorExecution,
+    StrictPatchApplyError,
+)
+from op_bench.runtime.local_evaluation import (
+    EvaluationOnlyTestAsset,
+    LocalGitEvaluationBackend,
+    LocalGitSource,
+    git_archive_source_identity,
+)
+from op_bench.runtime.integrity import (
+    persist_integrity_reports,
+    selected_attempts_from_ledger,
+    verify_run_artifacts,
+)
 from op_bench.runtime.session import (
     AttemptSession,
     SessionStateError,
     TerminationAttribution,
     termination_attribution,
 )
-from op_bench.runtime.resume import AttemptLedger, AttemptLedgerRecord, ResumeDecision
+from op_bench.runtime.summary import (
+    SelectedAttempt,
+    rebuild_results,
+    rebuild_summary,
+    result_record,
+    write_rebuilt_outputs,
+)
+from op_bench.runtime.resume import (
+    AttemptLedger,
+    AttemptLedgerRecord,
+    ResumeDecision,
+    parse_attempt_ledger,
+)
+from op_bench.runtime.run_artifacts import (
+    AttemptArtifactIndex,
+    AttemptArtifactStore,
+    EvaluationArtifactHashes,
+    retry_directory_name,
+)
 from op_bench.runtime.task_view import (
     AgentLaunchInput,
     TaskViewPolicy,
@@ -39,6 +78,9 @@ from op_bench.runtime.workspace import (
 
 __all__ = [
     "AgentLaunchInput",
+    "AttemptArtifactIndex",
+    "AttemptArtifactStore",
+    "AttemptEvaluationCoordinator",
     "AttemptLedger",
     "AttemptLedgerRecord",
     "AttemptSession",
@@ -50,24 +92,46 @@ __all__ = [
     "CanonicalActionService",
     "CommandExecution",
     "ContractError",
+    "CompletedEvaluation",
+    "EvaluationInfrastructureError",
+    "EvaluationArtifactHashes",
+    "EvaluationOnlyTestAsset",
     "EventJournal",
+    "FreshEvaluationBackend",
+    "FreshEvaluator",
     "FrozenPatch",
     "PatchArtifact",
+    "persist_integrity_reports",
+    "PrivateEvaluationEvidence",
     "PublicArtifactStore",
     "RegisteredTest",
     "ResumeDecision",
     "SessionStateError",
+    "SelectorExecution",
+    "SelectedAttempt",
+    "StrictPatchApplyError",
     "TaskViewPolicy",
     "TerminationAttribution",
     "WorkspacePolicy",
+    "LocalGitEvaluationBackend",
+    "LocalGitSource",
     "agent_task_view_identity",
     "assert_patch_identity_handoff",
     "assert_public_artifact_safe",
     "build_patch_artifact",
     "canonical_json",
     "canonical_sha256",
+    "git_archive_source_identity",
     "project_agent_task_view",
+    "parse_attempt_ledger",
+    "rebuild_results",
+    "rebuild_summary",
+    "retry_directory_name",
+    "result_record",
+    "selected_attempts_from_ledger",
     "termination_attribution",
     "verify_action_pairing",
     "verify_event_chain",
+    "verify_run_artifacts",
+    "write_rebuilt_outputs",
 ]

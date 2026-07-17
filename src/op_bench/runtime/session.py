@@ -454,7 +454,7 @@ class AttemptSession:
                     ended_at_ms=self._now(),
                 )
             self._append_lifecycle(
-                "terminal_emitted",
+                "session_terminal_emitted",
                 {
                     "attempt_id": self.spec.attempt_id,
                     "terminal_reason": reason,
@@ -464,7 +464,7 @@ class AttemptSession:
                         if result.final_patch is None
                         else result.final_patch.to_dict()
                     ),
-                    "attempt_validity": termination_attribution(reason).attempt_validity,
+                    "session_validity": termination_attribution(reason).attempt_validity,
                 },
             )
             with self._condition:

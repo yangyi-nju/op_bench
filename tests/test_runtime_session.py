@@ -170,7 +170,7 @@ class AttemptSessionTests(unittest.TestCase):
         self.assertEqual(verify_event_chain(self.session.events), ())
         self.assertEqual(verify_action_pairing(self.session.events), ())
         self.assertEqual(
-            [event.event_type for event in self.session.events].count("terminal_emitted"),
+            [event.event_type for event in self.session.events].count("session_terminal_emitted"),
             1,
         )
         self.assertEqual(
@@ -194,7 +194,7 @@ class AttemptSessionTests(unittest.TestCase):
         self.assertEqual(result.final_patch.to_dict(), finish.data["patch"])
         self.assertIs(self.session.finalize(), result)
         self.assertEqual(
-            [event.event_type for event in self.session.events].count("terminal_emitted"),
+            [event.event_type for event in self.session.events].count("session_terminal_emitted"),
             1,
         )
 
@@ -316,7 +316,7 @@ class AttemptSessionTests(unittest.TestCase):
         self.assertEqual(results[0].terminal_reason, "platform_error")
         self.assertEqual(session.state, "terminal")
         self.assertEqual(
-            [event.event_type for event in session.events].count("terminal_emitted"),
+            [event.event_type for event in session.events].count("session_terminal_emitted"),
             1,
         )
 
@@ -336,7 +336,7 @@ class AttemptSessionTests(unittest.TestCase):
         failed = [False]
 
         def fail_once(event_type, payload):
-            if event_type == "terminal_emitted" and not failed[0]:
+            if event_type == "session_terminal_emitted" and not failed[0]:
                 failed[0] = True
                 raise ContractError("fixture persistence failure")
             return original(event_type, payload)
@@ -353,7 +353,7 @@ class AttemptSessionTests(unittest.TestCase):
         self.assertEqual(results[0].terminal_reason, "platform_error")
         self.assertEqual(freeze_calls, [1])
         self.assertEqual(
-            [event.event_type for event in session.events].count("terminal_emitted"),
+            [event.event_type for event in session.events].count("session_terminal_emitted"),
             1,
         )
 
@@ -388,7 +388,7 @@ class AttemptSessionTests(unittest.TestCase):
         self.assertEqual(result.terminal_reason, "agent_finished")
         self.assertEqual(session.state, "terminal")
         self.assertEqual(
-            [event.event_type for event in session.events].count("terminal_emitted"),
+            [event.event_type for event in session.events].count("session_terminal_emitted"),
             1,
         )
 

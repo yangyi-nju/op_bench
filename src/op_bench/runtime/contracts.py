@@ -107,6 +107,7 @@ EVENT_TYPES = (
     "patch_freeze_started",
     "patch_freeze_completed",
     "patch_freeze_failed",
+    "session_terminal_emitted",
     "evaluation_started",
     "evaluation_completed",
     "terminal_emitted",
@@ -489,8 +490,17 @@ class FullTaskSpec(Contract):
         for selector in self.hidden_tests:
             if selector.visibility not in {"hidden", "evaluation_only"}:
                 raise ContractError("hidden_tests: selector is not hidden or evaluation_only")
+        selector_ids: set[str] = set()
+        for selector in (*self.public_tests, *self.hidden_tests):
+            if selector.selector_id in selector_ids:
+                raise ContractError(
+                    "duplicate selector_id across public_tests and hidden_tests: "
+                    f"{selector.selector_id!r}"
+                )
+            selector_ids.add(selector.selector_id)
         _validate_str_values(self.fail_to_pass, "fail_to_pass", allow_empty=False)
         _validate_str_values(self.pass_to_pass, "pass_to_pass", allow_empty=False)
+        _validate_disjoint_scoring_groups(self.fail_to_pass, self.pass_to_pass)
         _validate_str_values(self.patch_scope, "patch_scope", allow_empty=False)
         known_selectors = {item.selector_id for item in (*self.public_tests, *self.hidden_tests)}
         for path, selectors in (("fail_to_pass", self.fail_to_pass), ("pass_to_pass", self.pass_to_pass)):
@@ -887,13 +897,14 @@ class EvaluationSpec(Contract):
     attempt_id: str
     task: ContentIdentity
     source: ContentIdentity
-    frozen_patch: ContentIdentity
+    frozen_patch: ContentIdentity | None
     hidden_test_asset: ContentIdentity
     public_tests: tuple[TestSelector, ...]
     fail_to_pass: tuple[str, ...]
     pass_to_pass: tuple[str, ...]
     runtime: RuntimeProfile
     timeout_ms: int
+    evaluation: ContentIdentity
     scoring: ContentIdentity
 
     def __post_init__(self) -> None:
@@ -902,15 +913,27 @@ class EvaluationSpec(Contract):
         for value, path, identity_type in (
             (self.task, "task", "task"),
             (self.source, "source", "source"),
-            (self.frozen_patch, "frozen_patch", "patch"),
             (self.hidden_test_asset, "hidden_test_asset", "test"),
+            (self.evaluation, "evaluation", "evaluation"),
             (self.scoring, "scoring", "scoring"),
         ):
             _require_instance(value, ContentIdentity, path)
             _require_identity_type(value, identity_type, path)
+        if self.frozen_patch is not None:
+            _require_instance(self.frozen_patch, ContentIdentity, "frozen_patch")
+            _require_identity_type(self.frozen_patch, "patch", "frozen_patch")
         _validate_contract_values(self.public_tests, TestSelector, "public_tests")
+        selector_ids: set[str] = set()
+        for selector in self.public_tests:
+            if selector.selector_id in selector_ids:
+                raise ContractError(
+                    "public_tests: duplicate selector_id "
+                    f"{selector.selector_id!r}"
+                )
+            selector_ids.add(selector.selector_id)
         _validate_str_values(self.fail_to_pass, "fail_to_pass", allow_empty=False)
         _validate_str_values(self.pass_to_pass, "pass_to_pass", allow_empty=False)
+        _validate_disjoint_scoring_groups(self.fail_to_pass, self.pass_to_pass)
         _require_instance(self.runtime, RuntimeProfile, "runtime")
         require_int(self.timeout_ms, "timeout_ms", minimum=1)
 
@@ -927,8 +950,12 @@ class EvaluationSpec(Contract):
             attempt_id=require_str(data["attempt_id"], "attempt_id"),
             task=ContentIdentity.from_dict(data["task"], path="evaluation_spec.task"),
             source=ContentIdentity.from_dict(data["source"], path="evaluation_spec.source"),
-            frozen_patch=ContentIdentity.from_dict(
-                data["frozen_patch"], path="evaluation_spec.frozen_patch"
+            frozen_patch=(
+                None
+                if data["frozen_patch"] is None
+                else ContentIdentity.from_dict(
+                    data["frozen_patch"], path="evaluation_spec.frozen_patch"
+                )
             ),
             hidden_test_asset=ContentIdentity.from_dict(
                 data["hidden_test_asset"], path="evaluation_spec.hidden_test_asset"
@@ -938,6 +965,9 @@ class EvaluationSpec(Contract):
             pass_to_pass=require_str_tuple(data["pass_to_pass"], "pass_to_pass", allow_empty=False),
             runtime=RuntimeProfile.from_dict(data["runtime"], path="evaluation_spec.runtime"),
             timeout_ms=require_int(data["timeout_ms"], "timeout_ms", minimum=1),
+            evaluation=ContentIdentity.from_dict(
+                data["evaluation"], path="evaluation_spec.evaluation"
+            ),
             scoring=ContentIdentity.from_dict(data["scoring"], path="evaluation_spec.scoring"),
         )
 
@@ -1030,19 +1060,22 @@ class EvaluationResultV06(Contract):
     session_id: str
     attempt_id: str
     attempt_validity: str
-    agent_terminal: str
+    agent_terminal: str | None
     evaluation_outcome: str
     invalid_reason: str | None
     patch: ContentIdentity | None
     fail_to_pass: TestExecutionSummary
     pass_to_pass: TestExecutionSummary
     duration_ms: int
+    evaluation: ContentIdentity
+    scoring: ContentIdentity
 
     def __post_init__(self) -> None:
         require_str(self.session_id, "session_id")
         require_str(self.attempt_id, "attempt_id")
         require_enum(self.attempt_validity, "attempt_validity", ATTEMPT_VALIDITIES)
-        require_enum(self.agent_terminal, "agent_terminal", AGENT_TERMINALS)
+        if self.agent_terminal is not None:
+            require_enum(self.agent_terminal, "agent_terminal", AGENT_TERMINALS)
         require_enum(self.evaluation_outcome, "evaluation_outcome", EVALUATION_OUTCOMES)
         if self.attempt_validity == "infrastructure_invalid":
             if self.invalid_reason is None:
@@ -1056,6 +1089,12 @@ class EvaluationResultV06(Contract):
         _require_instance(self.fail_to_pass, TestExecutionSummary, "fail_to_pass")
         _require_instance(self.pass_to_pass, TestExecutionSummary, "pass_to_pass")
         require_int(self.duration_ms, "duration_ms", minimum=0)
+        for value, path, identity_type in (
+            (self.evaluation, "evaluation", "evaluation"),
+            (self.scoring, "scoring", "scoring"),
+        ):
+            _require_instance(value, ContentIdentity, path)
+            _require_identity_type(value, identity_type, path)
 
     @classmethod
     def from_dict(cls, value: object, *, path: str | None = None) -> "EvaluationResultV06":
@@ -1073,13 +1112,18 @@ class EvaluationResultV06(Contract):
         invalid_reason = data["invalid_reason"]
         if invalid_reason is not None:
             invalid_reason = require_str(invalid_reason, "invalid_reason")
+        agent_terminal = data["agent_terminal"]
+        if agent_terminal is not None:
+            agent_terminal = require_enum(
+                agent_terminal, "agent_terminal", AGENT_TERMINALS
+            )
         return cls(
             session_id=require_str(data["session_id"], "session_id"),
             attempt_id=require_str(data["attempt_id"], "attempt_id"),
             attempt_validity=require_enum(
                 data["attempt_validity"], "attempt_validity", ATTEMPT_VALIDITIES
             ),
-            agent_terminal=require_enum(data["agent_terminal"], "agent_terminal", AGENT_TERMINALS),
+            agent_terminal=agent_terminal,
             evaluation_outcome=require_enum(
                 data["evaluation_outcome"], "evaluation_outcome", EVALUATION_OUTCOMES
             ),
@@ -1092,6 +1136,12 @@ class EvaluationResultV06(Contract):
                 data["pass_to_pass"], path="evaluation_result.pass_to_pass"
             ),
             duration_ms=require_int(data["duration_ms"], "duration_ms", minimum=0),
+            evaluation=ContentIdentity.from_dict(
+                data["evaluation"], path="evaluation_result.evaluation"
+            ),
+            scoring=ContentIdentity.from_dict(
+                data["scoring"], path="evaluation_result.scoring"
+            ),
         )
 
 
@@ -1194,6 +1244,18 @@ def _validate_contract_values(values: object, cls: type, path: str) -> None:
         if content_hash in seen:
             raise ContractError(f"{path}: duplicate contract at index {index}")
         seen.add(content_hash)
+
+
+def _validate_disjoint_scoring_groups(
+    fail_to_pass: tuple[str, ...],
+    pass_to_pass: tuple[str, ...],
+) -> None:
+    overlap = sorted(set(fail_to_pass) & set(pass_to_pass))
+    if overlap:
+        raise ContractError(
+            "fail_to_pass and pass_to_pass must be disjoint; "
+            f"overlap={overlap!r}"
+        )
 
 
 def _freeze_json_object(value: object, path: str) -> Mapping[str, JsonValue]:

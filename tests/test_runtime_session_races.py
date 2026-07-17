@@ -174,7 +174,7 @@ class AttemptSessionRaceTests(unittest.TestCase):
                     self.assertEqual(results[0].terminal_reason, left)
                     self.assertEqual(freeze_calls, [1])
                     self.assertEqual(
-                        [event.event_type for event in session.events].count("terminal_emitted"),
+                        [event.event_type for event in session.events].count("session_terminal_emitted"),
                         1,
                     )
                     self.assertEqual(verify_event_chain(session.events), ())
@@ -234,7 +234,7 @@ class AttemptSessionRaceTests(unittest.TestCase):
         self.assertFalse(finalizer.is_alive())
         self.assertTrue(action_results[0].ok)
         self.assertEqual(final_results[0].terminal_reason, "agent_exited")
-        self.assertEqual(session.events[-1].event_type, "terminal_emitted")
+        self.assertEqual(session.events[-1].event_type, "session_terminal_emitted")
         self.assertEqual((self.root / "src/operator.py").read_text(), "VALUE = 2\n")
 
     def test_finalize_waits_for_pending_stop_event_publisher(self) -> None:
@@ -266,7 +266,7 @@ class AttemptSessionRaceTests(unittest.TestCase):
         self.assertFalse(stopper.is_alive())
         self.assertFalse(finalizer.is_alive())
         self.assertEqual(final_results[0].terminal_reason, "cancelled")
-        self.assertEqual(session.events[-1].event_type, "terminal_emitted")
+        self.assertEqual(session.events[-1].event_type, "session_terminal_emitted")
 
     def test_action_waits_until_session_started_event_is_durable(self) -> None:
         session, _ = self.make_session("start-publication", start=False)

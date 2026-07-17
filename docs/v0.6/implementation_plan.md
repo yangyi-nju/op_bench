@@ -2,7 +2,7 @@
 
 日期：2026-07-17
 
-状态：实施中（M1–M4 已完成，准备 M5）
+状态：实施中（M1–M5 已完成，准备 M6）
 
 目标版本：`opbench-v0.6.0`
 
@@ -219,6 +219,21 @@ Agent、Docker、SSH、远程 Runtime 或网络探针。
 
 ## 8. M5：Fresh Evaluator、Artifact、Integrity 与 Summary
 
+状态：已完成（2026-07-18）。独立审查提出的 unittest 结构化证据、retry-specific
+immutable Artifact、完整 EvaluationSpec/evaluation identity/private evidence closure、
+完整 lifecycle grammar、Session→Evaluation 归因、no-patch byte 语义、timeout 归因和
+隐藏目录检查均已实现。最终复审 Critical/Important/Minor 为 0/0/0。
+
+最终证据：
+FreshEvaluator 以冻结 patch identity 为唯一 Agent→Evaluator 交接，在本地全新 Git
+Source 中严格应用 patch 后注入 evaluation-only tests。Evaluation Result 的 validity、
+Agent terminal 与 outcome 三轴独立，Evaluation-aware ledger 以最终评测有效性决定
+retry/resume。public/private Artifact、12 项只读引用图检查、确定性
+results/summary rebuild 和 resolved denominator 均已覆盖。62 项 M5 focused、252 项
+runtime、421 项全量测试以及 17-task Dataset、示例 Manifest、tracked JSON、compileall
+和 diff check 全部通过。本阶段仅使用本地确定性 fixture，未启动 Agent、Docker、
+SSH、远程 Runtime 或网络探针；真实 Codex 与多 Runtime conformance 仍是 M6 gate。
+
 ### 8.1 交付
 
 1. 在干净 Source/Container 中校验 Base Identity 并严格应用 Frozen Patch；
@@ -228,7 +243,11 @@ Agent、Docker、SSH、远程 Runtime 或网络探针。
 5. 建立 public/private artifact 分层；
 6. 校验 Manifest→Session→Patch→Evaluation→Result→Summary 的 hash 和引用；
 7. 从原始 Artifact 重建 `results.jsonl` 和 `summary.json`；
-8. expected/observed matrix、duplicate、missing、unexpected 和 retry audit 都进入 Integrity。
+8. expected/observed matrix、duplicate、missing、unexpected 和全部 retry audit 都进入 Integrity；
+9. evaluator-owned 隔离 runner 生成 canonical unittest 计数，不解析被评测代码 stdout；
+10. 每个 retry 的 Session/Event/Patch/Evaluation 存在独立 `retry-NNNN` 目录，完整
+    EvaluationSpec 只存 private Artifact，公开侧仅发布其 hash；
+11. Manifest、Result、Summary 与 Integrity 均绑定完整 Evaluation identity，而非只比较名称。
 
 ### 8.2 测试
 
@@ -238,12 +257,18 @@ Agent、Docker、SSH、远程 Runtime 或网络探针。
 - Evaluator 不读取 Agent Workspace 或 Agent 修改的测试文件；
 - 任一 Patch byte 变化触发三方身份不一致；
 - 删除/篡改 Event、Evaluation 或 Attempt 会使 Integrity 失败；
+- Event 即使重算为合法 hash chain，只要 action/test/budget/freeze 语义顺序非法也会失败；
+- 伪造 unittest stdout、workspace `unittest.py` shadow 和非 selected retry 篡改均失败；
 - Summary 重建与存储值 byte-equivalent 或 canonical-equivalent。
 
 ### 8.3 退出条件
 
 - Acceptance `V-*` 和剩余 `E-*` 全部通过；
 - v0.5 的现有 Gold/Bad controls 在新 Evaluator 上语义一致。
+
+兼容策略：v0.6 尚未发布，M1～M7 是同一首发版本的内部里程碑；当前
+`schema_version: v1` 表示最终 v0.6 首发合同，因此 M5 在首发前原地闭合字段与身份。
+v0.6 发布后的破坏性合同变更必须提升 schema version，并提供显式迁移规则。
 
 ## 9. M6：Runtime Conformance、Legacy Replay 与真实 Agent 验证
 

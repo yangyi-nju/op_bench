@@ -236,7 +236,7 @@
         "session_id": {"type": "string", "minLength": 1},
         "sequence": {"type": "integer", "minimum": 1},
         "occurred_at_ms": {"type": "integer", "minimum": 0},
-        "event_type": {"enum": ["session_created", "session_prepared", "session_started", "agent_launched", "agent_exited", "action_requested", "action_observed", "test_started", "test_completed", "budget_updated", "budget_exhausted", "finish_requested", "timeout_requested", "cancel_requested", "patch_freeze_started", "patch_freeze_completed", "patch_freeze_failed", "evaluation_started", "evaluation_completed", "terminal_emitted"]},
+        "event_type": {"enum": ["session_created", "session_prepared", "session_started", "agent_launched", "agent_exited", "action_requested", "action_observed", "test_started", "test_completed", "budget_updated", "budget_exhausted", "finish_requested", "timeout_requested", "cancel_requested", "patch_freeze_started", "patch_freeze_completed", "patch_freeze_failed", "session_terminal_emitted", "evaluation_started", "evaluation_completed", "terminal_emitted"]},
         "public_payload": {"$ref": "#/$defs/JsonObject"},
         "previous_event_hash": {"oneOf": [{"type": "null"}, {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}]},
         "event_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
@@ -265,7 +265,7 @@
     },
     "evaluation_spec": {
       "type": "object",
-      "required": ["contract_type", "schema_version", "session_id", "attempt_id", "task", "source", "frozen_patch", "hidden_test_asset", "public_tests", "fail_to_pass", "pass_to_pass", "runtime", "timeout_ms", "scoring"],
+      "required": ["contract_type", "schema_version", "session_id", "attempt_id", "task", "source", "frozen_patch", "hidden_test_asset", "public_tests", "fail_to_pass", "pass_to_pass", "runtime", "timeout_ms", "evaluation", "scoring"],
       "properties": {
         "contract_type": {"const": "evaluation_spec"},
         "schema_version": {"const": "v1"},
@@ -273,13 +273,14 @@
         "attempt_id": {"type": "string", "minLength": 1},
         "task": {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "task"}}},
         "source": {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "source"}}},
-        "frozen_patch": {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "patch"}}},
+        "frozen_patch": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "patch"}}}]},
         "hidden_test_asset": {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "test"}}},
         "public_tests": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/test_selector"}},
         "fail_to_pass": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
         "pass_to_pass": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
         "runtime": {"$ref": "#/$defs/runtime_profile"},
         "timeout_ms": {"type": "integer", "minimum": 1},
+        "evaluation": {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "evaluation"}}},
         "scoring": {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "scoring"}}}
       },
       "additionalProperties": false
@@ -315,20 +316,22 @@
     },
     "evaluation_result": {
       "type": "object",
-      "required": ["contract_type", "schema_version", "session_id", "attempt_id", "attempt_validity", "agent_terminal", "evaluation_outcome", "invalid_reason", "patch", "fail_to_pass", "pass_to_pass", "duration_ms"],
+      "required": ["contract_type", "schema_version", "session_id", "attempt_id", "attempt_validity", "agent_terminal", "evaluation_outcome", "invalid_reason", "patch", "fail_to_pass", "pass_to_pass", "duration_ms", "evaluation", "scoring"],
       "properties": {
         "contract_type": {"const": "evaluation_result"},
         "schema_version": {"const": "v1"},
         "session_id": {"type": "string", "minLength": 1},
         "attempt_id": {"type": "string", "minLength": 1},
         "attempt_validity": {"enum": ["valid", "infrastructure_invalid"]},
-        "agent_terminal": {"enum": ["finished", "exited", "timeout", "budget", "cancelled"]},
+        "agent_terminal": {"oneOf": [{"type": "null"}, {"enum": ["finished", "exited", "timeout", "budget", "cancelled"]}]},
         "evaluation_outcome": {"enum": ["resolved", "f2p_failed", "p2p_regression", "invalid_patch", "no_patch", "evaluation_error", "not_evaluated"]},
         "invalid_reason": {"oneOf": [{"type": "null"}, {"type": "string", "minLength": 1}]},
         "patch": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "patch"}}}]},
         "fail_to_pass": {"$ref": "#/$defs/test_execution_summary"},
         "pass_to_pass": {"$ref": "#/$defs/test_execution_summary"},
-        "duration_ms": {"type": "integer", "minimum": 0}
+        "duration_ms": {"type": "integer", "minimum": 0},
+        "evaluation": {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "evaluation"}}},
+        "scoring": {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "scoring"}}}
       },
       "additionalProperties": false
     },
@@ -375,7 +378,7 @@
     },
     "run_manifest": {
       "type": "object",
-      "required": ["contract_type", "schema_version", "platform_version", "action_protocol", "evaluation_protocol", "scoring_protocol", "dataset", "tasks", "task_views", "agents", "capability_policy", "budget_policy", "runtime_profiles", "retry_policy", "termination_policy", "scoring", "repeat_count", "created_at", "comparability_key", "cohort_id", "expected_attempts"],
+      "required": ["contract_type", "schema_version", "platform_version", "action_protocol", "evaluation_protocol", "scoring_protocol", "evaluation", "dataset", "tasks", "task_views", "agents", "capability_policy", "budget_policy", "runtime_profiles", "retry_policy", "termination_policy", "scoring", "repeat_count", "created_at", "comparability_key", "cohort_id", "expected_attempts"],
       "properties": {
         "contract_type": {"const": "run_manifest"},
         "schema_version": {"const": "v1"},
@@ -383,6 +386,7 @@
         "action_protocol": {"type": "string", "minLength": 1},
         "evaluation_protocol": {"type": "string", "minLength": 1},
         "scoring_protocol": {"type": "string", "minLength": 1},
+        "evaluation": {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "evaluation"}}},
         "dataset": {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "dataset"}}},
         "tasks": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/full_task_spec"}},
         "task_views": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/agent_task_view"}},

@@ -14,9 +14,11 @@ from op_bench.runtime.contracts import (
     RESUME_POLICIES,
     SCHEMA_VERSION,
     SHA256_PATTERN,
+    EvaluationResultV06,
     SessionResult,
 )
 from op_bench.runtime.manifest import ATTEMPT_PATTERN
+from op_bench.runtime.evaluation import validate_session_evaluation_binding
 from op_bench.runtime.session import termination_attribution
 from op_bench.runtime.task_view import assert_public_artifact_safe
 from op_bench.runtime.validation import (
@@ -39,6 +41,9 @@ class AttemptLedgerRecord:
     attempt_validity: str
     session_result: SessionResult
     session_result_hash: str
+    evaluation_result: EvaluationResultV06
+    evaluation_result_hash: str
+    evaluation_spec_hash: str
     recorded_at_ms: int
 
     def __post_init__(self) -> None:
@@ -59,14 +64,40 @@ class AttemptLedgerRecord:
         )
         if self.session_result_hash != self.session_result.content_hash:
             raise ContractError("session_result_hash: does not match SessionResult")
-        require_int(self.recorded_at_ms, "recorded_at_ms", minimum=0)
-        expected_validity = termination_attribution(
-            self.session_result.terminal_reason
-        ).attempt_validity
-        if self.attempt_validity != expected_validity:
+        if not isinstance(self.evaluation_result, EvaluationResultV06):
+            raise ContractError("evaluation_result: expected EvaluationResultV06")
+        if self.evaluation_result.attempt_id != self.attempt_id:
+            raise ContractError("attempt_id: does not match EvaluationResult")
+        if self.evaluation_result.session_id != self.session_id:
+            raise ContractError("session_id: does not match EvaluationResult")
+        require_str(
+            self.evaluation_result_hash,
+            "evaluation_result_hash",
+            pattern=SHA256_PATTERN,
+        )
+        if self.evaluation_result_hash != self.evaluation_result.content_hash:
             raise ContractError(
-                "attempt_validity: does not match SessionResult terminal_reason"
+                "evaluation_result_hash: does not match EvaluationResult"
             )
+        require_str(
+            self.evaluation_spec_hash,
+            "evaluation_spec_hash",
+            pattern=SHA256_PATTERN,
+        )
+        require_int(self.recorded_at_ms, "recorded_at_ms", minimum=0)
+        if self.attempt_validity != self.evaluation_result.attempt_validity:
+            raise ContractError(
+                "attempt_validity: does not match EvaluationResult"
+            )
+        attribution = termination_attribution(self.session_result.terminal_reason)
+        if self.evaluation_result.agent_terminal != attribution.agent_terminal:
+            raise ContractError("agent_terminal: does not match SessionResult")
+        if self.evaluation_result.patch != self.session_result.final_patch:
+            raise ContractError("patch: SessionResult and EvaluationResult differ")
+        validate_session_evaluation_binding(
+            self.session_result,
+            self.evaluation_result,
+        )
         assert_public_artifact_safe(self.to_dict())
 
     def to_dict(self) -> dict[str, object]:
@@ -79,6 +110,9 @@ class AttemptLedgerRecord:
             "attempt_validity": self.attempt_validity,
             "session_result": self.session_result.to_dict(),
             "session_result_hash": self.session_result_hash,
+            "evaluation_result": self.evaluation_result.to_dict(),
+            "evaluation_result_hash": self.evaluation_result_hash,
+            "evaluation_spec_hash": self.evaluation_spec_hash,
             "recorded_at_ms": self.recorded_at_ms,
         }
 
@@ -96,6 +130,9 @@ class AttemptLedgerRecord:
                 "attempt_validity",
                 "session_result",
                 "session_result_hash",
+                "evaluation_result",
+                "evaluation_result_hash",
+                "evaluation_spec_hash",
                 "recorded_at_ms",
             ),
         )
@@ -117,6 +154,16 @@ class AttemptLedgerRecord:
             ),
             session_result_hash=require_str(
                 data["session_result_hash"], "session_result_hash"
+            ),
+            evaluation_result=EvaluationResultV06.from_dict(
+                data["evaluation_result"],
+                path="attempt_ledger_record.evaluation_result",
+            ),
+            evaluation_result_hash=require_str(
+                data["evaluation_result_hash"], "evaluation_result_hash"
+            ),
+            evaluation_spec_hash=require_str(
+                data["evaluation_spec_hash"], "evaluation_spec_hash"
             ),
             recorded_at_ms=require_int(
                 data["recorded_at_ms"], "recorded_at_ms", minimum=0
@@ -200,19 +247,25 @@ class AttemptLedger:
         self,
         *,
         session_result: SessionResult,
-        attempt_validity: str,
+        evaluation_result: EvaluationResultV06,
+        evaluation_spec_hash: str,
         retry_index: int,
         recorded_at_ms: int,
     ) -> AttemptLedgerRecord:
         if not isinstance(session_result, SessionResult):
             raise ContractError("session_result: expected SessionResult")
+        if not isinstance(evaluation_result, EvaluationResultV06):
+            raise ContractError("evaluation_result: expected EvaluationResultV06")
         record = AttemptLedgerRecord(
             attempt_id=session_result.attempt_id,
             session_id=session_result.session_id,
             retry_index=retry_index,
-            attempt_validity=attempt_validity,
+            attempt_validity=evaluation_result.attempt_validity,
             session_result=session_result,
             session_result_hash=session_result.content_hash,
+            evaluation_result=evaluation_result,
+            evaluation_result_hash=evaluation_result.content_hash,
+            evaluation_spec_hash=evaluation_spec_hash,
             recorded_at_ms=recorded_at_ms,
         )
         with self._lock:
@@ -509,4 +562,19 @@ class AttemptLedger:
             pass
 
 
-__all__ = ["AttemptLedger", "AttemptLedgerRecord", "ResumeDecision"]
+def parse_attempt_ledger(raw: bytes) -> tuple[AttemptLedgerRecord, ...]:
+    """Parse and validate durable ledger bytes without creating or opening a path."""
+
+    if not isinstance(raw, bytes):
+        raise ContractError("attempt ledger: expected bytes")
+    records = AttemptLedger._decode_records(raw)
+    AttemptLedger._validate_history(list(records))
+    return records
+
+
+__all__ = [
+    "AttemptLedger",
+    "AttemptLedgerRecord",
+    "ResumeDecision",
+    "parse_attempt_ledger",
+]

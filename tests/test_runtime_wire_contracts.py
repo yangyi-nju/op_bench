@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 import unittest
 
 from op_bench.runtime.contracts import (
@@ -106,6 +107,7 @@ def evaluation_spec() -> EvaluationSpec:
         pass_to_pass=("public::smoke",),
         runtime=runtime_profile(),
         timeout_ms=900_000,
+        evaluation=identity("evaluation", "evaluation-v1", SHA_B),
         scoring=identity("scoring", "opbench-scoring-v1", SHA_A),
     )
 
@@ -137,6 +139,8 @@ def evaluation_result() -> EvaluationResultV06:
         fail_to_pass=test_summary(),
         pass_to_pass=test_summary(),
         duration_ms=400,
+        evaluation=identity("evaluation", "evaluation-v1", SHA_B),
+        scoring=identity("scoring", "opbench-scoring-v1", SHA_A),
     )
 
 
@@ -184,18 +188,27 @@ class WireContractRoundTripTests(unittest.TestCase):
             session_id="session-002",
             attempt_id="attempt-002",
             attempt_validity="infrastructure_invalid",
-            agent_terminal="finished",
+            agent_terminal=None,
             evaluation_outcome="not_evaluated",
             invalid_reason="remote_runtime_unavailable",
             patch=None,
             fail_to_pass=TestExecutionSummary(0, 0, 0, 0, 0),
             pass_to_pass=TestExecutionSummary(0, 0, 0, 0, 0),
             duration_ms=0,
+            evaluation=identity("evaluation", "evaluation-v1", SHA_B),
+            scoring=identity("scoring", "opbench-scoring-v1", SHA_A),
         )
 
         self.assertEqual(result.attempt_validity, "infrastructure_invalid")
-        self.assertEqual(result.agent_terminal, "finished")
+        self.assertIsNone(result.agent_terminal)
         self.assertEqual(result.evaluation_outcome, "not_evaluated")
+        self.assertEqual(EvaluationResultV06.from_dict(result.to_dict()), result)
+
+    def test_freeze_failed_evaluation_spec_round_trips_without_a_patch(self) -> None:
+        value = replace(evaluation_spec(), frozen_patch=None)
+
+        self.assertIsNone(value.frozen_patch)
+        self.assertEqual(EvaluationSpec.from_dict(value.to_dict()), value)
 
     def test_json_payloads_are_defensively_frozen(self) -> None:
         constructors = (
@@ -323,10 +336,10 @@ class WireContractNegativeTests(unittest.TestCase):
             SessionSpec.from_dict(encoded)
 
     def test_test_summary_rejects_inconsistent_counts(self) -> None:
-        with self.assertRaisesRegex(ContractError, "executed: must equal passed \+ failed"):
+        with self.assertRaisesRegex(ContractError, r"executed: must equal passed \+ failed"):
             TestExecutionSummary(collected=1, executed=1, passed=0, failed=0, skipped=0)
 
-        with self.assertRaisesRegex(ContractError, "collected: must equal executed \+ skipped"):
+        with self.assertRaisesRegex(ContractError, r"collected: must equal executed \+ skipped"):
             TestExecutionSummary(collected=2, executed=1, passed=1, failed=0, skipped=0)
 
     def test_invalid_attempt_requires_a_reason(self) -> None:
@@ -354,6 +367,42 @@ class WireContractNegativeTests(unittest.TestCase):
         encoded = evaluation_result().to_dict()
         encoded["agent_terminal"] = "budget"
         self.assertEqual(EvaluationResultV06.from_dict(encoded).agent_terminal, "budget")
+
+    def test_evaluation_contracts_reject_protocol_identity_role_swaps(self) -> None:
+        encoded = evaluation_spec().to_dict()
+        encoded["evaluation"] = identity("scoring", "wrong-role", SHA_B).to_dict()
+        with self.assertRaisesRegex(ContractError, "evaluation: expected identity_type 'evaluation'"):
+            EvaluationSpec.from_dict(encoded)
+
+        encoded = evaluation_result().to_dict()
+        encoded["scoring"] = identity("evaluation", "wrong-role", SHA_A).to_dict()
+        with self.assertRaisesRegex(ContractError, "scoring: expected identity_type 'scoring'"):
+            EvaluationResultV06.from_dict(encoded)
+
+    def test_evaluation_spec_rejects_selector_in_both_scoring_groups(self) -> None:
+        with self.assertRaisesRegex(
+            ContractError,
+            "fail_to_pass and pass_to_pass must be disjoint",
+        ):
+            replace(
+                evaluation_spec(),
+                pass_to_pass=("hidden::f2p",),
+            )
+
+    def test_evaluation_spec_rejects_duplicate_public_selector_ids(self) -> None:
+        selector = public_test()
+
+        with self.assertRaisesRegex(
+            ContractError,
+            "public_tests: duplicate selector_id",
+        ):
+            replace(
+                evaluation_spec(),
+                public_tests=(
+                    selector,
+                    replace(selector, description="Different selector definition"),
+                ),
+            )
 
 
 if __name__ == "__main__":

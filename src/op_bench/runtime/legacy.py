@@ -31,6 +31,7 @@ class LegacyV05Defaults:
     action_protocol: str
     evaluation_protocol: str
     scoring_protocol: str
+    evaluation: ContentIdentity
     capability_policy: CapabilityPolicy
     budget_policy: BudgetPolicy
     retry_policy: ContentIdentity
@@ -64,6 +65,11 @@ class LegacyV05Defaults:
             action_protocol="action-v1",
             evaluation_protocol="evaluation-v1",
             scoring_protocol="scoring-v1",
+            evaluation=_config_identity(
+                "evaluation",
+                "evaluation-v1",
+                {"runner": "fresh-evaluation-v1", "patch_apply": "strict"},
+            ),
             capability_policy=capability,
             budget_policy=budget,
             retry_policy=_config_identity(
@@ -160,6 +166,7 @@ def run_manifest_from_v05_dataset(
         action_protocol=selected_defaults.action_protocol,
         evaluation_protocol=selected_defaults.evaluation_protocol,
         scoring_protocol=selected_defaults.scoring_protocol,
+        evaluation=selected_defaults.evaluation,
         dataset=_dataset_identity(dataset),
         tasks=tasks,
         agents=agents,
