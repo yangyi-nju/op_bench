@@ -25,7 +25,7 @@ from op_bench.runtime.backends import (
 from op_bench.runtime.profiles import load_runtime_profile_registry
 from op_bench.runtime.resources import AttemptResourceLedger, RuntimeLeaseStore
 from op_bench.runtime.validation import ContractError
-from tests.runtime_git_fixture import initialize_git_repo
+from tests.runtime_git_fixture import git, initialize_git_repo
 
 
 ATTEMPT_ID = "attempt:v1:" + "a" * 64
@@ -90,6 +90,49 @@ class LocalProcessBackendTests(unittest.TestCase):
             parameters["frozen_source_revision"].default,
             inspect.Parameter.empty,
         )
+
+    def test_prepare_materializes_only_the_frozen_revision(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            fixture = LocalBackendFixture(Path(temporary))
+            (fixture.source / ".gitignore").write_text(
+                "ignored-cache/\n",
+                encoding="utf-8",
+            )
+            git(fixture.source, "add", ".gitignore")
+            git(fixture.source, "commit", "--quiet", "-m", "freeze ignore policy")
+            revision = git(fixture.source, "rev-parse", "HEAD").stdout.decode().strip()
+            fixture.context = replace(
+                fixture.context,
+                frozen_source_revision=revision,
+            )
+            (fixture.source / "ignored-cache").mkdir()
+            (fixture.source / "ignored-cache" / "state.bin").write_bytes(b"ignored")
+            (fixture.source / "untracked.txt").write_text(
+                "untracked\n",
+                encoding="utf-8",
+            )
+            (fixture.source / "src" / "operator.py").write_text(
+                "VALUE = 999\n",
+                encoding="utf-8",
+            )
+
+            lease = LocalProcessBackend().prepare(fixture.profile, fixture.context)
+            workspace = Path(lease.handles[0].raw_handle)
+
+            self.assertEqual(
+                (workspace / "src" / "operator.py").read_text(encoding="utf-8"),
+                "VALUE = 1\n",
+            )
+            self.assertFalse((workspace / "ignored-cache").exists())
+            self.assertFalse((workspace / "untracked.txt").exists())
+            status = git(
+                workspace,
+                "status",
+                "--porcelain=v1",
+                "--untracked-files=all",
+                "--ignored=matching",
+            ).stdout
+            self.assertEqual(status, b"")
 
     def test_runtime_process_does_not_inherit_controller_python_or_secret_env(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

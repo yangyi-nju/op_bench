@@ -26,6 +26,7 @@ from op_bench.runtime.resources import (
     RuntimeLeaseStore,
     RuntimeResourceHandle,
 )
+from op_bench.runtime.source_materialization import materialize_frozen_git_revision
 from op_bench.runtime.validation import (
     ContractError,
     require_bool,
@@ -429,16 +430,16 @@ class LocalProcessBackend:
                 if workspace.exists() or workspace.is_symlink():
                     raise ContractError("workspace path already exists")
                 workspace.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copytree(
+                snapshot = materialize_frozen_git_revision(
                     attempt_context.frozen_source_directory,
+                    attempt_context.frozen_source_revision,
                     workspace,
-                    symlinks=False,
                 )
                 handle = attempt_context.lease_store.put_exact(
                     declared.resource_id,
                     "workspace",
                     ordinal,
-                    str(workspace),
+                    str(snapshot.workspace),
                 )
                 attempt_context.resource_ledger.created(
                     declared.resource_id,
