@@ -45,7 +45,7 @@ class LocalBackendFixture:
     def __init__(self, root: Path, *, profile=None, binding=None) -> None:
         self.root = root
         self.source = root / "source"
-        initialize_git_repo(self.source)
+        self.source_revision = initialize_git_repo(self.source)
         self.workspaces = root / "workspaces"
         self.workspaces.mkdir(exist_ok=True)
         self.evidence = root / "evidence"
@@ -74,6 +74,7 @@ class LocalBackendFixture:
             retry_index=1,
             runtime_profile_hash=self.profile.content_hash,
             frozen_source_directory=self.source,
+            frozen_source_revision=self.source_revision,
             resource_ledger=self.ledger,
             lease_store=self.store,
             target_binding=self.binding,
@@ -81,6 +82,15 @@ class LocalBackendFixture:
 
 
 class LocalProcessBackendTests(unittest.TestCase):
+    def test_attempt_context_requires_explicit_frozen_source_revision(self) -> None:
+        parameters = inspect.signature(RuntimeAttemptContext).parameters
+
+        self.assertIn("frozen_source_revision", parameters)
+        self.assertIs(
+            parameters["frozen_source_revision"].default,
+            inspect.Parameter.empty,
+        )
+
     def test_runtime_process_does_not_inherit_controller_python_or_secret_env(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             fixture = LocalBackendFixture(Path(temporary))

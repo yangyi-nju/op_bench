@@ -279,6 +279,7 @@ class RuntimeAttemptContext:
     retry_index: int
     runtime_profile_hash: str
     frozen_source_directory: Path
+    frozen_source_revision: str
     resource_ledger: AttemptResourceLedger
     lease_store: RuntimeLeaseStore
     target_binding: RuntimeTargetBinding
@@ -298,6 +299,7 @@ class RuntimeAttemptContext:
             or not self.frozen_source_directory.is_dir()
         ):
             raise ContractError("frozen_source_directory: expected real directory")
+        require_str(self.frozen_source_revision, "frozen_source_revision")
         if not isinstance(self.resource_ledger, AttemptResourceLedger):
             raise ContractError("resource_ledger: expected AttemptResourceLedger")
         if not isinstance(self.lease_store, RuntimeLeaseStore):

@@ -285,6 +285,7 @@ class V06Orchestrator:
             retry_index=retry_index,
             runtime_profile_hash=profile.content_hash,
             frozen_source_directory=source.repository,
+            frozen_source_revision=source.revision,
             resource_ledger=resource_ledger,
             lease_store=lease_store,
             target_binding=request.target_binding,

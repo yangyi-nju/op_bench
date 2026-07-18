@@ -4,6 +4,7 @@ from dataclasses import dataclass
 import json
 from pathlib import Path
 import shutil
+import subprocess
 import sys
 import tempfile
 
@@ -516,6 +517,7 @@ class RuntimeConformanceRunner:
                 retry_index=1,
                 runtime_profile_hash=selected_profile.content_hash,
                 frozen_source_directory=self.fixture_source,
+                frozen_source_revision=_git_head(self.fixture_source),
                 resource_ledger=ledger,
                 lease_store=lease_store,
                 target_binding=(
@@ -728,6 +730,16 @@ class RuntimeConformanceRunner:
                     finally:
                         ledger.close()
                         lease_store.close()
+
+
+def _git_head(repository: Path) -> str:
+    completed = subprocess.run(
+        ("git", "-C", str(repository), "rev-parse", "--verify", "HEAD"),
+        check=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    return completed.stdout.decode("ascii").strip()
 
 
 def _runtime_backend(profile):

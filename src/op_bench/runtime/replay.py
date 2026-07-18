@@ -324,6 +324,7 @@ class ExactReplayObserver:
             retry_index=1,
             runtime_profile_hash=task.runtime.content_hash,
             frozen_source_directory=source.repository,
+            frozen_source_revision=source.revision,
             resource_ledger=ledger,
             lease_store=lease_store,
             target_binding=self.target_binding,

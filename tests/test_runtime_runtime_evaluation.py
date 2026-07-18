@@ -131,6 +131,7 @@ class RuntimeEvaluationFixture:
             retry_index=1,
             runtime_profile_hash=self.profile.content_hash,
             frozen_source_directory=self.git.repository,
+            frozen_source_revision=self.git.revision,
             resource_ledger=self.ledger,
             lease_store=self.store,
             target_binding=RuntimeTargetBinding(
