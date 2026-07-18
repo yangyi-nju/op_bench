@@ -3,9 +3,11 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import os
 from pathlib import Path
 from pathlib import PurePosixPath
 import shlex
+import subprocess
 
 from op_bench.runtime.backends import (
     RuntimeAttemptContext,
@@ -43,14 +45,6 @@ _WRITE_BYTES_PROGRAM = (
 _READ_BYTES_PROGRAM = (
     "import pathlib,sys;"
     "sys.stdout.buffer.write(pathlib.Path(sys.argv[1]).read_bytes())"
-)
-_SOURCE_HASH_PROGRAM = (
-    "import hashlib,subprocess,sys;"
-    "p=subprocess.run(('git','archive','--format=tar','HEAD'),"
-    "stdout=subprocess.PIPE,stderr=subprocess.PIPE,check=False);"
-    "sys.stderr.buffer.write(p.stderr);"
-    "sys.exit(p.returncode) if p.returncode else "
-    "print('sha256:'+hashlib.sha256(p.stdout).hexdigest())"
 )
 _PYTHON_OVERLAY_PROGRAM = r"""
 import importlib
@@ -270,21 +264,34 @@ class RuntimeFreshEvaluationBackend:
         return evidence
 
     def _verify_source(self, lease, timeout_ms: int) -> None:
-        result = self.runtime_backend.run(
-            lease,
-            (self.python_executable, "-I", "-c", _SOURCE_HASH_PROGRAM),
-            ".",
-            timeout_ms,
-        )
-        if result.timed_out:
-            raise EvaluationInfrastructureError("evaluation_timeout")
-        if result.exit_code != 0:
+        workspace = self._controller_workspace(lease)
+        try:
+            head = _controller_git(
+                workspace,
+                "rev-parse",
+                "--verify",
+                "HEAD",
+                timeout_ms=timeout_ms,
+            )
+            archive = _controller_git(
+                workspace,
+                "archive",
+                "--format=tar",
+                "HEAD",
+                timeout_ms=timeout_ms,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise EvaluationInfrastructureError("evaluation_timeout") from exc
+        if head.returncode != 0 or archive.returncode != 0:
             raise EvaluationInfrastructureError(
                 "source_identity_verification_failed"
             )
+        if head.stdout.decode("ascii").strip() != self.attempt_context.frozen_source_revision:
+            raise EvaluationInfrastructureError("source_identity_mismatch")
+        observed_digest = "sha256:" + hashlib.sha256(archive.stdout).hexdigest()
         if (
             self.source.identity.digest_kind == "content_sha256"
-            and result.stdout.strip() != self.source.identity.digest
+            and observed_digest != self.source.identity.digest
         ):
             raise EvaluationInfrastructureError("source_identity_mismatch")
         if self.source.identity.digest_kind not in {
@@ -292,6 +299,27 @@ class RuntimeFreshEvaluationBackend:
             "canonical_config",
         }:
             raise EvaluationInfrastructureError("source_identity_kind_unsupported")
+
+    def _controller_workspace(self, lease) -> Path:
+        workspaces = tuple(
+            handle for handle in lease.handles if handle.resource_type == "workspace"
+        )
+        if len(workspaces) != 1:
+            raise EvaluationInfrastructureError("source_identity_verification_failed")
+        workspace = Path(workspaces[0].raw_handle)
+        if workspace.is_symlink() or not workspace.is_dir():
+            raise EvaluationInfrastructureError("source_identity_verification_failed")
+        try:
+            boundary = self.attempt_context.target_binding.local_workspace_parent.resolve(
+                strict=True
+            )
+            resolved = workspace.resolve(strict=True)
+            resolved.relative_to(boundary)
+        except (OSError, ValueError) as exc:
+            raise EvaluationInfrastructureError(
+                "source_identity_verification_failed"
+            ) from exc
+        return resolved
 
     def _apply_patch(
         self,
@@ -302,26 +330,29 @@ class RuntimeFreshEvaluationBackend:
         timeout_ms: int,
         agent_patch: bool,
     ) -> None:
-        self._write_runtime_file(lease, path, raw, timeout_ms)
+        workspace = self._controller_workspace(lease)
         for check_only in (True, False):
-            command = ["git", "apply"]
+            arguments = ["apply"]
             if check_only:
-                command.append("--check")
-            command.extend(("--whitespace=nowarn", path))
-            result = self.runtime_backend.run(
-                lease,
-                tuple(command),
-                ".",
-                timeout_ms,
-            )
-            if result.timed_out:
-                raise EvaluationInfrastructureError("evaluation_timeout")
-            if result.exit_code != 0:
-                if agent_patch:
-                    raise StrictPatchApplyError(result.stderr)
-                raise EvaluationInfrastructureError(
-                    "hidden_test_injection_failed"
+                arguments.append("--check")
+            arguments.extend(("--whitespace=nowarn", "-"))
+            try:
+                result = _controller_git(
+                    workspace,
+                    *arguments,
+                    input_bytes=raw,
+                    timeout_ms=timeout_ms,
                 )
+            except subprocess.TimeoutExpired as exc:
+                raise EvaluationInfrastructureError("evaluation_timeout") from exc
+            if result.returncode == 0:
+                continue
+            detail = result.stderr.decode("utf-8", errors="replace")
+            if agent_patch:
+                raise StrictPatchApplyError(detail)
+            raise EvaluationInfrastructureError(
+                "hidden_test_injection_failed"
+            )
 
     def _write_runtime_file(
         self,
@@ -528,6 +559,38 @@ class RuntimeFreshEvaluationBackend:
             script,
             *command[2:],
         )
+
+
+def _controller_git(
+    repository: Path,
+    *arguments: str,
+    input_bytes: bytes | None = None,
+    timeout_ms: int,
+) -> subprocess.CompletedProcess[bytes]:
+    return subprocess.run(
+        (
+            "git",
+            "-c",
+            "core.autocrlf=false",
+            "-C",
+            str(repository),
+            *arguments,
+        ),
+        check=False,
+        input=input_bytes,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        timeout=timeout_ms / 1000,
+        env={
+            **os.environ,
+            "GIT_CONFIG_NOSYSTEM": "1",
+            "GIT_CONFIG_GLOBAL": os.devnull,
+            "GIT_ATTR_NOSYSTEM": "1",
+            "GIT_NO_REPLACE_OBJECTS": "1",
+            "LC_ALL": "C",
+            "LANG": "C",
+        },
+    )
 
 
 __all__ = ["RuntimeFreshEvaluationBackend"]

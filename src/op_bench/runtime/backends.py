@@ -868,13 +868,12 @@ class DockerRuntimeBackend(LocalProcessBackend):
             state.profile.mount_policy.workspace_target,
             relative,
         )
-        executed = (
-            state.context.target_binding.docker_binary,
-            "exec",
-            "--workdir",
-            target_cwd,
-            container.raw_handle,
-            *argv,
+        executed = _container_exec_command(
+            docker_binary=state.context.target_binding.docker_binary,
+            workspace_target=state.profile.mount_policy.workspace_target,
+            workdir=target_cwd,
+            container_name=container.raw_handle,
+            command=argv,
         )
         try:
             raw = self._argv_runner(executed, None, timeout)
@@ -1215,16 +1214,15 @@ class RemoteDockerRuntimeBackend(LocalProcessBackend):
             declared.resource_id,
             process_handle.raw_handle_hash,
         )
-        inner = (
-            state.context.target_binding.docker_binary,
-            "exec",
-            "--workdir",
-            _logical_container_cwd(
+        inner = _container_exec_command(
+            docker_binary=state.context.target_binding.docker_binary,
+            workspace_target=state.profile.mount_policy.workspace_target,
+            workdir=_logical_container_cwd(
                 state.profile.mount_policy.workspace_target,
                 relative,
             ),
-            container.raw_handle,
-            *argv,
+            container_name=container.raw_handle,
+            command=argv,
         )
         try:
             raw = self._argv_runner(
@@ -1629,6 +1627,30 @@ def _container_create_command(
         )
     )
     return tuple(command)
+
+
+def _container_exec_command(
+    *,
+    docker_binary: str,
+    workspace_target: str,
+    workdir: str,
+    container_name: str,
+    command: tuple[str, ...],
+) -> tuple[str, ...]:
+    return (
+        docker_binary,
+        "exec",
+        "--env",
+        "GIT_CONFIG_COUNT=1",
+        "--env",
+        "GIT_CONFIG_KEY_0=safe.directory",
+        "--env",
+        f"GIT_CONFIG_VALUE_0={workspace_target}",
+        "--workdir",
+        workdir,
+        container_name,
+        *command,
+    )
 
 
 def _logical_container_cwd(target: str, relative: PurePosixPath) -> str:

@@ -14,6 +14,7 @@ from op_bench.runtime.legacy import (
     LegacyV05Defaults,
     full_task_spec_from_v05,
     run_manifest_from_v05_dataset,
+    runtime_bundle_from_v05_dataset,
 )
 from op_bench.runtime.profiles import load_runtime_profile_registry
 from op_bench.runtime.validation import ContractError
@@ -33,6 +34,33 @@ PROFILE_BY_ENVIRONMENT = {
 
 
 class LegacyV05ProjectionTests(unittest.TestCase):
+    def test_private_runtime_bindings_use_resolvable_executable_commits(self) -> None:
+        bundle = runtime_bundle_from_v05_dataset(
+            DATASET_PATH,
+            agents=(agent_spec(),),
+            repeat=1,
+            created_at="2026-07-18T00:00:00Z",
+        )
+
+        self.assertEqual(len(bundle.private_tasks), 17)
+        for binding in bundle.private_tasks:
+            with self.subTest(task=binding.task_id):
+                resolved = subprocess.run(
+                    (
+                        "git",
+                        "-C",
+                        str(binding.source.repository),
+                        "rev-parse",
+                        "--verify",
+                        "--end-of-options",
+                        f"{binding.source.revision}^{{commit}}",
+                    ),
+                    check=False,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                )
+                self.assertEqual(resolved.returncode, 0, resolved.stderr.decode())
+
     def test_projects_all_17_verified_tasks_with_explicit_identity_kinds(self) -> None:
         dataset = DatasetManifest.load(DATASET_PATH)
         tasks = dataset.load_tasks(verified_only=True)

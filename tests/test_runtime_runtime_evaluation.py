@@ -190,6 +190,24 @@ class RuntimeEvaluationFixture:
 
 
 class RuntimeFreshEvaluationBackendTests(unittest.TestCase):
+    def test_source_and_patches_are_staged_without_runtime_git(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            fixture = RuntimeEvaluationFixture(Path(temporary))
+
+            completed = fixture.evaluate(fixture.git.gold_patch)
+
+            self.assertEqual(completed.result.evaluation_outcome, "resolved")
+            self.assertFalse(
+                any(command[0] == "git" for command in fixture.runtime.commands)
+            )
+            self.assertFalse(
+                any(
+                    "git','archive" in part or 'git","archive' in part
+                    for command in fixture.runtime.commands
+                    for part in command
+                )
+            )
+
     def test_baseline_replay_runs_hidden_tests_without_an_agent_patch(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             fixture = RuntimeEvaluationFixture(Path(temporary))

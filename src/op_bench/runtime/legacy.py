@@ -5,6 +5,7 @@ from functools import lru_cache
 import hashlib
 from pathlib import Path
 import re
+import subprocess
 from typing import Any
 
 from op_bench.dataset import DatasetManifest
@@ -292,7 +293,10 @@ def runtime_bundle_from_v05_dataset(
                 source=LocalGitSource(
                     identity=spec.source,
                     repository=source_path,
-                    revision=legacy_task.base_commit,
+                    revision=_executable_source_revision(
+                        source_path,
+                        legacy_task.base_commit,
+                    ),
                 ),
                 hidden_asset=EvaluationOnlyTestAsset(
                     identity=spec.hidden_test_asset,
@@ -305,6 +309,29 @@ def runtime_bundle_from_v05_dataset(
         manifest=manifest,
         private_tasks=tuple(bindings),
     )
+
+
+def _executable_source_revision(repository: Path, logical_revision: str) -> str:
+    for candidate in (logical_revision, "HEAD"):
+        resolved = subprocess.run(
+            (
+                "git",
+                "-c",
+                "core.autocrlf=false",
+                "-C",
+                str(repository),
+                "rev-parse",
+                "--verify",
+                "--end-of-options",
+                f"{candidate}^{{commit}}",
+            ),
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        if resolved.returncode == 0:
+            return resolved.stdout.decode("ascii").strip()
+    raise ContractError("source snapshot has no executable frozen commit")
 
 
 def agent_spec_for_v1_adapter(adapter_id: str) -> AgentSpec:

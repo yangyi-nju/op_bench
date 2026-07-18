@@ -582,6 +582,11 @@ class ContainerBackendCommandTests(unittest.TestCase):
 
             lease = backend.prepare(profile, fixture.context)
             result = backend.run(lease, ("python", "-V"), "src", 1_000)
+            execute = next(
+                call[0]
+                for call in runner.calls
+                if len(call[0]) >= 2 and call[0][1] == "exec"
+            )
             cleanup = backend.cleanup(lease)
 
             workspace = next(h for h in lease.handles if h.resource_type == "workspace")
@@ -606,6 +611,8 @@ class ContainerBackendCommandTests(unittest.TestCase):
             ):
                 self.assertIn(expected, create)
             self.assertEqual(result.exit_code, 0)
+            self.assertIn("GIT_CONFIG_KEY_0=safe.directory", execute)
+            self.assertIn("GIT_CONFIG_VALUE_0=/workspace", execute)
             self.assertTrue(cleanup.report.all_released)
             self.assertEqual(
                 runner.calls[-1][0],
@@ -701,6 +708,14 @@ class ContainerBackendCommandTests(unittest.TestCase):
             self.assertEqual(commands[1][-1], remote.raw_handle + "/")
             self.assertEqual(commands[4][0], "rsync-fixture")
             self.assertEqual(commands[4][-1], remote.raw_handle + "/")
+            remote_execute = next(
+                command
+                for command in commands
+                if command[0] == "ssh-fixture"
+                and "docker-fixture exec" in command[-1]
+            )
+            self.assertIn("GIT_CONFIG_KEY_0=safe.directory", remote_execute[-1])
+            self.assertIn("GIT_CONFIG_VALUE_0=/workspace", remote_execute[-1])
             self.assertTrue(cleanup.report.all_released)
             self.assertFalse(Path(workspace.raw_handle).exists())
             self.assertIn(
