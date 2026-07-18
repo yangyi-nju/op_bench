@@ -81,6 +81,37 @@ class RuntimeReplayInventoryTests(unittest.TestCase):
                 self.assertGreater(case.provenance_line, 0)
                 self.assertTrue(case.provenance_hash.startswith("sha256:"))
 
+    def test_legacy_expected_outcome_prefers_raw_test_counts_over_summary_status(self) -> None:
+        inventory = build_replay_inventory(ROOT)
+        affected = [
+            case
+            for case in inventory
+            if case.case_kind == "legacy"
+            and case.task_id == "pytorch__140557__layer_norm_decomp_precision"
+        ]
+
+        self.assertEqual(len(affected), 3)
+        self.assertEqual(
+            {case.expected_outcome for case in affected},
+            {"f2p_failed"},
+        )
+
+    def test_invalid_legacy_gold_uses_content_bound_strict_replay_patch(self) -> None:
+        inventory = build_replay_inventory(ROOT)
+        gold = next(
+            case
+            for case in inventory
+            if case.case_kind == "gold"
+            and case.task_id == "pytorch__132835__njt_sdpa_autocast"
+        )
+
+        self.assertTrue(gold.patch_path.endswith("/artifacts/gold.replay-v1.patch"))
+        self.assertTrue(
+            gold.provenance_root.endswith(
+                "/artifacts/gold.replay-v1.provenance.json"
+            )
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

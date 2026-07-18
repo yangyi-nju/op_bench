@@ -218,6 +218,79 @@ class FrozenSourceMaterializationTests(unittest.TestCase):
                 b"",
             )
 
+    def test_populated_submodules_are_materialized_recursively_from_exact_local_commits(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            leaf = root / "leaf"
+            initialize_git_repo(leaf)
+
+            dependency = root / "dependency"
+            initialize_git_repo(dependency)
+            git(
+                dependency,
+                "-c",
+                "protocol.file.allow=always",
+                "submodule",
+                "add",
+                "--quiet",
+                str(leaf),
+                "nested/leaf",
+            )
+            git(dependency, "commit", "--quiet", "-am", "add nested dependency")
+
+            source = root / "source"
+            initialize_git_repo(source)
+            git(
+                source,
+                "-c",
+                "protocol.file.allow=always",
+                "submodule",
+                "add",
+                "--quiet",
+                str(dependency),
+                "vendor/dependency",
+            )
+            git(source, "commit", "--quiet", "-am", "add dependency")
+            git(
+                source,
+                "-c",
+                "protocol.file.allow=always",
+                "submodule",
+                "update",
+                "--init",
+                "--recursive",
+            )
+            revision = git(source, "rev-parse", "HEAD").stdout.decode().strip()
+
+            snapshot = materialize_frozen_git_revision(
+                source,
+                revision,
+                root / "workspace",
+                include_submodules=True,
+            )
+
+            dependency_copy = snapshot.workspace / "vendor" / "dependency"
+            leaf_copy = dependency_copy / "nested" / "leaf"
+            self.assertEqual(
+                (dependency_copy / "src" / "operator.py").read_text(),
+                "VALUE = 1\n",
+            )
+            self.assertEqual(
+                (leaf_copy / "src" / "operator.py").read_text(),
+                "VALUE = 1\n",
+            )
+            self.assertFalse((dependency_copy / ".git").exists())
+            self.assertFalse((leaf_copy / ".git").exists())
+            self.assertEqual(
+                git(
+                    snapshot.workspace,
+                    "status",
+                    "--porcelain=v1",
+                    "--ignore-submodules=all",
+                ).stdout,
+                b"",
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

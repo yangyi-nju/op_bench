@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from functools import lru_cache
 import hashlib
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import re
 import subprocess
 from typing import Any
@@ -102,6 +102,7 @@ class LegacyV05PrivateTaskBinding:
     task_id: str
     source: LocalGitSource
     hidden_asset: EvaluationOnlyTestAsset
+    source_overlay_paths: tuple[str, ...]
 
     def __post_init__(self) -> None:
         require_str(self.task_id, "task_id")
@@ -109,6 +110,17 @@ class LegacyV05PrivateTaskBinding:
             raise ContractError("source: expected LocalGitSource")
         if not isinstance(self.hidden_asset, EvaluationOnlyTestAsset):
             raise ContractError("hidden_asset: expected EvaluationOnlyTestAsset")
+        if not isinstance(self.source_overlay_paths, tuple):
+            raise ContractError("source_overlay_paths: expected tuple")
+        if len(set(self.source_overlay_paths)) != len(self.source_overlay_paths):
+            raise ContractError("source_overlay_paths: duplicate path")
+        for index, value in enumerate(self.source_overlay_paths):
+            selected = require_str(value, f"source_overlay_paths[{index}]")
+            pure = PurePosixPath(selected)
+            if pure.is_absolute() or ".." in pure.parts or not pure.parts:
+                raise ContractError(
+                    f"source_overlay_paths[{index}]: expected safe relative path"
+                )
 
 
 @dataclass(frozen=True)
@@ -131,6 +143,9 @@ class LegacyV05RuntimeBundle:
 
     def hidden_asset_for(self, task: FullTaskSpec) -> EvaluationOnlyTestAsset:
         return self._binding_for(task).hidden_asset
+
+    def source_overlay_paths_for(self, task: FullTaskSpec) -> tuple[str, ...]:
+        return self._binding_for(task).source_overlay_paths
 
     def _binding_for(self, task: FullTaskSpec) -> LegacyV05PrivateTaskBinding:
         if not isinstance(task, FullTaskSpec):
@@ -302,6 +317,9 @@ def runtime_bundle_from_v05_dataset(
                     identity=spec.hidden_test_asset,
                     patch_bytes=hidden_bytes,
                     selectors=spec.hidden_tests,
+                ),
+                source_overlay_paths=tuple(
+                    legacy_task.source_loading_overlay_paths
                 ),
             )
         )

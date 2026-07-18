@@ -552,6 +552,7 @@ def _execute_v1(args, registry, profile, target) -> int:
     orchestrator = V06Orchestrator(
         source_resolver=bundle.source_for,
         hidden_asset_resolver=bundle.hidden_asset_for,
+        source_overlay_resolver=bundle.source_overlay_paths_for,
         backend_factory=backend_factory,
         adapter_factory=adapter_factory,
         python_executable=(sys.executable if profile.backend == "local" else "python"),

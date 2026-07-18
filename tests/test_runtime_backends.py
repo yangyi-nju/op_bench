@@ -613,6 +613,14 @@ class ContainerBackendCommandTests(unittest.TestCase):
             self.assertEqual(result.exit_code, 0)
             self.assertIn("GIT_CONFIG_KEY_0=safe.directory", execute)
             self.assertIn("GIT_CONFIG_VALUE_0=/workspace", execute)
+            for expected in (
+                "XDG_CACHE_HOME=/tmp/op_bench_runtime/xdg-cache",
+                "TRITON_CACHE_DIR=/tmp/op_bench_runtime/triton-cache",
+                "TORCHINDUCTOR_CACHE_DIR=/tmp/op_bench_runtime/torchinductor-cache",
+                "CCACHE_DIR=/tmp/op_bench_runtime/ccache",
+                "CCACHE_MAXSIZE=2G",
+            ):
+                self.assertIn(expected, execute)
             self.assertTrue(cleanup.report.all_released)
             self.assertEqual(
                 runner.calls[-1][0],
@@ -716,6 +724,14 @@ class ContainerBackendCommandTests(unittest.TestCase):
             )
             self.assertIn("GIT_CONFIG_KEY_0=safe.directory", remote_execute[-1])
             self.assertIn("GIT_CONFIG_VALUE_0=/workspace", remote_execute[-1])
+            for expected in (
+                "XDG_CACHE_HOME=/tmp/op_bench_runtime/xdg-cache",
+                "TRITON_CACHE_DIR=/tmp/op_bench_runtime/triton-cache",
+                "TORCHINDUCTOR_CACHE_DIR=/tmp/op_bench_runtime/torchinductor-cache",
+                "CCACHE_DIR=/tmp/op_bench_runtime/ccache",
+                "CCACHE_MAXSIZE=2G",
+            ):
+                self.assertIn(expected, remote_execute[-1])
             self.assertTrue(cleanup.report.all_released)
             self.assertFalse(Path(workspace.raw_handle).exists())
             self.assertIn(
@@ -734,6 +750,66 @@ class ContainerBackendCommandTests(unittest.TestCase):
             ):
                 with self.subTest(forbidden=forbidden):
                     self.assertNotIn(forbidden, flattened)
+
+    def test_remote_inplace_build_copies_exact_ccache_seed_into_attempt_workspace(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspaces = root / "workspaces"
+            workspaces.mkdir()
+            identity_file = root / "id_fixture"
+            identity_file.write_text("fixture", encoding="utf-8")
+            profile = replace(
+                self.profile("remote_docker", gpu=True),
+                source_loading_mode="inplace_build",
+            )
+            seed = "/srv/opbench/cache/ccache/frozen-cuda-environment"
+            binding = RuntimeTargetBinding(
+                backend="remote_docker",
+                local_workspace_parent=workspaces,
+                host_alias="gpu-exact-fixture",
+                remote_user="runner",
+                identity_file=identity_file,
+                docker_binary="docker-fixture",
+                ssh_binary="ssh-fixture",
+                rsync_binary="rsync-fixture",
+                remote_ccache_seed=seed,
+            )
+            fixture = LocalBackendFixture(root, profile=profile, binding=binding)
+            runner = RecordingArgvRunner()
+            backend = RemoteDockerRuntimeBackend(argv_runner=runner)
+
+            lease = backend.prepare(profile, fixture.context)
+            backend.run(lease, ("python", "-V"), ".", 1_000)
+            cleanup = backend.cleanup(lease)
+
+            remote = next(
+                handle
+                for handle in lease.handles
+                if handle.resource_type == "remote_workspace"
+            )
+            remote_path = remote.raw_handle.split(":", 1)[1]
+            commands = [call[0] for call in runner.calls]
+            seed_copy = next(
+                command
+                for command in commands
+                if command[0] == "ssh-fixture" and seed in command[-1]
+            )
+            self.assertIn("cp -a --reflink=auto --", seed_copy[-1])
+            self.assertIn(f"{remote_path}/.ccache", seed_copy[-1])
+            initial_sync = next(command for command in commands if command[0] == "rsync-fixture")
+            self.assertIn("--exclude=.ccache/", initial_sync)
+            remote_execute = next(
+                command
+                for command in commands
+                if command[0] == "ssh-fixture"
+                and "docker-fixture exec" in command[-1]
+            )
+            self.assertIn("CCACHE_DIR=/workspace/.ccache", remote_execute[-1])
+            self.assertNotIn("CCACHE_DIR=/tmp/op_bench_runtime/ccache", remote_execute[-1])
+            self.assertIn("PYTHONPATH=/workspace", remote_execute[-1])
+            self.assertTrue(cleanup.report.all_released)
+            cleanup_commands = "\n".join(command[-1] for command in commands[-2:])
+            self.assertNotIn(seed, cleanup_commands)
 
     def test_remote_target_is_required_before_any_resource_declaration(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -769,8 +845,9 @@ class ContainerBackendCommandTests(unittest.TestCase):
                                 "hostname": "exact.example.invalid",
                                 "user": "runner",
                                 "port": 2222,
-                                "identity_file": str(identity_file),
-                                "remote_workspace_root": "/srv/opbench/exact",
+                            "identity_file": str(identity_file),
+                            "remote_workspace_root": "/srv/opbench/exact",
+                            "remote_ccache_seed": "/srv/opbench/cache/ccache/frozen",
                             }
                         }
                     }
@@ -786,6 +863,10 @@ class ContainerBackendCommandTests(unittest.TestCase):
             self.assertEqual(binding.backend, "remote_docker")
             self.assertEqual(binding.host_alias, "exact.example.invalid")
             self.assertEqual(binding.remote_workspace_root, "/srv/opbench/exact")
+            self.assertEqual(
+                binding.remote_ccache_seed,
+                "/srv/opbench/cache/ccache/frozen",
+            )
 
 
 if __name__ == "__main__":

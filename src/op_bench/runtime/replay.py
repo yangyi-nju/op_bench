@@ -338,7 +338,7 @@ class ExactReplayObserver:
             runtime_backend=self._backend_factory(task.runtime, self.target_binding),
             runtime_profile=task.runtime,
             attempt_context=context,
-            source_overlay_paths=task.patch_scope,
+            source_overlay_paths=self._bundle.source_overlay_paths_for(task),
         )
         frozen, patch_artifact = self._patch_inputs(case, task, source.revision)
         spec = EvaluationSpec(
@@ -679,15 +679,30 @@ def build_replay_inventory(
         )
         gold_path = _within_root(root, task.gold_patch_path, "gold_patch")
         gold_raw = _read_regular(gold_path, "gold_patch")
+        (
+            gold_path,
+            gold_raw,
+            gold_provenance_path,
+            gold_provenance_raw,
+        ) = _strict_gold_replay_inputs(
+            root=root,
+            task_dir=task_dir,
+            task_id=entry.task_id,
+            source_revision=require_str(task.base_commit, "task.base_commit"),
+            admission_path=evidence_path,
+            admission_raw=evidence_raw,
+            original_path=gold_path,
+            original_raw=gold_raw,
+        )
         gold = _case(
             case_kind="gold",
             patch_path=gold_path.relative_to(root).as_posix(),
             patch_hash=_sha256(gold_raw),
             expected_outcome="resolved",
             attempt_number=None,
-            provenance_root=provenance_root,
+            provenance_root=gold_provenance_path.relative_to(root).as_posix(),
             provenance_line=0,
-            provenance_hash=provenance_hash,
+            provenance_hash=_sha256(gold_provenance_raw),
             **common,
         )
         cases.extend((baseline, gold))
@@ -724,12 +739,7 @@ def build_replay_inventory(
             line_number, row, row_hash = rows[-1]
             if row.get("task_id") != task_id:
                 raise ContractError("legacy result: task does not match patch")
-            status = row.get("status")
-            expected_outcome = _STATUS_OUTCOMES.get(status)
-            if expected_outcome is None:
-                raise ContractError(
-                    f"legacy result: unsupported final status {status!r}"
-                )
+            expected_outcome = _legacy_expected_outcome(row)
             spec, task_relative = task_metadata[task_id]
             patch_raw = _read_regular(patch_path, "legacy patch")
             cases.append(
@@ -755,6 +765,124 @@ def build_replay_inventory(
     if len(ordered) != 85 or len({item.replay_id for item in ordered}) != 85:
         raise ContractError("replay inventory: expected 85 unique cases")
     return ordered
+
+
+def _strict_gold_replay_inputs(
+    *,
+    root: Path,
+    task_dir: Path,
+    task_id: str,
+    source_revision: str,
+    admission_path: Path,
+    admission_raw: bytes,
+    original_path: Path,
+    original_raw: bytes,
+) -> tuple[Path, bytes, Path, bytes]:
+    provenance_path = original_path.with_name("gold.replay-v1.provenance.json")
+    strict_path = original_path.with_name("gold.replay-v1.patch")
+    if not provenance_path.exists() and not strict_path.exists():
+        return original_path, original_raw, admission_path, admission_raw
+    if not provenance_path.exists() or not strict_path.exists():
+        raise ContractError("strict gold replay: patch and provenance must coexist")
+
+    provenance_raw = _read_regular(provenance_path, "strict gold provenance")
+    provenance = _json_object(provenance_raw, "strict gold provenance")
+    if set(provenance) != {
+        "provenance_type",
+        "schema_version",
+        "task_id",
+        "source_revision",
+        "original_patch",
+        "strict_patch",
+        "admission_evidence",
+        "normalization",
+    }:
+        raise ContractError("strict gold provenance: unexpected fields")
+    if (
+        provenance.get("provenance_type")
+        != "legacy_gold_strict_replay_normalization"
+        or provenance.get("schema_version") != "v1"
+        or provenance.get("task_id") != task_id
+        or provenance.get("source_revision") != source_revision
+    ):
+        raise ContractError("strict gold provenance: identity mismatch")
+
+    def bound_file(
+        value: object,
+        *,
+        label: str,
+        expected_path: Path,
+        expected_raw: bytes | None,
+    ) -> tuple[Path, bytes]:
+        if not isinstance(value, dict) or set(value) != {"path", "sha256"}:
+            raise ContractError(f"strict gold provenance.{label}: invalid binding")
+        relative = Path(require_str(value.get("path"), f"{label}.path"))
+        if relative.is_absolute() or ".." in relative.parts:
+            raise ContractError(f"strict gold provenance.{label}: unsafe path")
+        resolved = _within_root(root, task_dir / relative, label)
+        if resolved != expected_path:
+            raise ContractError(f"strict gold provenance.{label}: path mismatch")
+        raw = _read_regular(resolved, label)
+        if expected_raw is not None and raw != expected_raw:
+            raise ContractError(f"strict gold provenance.{label}: bytes mismatch")
+        if value.get("sha256") != _sha256(raw):
+            raise ContractError(f"strict gold provenance.{label}: hash mismatch")
+        return resolved, raw
+
+    bound_file(
+        provenance.get("original_patch"),
+        label="original_patch",
+        expected_path=original_path,
+        expected_raw=original_raw,
+    )
+    bound_file(
+        provenance.get("admission_evidence"),
+        label="admission_evidence",
+        expected_path=admission_path,
+        expected_raw=admission_raw,
+    )
+    resolved_strict, strict_raw = bound_file(
+        provenance.get("strict_patch"),
+        label="strict_patch",
+        expected_path=strict_path,
+        expected_raw=None,
+    )
+    normalization = provenance.get("normalization")
+    if normalization != {
+        "reason": "legacy_gold_context_predates_enable_gqa_parameter",
+        "method": "preserve_patch_additions_and_rebase_second_hunk_context_only",
+    }:
+        raise ContractError("strict gold provenance: normalization mismatch")
+    return resolved_strict, strict_raw, provenance_path, provenance_raw
+
+
+def _legacy_expected_outcome(row: dict[str, object]) -> str:
+    status = row.get("status")
+    status_outcome = _STATUS_OUTCOMES.get(status)
+    if status_outcome is None:
+        raise ContractError(f"legacy result: unsupported final status {status!r}")
+    if status_outcome == "invalid_patch":
+        return status_outcome
+
+    counts: dict[str, int] = {}
+    for field in (
+        "fail_to_pass_passed",
+        "fail_to_pass_total",
+        "pass_to_pass_passed",
+        "pass_to_pass_total",
+    ):
+        value = row.get(field)
+        require_int(value, f"legacy result.{field}", minimum=0)
+        counts[field] = value
+    if counts["fail_to_pass_passed"] > counts["fail_to_pass_total"]:
+        raise ContractError("legacy result: fail-to-pass passed exceeds total")
+    if counts["pass_to_pass_passed"] > counts["pass_to_pass_total"]:
+        raise ContractError("legacy result: pass-to-pass passed exceeds total")
+    if counts["fail_to_pass_passed"] < counts["fail_to_pass_total"]:
+        return "f2p_failed"
+    if counts["pass_to_pass_passed"] < counts["pass_to_pass_total"]:
+        return "p2p_regression"
+    return "resolved"
 
 
 def _case(**values) -> ReplayCase:

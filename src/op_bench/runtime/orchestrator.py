@@ -148,6 +148,7 @@ class V06Orchestrator:
         backend_factory: object,
         adapter_factory: object,
         python_executable: str,
+        source_overlay_resolver: object | None = None,
     ) -> None:
         for value, path in (
             (source_resolver, "source_resolver"),
@@ -159,6 +160,12 @@ class V06Orchestrator:
                 raise ContractError(f"{path}: expected callable")
         self._source_resolver = source_resolver
         self._hidden_asset_resolver = hidden_asset_resolver
+        if source_overlay_resolver is None:
+            self._source_overlay_resolver = lambda task: task.patch_scope
+        elif callable(source_overlay_resolver):
+            self._source_overlay_resolver = source_overlay_resolver
+        else:
+            raise ContractError("source_overlay_resolver: expected callable")
         self._backend_factory = backend_factory
         self._adapter_factory = adapter_factory
         self._python_executable = require_str(
@@ -449,7 +456,7 @@ class V06Orchestrator:
                 runtime_backend=evaluation_backend,
                 runtime_profile=profile,
                 attempt_context=attempt_context,
-                source_overlay_paths=task.patch_scope,
+                source_overlay_paths=self._source_overlay_resolver(task),
             )
             evaluation_spec = EvaluationSpec(
                 session_id=session_id,

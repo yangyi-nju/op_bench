@@ -34,6 +34,29 @@ PROFILE_BY_ENVIRONMENT = {
 
 
 class LegacyV05ProjectionTests(unittest.TestCase):
+    def test_private_runtime_bindings_preserve_frozen_source_overlay_paths(self) -> None:
+        dataset = DatasetManifest.load(DATASET_PATH)
+        tasks = dataset.load_tasks(verified_only=True)
+        bundle = runtime_bundle_from_v05_dataset(
+            DATASET_PATH,
+            agents=(agent_spec(),),
+            repeat=1,
+            created_at="2026-07-18T00:00:00Z",
+        )
+
+        bindings = {binding.task_id: binding for binding in bundle.private_tasks}
+        for task in tasks:
+            with self.subTest(task=task.task_id):
+                self.assertEqual(
+                    bindings[task.task_id].source_overlay_paths,
+                    tuple(task.source_loading_overlay_paths),
+                )
+        set_submodule = bindings["pytorch__143455__set_submodule"]
+        self.assertIn(
+            "torch/testing/_internal/common_nn.py",
+            set_submodule.source_overlay_paths,
+        )
+
     def test_private_runtime_bindings_use_resolvable_executable_commits(self) -> None:
         bundle = runtime_bundle_from_v05_dataset(
             DATASET_PATH,

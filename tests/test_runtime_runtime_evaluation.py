@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 import hashlib
+import json
 from pathlib import Path
 import sys
 import tempfile
@@ -71,6 +72,33 @@ class SelectorTimeoutBackend(RecordingLocalBackend):
                 50,
             )
         return super().run(lease, command, cwd, timeout_ms)
+
+
+class SourceLoadingCommandBackend:
+    def __init__(self) -> None:
+        self.commands: list[tuple[str, ...]] = []
+
+    def prepare(self, *args, **kwargs):
+        raise AssertionError("prepare is not used by source-loading command tests")
+
+    def run(self, lease, command, cwd, timeout_ms):
+        del lease, timeout_ms
+        self.commands.append(command)
+        return RuntimeCommandResult(
+            command=command,
+            cwd=cwd,
+            exit_code=0,
+            stdout="",
+            stderr="",
+            duration_ms=1,
+            timed_out=False,
+        )
+
+    def collect(self, *args, **kwargs):
+        raise AssertionError("collect is not used by source-loading command tests")
+
+    def cleanup(self, *args, **kwargs):
+        raise AssertionError("cleanup is not used by source-loading command tests")
 
 
 class RuntimeEvaluationFixture:
@@ -190,6 +218,105 @@ class RuntimeEvaluationFixture:
 
 
 class RuntimeFreshEvaluationBackendTests(unittest.TestCase):
+    def test_python_overlay_stages_all_frozen_overlay_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            fixture = RuntimeEvaluationFixture(Path(temporary))
+            profile = replace(
+                fixture.profile,
+                source_loading_mode="python_overlay",
+            )
+            runtime = SourceLoadingCommandBackend()
+            backend = RuntimeFreshEvaluationBackend(
+                source=LocalGitSource(
+                    identity=fixture.source,
+                    repository=fixture.git.repository,
+                    revision=fixture.git.revision,
+                ),
+                hidden_asset=fixture.hidden_asset,
+                python_executable="python",
+                runtime_backend=runtime,
+                runtime_profile=fixture.profile,
+                attempt_context=fixture.context,
+                source_overlay_paths=(
+                    "torch/nn/modules/module.py",
+                    "torch/testing/_internal/common_nn.py",
+                ),
+            )
+            backend.runtime_profile = profile
+
+            backend._prepare_source_loading(object(), 30_000)
+
+            self.assertEqual(len(runtime.commands), 1)
+            configuration = json.loads(runtime.commands[0][-1])
+            self.assertEqual(
+                configuration["paths"],
+                [
+                    "torch/nn/modules/module.py",
+                    "torch/testing/_internal/common_nn.py",
+                ],
+            )
+
+    def test_inplace_build_freezes_legacy_cuda_build_environment(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            fixture = RuntimeEvaluationFixture(Path(temporary))
+            profile = replace(
+                fixture.profile,
+                source_loading_mode="inplace_build",
+            )
+            runtime = SourceLoadingCommandBackend()
+            backend = RuntimeFreshEvaluationBackend(
+                source=LocalGitSource(
+                    identity=fixture.source,
+                    repository=fixture.git.repository,
+                    revision=fixture.git.revision,
+                ),
+                hidden_asset=fixture.hidden_asset,
+                python_executable="python",
+                runtime_backend=runtime,
+                runtime_profile=fixture.profile,
+                attempt_context=fixture.context,
+            )
+            backend.runtime_profile = profile
+
+            backend._prepare_source_loading(object(), 30_000)
+
+            self.assertEqual(len(runtime.commands), 1)
+            command = runtime.commands[0]
+            self.assertEqual(command[:2], ("bash", "-lc"))
+            self.assertIn("export BUILD_TEST=0;", command[2])
+            self.assertIn("export TORCH_CUDA_ARCH_LIST=7.0;", command[2])
+            self.assertIn("setup.py build_ext --inplace", command[2])
+            self.assertNotIn("setup.py develop", command[2])
+
+    def test_overlay_script_runner_preserves_direct_python_script_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            fixture = RuntimeEvaluationFixture(Path(temporary))
+            profile = replace(
+                fixture.profile,
+                source_loading_mode="python_overlay",
+            )
+            backend = RuntimeFreshEvaluationBackend(
+                source=LocalGitSource(
+                    identity=fixture.source,
+                    repository=fixture.git.repository,
+                    revision=fixture.git.revision,
+                ),
+                hidden_asset=fixture.hidden_asset,
+                python_executable="python",
+                runtime_backend=SourceLoadingCommandBackend(),
+                runtime_profile=fixture.profile,
+                attempt_context=fixture.context,
+                source_overlay_paths=("torch/autograd/__init__.py",),
+            )
+            backend.runtime_profile = profile
+
+            command = backend._runtime_selector_command(
+                ("python", "test/test_autograd.py", "TestAutograd.test_example")
+            )
+
+            self.assertIn("pathlib.Path(script).resolve().parent", command[3])
+            self.assertEqual(command[-2:], ("test/test_autograd.py", "TestAutograd.test_example"))
+
     def test_source_and_patches_are_staged_without_runtime_git(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             fixture = RuntimeEvaluationFixture(Path(temporary))

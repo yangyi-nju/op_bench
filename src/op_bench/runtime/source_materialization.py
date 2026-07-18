@@ -60,6 +60,8 @@ def materialize_frozen_git_revision(
     source_directory: Path,
     revision: str,
     workspace: Path,
+    *,
+    include_submodules: bool = False,
 ) -> FrozenSourceSnapshot:
     """Create one clean standalone Git workspace from an exact local revision."""
     if not isinstance(source_directory, Path):
@@ -72,6 +74,8 @@ def materialize_frozen_git_revision(
         raise SourceMaterializationError("workspace must be a pathlib.Path")
     if workspace.exists() or workspace.is_symlink():
         raise SourceMaterializationError("workspace already exists")
+    if not isinstance(include_submodules, bool):
+        raise SourceMaterializationError("include_submodules must be a bool")
 
     try:
         resolved_commit = _git_text(
@@ -108,6 +112,12 @@ def materialize_frozen_git_revision(
             resolved_commit,
         )
         _git(workspace, "update-ref", "HEAD", snapshot_commit)
+        if include_submodules:
+            _materialize_frozen_submodules(
+                source_directory,
+                resolved_commit,
+                workspace,
+            )
         if _git_bytes(
             workspace,
             "status",
@@ -115,6 +125,7 @@ def materialize_frozen_git_revision(
             "-z",
             "--untracked-files=all",
             "--ignored=matching",
+            "--ignore-submodules=all",
         ):
             raise SourceMaterializationError("materialized workspace is not clean")
         return FrozenSourceSnapshot(
@@ -261,6 +272,83 @@ def _restore_gitlink_index_entries(
     revision: str,
     workspace: Path,
 ) -> None:
+    for object_id, path in _gitlink_entries(source_directory, revision):
+        _git(
+            workspace,
+            "update-index",
+            "--add",
+            "--cacheinfo",
+            "160000",
+            object_id,
+            path,
+        )
+
+
+def _materialize_frozen_submodules(
+    source_directory: Path,
+    revision: str,
+    workspace: Path,
+) -> None:
+    for object_id, path in _gitlink_entries(source_directory, revision):
+        source_submodule = _real_submodule_directory(source_directory, path)
+        try:
+            resolved_commit = _git_text(
+                source_submodule,
+                "rev-parse",
+                "--verify",
+                "--end-of-options",
+                f"{object_id}^{{commit}}",
+            )
+        except subprocess.CalledProcessError as exc:
+            raise SourceMaterializationError(
+                f"frozen submodule commit is unavailable: {path}"
+            ) from exc
+        if resolved_commit != object_id:
+            raise SourceMaterializationError(
+                f"frozen submodule commit does not match Gitlink: {path}"
+            )
+        relative = PurePosixPath(path)
+        destination = workspace.joinpath(*relative.parts)
+        _ensure_real_parent_directories(workspace, destination.parent)
+        if destination.is_symlink() or (
+            destination.exists() and not destination.is_dir()
+        ):
+            raise SourceMaterializationError(
+                f"submodule destination is not a real directory: {path}"
+            )
+        destination.mkdir(exist_ok=True)
+        if any(destination.iterdir()):
+            raise SourceMaterializationError(
+                f"submodule destination is not empty: {path}"
+            )
+        _stream_safe_git_archive(source_submodule, object_id, destination)
+        _materialize_frozen_submodules(
+            source_submodule,
+            object_id,
+            destination,
+        )
+
+
+def _real_submodule_directory(source_directory: Path, path: str) -> Path:
+    current = source_directory
+    for part in PurePosixPath(path).parts:
+        current = current / part
+        if current.is_symlink():
+            raise SourceMaterializationError(
+                f"source submodule path contains a symlink: {path}"
+            )
+    if not current.is_dir():
+        raise SourceMaterializationError(
+            f"frozen source submodule is not populated: {path}"
+        )
+    return current
+
+
+def _gitlink_entries(
+    source_directory: Path,
+    revision: str,
+) -> tuple[tuple[str, str], ...]:
+    gitlinks: list[tuple[str, str]] = []
     entries = _git_bytes(
         source_directory,
         "ls-tree",
@@ -290,15 +378,8 @@ def _restore_gitlink_index_entries(
             character not in "0123456789abcdef" for character in object_id
         ):
             raise SourceMaterializationError("Gitlink object id is not canonical")
-        _git(
-            workspace,
-            "update-index",
-            "--add",
-            "--cacheinfo",
-            "160000",
-            object_id,
-            path,
-        )
+        gitlinks.append((object_id, path))
+    return tuple(gitlinks)
 
 
 def _git_text(repository: Path, *arguments: str) -> str:

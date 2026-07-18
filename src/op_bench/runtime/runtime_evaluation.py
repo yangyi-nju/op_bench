@@ -79,8 +79,9 @@ for relative in paths:
 print(json.dumps({"mode": "python_overlay", "overlay_count": len(paths)}, sort_keys=True))
 """.strip()
 _RUN_SCRIPT_WITH_PATH_PROGRAM = (
-    "import runpy,sys;"
+    "import pathlib,runpy,sys;"
     "overlay=sys.argv[1];script=sys.argv[2];"
+    "sys.path.insert(0,str(pathlib.Path(script).resolve().parent));"
     "sys.path.insert(0,overlay);"
     "sys.argv=sys.argv[2:];"
     "runpy.run_path(script,run_name='__main__')"
@@ -88,8 +89,10 @@ _RUN_SCRIPT_WITH_PATH_PROGRAM = (
 _INPLACE_BUILD_COMMAND = (
     "set -o pipefail; "
     "test -f setup.py || { echo 'setup.py missing' >&2; exit 2; }; "
+    "export BUILD_TEST=0; "
+    "export TORCH_CUDA_ARCH_LIST=7.0; "
     "export MAX_JOBS=${MAX_JOBS:-8}; "
-    "{python} setup.py develop --no-deps"
+    "{python} setup.py build_ext --inplace"
 )
 
 

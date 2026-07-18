@@ -63,6 +63,7 @@ class RuntimeTargetBinding:
     ssh_binary: str = "ssh"
     rsync_binary: str = "rsync"
     remote_workspace_root: str = "/tmp/opbench-runtime"
+    remote_ccache_seed: str | None = None
 
     def __post_init__(self) -> None:
         if self.backend not in _BACKENDS:
@@ -99,6 +100,14 @@ class RuntimeTargetBinding:
         )
         if not remote_root.is_absolute() or ".." in remote_root.parts:
             raise ContractError("remote_workspace_root: expected safe absolute path")
+        if self.remote_ccache_seed is not None:
+            seed = PurePosixPath(
+                require_str(self.remote_ccache_seed, "remote_ccache_seed")
+            )
+            if not seed.is_absolute() or ".." in seed.parts:
+                raise ContractError("remote_ccache_seed: expected safe absolute path")
+            if self.backend != "remote_docker":
+                raise ContractError("remote_ccache_seed: requires remote_docker")
 
     @property
     def public_binding_hash(self) -> str:
@@ -117,6 +126,7 @@ class RuntimeTargetBinding:
                 "ssh_binary": self.ssh_binary,
                 "rsync_binary": self.rsync_binary,
                 "remote_workspace_root": self.remote_workspace_root,
+                "remote_ccache_seed": self.remote_ccache_seed,
             }
         )
 
@@ -161,6 +171,7 @@ def load_runtime_target_binding(
         "ssh_binary",
         "rsync_binary",
         "remote_workspace_root",
+        "remote_ccache_seed",
     }
     if set(encoded) == {"hosts"}:
         return _load_single_legacy_target(
@@ -223,6 +234,14 @@ def load_runtime_target_binding(
             encoded.get("remote_workspace_root", "/tmp/opbench-runtime"),
             "target_config.remote_workspace_root",
         ),
+        remote_ccache_seed=(
+            None
+            if encoded.get("remote_ccache_seed") is None
+            else require_str(
+                encoded["remote_ccache_seed"],
+                "target_config.remote_ccache_seed",
+            )
+        ),
     )
     if backend == "remote_docker" and (
         binding.host_alias is None
@@ -245,14 +264,15 @@ def _load_single_legacy_target(
     raw = next(iter(hosts.values()))
     if not isinstance(raw, dict):
         raise ContractError("target_config: invalid exact host binding")
-    allowed = {
+    required = {
         "hostname",
         "user",
         "port",
         "identity_file",
         "remote_workspace_root",
     }
-    if set(raw) - allowed or set(raw) != allowed:
+    allowed = required | {"remote_ccache_seed"}
+    if set(raw) - allowed or not required.issubset(raw):
         raise ContractError("target_config: invalid exact host fields")
     if local_workspace_parent is None:
         raise ContractError("target_config: local workspace parent is required")
@@ -270,6 +290,14 @@ def _load_single_legacy_target(
         remote_workspace_root=require_str(
             raw["remote_workspace_root"],
             "target_config.remote_workspace_root",
+        ),
+        remote_ccache_seed=(
+            None
+            if raw.get("remote_ccache_seed") is None
+            else require_str(
+                raw["remote_ccache_seed"],
+                "target_config.remote_ccache_seed",
+            )
         ),
     )
 
@@ -434,6 +462,9 @@ class LocalProcessBackend:
                     attempt_context.frozen_source_directory,
                     attempt_context.frozen_source_revision,
                     workspace,
+                    include_submodules=(
+                        profile.source_loading_mode == "inplace_build"
+                    ),
                 )
                 handle = attempt_context.lease_store.put_exact(
                     declared.resource_id,
@@ -726,7 +757,8 @@ class DockerRuntimeBackend(LocalProcessBackend):
             if key in self._states:
                 raise ContractError("attempt context is already prepared")
             workspace_record, workspace_handle, workspace = _materialize_local_workspace(
-                attempt_context
+                profile,
+                attempt_context,
             )
             container_ordinal = _next_ordinal(
                 attempt_context.resource_ledger,
@@ -874,6 +906,11 @@ class DockerRuntimeBackend(LocalProcessBackend):
             workdir=target_cwd,
             container_name=container.raw_handle,
             command=argv,
+            python_path=(
+                state.profile.mount_policy.workspace_target
+                if state.profile.source_loading_mode == "inplace_build"
+                else None
+            ),
         )
         try:
             raw = self._argv_runner(executed, None, timeout)
@@ -956,7 +993,8 @@ class RemoteDockerRuntimeBackend(LocalProcessBackend):
             if key in self._states:
                 raise ContractError("attempt context is already prepared")
             workspace_record, workspace_handle, workspace = _materialize_local_workspace(
-                attempt_context
+                profile,
+                attempt_context,
             )
             try:
                 local_sync_hash = _workspace_sync_fingerprint(workspace)
@@ -1046,6 +1084,59 @@ class RemoteDockerRuntimeBackend(LocalProcessBackend):
                     workspace,
                 )
                 raise RuntimeBackendUnavailable("remote_source_sync_failed")
+
+            if (
+                profile.source_loading_mode == "inplace_build"
+                and binding.remote_ccache_seed is not None
+            ):
+                try:
+                    seeded = self._argv_runner(
+                        _ssh_command(
+                            binding,
+                            (
+                                "cp",
+                                "-a",
+                                "--reflink=auto",
+                                "--",
+                                binding.remote_ccache_seed,
+                                f"{remote_path}/.ccache",
+                            ),
+                        ),
+                        None,
+                        profile.timeout_ms,
+                    )
+                except RuntimeBackendUnavailable:
+                    _release_remote_after_prepare_failure(
+                        attempt_context,
+                        binding,
+                        remote_record.resource_id,
+                        remote_path,
+                        self._argv_runner,
+                        profile.cleanup_policy.timeout_ms,
+                    )
+                    _release_workspace_after_prepare_failure(
+                        attempt_context,
+                        workspace_record.resource_id,
+                        workspace,
+                    )
+                    raise
+                if seeded.exit_code != 0 or seeded.timed_out:
+                    _release_remote_after_prepare_failure(
+                        attempt_context,
+                        binding,
+                        remote_record.resource_id,
+                        remote_path,
+                        self._argv_runner,
+                        profile.cleanup_policy.timeout_ms,
+                    )
+                    _release_workspace_after_prepare_failure(
+                        attempt_context,
+                        workspace_record.resource_id,
+                        workspace,
+                    )
+                    raise RuntimeBackendUnavailable(
+                        "remote_ccache_seed_copy_failed"
+                    )
 
             container_ordinal = _next_ordinal(
                 attempt_context.resource_ledger,
@@ -1223,6 +1314,17 @@ class RemoteDockerRuntimeBackend(LocalProcessBackend):
             ),
             container_name=container.raw_handle,
             command=argv,
+            ccache_directory=(
+                f"{state.profile.mount_policy.workspace_target}/.ccache"
+                if state.profile.source_loading_mode == "inplace_build"
+                and state.context.target_binding.remote_ccache_seed is not None
+                else "/tmp/op_bench_runtime/ccache"
+            ),
+            python_path=(
+                state.profile.mount_policy.workspace_target
+                if state.profile.source_loading_mode == "inplace_build"
+                else None
+            ),
         )
         try:
             raw = self._argv_runner(
@@ -1406,6 +1508,7 @@ def _local_workspace_path(
 
 
 def _materialize_local_workspace(
+    profile: RuntimeProfile,
     context: RuntimeAttemptContext,
 ) -> tuple[object, RuntimeResourceHandle, Path]:
     ordinal = _next_ordinal(context.resource_ledger, "workspace")
@@ -1419,6 +1522,7 @@ def _materialize_local_workspace(
             context.frozen_source_directory,
             context.frozen_source_revision,
             workspace,
+            include_submodules=(profile.source_loading_mode == "inplace_build"),
         )
         handle = context.lease_store.put_exact(
             declared.resource_id,
@@ -1636,6 +1740,8 @@ def _container_exec_command(
     workdir: str,
     container_name: str,
     command: tuple[str, ...],
+    ccache_directory: str = "/tmp/op_bench_runtime/ccache",
+    python_path: str | None = None,
 ) -> tuple[str, ...]:
     return (
         docker_binary,
@@ -1646,6 +1752,25 @@ def _container_exec_command(
         "GIT_CONFIG_KEY_0=safe.directory",
         "--env",
         f"GIT_CONFIG_VALUE_0={workspace_target}",
+        "--env",
+        "XDG_CACHE_HOME=/tmp/op_bench_runtime/xdg-cache",
+        "--env",
+        "TRITON_CACHE_DIR=/tmp/op_bench_runtime/triton-cache",
+        "--env",
+        "TORCHINDUCTOR_CACHE_DIR=/tmp/op_bench_runtime/torchinductor-cache",
+        "--env",
+        f"CCACHE_DIR={ccache_directory}",
+        "--env",
+        "CCACHE_MAXSIZE=2G",
+        "--env",
+        "CUDA_CACHE_PATH=/tmp/op_bench_runtime/cuda-cache",
+        "--env",
+        "TORCH_EXTENSIONS_DIR=/tmp/op_bench_runtime/torch-extensions",
+        *(
+            ()
+            if python_path is None
+            else ("--env", f"PYTHONPATH={python_path}")
+        ),
         "--workdir",
         workdir,
         container_name,
@@ -1717,6 +1842,7 @@ def _rsync_command(
         binding.rsync_binary,
         "-a",
         "--delete",
+        "--exclude=.ccache/",
         "-e",
         transport,
         str(source) + "/",
