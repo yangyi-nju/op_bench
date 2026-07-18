@@ -228,17 +228,21 @@ class V06OrchestratorFailureTests(unittest.TestCase):
     def test_workspace_authority_failure_cleans_prepared_runtime(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             fixture = build_orchestrator_fixture(Path(temporary))
-            (fixture.source.repository / "calc.py").write_text(
-                "def normalize(value):\n    return 'dirty'\n",
-                encoding="utf-8",
-            )
             adapter = PatchAdapter()
 
-            result = orchestrator_for(
-                fixture,
-                backend_factory=lambda profile, target, phase: LocalProcessBackend(),
-                adapter=adapter,
-            ).run(request_for(fixture))
+            with mock.patch.object(
+                __import__(
+                    "op_bench.runtime.workspace",
+                    fromlist=["AuthoritativeWorkspace"],
+                ).AuthoritativeWorkspace,
+                "open",
+                side_effect=WorkspacePolicyError("private authority detail"),
+            ):
+                result = orchestrator_for(
+                    fixture,
+                    backend_factory=lambda profile, target, phase: LocalProcessBackend(),
+                    adapter=adapter,
+                ).run(request_for(fixture))
 
             self.assertEqual(result.integrity.status, "passed", result.integrity.to_dict())
             self.assertEqual(adapter.run_count, 0)
@@ -248,6 +252,7 @@ class V06OrchestratorFailureTests(unittest.TestCase):
             self.assertEqual(row["attempt_validity"], "infrastructure_invalid")
             self.assertEqual(row["evaluation_outcome"], "not_evaluated")
             self.assertEqual(row["invalid_reason"], "session_workspace_error")
+            self.assertNotIn("private authority detail", repr(result))
             cleanup = result.cleanup_reports[fixture.expected.attempt_id]
             self.assertTrue(cleanup.all_released)
             self.assertTrue(

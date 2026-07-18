@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import os
 from pathlib import Path
+import stat
 import tempfile
 import unittest
 
@@ -40,6 +41,32 @@ class FrozenSourceMaterializationApiTests(unittest.TestCase):
 
 
 class FrozenSourceMaterializationTests(unittest.TestCase):
+    def test_snapshot_normalizes_git_regular_file_modes(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "source"
+            initialize_git_repo(source)
+            executable = source / "src" / "helper.py"
+            executable.chmod(0o755)
+            git(source, "add", "src/helper.py")
+            git(source, "commit", "--quiet", "-m", "make helper executable")
+            revision = git(source, "rev-parse", "HEAD").stdout.decode().strip()
+
+            snapshot = materialize_frozen_git_revision(
+                source,
+                revision,
+                root / "workspace",
+            )
+
+            self.assertEqual(
+                stat.S_IMODE((snapshot.workspace / "src" / "operator.py").stat().st_mode),
+                0o644,
+            )
+            self.assertEqual(
+                stat.S_IMODE((snapshot.workspace / "src" / "helper.py").stat().st_mode),
+                0o755,
+            )
+
     def test_snapshot_tree_equals_selected_revision_and_is_deterministic(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -65,6 +92,45 @@ class FrozenSourceMaterializationTests(unittest.TestCase):
                 b"",
             )
             self.assertEqual(_source_state(source), before)
+
+    def test_snapshot_head_preserves_exact_source_archive_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "source"
+            revision = initialize_git_repo(source)
+            (source / "src" / "operator.py").write_text(
+                "VALUE = 2\n",
+                encoding="utf-8",
+            )
+            git(source, "add", "src/operator.py")
+            git(source, "commit", "--quiet", "-m", "second source revision")
+            revision = git(source, "rev-parse", "HEAD").stdout.decode().strip()
+            expected_archive = git(
+                source,
+                "archive",
+                "--format=tar",
+                revision,
+            ).stdout
+
+            snapshot = materialize_frozen_git_revision(
+                source,
+                revision,
+                root / "workspace",
+            )
+
+            self.assertEqual(
+                git(snapshot.workspace, "rev-parse", "HEAD").stdout.decode().strip(),
+                revision,
+            )
+            self.assertEqual(
+                git(
+                    snapshot.workspace,
+                    "archive",
+                    "--format=tar",
+                    "HEAD",
+                ).stdout,
+                expected_archive,
+            )
 
     def test_unknown_revision_fails_without_leaving_workspace(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -112,6 +178,45 @@ class FrozenSourceMaterializationTests(unittest.TestCase):
             self.assertTrue(link.is_symlink())
             self.assertEqual(os.readlink(link), "../src/operator.py")
             self.assertEqual(_source_state(source), before)
+
+    def test_gitlink_entries_are_preserved_without_initializing_submodules(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "source"
+            submodule_commit = initialize_git_repo(source)
+            git(
+                source,
+                "update-index",
+                "--add",
+                "--cacheinfo",
+                f"160000,{submodule_commit},vendor/dependency",
+            )
+            git(source, "commit", "--quiet", "-m", "add frozen gitlink")
+            revision = git(source, "rev-parse", "HEAD").stdout.decode().strip()
+
+            snapshot = materialize_frozen_git_revision(
+                source,
+                revision,
+                root / "workspace",
+            )
+
+            entry = git(
+                snapshot.workspace,
+                "ls-tree",
+                "HEAD",
+                "vendor/dependency",
+            ).stdout.decode("ascii")
+            self.assertEqual(
+                entry,
+                f"160000 commit {submodule_commit}\tvendor/dependency\n",
+            )
+            dependency = snapshot.workspace / "vendor" / "dependency"
+            self.assertTrue(dependency.is_dir())
+            self.assertEqual(list(dependency.iterdir()), [])
+            self.assertEqual(
+                git(snapshot.workspace, "status", "--porcelain=v1").stdout,
+                b"",
+            )
 
 
 if __name__ == "__main__":

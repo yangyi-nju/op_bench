@@ -8,16 +8,6 @@ import subprocess
 import tarfile
 
 
-_SNAPSHOT_IDENTITY = {
-    "GIT_AUTHOR_NAME": "OpBench Runtime",
-    "GIT_AUTHOR_EMAIL": "runtime@opbench.invalid",
-    "GIT_AUTHOR_DATE": "2000-01-01T00:00:00+0000",
-    "GIT_COMMITTER_NAME": "OpBench Runtime",
-    "GIT_COMMITTER_EMAIL": "runtime@opbench.invalid",
-    "GIT_COMMITTER_DATE": "2000-01-01T00:00:00+0000",
-}
-
-
 @dataclass(frozen=True)
 class FrozenSourceSnapshot:
     workspace: Path
@@ -102,12 +92,21 @@ def materialize_frozen_git_revision(
         _stream_safe_git_archive(source_directory, resolved_commit, workspace)
         _git(workspace, "init", "--quiet", "--initial-branch=main")
         _git(workspace, "add", "--force", "--all")
+        _restore_gitlink_index_entries(
+            source_directory,
+            resolved_commit,
+            workspace,
+        )
         snapshot_tree = _git_text(workspace, "write-tree")
         if snapshot_tree != source_tree:
             raise SourceMaterializationError(
                 "materialized Git tree does not match frozen revision"
             )
-        snapshot_commit = _deterministic_root_commit(workspace, snapshot_tree)
+        snapshot_commit = _install_frozen_commit(
+            source_directory,
+            workspace,
+            resolved_commit,
+        )
         _git(workspace, "update-ref", "HEAD", snapshot_commit)
         if _git_bytes(
             workspace,
@@ -194,7 +193,7 @@ def _extract_archive_member(
         ):
             raise SourceMaterializationError("archive directory conflicts with an entry")
         destination.mkdir(exist_ok=True)
-        destination.chmod(member.mode & 0o777)
+        destination.chmod(0o755)
         return
     if destination.exists() or destination.is_symlink():
         raise SourceMaterializationError("archive contains a duplicate entry")
@@ -204,7 +203,7 @@ def _extract_archive_member(
             raise SourceMaterializationError("archive regular file has no content")
         with source, destination.open("xb") as target:
             shutil.copyfileobj(source, target)
-        destination.chmod(member.mode & 0o777)
+        destination.chmod(0o755 if member.mode & 0o111 else 0o644)
         return
     if member.issym():
         destination.symlink_to(member.linkname)
@@ -226,15 +225,80 @@ def _ensure_real_parent_directories(workspace: Path, parent: Path) -> None:
             current.mkdir()
 
 
-def _deterministic_root_commit(workspace: Path, tree: str) -> str:
-    completed = _git(
+def _install_frozen_commit(
+    source_directory: Path,
+    workspace: Path,
+    revision: str,
+) -> str:
+    commit_content = _git(
+        source_directory,
+        "cat-file",
+        "commit",
+        revision,
+    ).stdout
+    installed = _git(
         workspace,
-        "commit-tree",
-        tree,
-        input_bytes=b"OpBench frozen source snapshot\n",
-        extra_environment=_SNAPSHOT_IDENTITY,
+        "hash-object",
+        "-t",
+        "commit",
+        "-w",
+        "--stdin",
+        input_bytes=commit_content,
+    ).stdout.decode("ascii").strip()
+    if installed != revision:
+        raise SourceMaterializationError("installed commit does not match frozen revision")
+    commit_headers = commit_content.split(b"\n\n", 1)[0].splitlines()
+    if any(line.startswith(b"parent ") for line in commit_headers):
+        (workspace / ".git" / "shallow").write_text(
+            revision + "\n",
+            encoding="ascii",
+        )
+    return installed
+
+
+def _restore_gitlink_index_entries(
+    source_directory: Path,
+    revision: str,
+    workspace: Path,
+) -> None:
+    entries = _git_bytes(
+        source_directory,
+        "ls-tree",
+        "-r",
+        "-z",
+        revision,
     )
-    return completed.stdout.decode("ascii").strip()
+    for encoded_entry in entries.split(b"\x00"):
+        if not encoded_entry:
+            continue
+        try:
+            header, encoded_path = encoded_entry.split(b"\t", 1)
+            mode, object_type, encoded_object_id = header.split(b" ", 2)
+        except ValueError as exc:
+            raise SourceMaterializationError("Git tree entry is malformed") from exc
+        if mode != b"160000":
+            continue
+        if object_type != b"commit":
+            raise SourceMaterializationError("Gitlink entry has an invalid object type")
+        try:
+            path = encoded_path.decode("utf-8")
+            object_id = encoded_object_id.decode("ascii")
+        except UnicodeDecodeError as exc:
+            raise SourceMaterializationError("Gitlink entry is not decodable") from exc
+        _validate_archive_entry(path)
+        if not object_id or any(
+            character not in "0123456789abcdef" for character in object_id
+        ):
+            raise SourceMaterializationError("Gitlink object id is not canonical")
+        _git(
+            workspace,
+            "update-index",
+            "--add",
+            "--cacheinfo",
+            "160000",
+            object_id,
+            path,
+        )
 
 
 def _git_text(repository: Path, *arguments: str) -> str:
