@@ -81,6 +81,28 @@ class LocalBackendFixture:
         )
 
 
+def pollute_source_after_frozen_commit(fixture: LocalBackendFixture) -> str:
+    (fixture.source / ".gitignore").write_text(
+        "ignored-cache/\n",
+        encoding="utf-8",
+    )
+    git(fixture.source, "add", ".gitignore")
+    git(fixture.source, "commit", "--quiet", "-m", "freeze ignore policy")
+    revision = git(fixture.source, "rev-parse", "HEAD").stdout.decode().strip()
+    fixture.context = replace(
+        fixture.context,
+        frozen_source_revision=revision,
+    )
+    (fixture.source / "ignored-cache").mkdir()
+    (fixture.source / "ignored-cache" / "state.bin").write_bytes(b"ignored")
+    (fixture.source / "untracked.txt").write_text("untracked\n", encoding="utf-8")
+    (fixture.source / "src" / "operator.py").write_text(
+        "VALUE = 999\n",
+        encoding="utf-8",
+    )
+    return revision
+
+
 class LocalProcessBackendTests(unittest.TestCase):
     def test_attempt_context_requires_explicit_frozen_source_revision(self) -> None:
         parameters = inspect.signature(RuntimeAttemptContext).parameters
@@ -94,27 +116,7 @@ class LocalProcessBackendTests(unittest.TestCase):
     def test_prepare_materializes_only_the_frozen_revision(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             fixture = LocalBackendFixture(Path(temporary))
-            (fixture.source / ".gitignore").write_text(
-                "ignored-cache/\n",
-                encoding="utf-8",
-            )
-            git(fixture.source, "add", ".gitignore")
-            git(fixture.source, "commit", "--quiet", "-m", "freeze ignore policy")
-            revision = git(fixture.source, "rev-parse", "HEAD").stdout.decode().strip()
-            fixture.context = replace(
-                fixture.context,
-                frozen_source_revision=revision,
-            )
-            (fixture.source / "ignored-cache").mkdir()
-            (fixture.source / "ignored-cache" / "state.bin").write_bytes(b"ignored")
-            (fixture.source / "untracked.txt").write_text(
-                "untracked\n",
-                encoding="utf-8",
-            )
-            (fixture.source / "src" / "operator.py").write_text(
-                "VALUE = 999\n",
-                encoding="utf-8",
-            )
+            pollute_source_after_frozen_commit(fixture)
 
             lease = LocalProcessBackend().prepare(fixture.profile, fixture.context)
             workspace = Path(lease.handles[0].raw_handle)
@@ -343,6 +345,114 @@ class SelectiveExceptionArgvRunner(RecordingArgvRunner):
 
 
 class ContainerBackendCommandTests(unittest.TestCase):
+    def test_docker_materializes_only_the_frozen_revision_before_mount(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            profile = self.profile("docker")
+            workspaces = root / "workspaces"
+            workspaces.mkdir()
+            binding = RuntimeTargetBinding(
+                backend="docker",
+                local_workspace_parent=workspaces,
+                docker_binary="docker-fixture",
+            )
+            fixture = LocalBackendFixture(root, profile=profile, binding=binding)
+            pollute_source_after_frozen_commit(fixture)
+            runner = RecordingArgvRunner()
+            backend = DockerRuntimeBackend(argv_runner=runner)
+
+            lease = backend.prepare(profile, fixture.context)
+
+            workspace = next(
+                handle for handle in lease.handles if handle.resource_type == "workspace"
+            )
+            snapshot = Path(workspace.raw_handle)
+            self.assertEqual(
+                (snapshot / "src" / "operator.py").read_text(encoding="utf-8"),
+                "VALUE = 1\n",
+            )
+            self.assertFalse((snapshot / "ignored-cache").exists())
+            self.assertFalse((snapshot / "untracked.txt").exists())
+            self.assertIn(f"{snapshot}:/workspace:rw", runner.calls[0][0])
+            backend.cleanup(lease)
+
+    def test_remote_materializes_only_the_frozen_revision_before_sync(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspaces = root / "workspaces"
+            workspaces.mkdir()
+            identity_file = root / "id_fixture"
+            identity_file.write_text("fixture", encoding="utf-8")
+            profile = self.profile("remote_docker")
+            binding = RuntimeTargetBinding(
+                backend="remote_docker",
+                local_workspace_parent=workspaces,
+                host_alias="gpu-exact-fixture",
+                remote_user="runner",
+                identity_file=identity_file,
+                docker_binary="docker-fixture",
+                ssh_binary="ssh-fixture",
+                rsync_binary="rsync-fixture",
+            )
+            fixture = LocalBackendFixture(root, profile=profile, binding=binding)
+            pollute_source_after_frozen_commit(fixture)
+            runner = RecordingArgvRunner()
+            backend = RemoteDockerRuntimeBackend(argv_runner=runner)
+
+            lease = backend.prepare(profile, fixture.context)
+
+            workspace = next(
+                handle for handle in lease.handles if handle.resource_type == "workspace"
+            )
+            snapshot = Path(workspace.raw_handle)
+            self.assertEqual(
+                (snapshot / "src" / "operator.py").read_text(encoding="utf-8"),
+                "VALUE = 1\n",
+            )
+            self.assertFalse((snapshot / "ignored-cache").exists())
+            self.assertFalse((snapshot / "untracked.txt").exists())
+            self.assertEqual(runner.calls[1][0][-2], str(snapshot) + "/")
+            backend.cleanup(lease)
+
+    def test_remote_invalid_revision_fails_before_any_target_command(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspaces = root / "workspaces"
+            workspaces.mkdir()
+            identity_file = root / "id_fixture"
+            identity_file.write_text("fixture", encoding="utf-8")
+            profile = self.profile("remote_docker")
+            binding = RuntimeTargetBinding(
+                backend="remote_docker",
+                local_workspace_parent=workspaces,
+                host_alias="gpu-exact-fixture",
+                remote_user="runner",
+                identity_file=identity_file,
+                docker_binary="docker-fixture",
+                ssh_binary="ssh-fixture",
+                rsync_binary="rsync-fixture",
+            )
+            fixture = LocalBackendFixture(root, profile=profile, binding=binding)
+            runner = RecordingArgvRunner()
+            backend = RemoteDockerRuntimeBackend(argv_runner=runner)
+
+            with self.assertRaises(RuntimeBackendUnavailable) as raised:
+                backend.prepare(
+                    profile,
+                    replace(fixture.context, frozen_source_revision="f" * 40),
+                )
+
+            self.assertEqual(raised.exception.reason_code, "workspace_prepare_failed")
+            self.assertEqual(
+                [
+                    (record.resource_type, record.transition)
+                    for record in fixture.ledger.records
+                ],
+                [("workspace", "declared"), ("workspace", "create_failed")],
+            )
+            self.assertEqual(runner.calls, [])
+            self.assertEqual(list(workspaces.iterdir()), [])
+
     def test_docker_command_exception_during_create_releases_workspace(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

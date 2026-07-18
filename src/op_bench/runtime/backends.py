@@ -1417,19 +1417,30 @@ def _materialize_local_workspace(
         if workspace.exists() or workspace.is_symlink():
             raise ContractError("workspace path already exists")
         workspace.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copytree(context.frozen_source_directory, workspace, symlinks=False)
+        snapshot = materialize_frozen_git_revision(
+            context.frozen_source_directory,
+            context.frozen_source_revision,
+            workspace,
+        )
         handle = context.lease_store.put_exact(
             declared.resource_id,
             "workspace",
             ordinal,
-            str(workspace),
+            str(snapshot.workspace),
         )
         context.resource_ledger.created(
             declared.resource_id,
             handle.raw_handle_hash,
         )
-        return declared, handle, workspace
+        return declared, handle, snapshot.workspace
     except Exception as exc:  # noqa: BLE001 - stable materialization boundary.
+        try:
+            _prune_empty_workspace_parents(
+                workspace,
+                context.target_binding.local_workspace_parent,
+            )
+        except OSError:
+            pass
         if _last_transition(context, declared.resource_id) == "declared":
             context.resource_ledger.create_failed(declared.resource_id)
         raise RuntimeBackendUnavailable("workspace_prepare_failed", str(exc)) from exc
