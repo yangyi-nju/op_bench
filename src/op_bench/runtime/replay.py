@@ -365,7 +365,7 @@ class ExactReplayObserver:
             ledger.close()
             lease_store.close()
         unavailable = runtime_evaluator.last_backend_unavailable_reason
-        if unavailable is not None:
+        if unavailable is not None and observed.invalid_reason == unavailable:
             if unavailable in self._GLOBAL_UNAVAILABLE:
                 self._global_unavailable_reason = unavailable
             else:

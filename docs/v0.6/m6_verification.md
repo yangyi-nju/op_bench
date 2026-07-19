@@ -6,6 +6,9 @@ Branch: `codex/opbench-v0.6`
 
 Commit under test: `86a7e04675c30867706831341703cd892c21c6f4` plus the M6 working tree. The milestone commit is created after this record and is reported in the handoff.
 
+Current release status: **Completed** by the post-M7 exact-target closure in
+section 8. The original M6 decision below is preserved as a historical freeze.
+
 Decision: M6 implementation is complete and M7 is next. Deterministic runtime conformance and the required real-Codex local CPU paths passed. The one explicitly configured Remote target was unavailable with a stable connection timeout, so exact Runtime replay and Remote/CUDA canaries remain `Blocked`; they are not reported as successful executions.
 
 ## 1. Frozen identities
@@ -169,3 +172,75 @@ The resource verifier was run separately on the single local canary, the two-rep
 - Final review found no open P0/P1 issue. The remaining Remote/CUDA and replay blocks are environmental release evidence gaps, not hidden successes.
 
 M6 does not publish a new Agent ranking and does not relabel v0.5 results as v0.6 results.
+
+## 8. Post-M7 exact-target closure
+
+On 2026-07-19 the same configured target recovered. The closing work did
+not search for another host and did not run a network probe, host discovery,
+port/service scan, process list, or container list. It invoked only the exact
+target and paths already present in the private target binding.
+
+Representative canaries:
+
+| Entry | Artifact root | Result |
+| --- | --- | --- |
+| Remote CPU | `runs/v0.6_retry_remote_cpu_canary_fixed` | valid/finished/no_patch; 14 Integrity checks Passed; workspace, container, and remote workspace released |
+| CUDA Overlay | `runs/v0.6_retry_cuda_overlay_canary` | valid/finished/no_patch; 14 Integrity checks Passed; workspace, container, and remote workspace released |
+| CUDA Kernel Build | `runs/v0.6_retry_cuda_kernel_inplace_canary` | expected/observed `f2p_failed`; build exit 0; 1/1 Passed, zero differences |
+
+The kernel path materializes the exact frozen root tree plus recursive Gitlink
+submodule commits, copies an optional exact ccache seed into the Attempt-owned
+workspace, and executes `setup.py build_ext --inplace` with the workspace on
+`PYTHONPATH`. The seed remains read-only shared input; the copied cache,
+container, and remote workspace are Attempt-owned cleanup targets.
+The remote workspace leaf is created exclusively; a pre-existing leaf fails
+closed before rsync/seed/Docker and is never claimed or cleaned by the Attempt.
+Each recursive submodule archive is tree-verified against its exact Gitlink
+commit, and controller Git (including the incremental rsync fingerprint) runs
+under an isolated authority environment. Its fingerprint includes ignored as
+well as non-ignored controller-created files. Revision/archive resolution,
+conformance, local fresh evaluation, and workspace Git use that same isolation.
+Ordinary Remote CPU/Overlay rsync
+has no cache exclusion. A seeded inplace-build excludes only root `/.ccache/`,
+and a frozen source-owned root `.ccache` fails closed before remote operations.
+
+The final command was:
+
+```bash
+PYTHONPATH=src python3.12 scripts/run_legacy_replay.py \
+  --repository-root . \
+  --output-root runs/v0.6_retry_legacy_replay_exact_complete \
+  --target-config configs/remote_hosts.json
+```
+
+It exited `0` with `total=85 passed=85 failed=0 blocked=0`. The manifest contains
+17 Baseline, 17 Gold, and 51 Legacy cases; all Task authorities are verified.
+Expected and observed outcomes match for all 85 cases (31 `f2p_failed`, 54
+`resolved`), and `replay_differences.jsonl` is empty.
+
+The exact replay observer creates each case's resource ledger, private lease
+store, and cleanup report inside controller-private temporary scratch. Cleanup
+is fail-closed: a backend cleanup failure becomes an evaluation failure. Those
+per-case files are intentionally ephemeral under the M6 Task 5 persist-only
+contract, which retains only the manifest, results, differences, and summary.
+Therefore the four replay files are outcome-compatibility evidence, not direct
+per-case cleanup artifacts. Persistent R-03/R-10/R-12 resource proof comes
+from the v1 Remote CPU/CUDA Overlay canary run roots (all 14 Integrity checks,
+including ownership and cleanup) plus backend failure-injection tests.
+If the controller process dies after a replay remote leaf is created, that
+temporary ledger can be lost; a later exclusive-leaf collision fails closed and
+may currently become cached target-global unavailability. Persisted protected
+per-case cleanup attestations and collision-specific classification are future
+hardening. v0.6 does not infer ownership or run broad cleanup in that case.
+
+| Closing artifact | SHA-256 |
+| --- | --- |
+| Replay inventory | `sha256:193ef08f68f50a50c67f22b41ca2a31043c78d6b2311d23f16c588a86b80daee` |
+| `replay_manifest.json` | `21f85f547b5efde922616a44390b5c07814aaf59c8db27a9863a37a61ac2b424` |
+| `replay_results.jsonl` | `3c14d5bd462a633b1c4b7b062d1447d6a575ed62244793d5b93154e43db8c9d1` |
+| empty `replay_differences.jsonl` | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+| `replay_summary.json` | `1f5fa1515f2e93bbdec9a393e9fc07a3ccf4d121e6d33b175fdb7a1b09b03309` |
+
+All eight historical v0.5 result/summary hashes listed in section 3 remained
+unchanged. This closes R-05, R-06, R-07, R-08, and R-10 without changing the
+historical 37/51 score or claiming a new v0.6 Agent result.

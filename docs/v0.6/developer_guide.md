@@ -1,10 +1,9 @@
 # OpBench v0.6 Developer Guide
 
-Date: 2026-07-18
+Date: 2026-07-19
 
-Status: M1–M7 platform implementation is locally complete. The formal v0.6
-release remains Blocked by the exact-Remote replay and CUDA evidence gates in
-the [acceptance matrix](acceptance_matrix.md).
+Status: `opbench-v0.6.0` is Completed. M1–M7 and every Must gate in the
+[acceptance matrix](acceptance_matrix.md) have Passed.
 
 ## 1. Which execution path to use
 
@@ -33,10 +32,10 @@ Profile IDs cover four Runtime classes:
 | Runtime class | Profile ID | Backend | M6/M7 evidence |
 | --- | --- | --- | --- |
 | Local CPU process | `local-cpu-process-v1` | `local` | Passed: CLI/MCP conformance, Scripted Demo, real Codex canary/cohort, resume, Integrity, cleanup |
-| Remote CPU overlay | `remote-cpu-pytorch-2.6-py311-v1` | `remote_docker` | Blocked: exact configured target returned `connection_timeout` |
-| Remote CPU compile | `remote-cpu-compile-pytorch-2.6-py311-v1` | `remote_docker` | Profile/schema Passed; exact execution evidence Blocked with the same target |
-| CUDA Python overlay | `remote-cuda-overlay-pytorch-2.6-cu124-v1` | `remote_docker` | Profile/schema Passed; exact execution evidence Blocked |
-| CUDA kernel build | `remote-cuda-kernel-pytorch-2.6-cu124-v1` | `remote_docker` | Profile/schema Passed; exact execution evidence Blocked |
+| Remote CPU overlay | `remote-cpu-pytorch-2.6-py311-v1` | `remote_docker` | Passed: exact v1 canary, Integrity, ownership, cleanup, and full replay |
+| Remote CPU compile | `remote-cpu-compile-pytorch-2.6-py311-v1` | `remote_docker` | Passed: exact source-loading/replay coverage |
+| CUDA Python overlay | `remote-cuda-overlay-pytorch-2.6-cu124-v1` | `remote_docker` | Passed: exact v1 canary, Integrity, ownership, cleanup, and full replay |
+| CUDA kernel build | `remote-cuda-kernel-pytorch-2.6-cu124-v1` | `remote_docker` | Passed: exact inplace-build canary and full replay |
 
 Scripted-Remote conformance Passed because it exercises the remote transport
 semantics deterministically without claiming external hardware availability.
@@ -45,10 +44,33 @@ It is not a substitute for the exact Remote CPU/CUDA canaries.
 Remote execution requires both `--target-config` and the selected remote
 Profile. The private target file binds one exact backend, local workspace
 parent, host alias, remote user/workspace parent, Docker executable, SSH/rsync
-argv prefixes, and optional GPU request. It is never copied into a public
-Manifest or result. OpBench performs no target discovery, no host/service
-scan, no ping, and no broad process/container enumeration. It executes only
-the supplied target and manages only handles created for the current Attempt.
+argv prefixes, optional GPU request, and an optional absolute ccache seed for
+inplace builds. The seed is exact-copied into the Attempt workspace and is not
+mutated or cleaned as a shared resource. The private binding is never copied
+into a public Manifest or result. OpBench performs no target discovery, no
+host/service scan, no ping, and no broad process/container enumeration. It
+executes only the supplied target and manages only handles created for the
+current Attempt.
+
+The deterministic remote parent namespace may already exist, but the workspace
+leaf is created exclusively. If that leaf exists, preparation fails before
+rsync, ccache seeding, or Docker creation and does not delete the unowned leaf.
+Git commands used to fingerprint controller workspace changes run under the
+same narrow authority environment as source materialization, so ambient
+`GIT_DIR`, worktree, index, object, or config variables cannot redirect sync.
+The same isolation applies to legacy revision resolution, conformance HEAD
+resolution, archive identities, local fresh-evaluation clone/apply commands,
+and authoritative workspace Git operations.
+The length-framed fingerprint includes every controller-created untracked file,
+including paths matched by the frozen `.gitignore`, plus the workspace-root
+mode, working-tree directory paths/modes, and tracked path types/modes.
+Empty-directory creation, root/directory mode changes, staged hidden assets,
+and tracked metadata changes therefore cannot be omitted from incremental
+rsync.
+Only a seeded `inplace_build` excludes the transfer-root `/.ccache/`; ordinary
+CPU/Overlay sync excludes nothing. A frozen source-owned root `.ccache` fails
+closed before any remote command instead of being silently replaced by seed
+content.
 
 ## 3. Identity and comparability
 
@@ -92,6 +114,11 @@ evidence, private outputs, credentials, and machine-local paths are excluded.
 Fresh Evaluation starts after the Agent session is terminal, rebuilds the
 verified Source independently, strictly applies only the frozen patch, then
 injects evaluation-only tests.
+
+Source materialization and controller-side patch staging do not inherit ambient
+Git repository/index/object/config authority. Recursive inplace submodules are
+tree-verified against each exact Gitlink commit before their temporary Git
+metadata is removed.
 
 ## 5. Result axes and failure classification
 
@@ -192,9 +219,32 @@ PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/verify_runtime_resources.py \
 The resource verifier reads only the supplied run root. It does not inspect
 host processes, Docker inventory, remote hosts, or network state.
 
+Backend preparation and command registration are exact-resource transactions.
+If private handle or ledger registration fails after an exclusive workspace,
+container, or local process was created, the backend first removes that exact
+owned resource, records its terminal transition, and only then reports the
+failure. A cleanup failure is reported as `prepare_cleanup_failed` or
+`runtime_cleanup_failed` rather than being hidden by the original error;
+interrupts follow the same unwind path before propagation. Remote and Docker
+process registration failures execute no container command.
+
 For Legacy history, `scripts/run_legacy_replay.py` freezes the v0.5 17 baseline
 + 17 gold + 51 final-patch inventory. Without `--target-config`, all 85 cases
-are explicitly Blocked. With it, only that exact target is used.
+are explicitly Blocked. With it, only that exact target is used. The release
+closure Passed all 85 exact cases with zero differences. `inplace_build`
+materialization includes the exact recursive submodule Gitlink commits and
+uses `setup.py build_ext --inplace`; a task whose historical Gold diff cannot
+strictly apply to the frozen base may provide a hash-bound
+`gold.replay-v1.patch` plus `gold.replay-v1.provenance.json` sidecar without
+altering the original task asset.
+
+Replay persists only its four aggregate compatibility files. The observer's
+per-case resource ledger, private lease store, and cleanup report live in
+controller-private temporary scratch and are removed when the observer closes;
+cleanup still fails the case closed. Use completed v1 canary run roots and
+`verify_runtime_resources.py`, together with backend failure-injection tests,
+for persistent resource ownership and cleanup evidence rather than treating
+the aggregate replay files as that evidence.
 
 ## 8. Known limits and release status
 
@@ -204,12 +254,19 @@ are explicitly Blocked. With it, only that exact target is used.
   formal v0.6 ranking.
 - v0.6 does not expand the 17-task v0.5 Dataset; expansion belongs to v0.7.
 - v0.5's 37/51 result remains historical v0.5 evidence. It is not a v0.6
-  score and is not replayed success until R-05–R-08 pass.
+  score; the 85/85 replay is compatibility evidence, not a new Agent result.
 - No feedback-causality, cross-Agent ranking, or population-generalization
   conclusion is claimed.
-- Exact Remote CPU/CUDA and replay execution is Blocked by the configured
-  target's `connection_timeout`. Formal v0.6 release therefore remains
-  Blocked even though local platform implementation and M7 are complete.
+- The original M6/M7 `connection_timeout` remains in the historical record.
+  After the same target recovered, exact Remote CPU/CUDA canaries and replay
+  Passed; no replacement target was discovered or selected.
+- Exact replay's per-case cleanup ledger is process-local temporary state. An
+  abrupt controller death after remote-leaf creation can therefore leave no
+  persisted ownership token; a later exclusive-leaf collision currently
+  fail-closes and may be cached as target-global unavailability. Future
+  hardening should persist protected per-case cleanup attestations and classify
+  leaf collision separately. v0.6 never discovers, claims, or broadly cleans
+  such a leaf.
 
 See [M6 verification](m6_verification.md), [M7 verification](m7_verification.md),
 and the [v0.6 release notes](release_notes.md) for frozen evidence and the

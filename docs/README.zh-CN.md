@@ -12,8 +12,8 @@
 4. [v0.6 实施计划](v0.6/implementation_plan.md)：M1–M7 依赖、实现范围和验证策略。
 5. [v0.6 开发者指南](v0.6/developer_guide.md)：协议选择、Runtime 支持、身份、Artifact、Resume、失败归因和已知限制。
 6. [v0.6 验收矩阵](v0.6/acceptance_matrix.md)：可度量的发布要求和证据状态。
-7. [v0.6 M6 验证记录](v0.6/m6_verification.md)：Runtime Conformance、Replay 清单、真实 Codex canary 和精确 Remote 阻塞证据。
-8. [v0.6 发布说明](v0.6/release_notes.md)：平台交付范围、迁移合同、证据、阻塞门和明确不作出的结论。
+7. [v0.6 M6 验证记录](v0.6/m6_verification.md)：Runtime Conformance、Replay 清单、真实 Codex canary、精确 Remote 原始阻塞及 85/85 关闭附录。
+8. [v0.6 发布说明](v0.6/release_notes.md)：已完成的平台范围、迁移合同、关闭门、冻结证据和明确不作出的结论。
 9. [v0.6 M7 验证记录](v0.6/m7_verification.md)：可执行 Demo、文档、干净环境验证和最终发布判定。
 10. [v0.7 Dataset Factory 与 Boundary 设计](v0.7/design.md)：Boundary 分类、Admission Factory、matched-runtime 恢复和数据集合同。
 11. [v0.5 实验报告](v0.5/experiment_report.md)：verified 17-task 数据集、51-attempt 全量结果、precision 拆解和 8 维指标。

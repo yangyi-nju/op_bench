@@ -43,6 +43,25 @@ def initialize_git_repo(root: Path) -> str:
     return git(root, "rev-parse", "HEAD").stdout.decode("ascii").strip()
 
 
+def git_authority_pollution(
+    root: Path,
+    source_repository: Path,
+    decoy_repository: Path,
+) -> dict[str, str]:
+    return {
+        "GIT_DIR": str(decoy_repository / ".git"),
+        "GIT_WORK_TREE": str(decoy_repository),
+        "GIT_INDEX_FILE": str(decoy_repository / ".git" / "index"),
+        "GIT_OBJECT_DIRECTORY": str(decoy_repository / ".git" / "objects"),
+        "GIT_ALTERNATE_OBJECT_DIRECTORIES": str(
+            source_repository / ".git" / "objects"
+        ),
+        "GIT_CONFIG_COUNT": "1",
+        "GIT_CONFIG_KEY_0": "core.hooksPath",
+        "GIT_CONFIG_VALUE_0": str(root / "foreign-hooks"),
+    }
+
+
 @dataclass(frozen=True)
 class EvaluationGitFixture:
     repository: Path

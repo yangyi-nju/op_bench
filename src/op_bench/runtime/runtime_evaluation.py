@@ -3,7 +3,6 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
-import os
 from pathlib import Path
 from pathlib import PurePosixPath
 import shlex
@@ -32,6 +31,7 @@ from op_bench.runtime.local_evaluation import (
     _selector_map,
     structured_unittest_summary,
 )
+from op_bench.runtime.source_materialization import _git_environment
 from op_bench.runtime.validation import ContractError, require_str
 from op_bench.runtime.workspace import FrozenPatch
 
@@ -584,15 +584,7 @@ def _controller_git(
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         timeout=timeout_ms / 1000,
-        env={
-            **os.environ,
-            "GIT_CONFIG_NOSYSTEM": "1",
-            "GIT_CONFIG_GLOBAL": os.devnull,
-            "GIT_ATTR_NOSYSTEM": "1",
-            "GIT_NO_REPLACE_OBJECTS": "1",
-            "LC_ALL": "C",
-            "LANG": "C",
-        },
+        env=_git_environment(),
     )
 
 

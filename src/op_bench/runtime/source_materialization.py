@@ -20,6 +20,21 @@ class SourceMaterializationError(Exception):
     """An exact local Git revision could not become an isolated workspace."""
 
 
+class SourceMaterializationCleanupError(SourceMaterializationError):
+    """A materializer-owned workspace remained after materialization failed."""
+
+    def __init__(
+        self,
+        workspace: Path,
+        materialization_cause: BaseException,
+        cleanup_cause: Exception,
+    ) -> None:
+        self.workspace = workspace
+        self.materialization_cause = materialization_cause
+        self.cleanup_cause = cleanup_cause
+        super().__init__("materializer-owned workspace cleanup failed")
+
+
 def _validate_archive_entry(name: str, link_target: str | None = None) -> None:
     """Reject archive names or symlink targets that can escape the workspace."""
     if not isinstance(name, str) or not name or "\x00" in name or "\\" in name:
@@ -77,6 +92,7 @@ def materialize_frozen_git_revision(
     if not isinstance(include_submodules, bool):
         raise SourceMaterializationError("include_submodules must be a bool")
 
+    workspace_created = False
     try:
         resolved_commit = _git_text(
             source_directory,
@@ -93,6 +109,7 @@ def materialize_frozen_git_revision(
             f"{resolved_commit}^{{tree}}",
         )
         workspace.mkdir(parents=True, exist_ok=False)
+        workspace_created = True
         _stream_safe_git_archive(source_directory, resolved_commit, workspace)
         _git(workspace, "init", "--quiet", "--initial-branch=main")
         _git(workspace, "add", "--force", "--all")
@@ -134,8 +151,18 @@ def materialize_frozen_git_revision(
             source_tree=source_tree,
             snapshot_commit=snapshot_commit,
         )
-    except Exception as exc:  # noqa: BLE001 - normalize the private failure boundary.
-        _remove_exact_workspace(workspace)
+    except BaseException as exc:  # noqa: BLE001 - clean exact ownership on interrupts too.
+        if workspace_created:
+            try:
+                _remove_exact_workspace(workspace)
+            except Exception as cleanup_exc:  # noqa: BLE001 - surface ownership to caller.
+                raise SourceMaterializationCleanupError(
+                    workspace,
+                    exc,
+                    cleanup_exc,
+                ) from cleanup_exc
+        if not isinstance(exc, Exception):
+            raise
         if isinstance(exc, SourceMaterializationError):
             raise
         detail = str(exc).strip()
@@ -322,11 +349,47 @@ def _materialize_frozen_submodules(
                 f"submodule destination is not empty: {path}"
             )
         _stream_safe_git_archive(source_submodule, object_id, destination)
+        _verify_submodule_archive_tree(
+            source_submodule,
+            object_id,
+            destination,
+        )
         _materialize_frozen_submodules(
             source_submodule,
             object_id,
             destination,
         )
+
+
+def _verify_submodule_archive_tree(
+    source_submodule: Path,
+    revision: str,
+    destination: Path,
+) -> None:
+    expected_tree = _git_text(
+        source_submodule,
+        "rev-parse",
+        "--verify",
+        "--end-of-options",
+        f"{revision}^{{tree}}",
+    )
+    _git(destination, "init", "--quiet", "--initial-branch=main")
+    _git(destination, "add", "--force", "--all")
+    _restore_gitlink_index_entries(
+        source_submodule,
+        revision,
+        destination,
+    )
+    if _git_text(destination, "write-tree") != expected_tree:
+        raise SourceMaterializationError(
+            "submodule archive tree does not match frozen commit"
+        )
+    metadata = destination / ".git"
+    if metadata.is_symlink() or not metadata.is_dir():
+        raise SourceMaterializationError(
+            "submodule verification metadata is not a real directory"
+        )
+    shutil.rmtree(metadata)
 
 
 def _real_submodule_directory(source_directory: Path, path: str) -> Path:
@@ -394,11 +457,7 @@ def _git(
     repository: Path,
     *arguments: str,
     input_bytes: bytes | None = None,
-    extra_environment: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess[bytes]:
-    environment = _git_environment()
-    if extra_environment is not None:
-        environment.update(extra_environment)
     return subprocess.run(
         (
             "git",
@@ -412,17 +471,32 @@ def _git(
         input=input_bytes,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        env=environment,
+        env=_git_environment(),
     )
 
 
 def _git_environment() -> dict[str, str]:
+    inherited = {
+        name: os.environ[name]
+        for name in (
+            "PATH",
+            "TMPDIR",
+            "TEMP",
+            "TMP",
+            "SYSTEMROOT",
+            "WINDIR",
+            "PATHEXT",
+        )
+        if name in os.environ
+    }
     return {
-        **os.environ,
+        **inherited,
         "GIT_CONFIG_NOSYSTEM": "1",
         "GIT_CONFIG_GLOBAL": os.devnull,
+        "GIT_CONFIG_COUNT": "0",
         "GIT_ATTR_NOSYSTEM": "1",
         "GIT_NO_REPLACE_OBJECTS": "1",
+        "GIT_DISCOVERY_ACROSS_FILESYSTEM": "0",
         "LC_ALL": "C",
         "LANG": "C",
     }

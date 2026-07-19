@@ -1,17 +1,17 @@
 # OpBench Project State
 
-更新时间：2026-07-18（Asia/Shanghai）
+更新时间：2026-07-19（Asia/Shanghai）
 
 ## Current baseline
 
 | 项目 | 当前值 |
 | --- | --- |
-| 当前稳定版本 | v0.5 Completed |
+| 当前稳定版本 | v0.6 Completed |
 | 数据集 | `pytorch_v0.5`，17 条 verified task |
 | 正式实验 | 51 次真实 Codex attempt，37/51 resolved |
-| 当前开发版本 | `opbench-v0.6.0`（Release Blocked） |
-| 当前目标 | Demo → 规范 Agent 评测平台 |
-| 当前阶段 | M1–M7 本地交付已完成；等待精确 Remote Must 证据关闭发布门 |
+| 当前开发版本 | `opbench-v0.7.0`（Planning） |
+| 当前目标 | Dataset Factory、Boundary Slice 与 matched-runtime recovery |
+| 当前阶段 | `opbench-v0.6.0` 全部 Must 已通过；准备进入 v0.7 |
 | v0.6 产品代码 | 合同、TaskView/Workspace/Action/Session/Evaluation/Artifact、版本化 Runtime Profile、Attempt-owned Local/Docker/Remote Backend、Conformance、Legacy Replay、标准 Codex 进程 Adapter、v1 Orchestrator、公开 Demo 与开发/发布文档均已实现 |
 | 正式新实验 | 尚未启动 |
 
@@ -37,17 +37,17 @@
 | V06-M3 | Passed | Canonical Action Service、CLI/MCP 与标准 Adapter 边界 | A-01～A-12 已通过；28 focused、302 full tests、17-task Dataset、示例 Manifest、tracked JSON 与 Legacy Action Bridge 回归通过；真实 Codex 标准 canary 保留为 M6 gate |
 | V06-M4 | Passed | AttemptSession、Budget、Trajectory、Public Artifact 与 Resume Ledger | S-01～S-10、E-02～E-04 已通过；61 focused、194 runtime、363 full tests、17-task Dataset、示例 Manifest 与 tracked JSON 通过；审查 Critical/Important/Minor 均为 0；E-01 evaluation 与 E-05 private artifact 保留为 M5 gate |
 | V06-M5 | Passed | Fresh Evaluator、private Artifact、Integrity 与 Summary | 62 focused、252 runtime、421 full tests，17-task Dataset、示例 Manifest、tracked JSON、compileall 与 diff check 通过；独立复审 Critical/Important/Minor 0/0/0；仅使用本地确定性 fixture，未启动 Agent、Docker、SSH、远程 Runtime 或网络探针 |
-| V06-M6 | Passed | Runtime Conformance、Legacy Replay、标准真实 Codex 与 Resume | 84 focused、348 runtime、517 full tests 通过；四路 conformance、真实 Codex 单例/双重复、Integrity 与资源清理通过；17+17+51 与 Remote/CUDA 因唯一精确目标 `connection_timeout` 按设计 Blocked，详见 `docs/v0.6/m6_verification.md` |
+| V06-M6 | Passed | Runtime Conformance、Legacy Replay、标准真实 Codex 与 Resume | 原 M6 freeze 的本地/确定性证据通过；目标恢复后代表性 Remote CPU/CUDA canary 与 17+17+51 精确回放全部通过，详见 `docs/v0.6/m6_verification.md` 的关闭附录 |
 | V06-M7 | Passed | 双语 Quickstart、公开 Scripted Demo、开发者指南、代表性 Artifact 与 Release Review | 干净 Python 3.12 venv 中 527 full tests 与 17-task Dataset 通过；25 release-focused tests、Demo resume/Integrity/resource cleanup、合同/JSON/link/wording review 通过，详见 `docs/v0.6/m7_verification.md` |
-| V06-RELEASE | Blocked | `opbench-v0.6.0` 统一发布 | R-05～R-08、R-10 仍为 Must/Blocked；目标恢复并补齐精确 Replay/Remote CPU/CUDA 证据后才能关闭 |
+| V06-RELEASE | Passed | `opbench-v0.6.0` 统一发布 | R-01～R-12、D-01～D-10 与全部 Must 已通过；85/85 精确 Replay、代表性 Remote CPU/CUDA canary、581 full tests、零开放 P0/P1 |
 | REMOTE-CLEANUP | Passed | RemoteDocker timeout/cleanup 收敛到 Attempt-owned exact handles | create/start/command/cleanup 异常注入、精确清理账本和 Remote blocked artifact 均通过 |
 
 ## Next actions
 
-1. 在精确 Remote 目标恢复后补跑 17+17+51 与 Remote/CUDA evidence，不搜索替代目标；
-2. 逐项关闭 R-05～R-08、R-10，并复核历史 v0.5 hash 不变；
-3. 所有 Must 证据通过前不把 v0.6 标记为完整发布；
-4. v0.6 完成前不启动 v0.7 正式 Admission。
+1. 以冻结 hash 保留 v0.6 的 85-case Replay 和代表性 Runtime canary 证据；
+2. 按 `docs/v0.7/design.md` 启动 Dataset Factory 与 Boundary Slice 实施；
+3. v0.7 正式 Admission 继续执行 verified-only、精确 Runtime 和历史成绩不改写约束；
+4. 反馈因果与跨 Agent 正式研究仍留在后续版本，不从 v0.6 平台验证推断结论。
 
 ## Status rules
 

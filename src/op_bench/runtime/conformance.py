@@ -9,6 +9,7 @@ import sys
 import tempfile
 
 from op_bench.runtime.canonical import canonical_json, canonical_sha256
+from op_bench.runtime.source_materialization import _git_environment
 from op_bench.runtime.validation import (
     ContractError,
     require_exact_fields,
@@ -738,6 +739,7 @@ def _git_head(repository: Path) -> str:
         check=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
+        env=_git_environment(),
     )
     return completed.stdout.decode("ascii").strip()
 

@@ -1,10 +1,10 @@
 # OpBench v0.6 Release Notes
 
-Date: 2026-07-18
+Date: 2026-07-19
 
 Release target: `opbench-v0.6.0`
 
-Decision: **Blocked — implementation complete, exact-Remote Must evidence incomplete**
+Decision: **Completed — every Must gate passed**
 
 ## What v0.6 changes
 
@@ -41,7 +41,8 @@ The v0.5 runner remains the default migration path. Existing commands omit
 
 Legacy and v1 Cohorts never merge. v1-only flags on the Legacy path and
 Legacy-only inputs on the v1 path fail before Runtime resources are created.
-Historical v0.5 result and summary hashes were unchanged by M6 replay work.
+Historical v0.5 result and summary hashes remained byte-identical through the
+final exact replay.
 
 ## Evidence that passed
 
@@ -54,31 +55,48 @@ Historical v0.5 result and summary hashes were unchanged by M6 replay work.
   whose identical second run skips it byte-for-byte;
 - RunManifest validation, deterministic rebuild, 14 Integrity checks, and
   exact resource ownership/cleanup verification;
-- a complete, immutable inventory for 17 baseline + 17 gold + 51 historical
-  final-patch replay cases.
+- representative exact-target Remote CPU, CUDA Overlay, and CUDA Kernel
+  canaries;
+- 85/85 Passed for 17 baseline + 17 gold + 51 historical final-patch replay
+  cases, with `failed=0`, `blocked=0`, and an empty difference report;
+- 581/581 final full-suite tests with the 17-task verified Dataset, example
+  Runtime contract, tracked JSON, and release-document checks passing.
 
 The representative public synthetic Artifact index is
 `configs/examples/v0.6_scripted_demo_artifact.example.json`. It contains only
 path-independent public identities, axes, totals, actions, and hashes. It is a
 controller/artifact demonstration, not a benchmark score.
 
-## Blocked release gates
+## Closed release gates
 
-The only configured exact Remote target consistently timed out during the
-workspace-create operation. Therefore:
+The original M6/M7 freeze correctly recorded R-05–R-08 and R-10 as Blocked
+after the one configured exact target returned `connection_timeout`. The same
+target later recovered. The closing run used only that configured target and
+performed no ping, scan, discovery, broad process/container listing, or
+replacement-target search.
 
-- R-05: v0.5 17/17 Baseline Failure Replay is Blocked;
-- R-06: v0.5 17/17 Gold Success Replay is Blocked;
-- R-07: v0.5 51/51 Legacy Final Patch Replay is Blocked;
-- R-08: per-Task/Environment/Protocol replay difference attribution is
-  Blocked because execution evidence does not exist;
-- R-10: representative Remote CPU, CUDA Overlay, and CUDA Kernel canaries are
-  Blocked.
+- R-05 Passed: all 17 baseline controls reproduced `f2p_failed`;
+- R-06 Passed: all 17 strict Gold controls reproduced `resolved`;
+- R-07 Passed: all 51 historical final patches reproduced their raw F2P/P2P
+  outcomes;
+- R-08 Passed: all expected and observed outcomes matched, so the canonical
+  difference report is empty and historical score files remain unchanged;
+- R-10 Passed: exact Remote CPU, CUDA Overlay, and CUDA Kernel canaries
+  completed, with Attempt-owned cleanup evidence for the v1 canaries.
 
-No ping, scan, discovery, broad process/container listing, or replacement
-target search was used. M7 does not repeat the stable timeout. The exact target
-must recover before these Must items can pass, so `opbench-v0.6.0` is not tagged
-or declared Completed.
+The replay's four persisted aggregate files prove outcome compatibility. Its
+controller-private per-case ledgers are intentionally ephemeral and fail
+closed on cleanup errors; persistent ownership/cleanup proof is supplied by
+the v1 canary artifacts and backend fault-injection coverage.
+
+The final replay inventory hash is
+`sha256:193ef08f68f50a50c67f22b41ca2a31043c78d6b2311d23f16c588a86b80daee`.
+The manifest, results, empty differences, and summary file SHA-256 values are,
+respectively,
+`21f85f547b5efde922616a44390b5c07814aaf59c8db27a9863a37a61ac2b424`,
+`3c14d5bd462a633b1c4b7b062d1447d6a575ed62244793d5b93154e43db8c9d1`,
+`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`,
+and `1f5fa1515f2e93bbdec9a393e9fc07a3ccf4d121e6d33b175fdb7a1b09b03309`.
 
 ## Explicit non-claims
 

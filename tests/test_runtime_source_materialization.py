@@ -6,6 +6,7 @@ from pathlib import Path
 import stat
 import tempfile
 import unittest
+from unittest import mock
 
 from op_bench.runtime.source_materialization import (
     SourceMaterializationError,
@@ -41,6 +42,69 @@ class FrozenSourceMaterializationApiTests(unittest.TestCase):
 
 
 class FrozenSourceMaterializationTests(unittest.TestCase):
+    def test_workspace_leaf_race_never_deletes_a_foreign_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "source"
+            revision = initialize_git_repo(source)
+            workspace = root / "workspace"
+            original_mkdir = Path.mkdir
+
+            def racing_mkdir(path, *args, **kwargs):
+                if path == workspace and not path.exists():
+                    original_mkdir(path, parents=True, exist_ok=False)
+                    (path / "foreign.txt").write_text(
+                        "foreign\n",
+                        encoding="utf-8",
+                    )
+                return original_mkdir(path, *args, **kwargs)
+
+            with mock.patch.object(Path, "mkdir", new=racing_mkdir):
+                with self.assertRaises(SourceMaterializationError):
+                    materialize_frozen_git_revision(
+                        source,
+                        revision,
+                        workspace,
+                    )
+
+            self.assertEqual(
+                (workspace / "foreign.txt").read_text(encoding="utf-8"),
+                "foreign\n",
+            )
+
+    def test_ambient_git_authority_variables_cannot_redirect_materialization(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "source"
+            revision = initialize_git_repo(source)
+            decoy = root / "decoy"
+            initialize_git_repo(decoy)
+            workspace = root / "workspace"
+            pollution = {
+                "GIT_DIR": str(decoy / ".git"),
+                "GIT_WORK_TREE": str(decoy),
+                "GIT_INDEX_FILE": str(root / "foreign-index"),
+                "GIT_OBJECT_DIRECTORY": str(decoy / ".git" / "objects"),
+                "GIT_ALTERNATE_OBJECT_DIRECTORIES": str(source / ".git" / "objects"),
+                "GIT_CONFIG_COUNT": "1",
+                "GIT_CONFIG_KEY_0": "core.hooksPath",
+                "GIT_CONFIG_VALUE_0": str(root / "foreign-hooks"),
+            }
+
+            with mock.patch.dict(os.environ, pollution, clear=False):
+                snapshot = materialize_frozen_git_revision(
+                    source,
+                    revision,
+                    workspace,
+                )
+
+            self.assertEqual(snapshot.revision, revision)
+            self.assertEqual(
+                (workspace / "src" / "operator.py").read_text(encoding="utf-8"),
+                "VALUE = 1\n",
+            )
+            self.assertFalse((root / "foreign-index").exists())
+
     def test_snapshot_normalizes_git_regular_file_modes(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -290,6 +354,62 @@ class FrozenSourceMaterializationTests(unittest.TestCase):
                 ).stdout,
                 b"",
             )
+
+    def test_submodule_archive_attributes_cannot_silently_change_the_frozen_tree(self) -> None:
+        scenarios = {
+            "export-ignore": (
+                "src/operator.py export-ignore\n",
+                "VALUE = 1\n",
+            ),
+            "export-subst": (
+                "src/operator.py export-subst\n",
+                "REVISION = '$Format:%H$'\n",
+            ),
+        }
+        for name, (attributes, operator_source) in scenarios.items():
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                dependency = root / "dependency"
+                initialize_git_repo(dependency)
+                (dependency / ".gitattributes").write_text(
+                    attributes,
+                    encoding="utf-8",
+                )
+                (dependency / "src" / "operator.py").write_text(
+                    operator_source,
+                    encoding="utf-8",
+                )
+                git(dependency, "add", ".gitattributes", "src/operator.py")
+                git(dependency, "commit", "--quiet", "-m", name)
+
+                source = root / "source"
+                initialize_git_repo(source)
+                git(
+                    source,
+                    "-c",
+                    "protocol.file.allow=always",
+                    "submodule",
+                    "add",
+                    "--quiet",
+                    str(dependency),
+                    "vendor/dependency",
+                )
+                git(source, "commit", "--quiet", "-am", "add dependency")
+                revision = git(source, "rev-parse", "HEAD").stdout.decode().strip()
+                workspace = root / "workspace"
+
+                with self.assertRaisesRegex(
+                    SourceMaterializationError,
+                    "submodule archive tree does not match frozen commit",
+                ):
+                    materialize_frozen_git_revision(
+                        source,
+                        revision,
+                        workspace,
+                        include_submodules=True,
+                    )
+
+                self.assertFalse(workspace.exists())
 
 
 if __name__ == "__main__":

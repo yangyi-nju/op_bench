@@ -2,15 +2,25 @@ from __future__ import annotations
 
 from copy import deepcopy
 from dataclasses import replace
+import os
+from pathlib import Path
+import tempfile
 import unittest
+from unittest import mock
 
 from op_bench.runtime.conformance import (
     CONFORMANCE_IGNORED_FIELDS_V1,
     ConformanceSnapshot,
     compare_conformance_snapshots,
     normalize_conformance_snapshot,
+    _git_head,
 )
 from op_bench.runtime.validation import ContractError
+from tests.runtime_git_fixture import (
+    git,
+    git_authority_pollution,
+    initialize_git_repo,
+)
 
 
 def snapshot() -> ConformanceSnapshot:
@@ -56,6 +66,26 @@ def snapshot() -> ConformanceSnapshot:
 
 
 class ConformanceNormalizationTests(unittest.TestCase):
+    def test_git_head_ignores_ambient_git_authority(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "source"
+            source_revision = initialize_git_repo(source)
+            decoy = root / "decoy"
+            initialize_git_repo(decoy)
+            (decoy / "foreign.txt").write_text("foreign\n", encoding="utf-8")
+            git(decoy, "add", "foreign.txt")
+            git(decoy, "commit", "--quiet", "-m", "foreign authority")
+
+            with mock.patch.dict(
+                os.environ,
+                git_authority_pollution(root, source, decoy),
+                clear=False,
+            ):
+                resolved = _git_head(source)
+
+            self.assertEqual(resolved, source_revision)
+
     def test_only_fixed_nondeterministic_fields_are_ignored(self) -> None:
         baseline = snapshot()
         changed = baseline.to_dict()

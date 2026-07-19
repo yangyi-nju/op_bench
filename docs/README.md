@@ -12,8 +12,8 @@ Use these documents in this order:
 4. [v0.6 implementation plan](v0.6/implementation_plan.md): M1–M7 dependencies, implementation scope, and verification strategy.
 5. [v0.6 developer guide](v0.6/developer_guide.md): protocol selection, Runtime support, identity, artifacts, resume, failure attribution, and known limits.
 6. [v0.6 acceptance matrix](v0.6/acceptance_matrix.md): measurable release requirements and evidence states.
-7. [v0.6 M6 verification](v0.6/m6_verification.md): Runtime conformance, replay inventory, real Codex canaries, and exact-Remote block evidence.
-8. [v0.6 release notes](v0.6/release_notes.md): shipped platform scope, migration contract, evidence, blocked gates, and explicit non-claims.
+7. [v0.6 M6 verification](v0.6/m6_verification.md): Runtime conformance, replay inventory, real Codex canaries, the original exact-Remote block, and its 85/85 closure addendum.
+8. [v0.6 release notes](v0.6/release_notes.md): completed platform scope, migration contract, closed gates, frozen evidence, and explicit non-claims.
 9. [v0.6 M7 verification](v0.6/m7_verification.md): executable Demo, documentation, clean-environment verification, and final release decision.
 10. [v0.7 Dataset Factory and Boundary design](v0.7/design.md): boundary taxonomy, admission factory, matched-runtime recovery, and dataset contract.
 11. [v0.5 experiment report](v0.5/experiment_report.md): verified 17-task dataset, 51-attempt full results, precision breakdown, and eight-dimensional metrics.

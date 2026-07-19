@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import replace
 import hashlib
 import json
+import os
 from pathlib import Path
 import sys
 import tempfile
@@ -29,9 +30,12 @@ from op_bench.runtime.resources import (
     verify_runtime_cleanup,
 )
 from op_bench.runtime.validation import ContractError
-from op_bench.runtime.runtime_evaluation import RuntimeFreshEvaluationBackend
+from op_bench.runtime.runtime_evaluation import (
+    RuntimeFreshEvaluationBackend,
+    _controller_git,
+)
 from op_bench.runtime.workspace import FrozenPatch, build_patch_artifact, raw_patch_identity
-from tests.runtime_git_fixture import initialize_evaluation_git_fixture
+from tests.runtime_git_fixture import git, initialize_evaluation_git_fixture
 from tests.test_runtime_contracts import SHA_B, identity
 from tests.test_runtime_wire_contracts import evaluation_spec, session_result
 
@@ -218,6 +222,46 @@ class RuntimeEvaluationFixture:
 
 
 class RuntimeFreshEvaluationBackendTests(unittest.TestCase):
+    def test_ambient_git_authority_variables_cannot_redirect_controller_staging(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            fixture = RuntimeEvaluationFixture(root)
+            decoy = initialize_evaluation_git_fixture(root / "decoy")
+            (decoy.repository / "foreign.txt").write_text(
+                "foreign\n",
+                encoding="utf-8",
+            )
+            git(decoy.repository, "add", "foreign.txt")
+            git(decoy.repository, "commit", "--quiet", "-m", "foreign authority")
+            pollution = {
+                "GIT_DIR": str(decoy.repository / ".git"),
+                "GIT_WORK_TREE": str(decoy.repository),
+                "GIT_INDEX_FILE": str(root / "foreign-index"),
+                "GIT_OBJECT_DIRECTORY": str(decoy.repository / ".git" / "objects"),
+                "GIT_ALTERNATE_OBJECT_DIRECTORIES": str(
+                    fixture.git.repository / ".git" / "objects"
+                ),
+                "GIT_CONFIG_COUNT": "1",
+                "GIT_CONFIG_KEY_0": "core.hooksPath",
+                "GIT_CONFIG_VALUE_0": str(root / "foreign-hooks"),
+            }
+
+            with mock.patch.dict(os.environ, pollution, clear=False):
+                result = _controller_git(
+                    fixture.git.repository,
+                    "rev-parse",
+                    "--verify",
+                    "HEAD",
+                    timeout_ms=30_000,
+                )
+
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(
+                result.stdout.decode("ascii").strip(),
+                fixture.git.revision,
+            )
+            self.assertFalse((root / "foreign-index").exists())
+
     def test_python_overlay_stages_all_frozen_overlay_paths(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             fixture = RuntimeEvaluationFixture(Path(temporary))

@@ -25,8 +25,13 @@ from op_bench.runtime.resources import (
     RuntimeLease,
     RuntimeLeaseStore,
     RuntimeResourceHandle,
+    runtime_raw_handle_hash,
 )
-from op_bench.runtime.source_materialization import materialize_frozen_git_revision
+from op_bench.runtime.source_materialization import (
+    SourceMaterializationCleanupError,
+    _git_environment,
+    materialize_frozen_git_revision,
+)
 from op_bench.runtime.validation import (
     ContractError,
     require_bool,
@@ -445,44 +450,10 @@ class LocalProcessBackend:
         with self._lock:
             if key in self._states:
                 raise ContractError("attempt context is already prepared")
-            ordinal = _next_ordinal(
-                attempt_context.resource_ledger,
-                "workspace",
+            _, handle, workspace = _materialize_local_workspace(
+                profile,
+                attempt_context,
             )
-            declared = attempt_context.resource_ledger.declare(
-                "workspace",
-                ordinal,
-            )
-            workspace = _local_workspace_path(attempt_context, ordinal)
-            try:
-                if workspace.exists() or workspace.is_symlink():
-                    raise ContractError("workspace path already exists")
-                workspace.parent.mkdir(parents=True, exist_ok=True)
-                snapshot = materialize_frozen_git_revision(
-                    attempt_context.frozen_source_directory,
-                    attempt_context.frozen_source_revision,
-                    workspace,
-                    include_submodules=(
-                        profile.source_loading_mode == "inplace_build"
-                    ),
-                )
-                handle = attempt_context.lease_store.put_exact(
-                    declared.resource_id,
-                    "workspace",
-                    ordinal,
-                    str(snapshot.workspace),
-                )
-                attempt_context.resource_ledger.created(
-                    declared.resource_id,
-                    handle.raw_handle_hash,
-                )
-            except Exception as exc:  # noqa: BLE001 - stable preparation boundary.
-                if _last_transition(attempt_context, declared.resource_id) == "declared":
-                    attempt_context.resource_ledger.create_failed(declared.resource_id)
-                raise RuntimeBackendUnavailable(
-                    "workspace_prepare_failed",
-                    str(exc),
-                ) from exc
             lease = RuntimeLease(
                 attempt_id=attempt_context.attempt_id,
                 retry_index=attempt_context.retry_index,
@@ -530,13 +501,43 @@ class LocalProcessBackend:
         except OSError as exc:
             context.resource_ledger.create_failed(declared.resource_id)
             raise RuntimeBackendUnavailable("process_launch_failed", str(exc)) from exc
-        handle = context.lease_store.put_exact(
-            declared.resource_id,
-            "process",
-            ordinal,
-            f"pid:{process.pid}",
-        )
-        context.resource_ledger.created(declared.resource_id, handle.raw_handle_hash)
+        raw_process_handle = f"pid:{process.pid}"
+        try:
+            handle = context.lease_store.put_exact(
+                declared.resource_id,
+                "process",
+                ordinal,
+                raw_process_handle,
+            )
+            context.resource_ledger.created(
+                declared.resource_id,
+                handle.raw_handle_hash,
+            )
+        except BaseException as exc:  # noqa: BLE001 - terminate before propagating interrupts.
+            removed = False
+            try:
+                _terminate_exact_process_group(
+                    process,
+                    grace_ms=state.profile.cleanup_policy.grace_ms,
+                )
+                removed = True
+            except Exception:  # noqa: BLE001 - cleanup failure takes precedence.
+                removed = False
+            cleanup_ok = _finalize_prepare_resource(
+                context,
+                declared.resource_id,
+                raw_process_handle,
+                removed=removed,
+                owned=True,
+            )
+            failure = _registration_failure_after_cleanup(
+                "process_registration_failed",
+                cleanup_ok,
+                exc,
+            )
+            if failure is exc:
+                raise
+            raise failure from exc
         timed_out = False
         try:
             stdout, stderr = process.communicate(timeout=timeout / 1000.0)
@@ -659,16 +660,34 @@ class ScriptedRuntimeBackend(LocalProcessBackend):
         key = _context_key(attempt_context)
         with self._lock:
             declared = attempt_context.resource_ledger.declare("workspace", 1)
-            handle = attempt_context.lease_store.put_exact(
-                declared.resource_id,
-                "workspace",
-                1,
-                f"scripted:{declared.resource_id}",
-            )
-            attempt_context.resource_ledger.created(
-                declared.resource_id,
-                handle.raw_handle_hash,
-            )
+            raw_workspace_handle = f"scripted:{declared.resource_id}"
+            try:
+                handle = attempt_context.lease_store.put_exact(
+                    declared.resource_id,
+                    "workspace",
+                    1,
+                    raw_workspace_handle,
+                )
+                attempt_context.resource_ledger.created(
+                    declared.resource_id,
+                    handle.raw_handle_hash,
+                )
+            except BaseException as exc:  # noqa: BLE001 - close before interrupts propagate.
+                cleanup_ok = _finalize_prepare_resource(
+                    attempt_context,
+                    declared.resource_id,
+                    raw_workspace_handle,
+                    removed=True,
+                    owned=False,
+                )
+                failure = _registration_failure_after_cleanup(
+                    "workspace_registration_failed",
+                    cleanup_ok,
+                    exc,
+                )
+                if failure is exc:
+                    raise
+                raise failure from exc
             lease = RuntimeLease(
                 attempt_id=attempt_context.attempt_id,
                 retry_index=attempt_context.retry_index,
@@ -696,16 +715,34 @@ class ScriptedRuntimeBackend(LocalProcessBackend):
         require_int(timeout_ms, "timeout_ms", minimum=1)
         ordinal = _next_ordinal(state.context.resource_ledger, "process")
         declared = state.context.resource_ledger.declare("process", ordinal)
-        handle = state.context.lease_store.put_exact(
-            declared.resource_id,
-            "process",
-            ordinal,
-            f"scripted:{declared.resource_id}",
-        )
-        state.context.resource_ledger.created(
-            declared.resource_id,
-            handle.raw_handle_hash,
-        )
+        raw_process_handle = f"scripted:{declared.resource_id}"
+        try:
+            handle = state.context.lease_store.put_exact(
+                declared.resource_id,
+                "process",
+                ordinal,
+                raw_process_handle,
+            )
+            state.context.resource_ledger.created(
+                declared.resource_id,
+                handle.raw_handle_hash,
+            )
+        except BaseException as exc:  # noqa: BLE001 - close before interrupts propagate.
+            cleanup_ok = _finalize_prepare_resource(
+                state.context,
+                declared.resource_id,
+                raw_process_handle,
+                removed=True,
+                owned=False,
+            )
+            failure = _registration_failure_after_cleanup(
+                "process_registration_failed",
+                cleanup_ok,
+                exc,
+            )
+            if failure is exc:
+                raise
+            raise failure from exc
         try:
             result = self._outcomes[
                 min(self._outcome_index, len(self._outcomes) - 1)
@@ -760,55 +797,39 @@ class DockerRuntimeBackend(LocalProcessBackend):
                 profile,
                 attempt_context,
             )
-            container_ordinal = _next_ordinal(
-                attempt_context.resource_ledger,
-                "container",
-            )
-            container_record = attempt_context.resource_ledger.declare(
-                "container",
-                container_ordinal,
-            )
+            container_record = None
             container_name = _container_name(attempt_context)
-            create = _container_create_command(
-                profile,
-                docker_binary=attempt_context.target_binding.docker_binary,
-                container_name=container_name,
-                container_resource_id=container_record.resource_id,
-                workspace_source=str(workspace),
-            )
+            container_owned = False
             try:
+                container_ordinal = _next_ordinal(
+                    attempt_context.resource_ledger,
+                    "container",
+                )
+                container_record = attempt_context.resource_ledger.declare(
+                    "container",
+                    container_ordinal,
+                )
+                create = _container_create_command(
+                    profile,
+                    docker_binary=attempt_context.target_binding.docker_binary,
+                    container_name=container_name,
+                    container_resource_id=container_record.resource_id,
+                    workspace_source=str(workspace),
+                )
                 created = self._argv_runner(create, None, profile.timeout_ms)
-            except RuntimeBackendUnavailable:
-                attempt_context.resource_ledger.create_failed(
-                    container_record.resource_id
+                if created.exit_code != 0 or created.timed_out:
+                    raise RuntimeBackendUnavailable("container_create_failed")
+                container_owned = True
+                container_handle = attempt_context.lease_store.put_exact(
+                    container_record.resource_id,
+                    "container",
+                    container_ordinal,
+                    container_name,
                 )
-                _release_workspace_after_prepare_failure(
-                    attempt_context,
-                    workspace_record.resource_id,
-                    workspace,
+                attempt_context.resource_ledger.created(
+                    container_record.resource_id,
+                    container_handle.raw_handle_hash,
                 )
-                raise
-            if created.exit_code != 0 or created.timed_out:
-                attempt_context.resource_ledger.create_failed(
-                    container_record.resource_id
-                )
-                _release_workspace_after_prepare_failure(
-                    attempt_context,
-                    workspace_record.resource_id,
-                    workspace,
-                )
-                raise RuntimeBackendUnavailable("container_create_failed")
-            container_handle = attempt_context.lease_store.put_exact(
-                container_record.resource_id,
-                "container",
-                container_ordinal,
-                container_name,
-            )
-            attempt_context.resource_ledger.created(
-                container_record.resource_id,
-                container_handle.raw_handle_hash,
-            )
-            try:
                 started = self._argv_runner(
                     (
                         attempt_context.target_binding.docker_binary,
@@ -818,44 +839,52 @@ class DockerRuntimeBackend(LocalProcessBackend):
                     None,
                     profile.timeout_ms,
                 )
-            except RuntimeBackendUnavailable:
-                _release_created_resource_after_prepare_failure(
-                    attempt_context,
-                    container_record.resource_id,
-                    (
-                        attempt_context.target_binding.docker_binary,
-                        "rm",
-                        "--force",
-                        container_name,
-                    ),
-                    self._argv_runner,
-                    profile.cleanup_policy.timeout_ms,
+                if started.exit_code != 0 or started.timed_out:
+                    raise RuntimeBackendUnavailable("container_start_failed")
+            except BaseException as exc:  # noqa: BLE001 - unwind exact owned resources.
+                cleanup_results: list[bool] = []
+                if container_record is not None:
+                    if container_owned:
+                        cleanup_results.append(
+                            _release_created_resource_after_prepare_failure(
+                                attempt_context,
+                                container_record.resource_id,
+                                container_name,
+                                (
+                                    attempt_context.target_binding.docker_binary,
+                                    "rm",
+                                    "--force",
+                                    container_name,
+                                ),
+                                self._argv_runner,
+                                profile.cleanup_policy.timeout_ms,
+                            )
+                        )
+                    else:
+                        cleanup_results.append(
+                            _finalize_prepare_resource(
+                                attempt_context,
+                                container_record.resource_id,
+                                container_name,
+                                removed=True,
+                                owned=False,
+                            )
+                        )
+                cleanup_results.append(
+                    _release_workspace_after_prepare_failure(
+                        attempt_context,
+                        workspace_record.resource_id,
+                        workspace,
+                    )
                 )
-                _release_workspace_after_prepare_failure(
-                    attempt_context,
-                    workspace_record.resource_id,
-                    workspace,
+                failure = _prepare_failure_after_cleanup(
+                    "runtime_prepare_failed",
+                    tuple(cleanup_results),
+                    exc,
                 )
-                raise
-            if started.exit_code != 0 or started.timed_out:
-                _release_created_resource_after_prepare_failure(
-                    attempt_context,
-                    container_record.resource_id,
-                    (
-                        attempt_context.target_binding.docker_binary,
-                        "rm",
-                        "--force",
-                        container_name,
-                    ),
-                    self._argv_runner,
-                    profile.cleanup_policy.timeout_ms,
-                )
-                _release_workspace_after_prepare_failure(
-                    attempt_context,
-                    workspace_record.resource_id,
-                    workspace,
-                )
-                raise RuntimeBackendUnavailable("container_start_failed")
+                if failure is exc:
+                    raise
+                raise failure from exc
             lease = RuntimeLease(
                 attempt_id=attempt_context.attempt_id,
                 retry_index=attempt_context.retry_index,
@@ -886,16 +915,34 @@ class DockerRuntimeBackend(LocalProcessBackend):
         )
         ordinal = _next_ordinal(state.context.resource_ledger, "process")
         declared = state.context.resource_ledger.declare("process", ordinal)
-        process_handle = state.context.lease_store.put_exact(
-            declared.resource_id,
-            "process",
-            ordinal,
-            f"container-exec:{container.raw_handle}:{ordinal}",
-        )
-        state.context.resource_ledger.created(
-            declared.resource_id,
-            process_handle.raw_handle_hash,
-        )
+        raw_process_handle = f"container-exec:{container.raw_handle}:{ordinal}"
+        try:
+            process_handle = state.context.lease_store.put_exact(
+                declared.resource_id,
+                "process",
+                ordinal,
+                raw_process_handle,
+            )
+            state.context.resource_ledger.created(
+                declared.resource_id,
+                process_handle.raw_handle_hash,
+            )
+        except BaseException as exc:  # noqa: BLE001 - close before interrupts propagate.
+            cleanup_ok = _finalize_prepare_resource(
+                state.context,
+                declared.resource_id,
+                raw_process_handle,
+                removed=True,
+                owned=False,
+            )
+            failure = _registration_failure_after_cleanup(
+                "process_registration_failed",
+                cleanup_ok,
+                exc,
+            )
+            if failure is exc:
+                raise
+            raise failure from exc
         target_cwd = _logical_container_cwd(
             state.profile.mount_policy.workspace_target,
             relative,
@@ -996,100 +1043,73 @@ class RemoteDockerRuntimeBackend(LocalProcessBackend):
                 profile,
                 attempt_context,
             )
+            remote_path = _remote_workspace_path(attempt_context)
+            container_name = _container_name(attempt_context)
+            remote_record = None
+            remote_owned = False
+            container_record = None
+            container_owned = False
             try:
                 local_sync_hash = _workspace_sync_fingerprint(workspace)
-            except RuntimeBackendUnavailable:
-                _release_workspace_after_prepare_failure(
-                    attempt_context,
-                    workspace_record.resource_id,
-                    workspace,
+                seed_remote_ccache = (
+                    profile.source_loading_mode == "inplace_build"
+                    and binding.remote_ccache_seed is not None
                 )
-                raise
-            remote_ordinal = _next_ordinal(
-                attempt_context.resource_ledger,
-                "remote_workspace",
-            )
-            remote_record = attempt_context.resource_ledger.declare(
-                "remote_workspace", remote_ordinal
-            )
-            remote_path = _remote_workspace_path(attempt_context)
-            target = _remote_target(binding)
-            try:
-                mkdir = self._argv_runner(
-                    _ssh_command(binding, ("mkdir", "-p", "--", remote_path)),
-                    None,
-                    profile.timeout_ms,
+                root_ccache = workspace / ".ccache"
+                if seed_remote_ccache and (
+                    root_ccache.exists() or root_ccache.is_symlink()
+                ):
+                    raise RuntimeBackendUnavailable(
+                        "workspace_ccache_seed_collision"
+                    )
+                remote_ordinal = _next_ordinal(
+                    attempt_context.resource_ledger,
+                    "remote_workspace",
                 )
-            except RuntimeBackendUnavailable:
-                attempt_context.resource_ledger.create_failed(
-                    remote_record.resource_id
+                remote_record = attempt_context.resource_ledger.declare(
+                    "remote_workspace",
+                    remote_ordinal,
                 )
-                _release_workspace_after_prepare_failure(
-                    attempt_context,
-                    workspace_record.resource_id,
-                    workspace,
+                remote_parent = str(PurePosixPath(remote_path).parent)
+                for mkdir_command in (
+                    ("mkdir", "-p", "--", remote_parent),
+                    ("mkdir", "--", remote_path),
+                ):
+                    mkdir = self._argv_runner(
+                        _ssh_command(binding, mkdir_command),
+                        None,
+                        profile.timeout_ms,
+                    )
+                    if mkdir.exit_code != 0 or mkdir.timed_out:
+                        raise RuntimeBackendUnavailable(
+                            "remote_workspace_create_failed"
+                        )
+                remote_owned = True
+                target = _remote_target(binding)
+                remote_handle = attempt_context.lease_store.put_exact(
+                    remote_record.resource_id,
+                    "remote_workspace",
+                    remote_ordinal,
+                    f"{target}:{remote_path}",
                 )
-                raise
-            if mkdir.exit_code != 0 or mkdir.timed_out:
-                attempt_context.resource_ledger.create_failed(remote_record.resource_id)
-                _release_workspace_after_prepare_failure(
-                    attempt_context,
-                    workspace_record.resource_id,
-                    workspace,
+                attempt_context.resource_ledger.created(
+                    remote_record.resource_id,
+                    remote_handle.raw_handle_hash,
                 )
-                raise RuntimeBackendUnavailable("remote_workspace_create_failed")
-            remote_handle = attempt_context.lease_store.put_exact(
-                remote_record.resource_id,
-                "remote_workspace",
-                remote_ordinal,
-                f"{target}:{remote_path}",
-            )
-            attempt_context.resource_ledger.created(
-                remote_record.resource_id,
-                remote_handle.raw_handle_hash,
-            )
-            try:
                 synced = self._argv_runner(
-                    _rsync_command(binding, workspace, remote_path),
+                    _rsync_command(
+                        binding,
+                        workspace,
+                        remote_path,
+                        exclude_root_ccache=seed_remote_ccache,
+                    ),
                     None,
                     profile.timeout_ms,
                 )
-            except RuntimeBackendUnavailable:
-                _release_remote_after_prepare_failure(
-                    attempt_context,
-                    binding,
-                    remote_record.resource_id,
-                    remote_path,
-                    self._argv_runner,
-                    profile.cleanup_policy.timeout_ms,
-                )
-                _release_workspace_after_prepare_failure(
-                    attempt_context,
-                    workspace_record.resource_id,
-                    workspace,
-                )
-                raise
-            if synced.exit_code != 0 or synced.timed_out:
-                _release_remote_after_prepare_failure(
-                    attempt_context,
-                    binding,
-                    remote_record.resource_id,
-                    remote_path,
-                    self._argv_runner,
-                    profile.cleanup_policy.timeout_ms,
-                )
-                _release_workspace_after_prepare_failure(
-                    attempt_context,
-                    workspace_record.resource_id,
-                    workspace,
-                )
-                raise RuntimeBackendUnavailable("remote_source_sync_failed")
-
-            if (
-                profile.source_loading_mode == "inplace_build"
-                and binding.remote_ccache_seed is not None
-            ):
-                try:
+                if synced.exit_code != 0 or synced.timed_out:
+                    raise RuntimeBackendUnavailable("remote_source_sync_failed")
+                if seed_remote_ccache:
+                    assert binding.remote_ccache_seed is not None
                     seeded = self._argv_runner(
                         _ssh_command(
                             binding,
@@ -1105,112 +1125,43 @@ class RemoteDockerRuntimeBackend(LocalProcessBackend):
                         None,
                         profile.timeout_ms,
                     )
-                except RuntimeBackendUnavailable:
-                    _release_remote_after_prepare_failure(
-                        attempt_context,
-                        binding,
-                        remote_record.resource_id,
-                        remote_path,
-                        self._argv_runner,
-                        profile.cleanup_policy.timeout_ms,
-                    )
-                    _release_workspace_after_prepare_failure(
-                        attempt_context,
-                        workspace_record.resource_id,
-                        workspace,
-                    )
-                    raise
-                if seeded.exit_code != 0 or seeded.timed_out:
-                    _release_remote_after_prepare_failure(
-                        attempt_context,
-                        binding,
-                        remote_record.resource_id,
-                        remote_path,
-                        self._argv_runner,
-                        profile.cleanup_policy.timeout_ms,
-                    )
-                    _release_workspace_after_prepare_failure(
-                        attempt_context,
-                        workspace_record.resource_id,
-                        workspace,
-                    )
-                    raise RuntimeBackendUnavailable(
-                        "remote_ccache_seed_copy_failed"
-                    )
-
-            container_ordinal = _next_ordinal(
-                attempt_context.resource_ledger,
-                "container",
-            )
-            container_record = attempt_context.resource_ledger.declare(
-                "container",
-                container_ordinal,
-            )
-            container_name = _container_name(attempt_context)
-            create_inner = _container_create_command(
-                profile,
-                docker_binary=binding.docker_binary,
-                container_name=container_name,
-                container_resource_id=container_record.resource_id,
-                workspace_source=remote_path,
-            )
-            try:
+                    if seeded.exit_code != 0 or seeded.timed_out:
+                        raise RuntimeBackendUnavailable(
+                            "remote_ccache_seed_copy_failed"
+                        )
+                container_ordinal = _next_ordinal(
+                    attempt_context.resource_ledger,
+                    "container",
+                )
+                container_record = attempt_context.resource_ledger.declare(
+                    "container",
+                    container_ordinal,
+                )
+                create_inner = _container_create_command(
+                    profile,
+                    docker_binary=binding.docker_binary,
+                    container_name=container_name,
+                    container_resource_id=container_record.resource_id,
+                    workspace_source=remote_path,
+                )
                 created = self._argv_runner(
                     _ssh_command(binding, create_inner),
                     None,
                     profile.timeout_ms,
                 )
-            except RuntimeBackendUnavailable:
-                attempt_context.resource_ledger.create_failed(
-                    container_record.resource_id
+                if created.exit_code != 0 or created.timed_out:
+                    raise RuntimeBackendUnavailable("container_create_failed")
+                container_owned = True
+                container_handle = attempt_context.lease_store.put_exact(
+                    container_record.resource_id,
+                    "container",
+                    container_ordinal,
+                    container_name,
                 )
-                _release_remote_after_prepare_failure(
-                    attempt_context,
-                    binding,
-                    remote_record.resource_id,
-                    remote_path,
-                    self._argv_runner,
-                    profile.cleanup_policy.timeout_ms,
+                attempt_context.resource_ledger.created(
+                    container_record.resource_id,
+                    container_handle.raw_handle_hash,
                 )
-                _release_workspace_after_prepare_failure(
-                    attempt_context,
-                    workspace_record.resource_id,
-                    workspace,
-                )
-                raise
-            if created.exit_code != 0 or created.timed_out:
-                attempt_context.resource_ledger.create_failed(
-                    container_record.resource_id
-                )
-                _release_remote_after_prepare_failure(
-                    attempt_context,
-                    binding,
-                    remote_record.resource_id,
-                    remote_path,
-                    self._argv_runner,
-                    profile.cleanup_policy.timeout_ms,
-                )
-                _release_workspace_after_prepare_failure(
-                    attempt_context,
-                    workspace_record.resource_id,
-                    workspace,
-                )
-                raise RuntimeBackendUnavailable("container_create_failed")
-            container_handle = attempt_context.lease_store.put_exact(
-                container_record.resource_id,
-                "container",
-                container_ordinal,
-                container_name,
-            )
-            attempt_context.resource_ledger.created(
-                container_record.resource_id,
-                container_handle.raw_handle_hash,
-            )
-            remove_container = _ssh_command(
-                binding,
-                (binding.docker_binary, "rm", "--force", container_name),
-            )
-            try:
                 started = self._argv_runner(
                     _ssh_command(
                         binding,
@@ -1219,50 +1170,77 @@ class RemoteDockerRuntimeBackend(LocalProcessBackend):
                     None,
                     profile.timeout_ms,
                 )
-            except RuntimeBackendUnavailable:
-                _release_created_resource_after_prepare_failure(
-                    attempt_context,
-                    container_record.resource_id,
-                    remove_container,
-                    self._argv_runner,
-                    profile.cleanup_policy.timeout_ms,
+                if started.exit_code != 0 or started.timed_out:
+                    raise RuntimeBackendUnavailable("container_start_failed")
+            except BaseException as exc:  # noqa: BLE001 - unwind exact owned resources.
+                cleanup_results: list[bool] = []
+                if container_record is not None:
+                    if container_owned:
+                        cleanup_results.append(
+                            _release_created_resource_after_prepare_failure(
+                                attempt_context,
+                                container_record.resource_id,
+                                container_name,
+                                _ssh_command(
+                                    binding,
+                                    (
+                                        binding.docker_binary,
+                                        "rm",
+                                        "--force",
+                                        container_name,
+                                    ),
+                                ),
+                                self._argv_runner,
+                                profile.cleanup_policy.timeout_ms,
+                            )
+                        )
+                    else:
+                        cleanup_results.append(
+                            _finalize_prepare_resource(
+                                attempt_context,
+                                container_record.resource_id,
+                                container_name,
+                                removed=True,
+                                owned=False,
+                            )
+                        )
+                if remote_record is not None:
+                    if remote_owned:
+                        cleanup_results.append(
+                            _release_remote_after_prepare_failure(
+                                attempt_context,
+                                binding,
+                                remote_record.resource_id,
+                                remote_path,
+                                self._argv_runner,
+                                profile.cleanup_policy.timeout_ms,
+                            )
+                        )
+                    else:
+                        cleanup_results.append(
+                            _finalize_prepare_resource(
+                                attempt_context,
+                                remote_record.resource_id,
+                                f"{_remote_target(binding)}:{remote_path}",
+                                removed=True,
+                                owned=False,
+                            )
+                        )
+                cleanup_results.append(
+                    _release_workspace_after_prepare_failure(
+                        attempt_context,
+                        workspace_record.resource_id,
+                        workspace,
+                    )
                 )
-                _release_remote_after_prepare_failure(
-                    attempt_context,
-                    binding,
-                    remote_record.resource_id,
-                    remote_path,
-                    self._argv_runner,
-                    profile.cleanup_policy.timeout_ms,
+                failure = _prepare_failure_after_cleanup(
+                    "runtime_prepare_failed",
+                    tuple(cleanup_results),
+                    exc,
                 )
-                _release_workspace_after_prepare_failure(
-                    attempt_context,
-                    workspace_record.resource_id,
-                    workspace,
-                )
-                raise
-            if started.exit_code != 0 or started.timed_out:
-                _release_created_resource_after_prepare_failure(
-                    attempt_context,
-                    container_record.resource_id,
-                    remove_container,
-                    self._argv_runner,
-                    profile.cleanup_policy.timeout_ms,
-                )
-                _release_remote_after_prepare_failure(
-                    attempt_context,
-                    binding,
-                    remote_record.resource_id,
-                    remote_path,
-                    self._argv_runner,
-                    profile.cleanup_policy.timeout_ms,
-                )
-                _release_workspace_after_prepare_failure(
-                    attempt_context,
-                    workspace_record.resource_id,
-                    workspace,
-                )
-                raise RuntimeBackendUnavailable("container_start_failed")
+                if failure is exc:
+                    raise
+                raise failure from exc
             lease = RuntimeLease(
                 attempt_id=attempt_context.attempt_id,
                 retry_index=attempt_context.retry_index,
@@ -1295,16 +1273,36 @@ class RemoteDockerRuntimeBackend(LocalProcessBackend):
         )
         ordinal = _next_ordinal(state.context.resource_ledger, "process")
         declared = state.context.resource_ledger.declare("process", ordinal)
-        process_handle = state.context.lease_store.put_exact(
-            declared.resource_id,
-            "process",
-            ordinal,
-            f"remote-container-exec:{container.raw_handle}:{ordinal}",
+        raw_process_handle = (
+            f"remote-container-exec:{container.raw_handle}:{ordinal}"
         )
-        state.context.resource_ledger.created(
-            declared.resource_id,
-            process_handle.raw_handle_hash,
-        )
+        try:
+            process_handle = state.context.lease_store.put_exact(
+                declared.resource_id,
+                "process",
+                ordinal,
+                raw_process_handle,
+            )
+            state.context.resource_ledger.created(
+                declared.resource_id,
+                process_handle.raw_handle_hash,
+            )
+        except BaseException as exc:  # noqa: BLE001 - close before interrupts propagate.
+            cleanup_ok = _finalize_prepare_resource(
+                state.context,
+                declared.resource_id,
+                raw_process_handle,
+                removed=True,
+                owned=False,
+            )
+            failure = _registration_failure_after_cleanup(
+                "process_registration_failed",
+                cleanup_ok,
+                exc,
+            )
+            if failure is exc:
+                raise
+            raise failure from exc
         inner = _container_exec_command(
             docker_binary=state.context.target_binding.docker_binary,
             workspace_target=state.profile.mount_policy.workspace_target,
@@ -1514,6 +1512,7 @@ def _materialize_local_workspace(
     ordinal = _next_ordinal(context.resource_ledger, "workspace")
     declared = context.resource_ledger.declare("workspace", ordinal)
     workspace = _local_workspace_path(context, ordinal)
+    workspace_owned = False
     try:
         if workspace.exists() or workspace.is_symlink():
             raise ContractError("workspace path already exists")
@@ -1524,6 +1523,7 @@ def _materialize_local_workspace(
             workspace,
             include_submodules=(profile.source_loading_mode == "inplace_build"),
         )
+        workspace_owned = True
         handle = context.lease_store.put_exact(
             declared.resource_id,
             "workspace",
@@ -1535,33 +1535,73 @@ def _materialize_local_workspace(
             handle.raw_handle_hash,
         )
         return declared, handle, snapshot.workspace
-    except Exception as exc:  # noqa: BLE001 - stable materialization boundary.
-        try:
-            _prune_empty_workspace_parents(
+    except BaseException as exc:  # noqa: BLE001 - preserve exact ownership on interrupts.
+        materialization_cleanup_failure = isinstance(
+            exc,
+            SourceMaterializationCleanupError,
+        )
+        if workspace_owned or materialization_cleanup_failure:
+            cleanup_ok = _release_workspace_after_prepare_failure(
+                context,
+                declared.resource_id,
                 workspace,
-                context.target_binding.local_workspace_parent,
             )
-        except OSError:
-            pass
-        if _last_transition(context, declared.resource_id) == "declared":
-            context.resource_ledger.create_failed(declared.resource_id)
-        raise RuntimeBackendUnavailable("workspace_prepare_failed", str(exc)) from exc
+        else:
+            try:
+                _prune_empty_workspace_parents(
+                    workspace,
+                    context.target_binding.local_workspace_parent,
+                )
+            except OSError:
+                pass
+            cleanup_ok = _finalize_prepare_resource(
+                context,
+                declared.resource_id,
+                str(workspace),
+                removed=True,
+                owned=False,
+            )
+        root_cause = (
+            exc.materialization_cause
+            if materialization_cleanup_failure
+            else exc
+        )
+        failure = _prepare_failure_after_cleanup(
+            "workspace_prepare_failed",
+            (cleanup_ok,),
+            root_cause,
+        )
+        if failure is exc:
+            raise
+        if failure is root_cause:
+            raise root_cause from exc
+        raise failure from root_cause
 
 
 def _release_workspace_after_prepare_failure(
     context: RuntimeAttemptContext,
     resource_id: str,
     workspace: Path,
-) -> None:
+) -> bool:
+    removed = False
     try:
         shutil.rmtree(workspace)
         _prune_empty_workspace_parents(
             workspace,
             context.target_binding.local_workspace_parent,
         )
-        context.resource_ledger.released(resource_id)
-    except OSError:
-        context.resource_ledger.cleanup_failed(resource_id)
+        removed = True
+    except FileNotFoundError:
+        removed = True
+    except Exception:  # noqa: BLE001 - cleanup failure must not mask preparation.
+        removed = False
+    return _finalize_prepare_resource(
+        context,
+        resource_id,
+        str(workspace),
+        removed=removed,
+        owned=True,
+    )
 
 
 def _release_remote_after_prepare_failure(
@@ -1571,39 +1611,112 @@ def _release_remote_after_prepare_failure(
     remote_path: str,
     argv_runner: ArgvRunner,
     timeout_ms: int,
-) -> None:
+) -> bool:
     try:
         removed = argv_runner(
             _ssh_command(binding, ("rm", "-rf", "--", remote_path)),
             None,
             timeout_ms,
         )
-    except RuntimeBackendUnavailable:
+    except Exception:  # noqa: BLE001 - normalize any cleanup helper failure.
         removed = None
-    if removed is not None and removed.exit_code == 0 and not removed.timed_out:
-        context.resource_ledger.released(resource_id)
-    else:
-        context.resource_ledger.cleanup_failed(resource_id)
+    released = removed is not None and removed.exit_code == 0 and not removed.timed_out
+    return _finalize_prepare_resource(
+        context,
+        resource_id,
+        f"{_remote_target(binding)}:{remote_path}",
+        removed=released,
+        owned=True,
+    )
 
 
 def _release_created_resource_after_prepare_failure(
     context: RuntimeAttemptContext,
     resource_id: str,
+    raw_handle: str,
     remove_command: tuple[str, ...],
     argv_runner: ArgvRunner,
     timeout_ms: int,
-) -> None:
+) -> bool:
     try:
         removed = argv_runner(remove_command, None, timeout_ms)
-    except RuntimeBackendUnavailable:
+    except Exception:  # noqa: BLE001 - normalize any cleanup helper failure.
         removed = None
-    if removed is not None and removed.exit_code == 0 and not removed.timed_out:
-        context.resource_ledger.released(resource_id)
-    else:
-        context.resource_ledger.cleanup_failed(resource_id)
+    released = removed is not None and removed.exit_code == 0 and not removed.timed_out
+    return _finalize_prepare_resource(
+        context,
+        resource_id,
+        raw_handle,
+        removed=released,
+        owned=True,
+    )
+
+
+def _finalize_prepare_resource(
+    context: RuntimeAttemptContext,
+    resource_id: str,
+    raw_handle: str,
+    *,
+    removed: bool,
+    owned: bool,
+) -> bool:
+    try:
+        transition = _last_transition(context, resource_id)
+        if transition == "declared":
+            if not owned:
+                context.resource_ledger.create_failed(resource_id)
+            else:
+                context.resource_ledger.created(
+                    resource_id,
+                    runtime_raw_handle_hash(raw_handle),
+                )
+                if removed:
+                    context.resource_ledger.released(resource_id)
+                else:
+                    context.resource_ledger.cleanup_failed(resource_id)
+        elif transition == "created":
+            if removed:
+                context.resource_ledger.released(resource_id)
+            else:
+                context.resource_ledger.cleanup_failed(resource_id)
+        elif transition not in {"create_failed", "released", "cleanup_failed"}:
+            return False
+    except Exception:  # noqa: BLE001 - physical cleanup result remains authoritative.
+        return False
+    return removed
+
+
+def _prepare_failure_after_cleanup(
+    reason_code: str,
+    cleanup_results: tuple[bool, ...],
+    cause: BaseException | None = None,
+) -> BaseException:
+    if not cleanup_results or not all(cleanup_results):
+        return RuntimeBackendUnavailable("prepare_cleanup_failed")
+    if isinstance(cause, RuntimeBackendUnavailable):
+        return cause
+    if cause is not None and not isinstance(cause, Exception):
+        return cause
+    return RuntimeBackendUnavailable(
+        reason_code,
+        "" if cause is None else str(cause),
+    )
+
+
+def _registration_failure_after_cleanup(
+    reason_code: str,
+    cleanup_ok: bool,
+    cause: BaseException,
+) -> BaseException:
+    if not cleanup_ok:
+        return RuntimeBackendUnavailable("runtime_cleanup_failed")
+    if not isinstance(cause, Exception):
+        return cause
+    return RuntimeBackendUnavailable(reason_code, str(cause))
 
 
 def _workspace_sync_fingerprint(workspace: Path) -> str:
+    git_environment = _git_environment()
     diff = subprocess.run(
         (
             "git",
@@ -1617,8 +1730,24 @@ def _workspace_sync_fingerprint(workspace: Path) -> str:
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         check=False,
+        env=git_environment,
     )
     if diff.returncode != 0:
+        raise RuntimeBackendUnavailable("workspace_sync_state_failed")
+    tracked = subprocess.run(
+        (
+            "git",
+            "-C",
+            str(workspace),
+            "ls-files",
+            "-z",
+        ),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+        env=git_environment,
+    )
+    if tracked.returncode != 0:
         raise RuntimeBackendUnavailable("workspace_sync_state_failed")
     untracked = subprocess.run(
         (
@@ -1627,27 +1756,157 @@ def _workspace_sync_fingerprint(workspace: Path) -> str:
             str(workspace),
             "ls-files",
             "--others",
-            "--exclude-standard",
             "-z",
         ),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         check=False,
+        env=git_environment,
     )
     if untracked.returncode != 0:
         raise RuntimeBackendUnavailable("workspace_sync_state_failed")
     digest = hashlib.sha256()
-    digest.update(diff.stdout)
+    _update_sync_fingerprint(digest, b"tracked-diff", diff.stdout)
+    try:
+        workspace_metadata = workspace.lstat()
+        if not stat.S_ISDIR(workspace_metadata.st_mode):
+            raise RuntimeBackendUnavailable("workspace_sync_state_failed")
+        _update_sync_fingerprint(
+            digest,
+            b"workspace-root-mode",
+            stat.S_IMODE(workspace_metadata.st_mode).to_bytes(4, "big"),
+        )
+    except OSError as exc:
+        raise RuntimeBackendUnavailable("workspace_sync_state_failed") from exc
+    for raw_path in sorted(item for item in tracked.stdout.split(b"\0") if item):
+        try:
+            relative = raw_path.decode("utf-8")
+            candidate = workspace.joinpath(*PurePosixPath(relative).parts)
+            _require_within_workspace(workspace, candidate, "tracked path")
+            try:
+                metadata = candidate.lstat()
+            except FileNotFoundError:
+                entry_type = b"missing"
+                mode = 0
+            else:
+                entry_type = (
+                    b"regular"
+                    if stat.S_ISREG(metadata.st_mode)
+                    else b"symlink"
+                    if stat.S_ISLNK(metadata.st_mode)
+                    else b"directory"
+                    if stat.S_ISDIR(metadata.st_mode)
+                    else b"unsupported"
+                )
+                if entry_type == b"unsupported":
+                    raise RuntimeBackendUnavailable(
+                        "workspace_sync_state_failed"
+                    )
+                mode = stat.S_IMODE(metadata.st_mode)
+            _update_sync_fingerprint(digest, b"tracked-path", raw_path)
+            _update_sync_fingerprint(digest, b"tracked-type", entry_type)
+            _update_sync_fingerprint(
+                digest,
+                b"tracked-mode",
+                mode.to_bytes(4, "big"),
+            )
+        except (OSError, UnicodeDecodeError, ContractError) as exc:
+            raise RuntimeBackendUnavailable("workspace_sync_state_failed") from exc
+    try:
+        for current, directory_names, _ in os.walk(
+            workspace,
+            topdown=True,
+            onerror=_raise_sync_walk_error,
+            followlinks=False,
+        ):
+            current_path = Path(current)
+            retained: list[str] = []
+            for name in sorted(directory_names):
+                candidate = current_path / name
+                if current_path == workspace and name == ".git":
+                    continue
+                metadata = candidate.lstat()
+                if stat.S_ISLNK(metadata.st_mode):
+                    continue
+                if not stat.S_ISDIR(metadata.st_mode):
+                    raise RuntimeBackendUnavailable(
+                        "workspace_sync_state_failed"
+                    )
+                relative = candidate.relative_to(workspace).as_posix().encode("utf-8")
+                _update_sync_fingerprint(digest, b"directory-path", relative)
+                _update_sync_fingerprint(
+                    digest,
+                    b"directory-mode",
+                    stat.S_IMODE(metadata.st_mode).to_bytes(4, "big"),
+                )
+                retained.append(name)
+            directory_names[:] = retained
+    except (OSError, UnicodeEncodeError, ValueError) as exc:
+        raise RuntimeBackendUnavailable("workspace_sync_state_failed") from exc
     for raw_path in sorted(item for item in untracked.stdout.split(b"\0") if item):
         try:
             relative = raw_path.decode("utf-8")
             candidate = workspace.joinpath(*PurePosixPath(relative).parts)
             _require_within_workspace(workspace, candidate, "untracked path")
-            digest.update(raw_path)
-            digest.update(candidate.read_bytes())
+            metadata = candidate.lstat()
+            if stat.S_ISREG(metadata.st_mode):
+                entry_type = b"regular"
+                flags = os.O_RDONLY
+                if hasattr(os, "O_NOFOLLOW"):
+                    flags |= os.O_NOFOLLOW
+                descriptor = os.open(candidate, flags)
+                try:
+                    opened = os.fstat(descriptor)
+                    if (
+                        not stat.S_ISREG(opened.st_mode)
+                        or opened.st_dev != metadata.st_dev
+                        or opened.st_ino != metadata.st_ino
+                    ):
+                        raise RuntimeBackendUnavailable(
+                            "workspace_sync_state_failed"
+                        )
+                    chunks: list[bytes] = []
+                    while True:
+                        chunk = os.read(descriptor, 1024 * 1024)
+                        if not chunk:
+                            break
+                        chunks.append(chunk)
+                    content = b"".join(chunks)
+                finally:
+                    os.close(descriptor)
+            elif stat.S_ISLNK(metadata.st_mode):
+                entry_type = b"symlink"
+                content = os.fsencode(os.readlink(candidate))
+            else:
+                raise RuntimeBackendUnavailable("workspace_sync_state_failed")
+            _update_sync_fingerprint(digest, b"path", raw_path)
+            _update_sync_fingerprint(digest, b"type", entry_type)
+            _update_sync_fingerprint(
+                digest,
+                b"mode",
+                stat.S_IMODE(metadata.st_mode).to_bytes(4, "big"),
+            )
+            _update_sync_fingerprint(digest, b"content", content)
         except (OSError, UnicodeDecodeError, ContractError) as exc:
             raise RuntimeBackendUnavailable("workspace_sync_state_failed") from exc
     return digest.hexdigest()
+
+
+def _update_sync_fingerprint(
+    digest: object,
+    tag: bytes,
+    payload: bytes,
+) -> None:
+    if not isinstance(digest, type(hashlib.sha256())):
+        raise ContractError("sync fingerprint digest is invalid")
+    digest.update(len(tag).to_bytes(4, "big"))
+    digest.update(tag)
+    digest.update(len(payload).to_bytes(8, "big"))
+    digest.update(payload)
+
+
+def _raise_sync_walk_error(error: OSError) -> None:
+    raise error
 
 
 def _sync_remote_workspace_if_changed(
@@ -1671,6 +1930,10 @@ def _sync_remote_workspace_if_changed(
             state.context.target_binding,
             state.workspace,
             remote_path,
+            exclude_root_ccache=(
+                state.profile.source_loading_mode == "inplace_build"
+                and state.context.target_binding.remote_ccache_seed is not None
+            ),
         ),
         None,
         timeout_ms,
@@ -1822,6 +2085,8 @@ def _rsync_command(
     binding: RuntimeTargetBinding,
     source: Path,
     remote_path: str,
+    *,
+    exclude_root_ccache: bool,
 ) -> tuple[str, ...]:
     if binding.identity_file is None:
         raise ContractError("explicit remote target binding is required")
@@ -1842,7 +2107,7 @@ def _rsync_command(
         binding.rsync_binary,
         "-a",
         "--delete",
-        "--exclude=.ccache/",
+        *(("--exclude=/.ccache/",) if exclude_root_ccache else ()),
         "-e",
         transport,
         str(source) + "/",
@@ -2014,17 +2279,19 @@ def _cleanup_report(context: RuntimeAttemptContext) -> RuntimeCleanupReport:
             resource_type=record.resource_type,
             status=record.transition,
             error_code=(
-                "workspace_remove_failed"
-                if record.transition == "cleanup_failed"
-                and record.resource_type in {"workspace", "remote_workspace"}
+                None
+                if record.transition == "released"
                 else (
-                    "container_remove_failed"
-                    if record.transition == "cleanup_failed"
-                    and record.resource_type == "container"
+                    "resource_create_failed"
+                    if record.transition == "create_failed"
                     else (
-                        "process_remove_failed"
-                        if record.transition == "cleanup_failed"
-                        else None
+                        "workspace_remove_failed"
+                        if record.resource_type in {"workspace", "remote_workspace"}
+                        else (
+                            "container_remove_failed"
+                            if record.resource_type == "container"
+                            else "process_remove_failed"
+                        )
                     )
                 )
             ),

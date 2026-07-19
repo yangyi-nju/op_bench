@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 import hashlib
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -19,7 +20,11 @@ from op_bench.runtime.local_evaluation import (
 )
 from op_bench.runtime.validation import ContractError
 from op_bench.runtime.workspace import FrozenPatch, build_patch_artifact, raw_patch_identity
-from tests.runtime_git_fixture import initialize_evaluation_git_fixture
+from tests.runtime_git_fixture import (
+    git,
+    git_authority_pollution,
+    initialize_evaluation_git_fixture,
+)
 from tests.test_runtime_contracts import SHA_B, identity
 from tests.test_runtime_wire_contracts import evaluation_spec, session_result
 
@@ -39,6 +44,74 @@ class StepClock:
 
 
 class LocalGitEvaluationBackendTests(unittest.TestCase):
+    def test_archive_identity_ignores_ambient_git_authority(self) -> None:
+        source = self.fixture.repository
+        expected = git_archive_source_identity(
+            source,
+            self.fixture.revision,
+            "fixture@expected",
+        )
+        decoy_fixture = initialize_evaluation_git_fixture(self.root / "decoy")
+        (decoy_fixture.repository / "foreign.txt").write_text(
+            "foreign\n",
+            encoding="utf-8",
+        )
+        git(decoy_fixture.repository, "add", "foreign.txt")
+        git(
+            decoy_fixture.repository,
+            "commit",
+            "--quiet",
+            "-m",
+            "foreign authority",
+        )
+
+        with mock.patch.dict(
+            os.environ,
+            git_authority_pollution(
+                self.root,
+                source,
+                decoy_fixture.repository,
+            ),
+            clear=False,
+        ):
+            observed = git_archive_source_identity(
+                source,
+                "HEAD",
+                "fixture@expected",
+            )
+
+        self.assertEqual(observed, expected)
+
+    def test_evaluation_git_commands_ignore_ambient_git_authority(self) -> None:
+        decoy_fixture = initialize_evaluation_git_fixture(self.root / "decoy-run")
+        (decoy_fixture.repository / "foreign.txt").write_text(
+            "foreign\n",
+            encoding="utf-8",
+        )
+        git(decoy_fixture.repository, "add", "foreign.txt")
+        git(
+            decoy_fixture.repository,
+            "commit",
+            "--quiet",
+            "-m",
+            "foreign authority",
+        )
+
+        with mock.patch.dict(
+            os.environ,
+            git_authority_pollution(
+                self.root,
+                self.fixture.repository,
+                decoy_fixture.repository,
+            ),
+            clear=False,
+        ):
+            completed = self.evaluate(self.fixture.gold_patch)
+
+        self.assertEqual(completed.result.attempt_validity, "valid")
+        self.assertEqual(completed.result.evaluation_outcome, "resolved")
+        self.assertEqual(list(self.evaluation_root.iterdir()), [])
+
     def setUp(self) -> None:
         self.temporary = tempfile.TemporaryDirectory()
         self.root = Path(self.temporary.name)

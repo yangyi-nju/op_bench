@@ -28,6 +28,7 @@ from op_bench.runtime.local_evaluation import (
     LocalGitSource,
 )
 from op_bench.runtime.profiles import load_runtime_profile_registry
+from op_bench.runtime.source_materialization import _git_environment
 from op_bench.runtime.validation import ContractError, require_bool, require_int, require_str
 from op_bench.task import TaskManifest
 
@@ -346,6 +347,7 @@ def _executable_source_revision(repository: Path, logical_revision: str) -> str:
             check=False,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
+            env=_git_environment(),
         )
         if resolved.returncode == 0:
             return resolved.stdout.decode("ascii").strip()

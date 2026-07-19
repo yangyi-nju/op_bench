@@ -6,7 +6,7 @@ OpBench is an operator-focused benchmark for evaluating coding agents on real fr
 
 v0.1 established the isolated replay/evaluation loop. v0.2 added asset registries and formal admission. v0.3 expanded the dataset to 10 verified tasks and added 3-repeat stability evaluation. v0.4 added CUDA tiers and remote Docker. v0.5 is now complete: the verified cumulative dataset contains 17 tasks, including a 6-task precision slice, and its 51-attempt Codex run reached **72.5% resolved** (37/51) with eight-dimensional reporting and hard experiment-integrity checks.
 
-The v0.6 platform implementation is locally complete across M1–M7: strict versioned contracts, one authoritative workspace and immutable patch, a server-authoritative CLI/MCP action service, deterministic Attempt/trajectory/evaluation/artifact semantics, versioned Runtime Profiles, exact Attempt-owned Local/Docker/Remote resources, conformance and legacy replay machinery, a process-isolated canonical Codex Adapter with resume and Integrity verification, and an executable public Demo/documentation surface. Real Codex local CPU canaries passed. Formal `opbench-v0.6.0` release remains **Blocked**, not Completed, because exact Remote replay and CUDA Must evidence is unavailable while the configured target returns `connection_timeout`. Boundary-task expansion follows in v0.7 only after the v0.6 release gate closes. See the [global project plan](docs/project_plan.md), [current project state](docs/project_state.md), and [v0.6 release notes](docs/v0.6/release_notes.md).
+The v0.6 platform is **Completed** across M1–M7: strict versioned contracts, one authoritative workspace and immutable patch, a server-authoritative CLI/MCP action service, deterministic Attempt/trajectory/evaluation/artifact semantics, versioned Runtime Profiles, exact Attempt-owned Local/Docker/Remote resources, conformance and legacy replay, a process-isolated canonical Codex Adapter with resume and Integrity verification, and an executable public Demo/documentation surface. The recovered exact target passed representative Remote CPU, CUDA Overlay, and CUDA Kernel canaries. The complete frozen replay passed all 17 baseline + 17 gold + 51 historical final-patch cases with zero failures, blocks, or differences, closing the formal `opbench-v0.6.0` release gate. Boundary-task expansion follows in v0.7. See the [global project plan](docs/project_plan.md), [current project state](docs/project_state.md), and [v0.6 release notes](docs/v0.6/release_notes.md).
 
 ## What The Current Code Contains
 
@@ -29,7 +29,7 @@ The v0.6 platform implementation is locally complete across M1–M7: strict vers
 - An AttemptSession state machine with server-owned deadline/resource budgets, deterministic termination priority, in-flight Action/publication barriers, one patch freeze, and one terminal SessionResult.
 - A canonical append-only EventJournal with atomic Action event batches, continuous hash chaining, public Artifact spill, strict descriptor-bound persistence, and an Evaluation-aware AttemptLedger for deterministic retry/resume decisions.
 - Fresh evaluation from a verified local Source copy with strict patch apply, post-session evaluation-only test injection, F2P/P2P evidence, and independent validity/terminal/outcome axes.
-- Descriptor-bound public/private attempt artifacts, a read-only 12-check integrity graph, tamper detection, and byte-exact deterministic `results.jsonl`/`summary.json` rebuilds.
+- Descriptor-bound public/private attempt artifacts, a read-only 14-check integrity graph, tamper detection, and byte-exact deterministic `results.jsonl`/`summary.json` rebuilds.
 - An independent zero-dependency JSON Schema validator, a strict schema artifact under `schemas/`, and offline build/validation CLIs that do not launch an Agent or contact a runtime.
 
 Development-only experiment adapters have been removed from the public v0.1 surface. Future agents should integrate by implementing the same action-interface boundary used by `codex_action_bridge`.
@@ -148,10 +148,10 @@ PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/run_experiment.py \
 ```
 
 This is a Runtime/Adapter canary, not a benchmark score. M6 already recorded a
-valid real-Codex local Attempt and a two-repeat resume cohort. Exact Remote CPU,
-CUDA Overlay, CUDA Kernel, and 17+17+51 replay evidence remains **Blocked** by
-the configured target's stable `connection_timeout`; OpBench does not probe or
-discover replacement targets.
+valid real-Codex local Attempt and a two-repeat resume cohort. After the exact
+configured target recovered, representative Remote CPU, CUDA Overlay, and CUDA
+Kernel canaries passed, followed by an 85/85 exact replay. OpBench used only the
+configured target; it did not probe or discover replacement targets.
 
 ### Legacy v0.5 compatibility
 

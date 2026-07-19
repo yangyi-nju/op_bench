@@ -4,6 +4,7 @@ from dataclasses import replace
 from pathlib import Path
 import tempfile
 import unittest
+from unittest import mock
 
 from op_bench.runtime.evaluation import (
     EvaluationInfrastructureError,
@@ -85,6 +86,57 @@ class UnavailableRuntimeBackend:
 
 
 class FreshEvaluatorReplayTests(unittest.TestCase):
+    def test_cleanup_failure_is_not_reclassified_or_cached_as_unavailable(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        cases = build_replay_inventory(root)[:2]
+        evaluators = []
+
+        class UnavailableThenCleanupFailureEvaluator:
+            def __init__(self, **kwargs):
+                del kwargs
+                self.last_backend_unavailable_reason = None
+                evaluators.append(self)
+
+            def evaluate_replay(self, spec, frozen_patch):
+                del spec, frozen_patch
+                self.last_backend_unavailable_reason = "remote_source_sync_failed"
+                raise EvaluationInfrastructureError("evaluation_cleanup_failed")
+
+            def evaluate(self, spec, frozen_patch):
+                return self.evaluate_replay(spec, frozen_patch)
+
+        with tempfile.TemporaryDirectory() as temporary:
+            private = Path(temporary)
+            workspaces = private / "workspaces"
+            workspaces.mkdir()
+            identity_file = private / "identity"
+            identity_file.write_text("fixture", encoding="utf-8")
+            target = private / "target.json"
+            target.write_text(
+                "{\"backend\":\"remote_docker\","
+                f"\"local_workspace_parent\":\"{workspaces}\","
+                "\"host_alias\":\"exact.invalid\","
+                "\"remote_user\":\"runner\","
+                f"\"identity_file\":\"{identity_file}\"}}",
+                encoding="utf-8",
+            )
+            with mock.patch(
+                "op_bench.runtime.replay.RuntimeFreshEvaluationBackend",
+                UnavailableThenCleanupFailureEvaluator,
+            ):
+                with ExactReplayObserver(root, target) as observer:
+                    observed = tuple(observer(case) for case in cases)
+
+        self.assertEqual(len(evaluators), 2)
+        self.assertEqual(
+            [item.observed_outcome for item in observed],
+            ["evaluation_error", "evaluation_error"],
+        )
+        self.assertEqual(
+            [item.invalid_reason for item in observed],
+            ["evaluation_cleanup_failed", "evaluation_cleanup_failed"],
+        )
+
     def test_exact_observer_caches_connection_level_unavailability(self) -> None:
         root = Path(__file__).resolve().parents[1]
         cases = build_replay_inventory(root)[:2]

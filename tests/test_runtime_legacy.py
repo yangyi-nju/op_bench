@@ -12,6 +12,7 @@ from op_bench.dataset import DatasetManifest
 from op_bench.integrity import replay_spec_hash
 from op_bench.runtime.legacy import (
     LegacyV05Defaults,
+    _executable_source_revision,
     full_task_spec_from_v05,
     run_manifest_from_v05_dataset,
     runtime_bundle_from_v05_dataset,
@@ -20,6 +21,11 @@ from op_bench.runtime.profiles import load_runtime_profile_registry
 from op_bench.runtime.validation import ContractError
 from op_bench.task import TaskManifest
 from tests.test_runtime_contracts import agent_spec
+from tests.runtime_git_fixture import (
+    git,
+    git_authority_pollution,
+    initialize_git_repo,
+)
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -34,6 +40,26 @@ PROFILE_BY_ENVIRONMENT = {
 
 
 class LegacyV05ProjectionTests(unittest.TestCase):
+    def test_executable_revision_ignores_ambient_git_authority(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "source"
+            source_revision = initialize_git_repo(source)
+            decoy = root / "decoy"
+            initialize_git_repo(decoy)
+            (decoy / "foreign.txt").write_text("foreign\n", encoding="utf-8")
+            git(decoy, "add", "foreign.txt")
+            git(decoy, "commit", "--quiet", "-m", "foreign authority")
+
+            with patch.dict(
+                os.environ,
+                git_authority_pollution(root, source, decoy),
+                clear=False,
+            ):
+                resolved = _executable_source_revision(source, "HEAD")
+
+            self.assertEqual(resolved, source_revision)
+
     def test_private_runtime_bindings_preserve_frozen_source_overlay_paths(self) -> None:
         dataset = DatasetManifest.load(DATASET_PATH)
         tasks = dataset.load_tasks(verified_only=True)

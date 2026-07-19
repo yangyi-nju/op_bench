@@ -16,6 +16,7 @@ from typing import Iterator, Mapping
 
 from op_bench.runtime.canonical import canonical_sha256
 from op_bench.runtime.contracts import ContentIdentity, EvaluationSpec, SessionResult
+from op_bench.runtime.source_materialization import _git_environment
 from op_bench.runtime.validation import ContractError, require_bool, require_int, require_str
 
 
@@ -1444,31 +1445,13 @@ def _run_git(
     *,
     check: bool = False,
 ) -> subprocess.CompletedProcess[bytes]:
-    environment = dict(os.environ)
-    for name in tuple(environment):
-        if name.startswith("GIT_CONFIG_KEY_") or name.startswith("GIT_CONFIG_VALUE_"):
-            environment.pop(name)
-    for name in (
-        "GIT_ALTERNATE_OBJECT_DIRECTORIES",
-        "GIT_COMMON_DIR",
-        "GIT_CONFIG_COUNT",
-        "GIT_DIR",
-        "GIT_INDEX_FILE",
-        "GIT_OBJECT_DIRECTORY",
-        "GIT_WORK_TREE",
-    ):
-        environment.pop(name, None)
-    environment["GIT_CONFIG_NOSYSTEM"] = "1"
-    environment["GIT_CONFIG_GLOBAL"] = os.devnull
-    environment["GIT_ATTR_NOSYSTEM"] = "1"
-    environment["GIT_NO_REPLACE_OBJECTS"] = "1"
     try:
         result = subprocess.run(
             command,
             check=False,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            env=environment,
+            env=_git_environment(),
         )
     except OSError as exc:
         raise WorkspaceError(f"cannot execute local Git: {exc}") from exc

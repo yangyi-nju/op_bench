@@ -19,6 +19,7 @@ from op_bench.runtime.evaluation import (
     SelectorExecution,
     StrictPatchApplyError,
 )
+from op_bench.runtime.source_materialization import _git_environment
 from op_bench.runtime.validation import (
     ContractError,
     require_exact_fields,
@@ -86,6 +87,7 @@ def git_archive_source_identity(
         stderr=subprocess.PIPE,
         timeout=timeout_seconds,
         check=False,
+        env=_git_environment(),
     )
     if result.returncode != 0:
         detail = result.stderr.decode("utf-8", errors="replace").strip()
@@ -480,7 +482,12 @@ def _run(
     cwd: Path,
     timeout_seconds: float,
 ) -> subprocess.CompletedProcess[str]:
-    environment = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1"}
+    environment = (
+        _git_environment()
+        if command and command[0] == "git"
+        else dict(os.environ)
+    )
+    environment["PYTHONDONTWRITEBYTECODE"] = "1"
     return subprocess.run(
         command,
         cwd=cwd,

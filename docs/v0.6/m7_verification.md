@@ -167,3 +167,21 @@ Blocked Must items: R-05, R-06, R-07, R-08, R-10.
 
 Release decision: **Blocked**. Local M7 completion cannot override the unified
 v0.6 rule that every Must item must be Passed.
+
+## 6. Post-freeze release closure
+
+The section 5 decision is the preserved 2026-07-18 M7 freeze. On 2026-07-19, the
+same exact configured target recovered and the remaining evidence was executed
+without target discovery or network probing:
+
+- representative Remote CPU, CUDA Overlay, and CUDA Kernel canaries Passed;
+- the complete immutable replay inventory Passed 85/85: 17 Baseline, 17 Gold,
+  and 51 Legacy final-patch cases;
+- replay failures, blocks, and differences were all zero;
+- all eight historical v0.5 result/summary hashes remained unchanged;
+- the final full suite Passed 581/581 with no open P0/P1 finding.
+
+R-05, R-06, R-07, R-08, and R-10 are now `Passed`. The unified release decision
+is therefore **Completed**. Exact hashes and commands are recorded in the
+[M6 closure addendum](m6_verification.md#8-post-m7-exact-target-closure) and the
+[acceptance matrix](acceptance_matrix.md#13-post-m7-统一发布关闭记录).

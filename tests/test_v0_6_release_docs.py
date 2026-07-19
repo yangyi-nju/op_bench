@@ -15,6 +15,9 @@ DEMO_ARTIFACT = (
     ROOT / "configs" / "examples" / "v0.6_scripted_demo_artifact.example.json"
 )
 RELEASE_NOTES = ROOT / "docs" / "v0.6" / "release_notes.md"
+ACCEPTANCE_MATRIX = ROOT / "docs" / "v0.6" / "acceptance_matrix.md"
+PROJECT_STATE = ROOT / "docs" / "project_state.md"
+CHANGELOG = ROOT / "CHANGELOG.md"
 LINK_PATTERN = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
 
 
@@ -53,7 +56,10 @@ class V06ReleaseDocumentationTests(unittest.TestCase):
             for fragment in required:
                 with self.subTest(readme=readme.name, fragment=fragment):
                     self.assertIn(fragment, text)
-            self.assertIn("Blocked", text)
+            self.assertIn("Completed", text)
+            self.assertIn("85/85", text)
+            self.assertNotIn("release remains **Blocked**", text)
+            self.assertNotIn("发布仍是 **Blocked**", text)
             self.assertIn("synthetic", text.lower())
             self.assertIn("benchmark score", text.lower())
 
@@ -68,6 +74,8 @@ class V06ReleaseDocumentationTests(unittest.TestCase):
 
     def test_developer_guide_covers_support_failures_and_artifacts(self) -> None:
         text = GUIDE.read_text(encoding="utf-8")
+        self.assertIn("Status: `opbench-v0.6.0` is Completed", text)
+        self.assertIn("85/85", text)
         registry = json.loads(
             (ROOT / "configs" / "runtime_profiles.v1.json").read_text(
                 encoding="utf-8"
@@ -143,11 +151,36 @@ class V06ReleaseDocumentationTests(unittest.TestCase):
             )
         self.assertIn("not a benchmark score", artifact["claim"])
         release = RELEASE_NOTES.read_text(encoding="utf-8")
-        self.assertIn("Decision: **Blocked", release)
+        self.assertIn("Decision: **Completed", release)
+        self.assertIn("85/85", release)
+        self.assertIn("17 baseline + 17 gold + 51 historical", release)
         self.assertIn("not a v0.6 score", release)
         self.assertIn("not a formal Agent", release)
         self.assertIn("does not run the planned feedback-causality", release)
-        self.assertNotIn("Decision: **Completed", release)
+        self.assertNotIn("Decision: **Blocked", release)
+
+    def test_completed_release_status_is_synchronized(self) -> None:
+        acceptance = ACCEPTANCE_MATRIX.read_text(encoding="utf-8")
+        rows = [
+            line
+            for line in acceptance.splitlines()
+            if re.match(r"^\| [A-Z]-[0-9]{2} \|", line)
+        ]
+        self.assertTrue(rows)
+        for row in rows:
+            with self.subTest(row=row):
+                self.assertTrue(row.endswith("| Passed |"))
+        self.assertIn(
+            "sha256:193ef08f68f50a50c67f22b41ca2a31043c78d6b2311d23f16c588a86b80daee",
+            acceptance,
+        )
+
+        project_state = PROJECT_STATE.read_text(encoding="utf-8")
+        self.assertIn("| 当前稳定版本 | v0.6 Completed |", project_state)
+        self.assertIn("| V06-RELEASE | Passed |", project_state)
+
+        changelog = CHANGELOG.read_text(encoding="utf-8")
+        self.assertIn("## v0.6 - Completed", changelog)
 
 
 if __name__ == "__main__":

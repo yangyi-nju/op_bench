@@ -6,7 +6,7 @@ OpBench 是一个面向算子问题的 benchmark，用于评测 coding agent 解
 
 v0.1 建立隔离 replay/evaluation 闭环，v0.2 加入资产 registry 和正式 admission，v0.3 扩展到 10 条 verified task 并加入 3-repeat，v0.4 加入 CUDA tier 和 remote Docker。v0.5 现已完成：verified 累计数据集包含 17 条 task，其中 precision slice 为 6 条；51-attempt Codex 全量实验达到 **72.5% resolved**（37/51），并落地 8 维指标与实验完整性硬校验。
 
-v0.6 平台实现已在本地完成 M1～M7：严格版本化合同、唯一 Authoritative Workspace 与不可变 Patch、服务端权威 CLI/MCP Action Service、确定性的 Attempt/Trajectory/Evaluation/Artifact 语义、版本化 Runtime Profile、精确 Attempt-owned Local/Docker/Remote 资源、Conformance 与 Legacy Replay、支持 Resume/Integrity 的进程隔离 Canonical Codex Adapter，以及可执行的公开 Demo 和文档入口均已落地。真实 Codex 本地 CPU canary 已通过；正式 `opbench-v0.6.0` 发布仍是 **Blocked** 而不是 Completed，因为已配置目标持续 `connection_timeout`，精确 Remote Replay 与 CUDA Must 证据尚不可得。v0.6 发布门关闭后才进入 v0.7 Boundary Task 扩充。详见[全局项目方案](docs/project_plan.md)、[当前项目状态](docs/project_state.md)和[v0.6 发布说明](docs/v0.6/release_notes.md)。
+v0.6 平台现已 **Completed**：M1～M7 的严格版本化合同、唯一 Authoritative Workspace 与不可变 Patch、服务端权威 CLI/MCP Action Service、确定性的 Attempt/Trajectory/Evaluation/Artifact 语义、版本化 Runtime Profile、精确 Attempt-owned Local/Docker/Remote 资源、Conformance 与 Legacy Replay、支持 Resume/Integrity 的进程隔离 Canonical Codex Adapter，以及可执行的公开 Demo 和文档入口均已落地。已恢复的精确目标通过代表性 Remote CPU、CUDA Overlay 与 CUDA Kernel canary；完整冻结回放的 17 条 baseline、17 条 gold 和 51 条历史 final patch 共 85/85 全部通过，零失败、零阻塞、零差异，正式关闭 `opbench-v0.6.0` 发布门。下一阶段进入 v0.7 Boundary Task 扩充。详见[全局项目方案](docs/project_plan.md)、[当前项目状态](docs/project_state.md)和[v0.6 发布说明](docs/v0.6/release_notes.md)。
 
 ## 当前代码包含什么
 
@@ -29,7 +29,7 @@ v0.6 平台实现已在本地完成 M1～M7：严格版本化合同、唯一 Aut
 - AttemptSession 状态机统一执行服务端 deadline/resource budget、固定终止优先级、在途 Action/事件发布屏障、唯一 Patch Freeze 与唯一 Terminal SessionResult。
 - Canonical append-only EventJournal 提供原子 Action 事件批次、连续 hash chain、Public Artifact spill 和严格描述符绑定持久化；Evaluation-aware AttemptLedger 以最终 Evaluation Result 和 append-only retry 历史提供确定性 resume 决策。
 - Fresh Evaluation 从校验过的本地 Source 副本执行，严格应用 patch，在 Session 终止后注入 evaluation-only tests，并记录 F2P/P2P 与 validity/terminal/outcome 三轴证据。
-- 描述符绑定的 public/private attempt Artifact、只读 12 项引用图完整性检查、篡改检测，以及 byte-exact `results.jsonl`/`summary.json` 确定性重建。
+- 描述符绑定的 public/private attempt Artifact、只读 14 项引用图完整性检查、篡改检测，以及 byte-exact `results.jsonl`/`summary.json` 确定性重建。
 - 零依赖独立 JSON Schema 校验器、`schemas/` 下的严格 Schema，以及不会启动 Agent 或连接 Runtime 的离线构建/校验 CLI。
 
 开发阶段的临时模型直连 adapter 已从 v0.1 公开表面移除。后续接入新 agent 时，应复用 `codex_action_bridge` 所验证的 action-interface 边界。
@@ -145,9 +145,9 @@ PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/run_experiment.py \
 ```
 
 这是 Runtime/Adapter canary，不是 benchmark score。M6 已记录一个有效的真实 Codex
-本地 Attempt 和一个双重复 resume Cohort。精确 Remote CPU、CUDA Overlay、CUDA Kernel
-以及 17+17+51 Replay 证据仍因已配置目标稳定 `connection_timeout` 保持 **Blocked**；
-OpBench 不探测或发现替代目标。
+本地 Attempt 和一个双重复 resume Cohort。已配置的精确目标恢复后，代表性 Remote CPU、
+CUDA Overlay、CUDA Kernel canary 均已通过，随后精确 Replay 达到 85/85。OpBench 只使用
+该已配置目标，没有探测或发现替代目标。
 
 ### Legacy v0.5 兼容路径
 

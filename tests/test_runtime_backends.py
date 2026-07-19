@@ -24,6 +24,7 @@ from op_bench.runtime.backends import (
 )
 from op_bench.runtime.profiles import load_runtime_profile_registry
 from op_bench.runtime.resources import AttemptResourceLedger, RuntimeLeaseStore
+from op_bench.runtime.source_materialization import SourceMaterializationError
 from op_bench.runtime.validation import ContractError
 from tests.runtime_git_fixture import git, initialize_git_repo
 
@@ -104,6 +105,176 @@ def pollute_source_after_frozen_commit(fixture: LocalBackendFixture) -> str:
 
 
 class LocalProcessBackendTests(unittest.TestCase):
+    def test_scripted_workspace_store_failure_closes_declaration(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            fixture = LocalBackendFixture(Path(temporary))
+            backend = ScriptedRuntimeBackend.success()
+
+            with mock.patch.object(
+                fixture.store,
+                "put_exact",
+                side_effect=ContractError("private store failure"),
+            ):
+                with self.assertRaises(RuntimeBackendUnavailable) as raised:
+                    backend.prepare(fixture.profile, fixture.context)
+
+            self.assertEqual(
+                raised.exception.reason_code,
+                "workspace_registration_failed",
+            )
+            self.assertEqual(
+                [record.transition for record in fixture.ledger.records],
+                ["declared", "create_failed"],
+            )
+
+    def test_materializer_cleanup_failure_is_attributed_to_owned_workspace(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            fixture = LocalBackendFixture(Path(temporary))
+            backend = LocalProcessBackend()
+
+            with (
+                mock.patch(
+                    "op_bench.runtime.source_materialization._stream_safe_git_archive",
+                    side_effect=SourceMaterializationError("archive failure"),
+                ),
+                mock.patch(
+                    "op_bench.runtime.source_materialization._remove_exact_workspace",
+                    side_effect=OSError("materializer cleanup failure"),
+                ),
+                mock.patch(
+                    "op_bench.runtime.backends.shutil.rmtree",
+                    side_effect=OSError("backend cleanup failure"),
+                ),
+            ):
+                with self.assertRaises(RuntimeBackendUnavailable) as raised:
+                    backend.prepare(fixture.profile, fixture.context)
+
+            self.assertEqual(raised.exception.reason_code, "prepare_cleanup_failed")
+            self.assertEqual(
+                [record.transition for record in fixture.ledger.records],
+                ["declared", "created", "cleanup_failed"],
+            )
+            workspace = fixture.binding.local_workspace_parent / (
+                fixture.context.attempt_id.removeprefix("attempt:v1:")
+            ) / "retry-0001" / "workspace"
+            self.assertTrue(workspace.is_dir())
+
+    def test_process_store_failure_terminates_exact_started_process_group(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            fixture = LocalBackendFixture(Path(temporary))
+            backend = LocalProcessBackend()
+            lease = backend.prepare(fixture.profile, fixture.context)
+            original_put = fixture.store.put_exact
+
+            def fail_process_store(resource_id, resource_type, ordinal, raw_handle):
+                if resource_type == "process":
+                    raise ContractError("private store failure")
+                return original_put(resource_id, resource_type, ordinal, raw_handle)
+
+            process = mock.Mock(pid=4242)
+            with (
+                mock.patch(
+                    "op_bench.runtime.backends.subprocess.Popen",
+                    return_value=process,
+                ),
+                mock.patch.object(
+                    fixture.store,
+                    "put_exact",
+                    side_effect=fail_process_store,
+                ),
+                mock.patch(
+                    "op_bench.runtime.backends._terminate_exact_process_group"
+                ) as terminate,
+            ):
+                with self.assertRaises(RuntimeBackendUnavailable) as raised:
+                    backend.run(
+                        lease,
+                        (sys.executable, "-c", "pass"),
+                        ".",
+                        1_000,
+                    )
+
+            self.assertEqual(raised.exception.reason_code, "process_registration_failed")
+            terminate.assert_called_once_with(
+                process,
+                grace_ms=fixture.profile.cleanup_policy.grace_ms,
+            )
+            process_records = [
+                record
+                for record in fixture.ledger.records
+                if record.resource_type == "process"
+            ]
+            self.assertEqual(
+                [record.transition for record in process_records],
+                ["declared", "created", "released"],
+            )
+            self.assertTrue(backend.cleanup(lease).report.all_released)
+
+    def test_process_store_interrupt_terminates_before_interrupt_propagates(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            fixture = LocalBackendFixture(Path(temporary))
+            backend = LocalProcessBackend()
+            lease = backend.prepare(fixture.profile, fixture.context)
+            process = mock.Mock(pid=4242)
+
+            with (
+                mock.patch(
+                    "op_bench.runtime.backends.subprocess.Popen",
+                    return_value=process,
+                ),
+                mock.patch.object(
+                    fixture.store,
+                    "put_exact",
+                    side_effect=KeyboardInterrupt,
+                ),
+                mock.patch(
+                    "op_bench.runtime.backends._terminate_exact_process_group"
+                ) as terminate,
+            ):
+                with self.assertRaises(KeyboardInterrupt):
+                    backend.run(
+                        lease,
+                        (sys.executable, "-c", "pass"),
+                        ".",
+                        1_000,
+                    )
+
+            terminate.assert_called_once_with(
+                process,
+                grace_ms=fixture.profile.cleanup_policy.grace_ms,
+            )
+            process_records = [
+                record
+                for record in fixture.ledger.records
+                if record.resource_type == "process"
+            ]
+            self.assertEqual(
+                [record.transition for record in process_records],
+                ["declared", "created", "released"],
+            )
+            self.assertTrue(backend.cleanup(lease).report.all_released)
+
+    def test_post_materialization_store_failure_removes_owned_workspace(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            fixture = LocalBackendFixture(Path(temporary))
+            with mock.patch.object(
+                fixture.store,
+                "put_exact",
+                side_effect=ContractError("private store failure"),
+            ):
+                with self.assertRaises(RuntimeBackendUnavailable) as raised:
+                    LocalProcessBackend().prepare(
+                        fixture.profile,
+                        fixture.context,
+                    )
+
+            self.assertEqual(raised.exception.reason_code, "workspace_prepare_failed")
+            self.assertEqual(list(fixture.workspaces.iterdir()), [])
+            self.assertEqual(
+                [record.transition for record in fixture.ledger.records],
+                ["declared", "created", "released"],
+            )
+
     def test_attempt_context_requires_explicit_frozen_source_revision(self) -> None:
         parameters = inspect.signature(RuntimeAttemptContext).parameters
 
@@ -344,7 +515,393 @@ class SelectiveExceptionArgvRunner(RecordingArgvRunner):
         return super().__call__(command, cwd, timeout_ms)
 
 
+class ExistingRemoteWorkspaceArgvRunner(RecordingArgvRunner):
+    def __call__(
+        self,
+        command: tuple[str, ...],
+        cwd: Path | None,
+        timeout_ms: int,
+    ):
+        result = super().__call__(command, cwd, timeout_ms)
+        if (
+            command[0] == "ssh-fixture"
+            and "mkdir --" in command[-1]
+            and "mkdir -p --" not in command[-1]
+        ):
+            return replace(result, exit_code=1, stderr="workspace already exists")
+        return result
+
+
+class RsyncAndRemoteCleanupFailureArgvRunner(RecordingArgvRunner):
+    def __call__(
+        self,
+        command: tuple[str, ...],
+        cwd: Path | None,
+        timeout_ms: int,
+    ):
+        result = super().__call__(command, cwd, timeout_ms)
+        if command[0] == "rsync-fixture":
+            return replace(result, exit_code=1, stderr="sync failed")
+        if command[0] == "ssh-fixture" and "rm -rf --" in command[-1]:
+            return replace(result, exit_code=1, stderr="cleanup failed")
+        return result
+
+
 class ContainerBackendCommandTests(unittest.TestCase):
+    def test_docker_prepare_interrupt_cleans_exact_owned_resources(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspaces = root / "workspaces"
+            workspaces.mkdir()
+            profile = self.profile("docker")
+            binding = RuntimeTargetBinding(
+                backend="docker",
+                local_workspace_parent=workspaces,
+                docker_binary="docker-fixture",
+            )
+            fixture = LocalBackendFixture(root, profile=profile, binding=binding)
+            recorded = RecordingArgvRunner()
+
+            def interrupt_start(command, cwd, timeout_ms):
+                result = recorded(command, cwd, timeout_ms)
+                if command[:2] == ("docker-fixture", "start"):
+                    raise KeyboardInterrupt
+                return result
+
+            with self.assertRaises(KeyboardInterrupt):
+                DockerRuntimeBackend(argv_runner=interrupt_start).prepare(
+                    profile,
+                    fixture.context,
+                )
+
+            commands = [command for command, _, _ in recorded.calls]
+            self.assertEqual(commands[-1][1:3], ("rm", "--force"))
+            self.assertEqual(list(workspaces.iterdir()), [])
+            final = {
+                record.resource_type: record.transition
+                for record in fixture.ledger.records
+            }
+            self.assertEqual(final, {"workspace": "released", "container": "released"})
+
+    def test_docker_post_workspace_declare_failure_releases_workspace(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspaces = root / "workspaces"
+            workspaces.mkdir()
+            profile = self.profile("docker")
+            binding = RuntimeTargetBinding(
+                backend="docker",
+                local_workspace_parent=workspaces,
+                docker_binary="docker-fixture",
+            )
+            fixture = LocalBackendFixture(root, profile=profile, binding=binding)
+            original_declare = fixture.ledger.declare
+
+            def fail_container_declare(resource_type, ordinal):
+                if resource_type == "container":
+                    raise ContractError("ledger declare failure")
+                return original_declare(resource_type, ordinal)
+
+            runner = RecordingArgvRunner()
+            with mock.patch.object(
+                fixture.ledger,
+                "declare",
+                side_effect=fail_container_declare,
+            ):
+                with self.assertRaises(RuntimeBackendUnavailable):
+                    DockerRuntimeBackend(argv_runner=runner).prepare(
+                        profile,
+                        fixture.context,
+                    )
+
+            self.assertEqual(runner.calls, [])
+            self.assertEqual(list(workspaces.iterdir()), [])
+            self.assertEqual(
+                [record.transition for record in fixture.ledger.records],
+                ["declared", "created", "released"],
+            )
+
+    def test_remote_post_leaf_container_declare_failure_unwinds_all_owned_resources(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspaces = root / "workspaces"
+            workspaces.mkdir()
+            identity_file = root / "id_fixture"
+            identity_file.write_text("fixture", encoding="utf-8")
+            profile = self.profile("remote_docker")
+            binding = RuntimeTargetBinding(
+                backend="remote_docker",
+                local_workspace_parent=workspaces,
+                host_alias="gpu-exact-fixture",
+                remote_user="runner",
+                identity_file=identity_file,
+                docker_binary="docker-fixture",
+                ssh_binary="ssh-fixture",
+                rsync_binary="rsync-fixture",
+            )
+            fixture = LocalBackendFixture(root, profile=profile, binding=binding)
+            original_declare = fixture.ledger.declare
+
+            def fail_container_declare(resource_type, ordinal):
+                if resource_type == "container":
+                    raise ContractError("ledger declare failure")
+                return original_declare(resource_type, ordinal)
+
+            runner = RecordingArgvRunner()
+            with mock.patch.object(
+                fixture.ledger,
+                "declare",
+                side_effect=fail_container_declare,
+            ):
+                with self.assertRaises(RuntimeBackendUnavailable):
+                    RemoteDockerRuntimeBackend(argv_runner=runner).prepare(
+                        profile,
+                        fixture.context,
+                    )
+
+            commands = [command for command, _, _ in runner.calls]
+            self.assertTrue(any(command[0] == "rsync-fixture" for command in commands))
+            self.assertIn("rm -rf --", commands[-1][-1])
+            self.assertNotIn("docker-fixture create", "\n".join(c[-1] for c in commands))
+            self.assertEqual(list(workspaces.iterdir()), [])
+            self.assertEqual(
+                [record.transition for record in fixture.ledger.records],
+                ["declared", "created", "declared", "created", "released", "released"],
+            )
+
+    def test_remote_prepare_cleanup_failure_is_not_masked_by_sync_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspaces = root / "workspaces"
+            workspaces.mkdir()
+            identity_file = root / "id_fixture"
+            identity_file.write_text("fixture", encoding="utf-8")
+            profile = self.profile("remote_docker")
+            binding = RuntimeTargetBinding(
+                backend="remote_docker",
+                local_workspace_parent=workspaces,
+                host_alias="gpu-exact-fixture",
+                remote_user="runner",
+                identity_file=identity_file,
+                docker_binary="docker-fixture",
+                ssh_binary="ssh-fixture",
+                rsync_binary="rsync-fixture",
+            )
+            fixture = LocalBackendFixture(root, profile=profile, binding=binding)
+            runner = RsyncAndRemoteCleanupFailureArgvRunner()
+
+            with self.assertRaises(RuntimeBackendUnavailable) as raised:
+                RemoteDockerRuntimeBackend(argv_runner=runner).prepare(
+                    profile,
+                    fixture.context,
+                )
+
+            self.assertEqual(raised.exception.reason_code, "prepare_cleanup_failed")
+            self.assertEqual(list(workspaces.iterdir()), [])
+            final = {
+                record.resource_type: record.transition
+                for record in fixture.ledger.records
+            }
+            self.assertEqual(final["workspace"], "released")
+            self.assertEqual(final["remote_workspace"], "cleanup_failed")
+
+    def test_docker_process_store_failure_never_executes_container_process(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspaces = root / "workspaces"
+            workspaces.mkdir()
+            profile = self.profile("docker")
+            binding = RuntimeTargetBinding(
+                backend="docker",
+                local_workspace_parent=workspaces,
+                docker_binary="docker-fixture",
+            )
+            fixture = LocalBackendFixture(root, profile=profile, binding=binding)
+            runner = RecordingArgvRunner()
+            backend = DockerRuntimeBackend(argv_runner=runner)
+            lease = backend.prepare(profile, fixture.context)
+            original_put = fixture.store.put_exact
+
+            def fail_process_store(resource_id, resource_type, ordinal, raw_handle):
+                if resource_type == "process":
+                    raise ContractError("private store failure")
+                return original_put(resource_id, resource_type, ordinal, raw_handle)
+
+            with mock.patch.object(
+                fixture.store,
+                "put_exact",
+                side_effect=fail_process_store,
+            ):
+                with self.assertRaises(RuntimeBackendUnavailable):
+                    backend.run(lease, ("python", "-V"), ".", 1_000)
+
+            self.assertFalse(
+                any(len(command) > 1 and command[1] == "exec" for command, _, _ in runner.calls)
+            )
+            process_records = [
+                record for record in fixture.ledger.records if record.resource_type == "process"
+            ]
+            self.assertEqual(
+                [record.transition for record in process_records],
+                ["declared", "create_failed"],
+            )
+            self.assertTrue(backend.cleanup(lease).report.all_released)
+
+    def test_remote_process_store_failure_never_executes_remote_process(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspaces = root / "workspaces"
+            workspaces.mkdir()
+            identity_file = root / "id_fixture"
+            identity_file.write_text("fixture", encoding="utf-8")
+            profile = self.profile("remote_docker")
+            binding = RuntimeTargetBinding(
+                backend="remote_docker",
+                local_workspace_parent=workspaces,
+                host_alias="gpu-exact-fixture",
+                remote_user="runner",
+                identity_file=identity_file,
+                docker_binary="docker-fixture",
+                ssh_binary="ssh-fixture",
+                rsync_binary="rsync-fixture",
+            )
+            fixture = LocalBackendFixture(root, profile=profile, binding=binding)
+            runner = RecordingArgvRunner()
+            backend = RemoteDockerRuntimeBackend(argv_runner=runner)
+            lease = backend.prepare(profile, fixture.context)
+            original_put = fixture.store.put_exact
+            calls_before_run = len(runner.calls)
+
+            def fail_process_store(resource_id, resource_type, ordinal, raw_handle):
+                if resource_type == "process":
+                    raise ContractError("private store failure")
+                return original_put(resource_id, resource_type, ordinal, raw_handle)
+
+            with mock.patch.object(
+                fixture.store,
+                "put_exact",
+                side_effect=fail_process_store,
+            ):
+                with self.assertRaises(RuntimeBackendUnavailable):
+                    backend.run(lease, ("python", "-V"), ".", 1_000)
+
+            self.assertEqual(len(runner.calls), calls_before_run)
+            process_records = [
+                record for record in fixture.ledger.records if record.resource_type == "process"
+            ]
+            self.assertEqual(
+                [record.transition for record in process_records],
+                ["declared", "create_failed"],
+            )
+            self.assertTrue(backend.cleanup(lease).report.all_released)
+
+    def test_docker_post_create_store_failure_removes_exact_owned_resources(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspaces = root / "workspaces"
+            workspaces.mkdir()
+            profile = self.profile("docker")
+            binding = RuntimeTargetBinding(
+                backend="docker",
+                local_workspace_parent=workspaces,
+                docker_binary="docker-fixture",
+            )
+            fixture = LocalBackendFixture(root, profile=profile, binding=binding)
+            original_put = fixture.store.put_exact
+
+            def fail_container_store(resource_id, resource_type, ordinal, raw_handle):
+                if resource_type == "container":
+                    raise ContractError("private store failure")
+                return original_put(resource_id, resource_type, ordinal, raw_handle)
+
+            runner = RecordingArgvRunner()
+            with mock.patch.object(
+                fixture.store,
+                "put_exact",
+                side_effect=fail_container_store,
+            ):
+                with self.assertRaises(RuntimeBackendUnavailable):
+                    DockerRuntimeBackend(argv_runner=runner).prepare(
+                        profile,
+                        fixture.context,
+                    )
+
+            commands = [command for command, _, _ in runner.calls]
+            container_name = commands[0][commands[0].index("--name") + 1]
+            self.assertEqual(
+                commands[-1],
+                ("docker-fixture", "rm", "--force", container_name),
+            )
+            self.assertEqual(list(workspaces.iterdir()), [])
+            self.assertEqual(
+                [record.transition for record in fixture.ledger.records],
+                [
+                    "declared",
+                    "created",
+                    "declared",
+                    "created",
+                    "released",
+                    "released",
+                ],
+            )
+
+    def test_remote_post_leaf_store_failure_removes_only_exact_owned_leaf(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspaces = root / "workspaces"
+            workspaces.mkdir()
+            identity_file = root / "id_fixture"
+            identity_file.write_text("fixture", encoding="utf-8")
+            profile = self.profile("remote_docker")
+            binding = RuntimeTargetBinding(
+                backend="remote_docker",
+                local_workspace_parent=workspaces,
+                host_alias="gpu-exact-fixture",
+                remote_user="runner",
+                identity_file=identity_file,
+                docker_binary="docker-fixture",
+                ssh_binary="ssh-fixture",
+                rsync_binary="rsync-fixture",
+            )
+            fixture = LocalBackendFixture(root, profile=profile, binding=binding)
+            original_put = fixture.store.put_exact
+
+            def fail_remote_store(resource_id, resource_type, ordinal, raw_handle):
+                if resource_type == "remote_workspace":
+                    raise ContractError("private store failure")
+                return original_put(resource_id, resource_type, ordinal, raw_handle)
+
+            runner = RecordingArgvRunner()
+            with mock.patch.object(
+                fixture.store,
+                "put_exact",
+                side_effect=fail_remote_store,
+            ):
+                with self.assertRaises(RuntimeBackendUnavailable):
+                    RemoteDockerRuntimeBackend(argv_runner=runner).prepare(
+                        profile,
+                        fixture.context,
+                    )
+
+            commands = [command for command, _, _ in runner.calls]
+            self.assertEqual(len(commands), 3)
+            self.assertIn("mkdir -p --", commands[0][-1])
+            self.assertIn("mkdir --", commands[1][-1])
+            self.assertIn("rm -rf --", commands[2][-1])
+            self.assertFalse(any(command[0] == "rsync-fixture" for command in commands))
+            self.assertEqual(list(workspaces.iterdir()), [])
+            self.assertEqual(
+                [record.transition for record in fixture.ledger.records],
+                [
+                    "declared",
+                    "created",
+                    "declared",
+                    "created",
+                    "released",
+                    "released",
+                ],
+            )
+
     def test_docker_materializes_only_the_frozen_revision_before_mount(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -411,7 +968,12 @@ class ContainerBackendCommandTests(unittest.TestCase):
             )
             self.assertFalse((snapshot / "ignored-cache").exists())
             self.assertFalse((snapshot / "untracked.txt").exists())
-            self.assertEqual(runner.calls[1][0][-2], str(snapshot) + "/")
+            initial_sync = next(
+                command
+                for command, _, _ in runner.calls
+                if command[0] == "rsync-fixture"
+            )
+            self.assertEqual(initial_sync[-2], str(snapshot) + "/")
             backend.cleanup(lease)
 
     def test_remote_invalid_revision_fails_before_any_target_command(self) -> None:
@@ -711,11 +1273,20 @@ class ContainerBackendCommandTests(unittest.TestCase):
             commands = [call[0] for call in runner.calls]
             self.assertEqual(commands[0][0], "ssh-fixture")
             self.assertIn("runner@gpu-exact-fixture", commands[0])
-            self.assertIn("mkdir", commands[0][-1])
-            self.assertEqual(commands[1][0], "rsync-fixture")
-            self.assertEqual(commands[1][-1], remote.raw_handle + "/")
-            self.assertEqual(commands[4][0], "rsync-fixture")
-            self.assertEqual(commands[4][-1], remote.raw_handle + "/")
+            self.assertIn("mkdir -p --", commands[0][-1])
+            self.assertIn("mkdir --", commands[1][-1])
+            sync_commands = [
+                command for command in commands if command[0] == "rsync-fixture"
+            ]
+            self.assertEqual(sync_commands[0][-1], remote.raw_handle + "/")
+            self.assertEqual(sync_commands[-1][-1], remote.raw_handle + "/")
+            self.assertFalse(
+                any(
+                    argument.startswith("--exclude=")
+                    for command in sync_commands
+                    for argument in command
+                )
+            )
             remote_execute = next(
                 command
                 for command in commands
@@ -750,6 +1321,252 @@ class ContainerBackendCommandTests(unittest.TestCase):
             ):
                 with self.subTest(forbidden=forbidden):
                     self.assertNotIn(forbidden, flattened)
+
+    def test_remote_sync_fingerprint_ignores_ambient_git_authority(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspaces = root / "workspaces"
+            workspaces.mkdir()
+            identity_file = root / "id_fixture"
+            identity_file.write_text("fixture", encoding="utf-8")
+            profile = self.profile("remote_docker")
+            binding = RuntimeTargetBinding(
+                backend="remote_docker",
+                local_workspace_parent=workspaces,
+                host_alias="gpu-exact-fixture",
+                remote_user="runner",
+                identity_file=identity_file,
+                docker_binary="docker-fixture",
+                ssh_binary="ssh-fixture",
+                rsync_binary="rsync-fixture",
+            )
+            fixture = LocalBackendFixture(root, profile=profile, binding=binding)
+            decoy = root / "decoy"
+            initialize_git_repo(decoy)
+            pollution = {
+                "GIT_DIR": str(decoy / ".git"),
+                "GIT_WORK_TREE": str(decoy),
+                "GIT_INDEX_FILE": str(decoy / ".git" / "index"),
+                "GIT_OBJECT_DIRECTORY": str(decoy / ".git" / "objects"),
+                "GIT_ALTERNATE_OBJECT_DIRECTORIES": str(
+                    fixture.source / ".git" / "objects"
+                ),
+                "GIT_CONFIG_COUNT": "1",
+                "GIT_CONFIG_KEY_0": "core.hooksPath",
+                "GIT_CONFIG_VALUE_0": str(root / "foreign-hooks"),
+            }
+            runner = RecordingArgvRunner()
+            backend = RemoteDockerRuntimeBackend(argv_runner=runner)
+
+            with mock.patch.dict(os.environ, pollution, clear=False):
+                lease = backend.prepare(profile, fixture.context)
+                workspace = next(
+                    handle
+                    for handle in lease.handles
+                    if handle.resource_type == "workspace"
+                )
+                (Path(workspace.raw_handle) / "src" / "operator.py").write_text(
+                    "VALUE = 2\n",
+                    encoding="utf-8",
+                )
+                backend.run(lease, ("python", "-V"), ".", 1_000)
+
+            sync_commands = [
+                command
+                for command, _, _ in runner.calls
+                if command[0] == "rsync-fixture"
+            ]
+            self.assertEqual(len(sync_commands), 2)
+            self.assertTrue(backend.cleanup(lease).report.all_released)
+
+    def test_remote_sync_fingerprint_includes_ignored_workspace_files(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspaces = root / "workspaces"
+            workspaces.mkdir()
+            identity_file = root / "id_fixture"
+            identity_file.write_text("fixture", encoding="utf-8")
+            profile = self.profile("remote_docker")
+            binding = RuntimeTargetBinding(
+                backend="remote_docker",
+                local_workspace_parent=workspaces,
+                host_alias="gpu-exact-fixture",
+                remote_user="runner",
+                identity_file=identity_file,
+                docker_binary="docker-fixture",
+                ssh_binary="ssh-fixture",
+                rsync_binary="rsync-fixture",
+            )
+            fixture = LocalBackendFixture(root, profile=profile, binding=binding)
+            (fixture.source / ".gitignore").write_text(
+                "controller-generated/\n",
+                encoding="utf-8",
+            )
+            git(fixture.source, "add", ".gitignore")
+            git(fixture.source, "commit", "--quiet", "-m", "freeze ignore rule")
+            fixture.context = replace(
+                fixture.context,
+                frozen_source_revision=git(
+                    fixture.source,
+                    "rev-parse",
+                    "HEAD",
+                ).stdout.decode().strip(),
+            )
+            runner = RecordingArgvRunner()
+            backend = RemoteDockerRuntimeBackend(argv_runner=runner)
+
+            lease = backend.prepare(profile, fixture.context)
+            workspace = next(
+                handle
+                for handle in lease.handles
+                if handle.resource_type == "workspace"
+            )
+            ignored = Path(workspace.raw_handle) / "controller-generated" / "asset.bin"
+            ignored.parent.mkdir()
+            ignored.write_bytes(b"must-sync")
+            backend.run(lease, ("python", "-V"), ".", 1_000)
+
+            sync_commands = [
+                command
+                for command, _, _ in runner.calls
+                if command[0] == "rsync-fixture"
+            ]
+            self.assertEqual(len(sync_commands), 2)
+            self.assertTrue(backend.cleanup(lease).report.all_released)
+
+    def test_remote_sync_fingerprint_frames_untracked_paths_and_contents(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspaces = root / "workspaces"
+            workspaces.mkdir()
+            identity_file = root / "id_fixture"
+            identity_file.write_text("fixture", encoding="utf-8")
+            profile = self.profile("remote_docker")
+            binding = RuntimeTargetBinding(
+                backend="remote_docker",
+                local_workspace_parent=workspaces,
+                host_alias="gpu-exact-fixture",
+                remote_user="runner",
+                identity_file=identity_file,
+                docker_binary="docker-fixture",
+                ssh_binary="ssh-fixture",
+                rsync_binary="rsync-fixture",
+            )
+            fixture = LocalBackendFixture(root, profile=profile, binding=binding)
+            runner = RecordingArgvRunner()
+            backend = RemoteDockerRuntimeBackend(argv_runner=runner)
+
+            lease = backend.prepare(profile, fixture.context)
+            workspace = next(
+                handle
+                for handle in lease.handles
+                if handle.resource_type == "workspace"
+            )
+            first = Path(workspace.raw_handle) / "src" / "a"
+            first.write_bytes(b"bc")
+            backend.run(lease, ("python", "-V"), ".", 1_000)
+            first.unlink()
+            (Path(workspace.raw_handle) / "src" / "ab").write_bytes(b"c")
+            backend.run(lease, ("python", "-V"), ".", 1_000)
+
+            sync_commands = [
+                command
+                for command, _, _ in runner.calls
+                if command[0] == "rsync-fixture"
+            ]
+            self.assertEqual(len(sync_commands), 3)
+            self.assertTrue(backend.cleanup(lease).report.all_released)
+
+    def test_remote_sync_fingerprint_includes_untracked_file_mode(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspaces = root / "workspaces"
+            workspaces.mkdir()
+            identity_file = root / "id_fixture"
+            identity_file.write_text("fixture", encoding="utf-8")
+            profile = self.profile("remote_docker")
+            binding = RuntimeTargetBinding(
+                backend="remote_docker",
+                local_workspace_parent=workspaces,
+                host_alias="gpu-exact-fixture",
+                remote_user="runner",
+                identity_file=identity_file,
+                docker_binary="docker-fixture",
+                ssh_binary="ssh-fixture",
+                rsync_binary="rsync-fixture",
+            )
+            fixture = LocalBackendFixture(root, profile=profile, binding=binding)
+            runner = RecordingArgvRunner()
+            backend = RemoteDockerRuntimeBackend(argv_runner=runner)
+
+            lease = backend.prepare(profile, fixture.context)
+            workspace = next(
+                handle
+                for handle in lease.handles
+                if handle.resource_type == "workspace"
+            )
+            executable = Path(workspace.raw_handle) / "src" / "tool.sh"
+            executable.write_bytes(b"#!/bin/sh\nexit 0\n")
+            executable.chmod(0o644)
+            backend.run(lease, ("python", "-V"), ".", 1_000)
+            executable.chmod(0o755)
+            backend.run(lease, ("python", "-V"), ".", 1_000)
+
+            sync_commands = [
+                command
+                for command, _, _ in runner.calls
+                if command[0] == "rsync-fixture"
+            ]
+            self.assertEqual(len(sync_commands), 3)
+            self.assertTrue(backend.cleanup(lease).report.all_released)
+
+    def test_remote_sync_fingerprint_includes_directory_and_tracked_file_modes(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspaces = root / "workspaces"
+            workspaces.mkdir()
+            identity_file = root / "id_fixture"
+            identity_file.write_text("fixture", encoding="utf-8")
+            profile = self.profile("remote_docker")
+            binding = RuntimeTargetBinding(
+                backend="remote_docker",
+                local_workspace_parent=workspaces,
+                host_alias="gpu-exact-fixture",
+                remote_user="runner",
+                identity_file=identity_file,
+                docker_binary="docker-fixture",
+                ssh_binary="ssh-fixture",
+                rsync_binary="rsync-fixture",
+            )
+            fixture = LocalBackendFixture(root, profile=profile, binding=binding)
+            runner = RecordingArgvRunner()
+            backend = RemoteDockerRuntimeBackend(argv_runner=runner)
+
+            lease = backend.prepare(profile, fixture.context)
+            workspace = next(
+                handle
+                for handle in lease.handles
+                if handle.resource_type == "workspace"
+            )
+            workspace_path = Path(workspace.raw_handle)
+            empty = workspace_path / "controller-empty"
+            empty.mkdir(mode=0o755)
+            backend.run(lease, ("python", "-V"), ".", 1_000)
+            empty.chmod(0o700)
+            backend.run(lease, ("python", "-V"), ".", 1_000)
+            tracked = workspace_path / "src" / "operator.py"
+            tracked.chmod(0o600)
+            backend.run(lease, ("python", "-V"), ".", 1_000)
+            workspace_path.chmod(0o700)
+            backend.run(lease, ("python", "-V"), ".", 1_000)
+
+            sync_commands = [
+                command
+                for command, _, _ in runner.calls
+                if command[0] == "rsync-fixture"
+            ]
+            self.assertEqual(len(sync_commands), 5)
+            self.assertTrue(backend.cleanup(lease).report.all_released)
 
     def test_remote_inplace_build_copies_exact_ccache_seed_into_attempt_workspace(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -797,7 +1614,8 @@ class ContainerBackendCommandTests(unittest.TestCase):
             self.assertIn("cp -a --reflink=auto --", seed_copy[-1])
             self.assertIn(f"{remote_path}/.ccache", seed_copy[-1])
             initial_sync = next(command for command in commands if command[0] == "rsync-fixture")
-            self.assertIn("--exclude=.ccache/", initial_sync)
+            self.assertIn("--exclude=/.ccache/", initial_sync)
+            self.assertNotIn("--exclude=.ccache/", initial_sync)
             remote_execute = next(
                 command
                 for command in commands
@@ -810,6 +1628,111 @@ class ContainerBackendCommandTests(unittest.TestCase):
             self.assertTrue(cleanup.report.all_released)
             cleanup_commands = "\n".join(command[-1] for command in commands[-2:])
             self.assertNotIn(seed, cleanup_commands)
+
+    def test_remote_inplace_seed_refuses_a_frozen_root_ccache_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspaces = root / "workspaces"
+            workspaces.mkdir()
+            identity_file = root / "id_fixture"
+            identity_file.write_text("fixture", encoding="utf-8")
+            profile = replace(
+                self.profile("remote_docker", gpu=True),
+                source_loading_mode="inplace_build",
+            )
+            binding = RuntimeTargetBinding(
+                backend="remote_docker",
+                local_workspace_parent=workspaces,
+                host_alias="gpu-exact-fixture",
+                remote_user="runner",
+                identity_file=identity_file,
+                docker_binary="docker-fixture",
+                ssh_binary="ssh-fixture",
+                rsync_binary="rsync-fixture",
+                remote_ccache_seed="/srv/opbench/cache/ccache/frozen-cuda-environment",
+            )
+            fixture = LocalBackendFixture(root, profile=profile, binding=binding)
+            (fixture.source / ".ccache").mkdir()
+            (fixture.source / ".ccache" / "tracked.bin").write_bytes(b"source-owned")
+            git(fixture.source, "add", ".ccache/tracked.bin")
+            git(fixture.source, "commit", "--quiet", "-m", "track root ccache")
+            fixture.context = replace(
+                fixture.context,
+                frozen_source_revision=git(
+                    fixture.source,
+                    "rev-parse",
+                    "HEAD",
+                ).stdout.decode().strip(),
+            )
+            runner = RecordingArgvRunner()
+
+            with self.assertRaisesRegex(
+                RuntimeBackendUnavailable,
+                "workspace_ccache_seed_collision",
+            ):
+                RemoteDockerRuntimeBackend(argv_runner=runner).prepare(
+                    profile,
+                    fixture.context,
+                )
+
+            self.assertEqual(runner.calls, [])
+            self.assertEqual(list(workspaces.iterdir()), [])
+
+    def test_remote_prepare_refuses_to_claim_an_existing_workspace_leaf(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspaces = root / "workspaces"
+            workspaces.mkdir()
+            identity_file = root / "id_fixture"
+            identity_file.write_text("fixture", encoding="utf-8")
+            profile = replace(
+                self.profile("remote_docker", gpu=True),
+                source_loading_mode="inplace_build",
+            )
+            seed = "/srv/opbench/cache/ccache/frozen-cuda-environment"
+            binding = RuntimeTargetBinding(
+                backend="remote_docker",
+                local_workspace_parent=workspaces,
+                host_alias="gpu-exact-fixture",
+                remote_user="runner",
+                identity_file=identity_file,
+                docker_binary="docker-fixture",
+                ssh_binary="ssh-fixture",
+                rsync_binary="rsync-fixture",
+                remote_ccache_seed=seed,
+            )
+            fixture = LocalBackendFixture(root, profile=profile, binding=binding)
+            runner = ExistingRemoteWorkspaceArgvRunner()
+
+            with self.assertRaisesRegex(
+                RuntimeBackendUnavailable,
+                "remote_workspace_create_failed",
+            ):
+                RemoteDockerRuntimeBackend(argv_runner=runner).prepare(
+                    profile,
+                    fixture.context,
+                )
+
+            commands = [call[0] for call in runner.calls]
+            self.assertFalse(any(command[0] == "rsync-fixture" for command in commands))
+            flattened = "\n".join(command[-1] for command in commands)
+            self.assertNotIn(seed, flattened)
+            self.assertNotIn("docker-fixture", flattened)
+            self.assertNotIn("rm -rf", flattened)
+            self.assertEqual(list(workspaces.iterdir()), [])
+            self.assertEqual(
+                [
+                    (record.resource_type, record.transition)
+                    for record in fixture.ledger.records
+                ],
+                [
+                    ("workspace", "declared"),
+                    ("workspace", "created"),
+                    ("remote_workspace", "declared"),
+                    ("remote_workspace", "create_failed"),
+                    ("workspace", "released"),
+                ],
+            )
 
     def test_remote_target_is_required_before_any_resource_declaration(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
