@@ -299,7 +299,7 @@ Release decision: Blocked — M7 Passed, opbench-v0.6.0 not Completed or tagged
 本记录追加于原 M7 freeze 之后，不覆盖当时正确的 `Blocked` 事实。
 
 ```text
-Platform commit-under-test: 1e3e18438965eabdc1c88c79a5132677d7b2348f + release-document working tree
+Platform commit-under-test: ef93e23f414207fe364e97cd2a622944a9bf0425
 Dataset identity: pytorch_v0.5 / sha256:ff9d0c2999d1175a45165b387e0731dcaa211a190d994b176441ce81a0382abc
 Action protocol: action-v1
 Evaluation protocol: evaluation-v1 / sha256:93a4bf18b30a97ca2f9d3b488c4db51e7d37a6987d2663c29efbd6ed8bade55e
@@ -312,6 +312,9 @@ Replay 17+17+51 result: 85 Passed, 0 Failed, 0 Blocked, 0 differences; baseline/
 Replay inventory hash: sha256:193ef08f68f50a50c67f22b41ca2a31043c78d6b2311d23f16c588a86b80daee
 Replay manifest/results/differences/summary SHA-256: 21f85f547b5efde922616a44390b5c07814aaf59c8db27a9863a37a61ac2b424 / 3c14d5bd462a633b1c4b7b062d1447d6a575ed62244793d5b93154e43db8c9d1 / e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 / 1f5fa1515f2e93bbdec9a393e9fc07a3ccf4d121e6d33b175fdb7a1b09b03309
 Representative Runtime canaries: Remote CPU Passed; CUDA Overlay Passed; CUDA Kernel Passed
+Representative Runtime artifact roots: runs/v0.6_release_remote_cpu_canary / runs/v0.6_release_cuda_overlay_canary / runs/v0.6_release_cuda_kernel_canary
+Public canary evidence boundary: CPU/Overlay omit private_evaluation.json and private_runtime_resources.json; 14/14 was verified on the complete controller-private roots before redaction
+Replay artifact root: runs/v0.6_release3_legacy_replay_exact_complete
 Historical v0.5 results/summaries: all eight recorded SHA-256 values unchanged
 Open P0/P1: none found
 Blocked items: none

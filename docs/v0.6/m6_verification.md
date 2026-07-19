@@ -184,9 +184,17 @@ Representative canaries:
 
 | Entry | Artifact root | Result |
 | --- | --- | --- |
-| Remote CPU | `runs/v0.6_retry_remote_cpu_canary_fixed` | valid/finished/no_patch; 14 Integrity checks Passed; workspace, container, and remote workspace released |
-| CUDA Overlay | `runs/v0.6_retry_cuda_overlay_canary` | valid/finished/no_patch; 14 Integrity checks Passed; workspace, container, and remote workspace released |
-| CUDA Kernel Build | `runs/v0.6_retry_cuda_kernel_inplace_canary` | expected/observed `f2p_failed`; build exit 0; 1/1 Passed, zero differences |
+| Remote CPU | `runs/v0.6_release_remote_cpu_canary` | valid/finished/no_patch; 14 Integrity checks Passed; workspace, container, and remote workspace released |
+| CUDA Overlay | `runs/v0.6_release_cuda_overlay_canary` | valid/finished/no_patch; 14 Integrity checks Passed; workspace, container, and remote workspace released |
+| CUDA Kernel Build | `runs/v0.6_release_cuda_kernel_canary` | expected/observed `f2p_failed`; build exit 0; 1/1 Passed, zero differences |
+
+The 14/14 statements above were verified against the complete
+controller-private CPU/Overlay run roots before publication. The repository
+contains redacted public subsets: `private_evaluation.json` and
+`private_runtime_resources.json` are intentionally omitted. Those private
+files are required to rerun the complete Integrity graph, so a checked-out
+public subset is evidence of the recorded public result and cleanup
+attestation, not a standalone reproduction of all 14 private checks.
 
 The kernel path materializes the exact frozen root tree plus recursive Gitlink
 submodule commits, copies an optional exact ccache seed into the Attempt-owned
@@ -204,14 +212,27 @@ Ordinary Remote CPU/Overlay rsync
 has no cache exclusion. A seeded inplace-build excludes only root `/.ccache/`,
 and a frozen source-owned root `.ccache` fails closed before remote operations.
 
-The final command was:
+The public-equivalent parameters of the final invocation were:
 
 ```bash
 PYTHONPATH=src python3.12 scripts/run_legacy_replay.py \
   --repository-root . \
-  --output-root runs/v0.6_retry_legacy_replay_exact_complete \
+  --output-root runs/v0.6_release3_legacy_replay_exact_complete \
   --target-config configs/remote_hosts.json
 ```
+
+The actual process was a local wrapper around `ReplayRunner` and
+`ExactReplayObserver`. After loading the same target config, it used
+`dataclasses.replace(observer.target_binding, remote_workspace_root=...)` to
+append the private, commit-specific `/v06-release-ef93e23` suffix to the
+already-configured remote workspace root in memory. It did not change the
+configured host, user, identity, Runtime Profile, or source authority, and it
+did not write the private override into public artifacts. An earlier
+post-commit attempt reused a deterministic namespace left by an interrupted
+ephemeral run; exclusive leaf creation correctly failed closed on the
+pre-existing second-case leaf. That incomplete diagnostic run is not release
+evidence. The final run used the fresh suffix above instead of inferring
+ownership, enumerating resources, or running broad cleanup.
 
 It exited `0` with `total=85 passed=85 failed=0 blocked=0`. The manifest contains
 17 Baseline, 17 Gold, and 51 Legacy cases; all Task authorities are verified.
@@ -225,8 +246,9 @@ per-case files are intentionally ephemeral under the M6 Task 5 persist-only
 contract, which retains only the manifest, results, differences, and summary.
 Therefore the four replay files are outcome-compatibility evidence, not direct
 per-case cleanup artifacts. Persistent R-03/R-10/R-12 resource proof comes
-from the v1 Remote CPU/CUDA Overlay canary run roots (all 14 Integrity checks,
-including ownership and cleanup) plus backend failure-injection tests.
+from verification of the complete controller-private v1 Remote CPU/CUDA
+Overlay canary run roots before redaction (all 14 Integrity checks, including
+ownership and cleanup) plus backend failure-injection tests.
 If the controller process dies after a replay remote leaf is created, that
 temporary ledger can be lost; a later exclusive-leaf collision fails closed and
 may currently become cached target-global unavailability. Persisted protected
