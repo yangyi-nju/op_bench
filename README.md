@@ -168,7 +168,7 @@ PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/run_experiment.py \
   --agent codex_mcp_canonical \
   --codex-model gpt-5.6-sol \
   --agent-repeat 1 \
-  --output-dir runs/v0.6_mcp_local_canary \
+  --output-dir runs/v0.6_mcp_local_canary_r2 \
   --runtime-protocol v1 \
   --runtime-profile local-cpu-process-v1 \
   --enable-external-canary

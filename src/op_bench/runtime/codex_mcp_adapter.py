@@ -313,6 +313,7 @@ class CodexMcpCanonicalAdapter:
                     ),
                     *_config_override("mcp_servers.opbench.args", server_arguments),
                     *_config_override("mcp_servers.opbench.env", {}),
+                    *_config_override("mcp_servers.opbench.required", True),
                     prompt,
                 )
                 try:

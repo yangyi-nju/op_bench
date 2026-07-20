@@ -71,6 +71,17 @@ def _exact_object(value: object, fields: set[str], label: str) -> dict[str, obje
     return dict(value)
 
 
+def _params_without_metadata(value: object, label: str) -> dict[str, object]:
+    if value is None:
+        return {}
+    if not isinstance(value, Mapping):
+        raise _RpcError(-32602, f"{label} must be an object")
+    selected = dict(value)
+    if "_meta" in selected and not isinstance(selected.pop("_meta"), Mapping):
+        raise _RpcError(-32602, f"{label} metadata must be an object")
+    return selected
+
+
 def _initialize_result(params: object) -> tuple[str, dict[str, object]]:
     if not isinstance(params, Mapping):
         raise _RpcError(-32602, "initialize params must be an object")
@@ -163,14 +174,20 @@ def serve_mcp_stdio(
                 negotiated, result = _initialize_result(params)
                 initialize_count += 1
             elif method == "ping":
-                if params not in ({}, None):
+                if _params_without_metadata(params, "ping params"):
                     raise _RpcError(-32602, "ping params must be empty")
                 result = {}
             elif method == "tools/list":
                 if negotiated is None:
                     raise _RpcError(-32602, "MCP server is not initialized")
-                if params not in ({}, None):
-                    raise _RpcError(-32602, "tools/list params must be empty")
+                list_params = _params_without_metadata(params, "tools/list params")
+                if set(list_params) - {"cursor"}:
+                    raise _RpcError(-32602, "tools/list params has invalid fields")
+                if "cursor" in list_params and (
+                    not isinstance(list_params["cursor"], str)
+                    or not list_params["cursor"]
+                ):
+                    raise _RpcError(-32602, "tools/list cursor must be a string")
                 from op_bench.runtime.mcp import canonical_mcp_tools
 
                 result = {"tools": [tool.to_dict() for tool in canonical_mcp_tools()]}
@@ -178,7 +195,11 @@ def serve_mcp_stdio(
             elif method == "tools/call":
                 if negotiated is None:
                     raise _RpcError(-32602, "MCP server is not initialized")
-                call = _exact_object(params, {"name", "arguments"}, "tools/call params")
+                call = _exact_object(
+                    _params_without_metadata(params, "tools/call params"),
+                    {"name", "arguments"},
+                    "tools/call params",
+                )
                 name = call["name"]
                 arguments = call["arguments"]
                 if not isinstance(name, str) or name not in ACTION_NAMES:
@@ -305,6 +326,17 @@ def parse_request(value):
     notification = "id" not in value
     selected_id = None if notification else request_id(value.get("id"))
     return selected_id, method, value.get("params", {}), notification
+
+
+def params_without_metadata(value, label):
+    if value is None:
+        return {}
+    if not isinstance(value, dict):
+        raise RpcError(-32602, label + " must be an object")
+    selected = dict(value)
+    if "_meta" in selected and not isinstance(selected.pop("_meta"), dict):
+        raise RpcError(-32602, label + " metadata must be an object")
+    return selected
 
 
 def initialize_result(params):
@@ -493,23 +525,30 @@ def main():
                     negotiated, result = initialize_result(params)
                     initialize_count += 1
                 elif method == "ping":
-                    if params not in ({}, None):
+                    if params_without_metadata(params, "ping params"):
                         raise RpcError(-32602, "ping params must be empty")
                     result = {}
                 elif method == "tools/list":
                     if negotiated is None:
                         raise RpcError(-32602, "MCP server is not initialized")
-                    if params not in ({}, None):
-                        raise RpcError(-32602, "tools/list params must be empty")
+                    list_params = params_without_metadata(params, "tools/list params")
+                    if set(list_params) - {"cursor"}:
+                        raise RpcError(-32602, "tools/list params has invalid fields")
+                    if "cursor" in list_params and (
+                        not isinstance(list_params["cursor"], str)
+                        or not list_params["cursor"]
+                    ):
+                        raise RpcError(-32602, "tools/list cursor must be a string")
                     result = {"tools": TOOLS}
                     tools_list_count += 1
                 elif method == "tools/call":
                     if negotiated is None:
                         raise RpcError(-32602, "MCP server is not initialized")
-                    if not isinstance(params, dict) or set(params) != {"name", "arguments"}:
+                    call = params_without_metadata(params, "tools/call params")
+                    if set(call) != {"name", "arguments"}:
                         raise RpcError(-32602, "tools/call params has invalid fields")
-                    name = params["name"]
-                    arguments = params["arguments"]
+                    name = call["name"]
+                    arguments = call["arguments"]
                     if not isinstance(name, str) or name not in TOOL_NAMES:
                         raise RpcError(-32602, "unknown MCP tool")
                     if not isinstance(arguments, dict):

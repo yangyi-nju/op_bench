@@ -61,7 +61,11 @@ def call_message(
         "jsonrpc": "2.0",
         "id": request_id,
         "method": "tools/call",
-        "params": {"name": name, "arguments": arguments},
+        "params": {
+            "name": name,
+            "arguments": arguments,
+            "_meta": {"progressToken": request_id},
+        },
     }
 
 
@@ -137,7 +141,12 @@ class CodexMcpCanonicalAdapterTests(unittest.TestCase):
         return (
             initialize_message(),
             {"jsonrpc": "2.0", "method": "notifications/initialized"},
-            {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}},
+            {
+                "jsonrpc": "2.0",
+                "id": 2,
+                "method": "tools/list",
+                "params": {"_meta": {"progressToken": 0}},
+            },
             *tuple(
                 call_message(index, name, arguments)
                 for index, (name, arguments) in enumerate(calls, start=3)
@@ -250,7 +259,8 @@ class CodexMcpCanonicalAdapterTests(unittest.TestCase):
             self.assertIn(required, argv)
         config = decode_mcp_config(argv)
         self.assertEqual(config["mcp_servers.opbench.env"], {})
-        self.assertEqual(len(config), 3)
+        self.assertIs(config["mcp_servers.opbench.required"], True)
+        self.assertEqual(len(config), 4)
         server_arguments = config["mcp_servers.opbench.args"]
         self.assertNotIn("--bridge-token", server_arguments)
         self.assertIn("--bridge-token-fd", server_arguments)

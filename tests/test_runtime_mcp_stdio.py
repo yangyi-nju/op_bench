@@ -208,6 +208,58 @@ class McpStdioProtocolTests(unittest.TestCase):
         )
         self.assertEqual(terminal, "client_closed")
 
+    def test_standard_request_metadata_is_accepted_without_reaching_actions(self) -> None:
+        calls: list[tuple[str, dict[str, object]]] = []
+        metadata = {"_meta": {"progressToken": 0}}
+        responses, traces, terminal, _ = self.run_server(
+            [
+                canonical_json(
+                    request(
+                        1,
+                        "initialize",
+                        {
+                            "protocolVersion": "2025-06-18",
+                            "capabilities": {},
+                            "clientInfo": {"name": "codex", "version": "1"},
+                        },
+                    )
+                ),
+                canonical_json(request(2, "ping", metadata)),
+                canonical_json(request(3, "tools/list", metadata)),
+                canonical_json(
+                    request(
+                        4,
+                        "tools/call",
+                        {
+                            "name": "workspace_read",
+                            "arguments": {"path": "src/a.py"},
+                            **metadata,
+                        },
+                    )
+                ),
+            ],
+            invoke_tool=lambda name, arguments: (
+                calls.append((name, arguments)) or observation()
+            ),
+        )
+
+        self.assertEqual([response["id"] for response in responses], [1, 2, 3, 4])
+        self.assertTrue(all("error" not in response for response in responses))
+        self.assertEqual(calls, [("workspace_read", {"path": "src/a.py"})])
+        self.assertEqual(traces[0]["tools_list_count"], 1)
+        self.assertEqual(traces[0]["tools_call_count"], 1)
+        self.assertEqual(traces[0]["protocol_error_count"], 0)
+        self.assertEqual(terminal, "client_closed")
+
+    def test_request_metadata_must_be_an_object(self) -> None:
+        responses, traces, terminal, _ = self.run_server(
+            [canonical_json(request(1, "tools/list", {"_meta": "invalid"}))]
+        )
+
+        self.assertEqual(responses[0]["error"]["code"], -32602)
+        self.assertEqual(traces[0]["protocol_error_count"], 1)
+        self.assertEqual(terminal, "client_closed")
+
     def test_action_error_is_a_successful_json_rpc_tool_result(self) -> None:
         responses, traces, _, _ = self.run_server(
             [

@@ -59,7 +59,7 @@ compare it with the canonical CLI path:
 ```bash
 PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/run_runtime_conformance.py \
   --transport mcp-stdio \
-  --output-dir runs/v0.6_mcp_offline_conformance
+  --output-dir runs/v0.6_mcp_offline_conformance_r2
 ```
 
 The comparison covers Action observations, Budget deltas/totals, Event
@@ -74,7 +74,7 @@ PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/run_experiment.py \
   --verified-only \
   --agent codex_mcp_canonical --codex-model gpt-5.6-sol \
   --agent-repeat 1 \
-  --output-dir runs/v0.6_mcp_local_canary \
+  --output-dir runs/v0.6_mcp_local_canary_r2 \
   --runtime-protocol v1 --runtime-profile local-cpu-process-v1 \
   --enable-external-canary
 
@@ -83,7 +83,7 @@ PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/run_experiment.py \
   --only-tasks pytorch__149693__lazylinear_init \
   --agent codex_mcp_canonical --codex-model gpt-5.6-sol \
   --agent-repeat 1 \
-  --output-dir runs/v0.6_mcp_remote_cpu_canary \
+  --output-dir runs/v0.6_mcp_remote_cpu_canary_r2 \
   --runtime-protocol v1 \
   --runtime-profile remote-cpu-pytorch-2.6-py311-v1 \
   --target-config configs/remote_hosts.json --enable-external-canary
@@ -96,10 +96,17 @@ A valid Agent failure is final and must not be retried. Only an
 Malformed/oversized JSON-RPC and internal bridge failures terminate the MCP
 server as `protocol_failed`; a later message cannot turn that retry valid.
 Unknown methods and invalid Agent parameters remain recoverable protocol
-responses. If exact Codex PGID cleanup is unproven, the invalid retry is made
+responses. Standard request `_meta`, including `progressToken`, is removed at
+the MCP boundary before Action validation. The invocation-local server is
+required, so an initialization failure aborts before Agent work instead of
+continuing without tools. If exact Codex PGID cleanup is unproven, the invalid retry is made
 durable and the cohort aborts. A private 0600 marker blocks resume until a
 zero-signal check proves that exact recorded PGID absent; no process listing,
 name lookup, or later signal is used.
+
+The first local canary root and the focused diagnostic roots are retained as
+immutable infrastructure-invalid evidence from the pre-fix platform. The `r2`
+roots above are the clean canaries for the final platform identity.
 
 ## 4. Four formal cohorts
 
