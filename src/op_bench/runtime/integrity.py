@@ -30,7 +30,11 @@ from op_bench.runtime.evaluation import (
 )
 from op_bench.runtime.events import verify_action_pairing, verify_event_chain
 from op_bench.runtime.manifest import RunManifest
-from op_bench.runtime.mcp import MCP_PROTOCOL_VERSIONS, McpAdapterTrace
+from op_bench.runtime.mcp import (
+    CODEX_MCP_TOOL_APPROVAL_MODE,
+    MCP_PROTOCOL_VERSIONS,
+    McpAdapterTrace,
+)
 from op_bench.runtime.resume import (
     AttemptLedger,
     AttemptLedgerRecord,
@@ -804,6 +808,7 @@ def _verify_adapter_trace(
             "protocol": "action-v1",
             "transport": "mcp-stdio",
             "mcp_protocol_versions": list(MCP_PROTOCOL_VERSIONS),
+            "tool_approval_mode": CODEX_MCP_TOOL_APPROVAL_MODE,
             "codex_cli_version": trace.codex_cli_version,
         }
     )

@@ -27,7 +27,10 @@ from op_bench.runtime.local_evaluation import (
     EvaluationOnlyTestAsset,
     LocalGitSource,
 )
-from op_bench.runtime.mcp import MCP_PROTOCOL_VERSIONS
+from op_bench.runtime.mcp import (
+    CODEX_MCP_TOOL_APPROVAL_MODE,
+    MCP_PROTOCOL_VERSIONS,
+)
 from op_bench.runtime.profiles import load_runtime_profile_registry
 from op_bench.runtime.source_materialization import _git_environment
 from op_bench.runtime.validation import ContractError, require_bool, require_int, require_str
@@ -417,6 +420,7 @@ def agent_spec_for_v1_adapter(
             "protocol": "action-v1",
             "transport": "mcp-stdio",
             "mcp_protocol_versions": list(MCP_PROTOCOL_VERSIONS),
+            "tool_approval_mode": CODEX_MCP_TOOL_APPROVAL_MODE,
             "codex_cli_version": frozen_cli_version,
         }
         system_prompt_id = "opbench-v0.6-mcp-system-prompt-v1"

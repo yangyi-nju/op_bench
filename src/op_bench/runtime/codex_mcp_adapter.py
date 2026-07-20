@@ -21,6 +21,7 @@ from op_bench.runtime.codex_adapter import (
     _minimal_environment,
 )
 from op_bench.runtime.mcp import (
+    CODEX_MCP_TOOL_APPROVAL_MODE,
     MCP_MAX_MESSAGE_BYTES,
     McpAdapterTrace,
     canonical_mcp_tools,
@@ -314,6 +315,10 @@ class CodexMcpCanonicalAdapter:
                     *_config_override("mcp_servers.opbench.args", server_arguments),
                     *_config_override("mcp_servers.opbench.env", {}),
                     *_config_override("mcp_servers.opbench.required", True),
+                    *_config_override(
+                        "mcp_servers.opbench.default_tools_approval_mode",
+                        CODEX_MCP_TOOL_APPROVAL_MODE,
+                    ),
                     prompt,
                 )
                 try:

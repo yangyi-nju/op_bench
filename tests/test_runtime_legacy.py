@@ -19,6 +19,7 @@ from op_bench.runtime.legacy import (
     runtime_bundle_from_v05_dataset,
 )
 from op_bench.runtime.profiles import load_runtime_profile_registry
+from op_bench.runtime.run_artifacts import AttemptArtifactStore
 from op_bench.runtime.validation import ContractError
 from op_bench.task import TaskManifest
 from tests.test_runtime_contracts import agent_spec
@@ -84,6 +85,56 @@ class LegacyV05ProjectionTests(unittest.TestCase):
             changed_cli.config.digest,
             changed_protocol.config.digest,
         }), 4)
+
+    def test_real_mcp_approval_mode_changes_identity_and_blocks_resume(self) -> None:
+        selected = agent_spec_for_v1_adapter(
+            "codex_mcp_canonical",
+            model_id="gpt-5.6-sol",
+            codex_cli_version="codex-cli 0.145.0-alpha.18",
+        )
+        with patch(
+            "op_bench.runtime.legacy.CODEX_MCP_TOOL_APPROVAL_MODE",
+            "prompt",
+        ):
+            changed = agent_spec_for_v1_adapter(
+                "codex_mcp_canonical",
+                model_id="gpt-5.6-sol",
+                codex_cli_version="codex-cli 0.145.0-alpha.18",
+            )
+
+        self.assertNotEqual(selected.adapter.digest, changed.adapter.digest)
+        self.assertNotEqual(selected.config.digest, changed.config.digest)
+
+        selected_manifest = run_manifest_from_v05_dataset(
+            DATASET_PATH,
+            agents=(selected,),
+            repeat=1,
+            created_at="2026-07-20T00:00:00Z",
+            selected_task_ids=("pytorch__149693__lazylinear_init",),
+        )
+        changed_manifest = run_manifest_from_v05_dataset(
+            DATASET_PATH,
+            agents=(changed,),
+            repeat=1,
+            created_at="2026-07-20T00:00:00Z",
+            selected_task_ids=("pytorch__149693__lazylinear_init",),
+        )
+        with tempfile.TemporaryDirectory() as temporary:
+            run_root = Path(temporary) / "run"
+            first = AttemptArtifactStore(run_root, selected_manifest)
+            try:
+                first.write_run_manifest()
+            finally:
+                first.close()
+            resumed = AttemptArtifactStore(run_root, changed_manifest)
+            try:
+                with self.assertRaisesRegex(
+                    ContractError,
+                    "run_manifest.json: conflicting artifact",
+                ):
+                    resumed.write_run_manifest()
+            finally:
+                resumed.close()
 
     def test_non_mcp_agent_identity_rejects_mcp_only_values(self) -> None:
         with self.assertRaisesRegex(ContractError, "model_id"):

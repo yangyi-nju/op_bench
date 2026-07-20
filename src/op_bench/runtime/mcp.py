@@ -25,6 +25,7 @@ MCP_PROTOCOL_VERSIONS = (
 MCP_MAX_MESSAGE_BYTES = 1_048_576
 MCP_SERVER_NAME = "opbench"
 MCP_SERVER_VERSION = "v0.6"
+CODEX_MCP_TOOL_APPROVAL_MODE = "approve"
 MCP_SERVER_TERMINAL_STATUSES = (
     "completed",
     "not_started",
@@ -343,6 +344,7 @@ class CanonicalMcpTransport:
 
 
 __all__ = [
+    "CODEX_MCP_TOOL_APPROVAL_MODE",
     "CanonicalMcpTransport",
     "MCP_MAX_MESSAGE_BYTES",
     "MCP_PROTOCOL_VERSIONS",

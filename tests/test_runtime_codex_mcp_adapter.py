@@ -260,7 +260,11 @@ class CodexMcpCanonicalAdapterTests(unittest.TestCase):
         config = decode_mcp_config(argv)
         self.assertEqual(config["mcp_servers.opbench.env"], {})
         self.assertIs(config["mcp_servers.opbench.required"], True)
-        self.assertEqual(len(config), 4)
+        self.assertEqual(
+            config["mcp_servers.opbench.default_tools_approval_mode"],
+            "approve",
+        )
+        self.assertEqual(len(config), 5)
         server_arguments = config["mcp_servers.opbench.args"]
         self.assertNotIn("--bridge-token", server_arguments)
         self.assertIn("--bridge-token-fd", server_arguments)
