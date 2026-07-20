@@ -23,7 +23,11 @@ from op_bench.runtime.backends import (
     ScriptedRuntimeBackend,
 )
 from op_bench.runtime.profiles import load_runtime_profile_registry
-from op_bench.runtime.resources import AttemptResourceLedger, RuntimeLeaseStore
+from op_bench.runtime.resources import (
+    AttemptResourceLedger,
+    RuntimeLeaseStore,
+    verify_runtime_resource_ownership,
+)
 from op_bench.runtime.source_materialization import SourceMaterializationError
 from op_bench.runtime.validation import ContractError
 from tests.runtime_git_fixture import git, initialize_git_repo
@@ -548,6 +552,138 @@ class RsyncAndRemoteCleanupFailureArgvRunner(RecordingArgvRunner):
 
 
 class ContainerBackendCommandTests(unittest.TestCase):
+    def test_docker_fresh_evaluation_uses_distinct_exact_owned_containers(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspaces = root / "workspaces"
+            workspaces.mkdir()
+            profile = self.profile("docker")
+            binding = RuntimeTargetBinding(
+                backend="docker",
+                local_workspace_parent=workspaces,
+                docker_binary="docker-fixture",
+            )
+            fixture = LocalBackendFixture(root, profile=profile, binding=binding)
+            runner = RecordingArgvRunner()
+
+            agent_backend = DockerRuntimeBackend(argv_runner=runner)
+            agent_lease = agent_backend.prepare(profile, fixture.context)
+            self.assertTrue(agent_backend.cleanup(agent_lease).report.all_released)
+
+            evaluation_backend = DockerRuntimeBackend(argv_runner=runner)
+            evaluation_lease = evaluation_backend.prepare(profile, fixture.context)
+            self.assertTrue(
+                evaluation_backend.cleanup(evaluation_lease).report.all_released
+            )
+
+            verify_runtime_resource_ownership(
+                fixture.ledger.records,
+                fixture.store.active_handles,
+            )
+            container_handles = [
+                handle.raw_handle
+                for handle in fixture.store.active_handles
+                if handle.resource_type == "container"
+            ]
+            self.assertEqual(len(container_handles), 2)
+            self.assertEqual(len(set(container_handles)), 2)
+
+    def test_remote_fresh_evaluation_uses_distinct_exact_owned_handles(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspaces = root / "workspaces"
+            workspaces.mkdir()
+            identity_file = root / "id_fixture"
+            identity_file.write_text("fixture", encoding="utf-8")
+            profile = self.profile("remote_docker")
+            binding = RuntimeTargetBinding(
+                backend="remote_docker",
+                local_workspace_parent=workspaces,
+                host_alias="gpu-exact-fixture",
+                remote_user="runner",
+                identity_file=identity_file,
+                docker_binary="docker-fixture",
+                ssh_binary="ssh-fixture",
+                rsync_binary="rsync-fixture",
+            )
+            fixture = LocalBackendFixture(root, profile=profile, binding=binding)
+            runner = RecordingArgvRunner()
+
+            agent_backend = RemoteDockerRuntimeBackend(argv_runner=runner)
+            agent_lease = agent_backend.prepare(profile, fixture.context)
+            self.assertTrue(agent_backend.cleanup(agent_lease).report.all_released)
+
+            evaluation_backend = RemoteDockerRuntimeBackend(argv_runner=runner)
+            evaluation_lease = evaluation_backend.prepare(profile, fixture.context)
+            self.assertTrue(
+                evaluation_backend.cleanup(evaluation_lease).report.all_released
+            )
+
+            verify_runtime_resource_ownership(
+                fixture.ledger.records,
+                fixture.store.active_handles,
+            )
+            for resource_type in ("remote_workspace", "container"):
+                raw_handles = [
+                    handle.raw_handle
+                    for handle in fixture.store.active_handles
+                    if handle.resource_type == resource_type
+                ]
+                self.assertEqual(len(raw_handles), 2)
+                self.assertEqual(len(set(raw_handles)), 2)
+
+    def test_remote_ordinal_read_failure_releases_local_workspace(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspaces = root / "workspaces"
+            workspaces.mkdir()
+            identity_file = root / "id_fixture"
+            identity_file.write_text("fixture", encoding="utf-8")
+            profile = self.profile("remote_docker")
+            binding = RuntimeTargetBinding(
+                backend="remote_docker",
+                local_workspace_parent=workspaces,
+                host_alias="gpu-exact-fixture",
+                remote_user="runner",
+                identity_file=identity_file,
+                docker_binary="docker-fixture",
+                ssh_binary="ssh-fixture",
+                rsync_binary="rsync-fixture",
+            )
+            fixture = LocalBackendFixture(root, profile=profile, binding=binding)
+            runner = RecordingArgvRunner()
+            original_records = AttemptResourceLedger.records.fget
+            assert original_records is not None
+            reads = 0
+
+            def fail_remote_ordinal_read(instance):
+                nonlocal reads
+                reads += 1
+                if reads == 2:
+                    raise ContractError("fixture ledger read failure")
+                return original_records(instance)
+
+            with (
+                mock.patch.object(
+                    AttemptResourceLedger,
+                    "records",
+                    new=property(fail_remote_ordinal_read),
+                ),
+                self.assertRaises(RuntimeBackendUnavailable) as raised,
+            ):
+                RemoteDockerRuntimeBackend(argv_runner=runner).prepare(
+                    profile,
+                    fixture.context,
+                )
+
+            self.assertEqual(raised.exception.reason_code, "runtime_prepare_failed")
+            self.assertEqual(runner.calls, [])
+            self.assertEqual(list(workspaces.iterdir()), [])
+            self.assertEqual(
+                [record.transition for record in fixture.ledger.records],
+                ["declared", "created", "released"],
+            )
+
     def test_docker_prepare_interrupt_cleans_exact_owned_resources(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

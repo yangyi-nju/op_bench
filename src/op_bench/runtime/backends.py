@@ -798,12 +798,15 @@ class DockerRuntimeBackend(LocalProcessBackend):
                 attempt_context,
             )
             container_record = None
-            container_name = _container_name(attempt_context)
             container_owned = False
             try:
                 container_ordinal = _next_ordinal(
                     attempt_context.resource_ledger,
                     "container",
+                )
+                container_name = _container_name(
+                    attempt_context,
+                    container_ordinal,
                 )
                 container_record = attempt_context.resource_ledger.declare(
                     "container",
@@ -1043,13 +1046,20 @@ class RemoteDockerRuntimeBackend(LocalProcessBackend):
                 profile,
                 attempt_context,
             )
-            remote_path = _remote_workspace_path(attempt_context)
-            container_name = _container_name(attempt_context)
+            remote_path: str | None = None
             remote_record = None
             remote_owned = False
             container_record = None
             container_owned = False
             try:
+                remote_ordinal = _next_ordinal(
+                    attempt_context.resource_ledger,
+                    "remote_workspace",
+                )
+                remote_path = _remote_workspace_path(
+                    attempt_context,
+                    remote_ordinal,
+                )
                 local_sync_hash = _workspace_sync_fingerprint(workspace)
                 seed_remote_ccache = (
                     profile.source_loading_mode == "inplace_build"
@@ -1062,10 +1072,6 @@ class RemoteDockerRuntimeBackend(LocalProcessBackend):
                     raise RuntimeBackendUnavailable(
                         "workspace_ccache_seed_collision"
                     )
-                remote_ordinal = _next_ordinal(
-                    attempt_context.resource_ledger,
-                    "remote_workspace",
-                )
                 remote_record = attempt_context.resource_ledger.declare(
                     "remote_workspace",
                     remote_ordinal,
@@ -1132,6 +1138,10 @@ class RemoteDockerRuntimeBackend(LocalProcessBackend):
                 container_ordinal = _next_ordinal(
                     attempt_context.resource_ledger,
                     "container",
+                )
+                container_name = _container_name(
+                    attempt_context,
+                    container_ordinal,
                 )
                 container_record = attempt_context.resource_ledger.declare(
                     "container",
@@ -1205,7 +1215,9 @@ class RemoteDockerRuntimeBackend(LocalProcessBackend):
                             )
                         )
                 if remote_record is not None:
-                    if remote_owned:
+                    if remote_path is None:
+                        cleanup_results.append(False)
+                    elif remote_owned:
                         cleanup_results.append(
                             _release_remote_after_prepare_failure(
                                 attempt_context,
@@ -1943,9 +1955,10 @@ def _sync_remote_workspace_if_changed(
     state.local_sync_hash = observed
 
 
-def _container_name(context: RuntimeAttemptContext) -> str:
+def _container_name(context: RuntimeAttemptContext, ordinal: int = 1) -> str:
     digest = context.attempt_id.removeprefix("attempt:v1:")
-    return f"opbench-{digest[:20]}-r{context.retry_index:04d}"
+    base = f"opbench-{digest[:20]}-r{context.retry_index:04d}"
+    return base if ordinal == 1 else f"{base}-{ordinal:04d}"
 
 
 def _container_create_command(
@@ -2048,10 +2061,14 @@ def _logical_container_cwd(target: str, relative: PurePosixPath) -> str:
     return str(base.joinpath(*relative.parts))
 
 
-def _remote_workspace_path(context: RuntimeAttemptContext) -> str:
+def _remote_workspace_path(
+    context: RuntimeAttemptContext,
+    ordinal: int = 1,
+) -> str:
     digest = context.attempt_id.removeprefix("attempt:v1:")
     root = context.target_binding.remote_workspace_root.rstrip("/")
-    return f"{root}/{digest}/retry-{context.retry_index:04d}/workspace"
+    leaf = "workspace" if ordinal == 1 else f"workspace-{ordinal:04d}"
+    return f"{root}/{digest}/retry-{context.retry_index:04d}/{leaf}"
 
 
 def _remote_target(binding: RuntimeTargetBinding) -> str:

@@ -74,7 +74,7 @@ PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/run_experiment.py \
   --verified-only \
   --agent codex_mcp_canonical --codex-model gpt-5.6-sol \
   --agent-repeat 1 \
-  --output-dir runs/v0.6_mcp_local_canary_r6 \
+  --output-dir runs/v0.6_mcp_local_canary_r7 \
   --runtime-protocol v1 --runtime-profile local-cpu-process-v1 \
   --enable-external-canary
 
@@ -83,7 +83,7 @@ PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/run_experiment.py \
   --only-tasks pytorch__149693__lazylinear_init \
   --agent codex_mcp_canonical --codex-model gpt-5.6-sol \
   --agent-repeat 1 \
-  --output-dir runs/v0.6_mcp_remote_cpu_canary_r6 \
+  --output-dir runs/v0.6_mcp_remote_cpu_canary_r7 \
   --runtime-protocol v1 \
   --runtime-profile remote-cpu-pytorch-2.6-py311-v1 \
   --target-config configs/remote_hosts.json --enable-external-canary
@@ -111,10 +111,11 @@ Action observation data above the inline threshold is stored in a retry-scoped,
 content-addressed public artifact and is revalidated by Integrity before use.
 
 The first five local canary roots, the failed `r5` remote canary, and the focused
-diagnostic roots are retained
-as immutable infrastructure-invalid evidence from the pre-fix platforms. The
-`r6` Agent canary roots above are the clean canaries for the final platform
-identity.
+diagnostic roots are retained as immutable infrastructure-invalid evidence from
+the pre-fix platforms. The successful `r6` local root and infrastructure-invalid
+`r6` remote root are also retained: they proved large Action artifact persistence,
+then exposed sequential Agent/Evaluation reuse of one raw remote handle. The `r7`
+Agent canary roots above are the clean canaries for the final platform identity.
 
 ## 4. Four formal cohorts
 
