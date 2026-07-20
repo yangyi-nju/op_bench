@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -28,6 +29,55 @@ COMMANDS = (
 
 
 class ProcessActionExchangeTests(unittest.TestCase):
+    def test_transport_token_denies_direct_client_bypass(self) -> None:
+        def execute(payload):
+            return replace(
+                action_observation(),
+                session_id=payload["session_id"],
+                action_id=payload["action_id"],
+            ).to_dict()
+
+        with tempfile.TemporaryDirectory() as temporary:
+            channel = AdapterActionChannel(execute)
+            with channel as action_client:
+                exchange = ProcessActionExchange(
+                    action_client=action_client,
+                    session_id="session-token-bound",
+                    exchange_root=Path(temporary) / "exchange",
+                    timeout_ms=2_000,
+                    transport_token="fixture-transport-token",
+                ).start()
+                command = (
+                    sys.executable,
+                    str(exchange.client_path),
+                    "workspace_list",
+                    "--arguments",
+                    "{}",
+                )
+                denied = subprocess.run(
+                    command,
+                    text=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    check=False,
+                )
+                allowed = subprocess.run(
+                    command,
+                    env={
+                        **os.environ,
+                        "OPBENCH_ACTION_TRANSPORT_TOKEN": "fixture-transport-token",
+                    },
+                    text=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    check=False,
+                )
+                exchange.close()
+
+        self.assertNotEqual(denied.returncode, 0)
+        self.assertIn("transport authentication failed", denied.stderr)
+        self.assertEqual(allowed.returncode, 0, allowed.stderr)
+
     def test_generated_client_round_trips_every_command_with_locked_sequence(self) -> None:
         received = []
 

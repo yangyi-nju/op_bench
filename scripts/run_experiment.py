@@ -5,7 +5,11 @@ from __future__ import annotations
 import argparse
 from dataclasses import replace
 import json
+import os
+import re
 import shutil
+import stat
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -27,6 +31,9 @@ from op_bench.registry import load_resolved_task
 from op_bench.reporter import compute_extended_metrics, summarize_results, write_json, write_jsonl
 from op_bench.resume import BASELINE_CACHE_DIRNAME, BaselineCache, ResultsStore, RunState, RUN_STATE_FILE
 from op_bench.task import TaskManifest
+
+
+_PRIVATE_PROCESS_GROUP_RECOVERY = "private_process_group_recovery.json"
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -136,9 +143,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="Private exact runtime target config. No target discovery is performed.",
     )
     parser.add_argument(
+        "--codex-model",
+        default=None,
+        metavar="MODEL_ID",
+        help="Exact model ID; required only for the v1 codex_mcp_canonical adapter.",
+    )
+    parser.add_argument(
         "--enable-external-canary",
         action="store_true",
-        help="Explicitly permit the v1 codex_canonical adapter.",
+        help="Explicitly permit a real v1 Codex adapter.",
     )
     return parser
 
@@ -152,6 +165,7 @@ def main(argv: list[str] | None = None) -> int:
         args.runtime_profile is not None
         or args.target_config is not None
         or args.enable_external_canary
+        or args.codex_model is not None
         or args.runtime_profile_registry != default_registry
     ):
         print("v1 runtime controls require --runtime-protocol v1", file=sys.stderr)
@@ -365,6 +379,151 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
+def detect_codex_cli_version(codex_binary: str = "codex") -> str:
+    """Read one exact local Codex CLI identity without network or discovery."""
+
+    completed = subprocess.run(
+        (codex_binary, "--version"),
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    output = completed.stdout.strip() if isinstance(completed.stdout, str) else ""
+    if (
+        completed.returncode != 0
+        or re.fullmatch(r"codex-cli [A-Za-z0-9][A-Za-z0-9.+-]*", output) is None
+    ):
+        from op_bench.runtime.validation import ContractError
+
+        raise ContractError("cannot determine exact Codex CLI version")
+    return output
+
+
+def _recovery_payload(process_group_id: int) -> bytes:
+    from op_bench.runtime.canonical import canonical_json
+    from op_bench.runtime.validation import require_int
+
+    selected = require_int(process_group_id, "process_group_id", minimum=1)
+    return (
+        canonical_json(
+            {
+                "record_type": "exact_process_group_cleanup_recovery",
+                "schema_version": "v1",
+                "process_group_id": selected,
+            }
+        )
+        + "\n"
+    ).encode("utf-8")
+
+
+def _open_real_output_root(output_root: Path) -> int:
+    descriptor = os.open(
+        output_root,
+        os.O_RDONLY
+        | getattr(os, "O_DIRECTORY", 0)
+        | getattr(os, "O_NOFOLLOW", 0),
+    )
+    metadata = os.fstat(descriptor)
+    if not stat.S_ISDIR(metadata.st_mode):
+        os.close(descriptor)
+        raise OSError("output root is not a directory")
+    return descriptor
+
+
+def _write_process_group_recovery(output_root: Path, process_group_id: int) -> None:
+    output_root.mkdir(parents=True, exist_ok=True)
+    encoded = _recovery_payload(process_group_id)
+    root_descriptor = _open_real_output_root(output_root)
+    try:
+        try:
+            descriptor = os.open(
+                _PRIVATE_PROCESS_GROUP_RECOVERY,
+                os.O_WRONLY
+                | os.O_CREAT
+                | os.O_EXCL
+                | getattr(os, "O_NOFOLLOW", 0),
+                0o600,
+                dir_fd=root_descriptor,
+            )
+        except FileExistsError:
+            descriptor = os.open(
+                _PRIVATE_PROCESS_GROUP_RECOVERY,
+                os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0),
+                dir_fd=root_descriptor,
+            )
+            try:
+                metadata = os.fstat(descriptor)
+                existing = os.read(descriptor, len(encoded) + 1)
+            finally:
+                os.close(descriptor)
+            if not stat.S_ISREG(metadata.st_mode) or existing != encoded:
+                raise OSError("process group recovery marker conflict")
+            return
+        try:
+            view = memoryview(encoded)
+            while view:
+                view = view[os.write(descriptor, view):]
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+        os.fsync(root_descriptor)
+    finally:
+        os.close(root_descriptor)
+
+
+def _resolve_process_group_recovery(output_root: Path) -> bool:
+    from op_bench.runtime.process_group import exact_process_group_is_absent
+    from op_bench.runtime.validation import require_exact_fields, require_int, require_str
+
+    if not output_root.exists():
+        return True
+    root_descriptor = _open_real_output_root(output_root)
+    try:
+        try:
+            descriptor = os.open(
+                _PRIVATE_PROCESS_GROUP_RECOVERY,
+                os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0),
+                dir_fd=root_descriptor,
+            )
+        except FileNotFoundError:
+            return True
+        try:
+            metadata = os.fstat(descriptor)
+            encoded = os.read(descriptor, 1_025)
+        finally:
+            os.close(descriptor)
+        if not stat.S_ISREG(metadata.st_mode) or len(encoded) > 1_024:
+            raise OSError("process group recovery marker is invalid")
+        try:
+            value = json.loads(encoded.decode("utf-8"))
+        except (UnicodeDecodeError, ValueError):
+            raise OSError("process group recovery marker is invalid") from None
+        data = require_exact_fields(
+            value,
+            "process_group_recovery",
+            ("record_type", "schema_version", "process_group_id"),
+        )
+        if require_str(data["record_type"], "record_type") != (
+            "exact_process_group_cleanup_recovery"
+        ) or require_str(data["schema_version"], "schema_version") != "v1":
+            raise OSError("process group recovery marker is invalid")
+        process_group_id = require_int(
+            data["process_group_id"],
+            "process_group_id",
+            minimum=1,
+        )
+        if encoded != _recovery_payload(process_group_id):
+            raise OSError("process group recovery marker is not canonical")
+        if not exact_process_group_is_absent(process_group_id):
+            return False
+        os.unlink(_PRIVATE_PROCESS_GROUP_RECOVERY, dir_fd=root_descriptor)
+        os.fsync(root_descriptor)
+        return True
+    finally:
+        os.close(root_descriptor)
+
+
 def _main_v1(args: argparse.Namespace) -> int:
     """Validate explicit v1 selection before creating output or runtime resources."""
 
@@ -396,19 +555,40 @@ def _main_v1(args: argparse.Namespace) -> int:
     if len(args.agent) != 1 or args.agent[0] not in {
         "scripted_canonical",
         "codex_canonical",
+        "codex_mcp_canonical",
     }:
         print(
-            "v1 --agent must explicitly select scripted_canonical or codex_canonical",
+            "v1 --agent must explicitly select scripted_canonical, "
+            "codex_canonical, or codex_mcp_canonical",
             file=sys.stderr,
         )
         return 2
     adapter_id = args.agent[0]
-    if adapter_id == "codex_canonical" and not args.enable_external_canary:
+    if adapter_id == "codex_mcp_canonical" and not args.codex_model:
+        print("--codex-model is required for codex_mcp_canonical", file=sys.stderr)
+        return 2
+    if adapter_id != "codex_mcp_canonical" and args.codex_model is not None:
         print(
-            "--enable-external-canary is required for codex_canonical",
+            "--codex-model is only supported for codex_mcp_canonical",
             file=sys.stderr,
         )
         return 2
+    if adapter_id in {
+        "codex_canonical",
+        "codex_mcp_canonical",
+    } and not args.enable_external_canary:
+        print(
+            f"--enable-external-canary is required for {adapter_id}",
+            file=sys.stderr,
+        )
+        return 2
+    codex_cli_version = None
+    if adapter_id == "codex_mcp_canonical":
+        try:
+            codex_cli_version = detect_codex_cli_version()
+        except (ContractError, OSError):
+            print("cannot determine exact Codex CLI version", file=sys.stderr)
+            return 2
     try:
         registry = load_runtime_profile_registry(
             Path(args.runtime_profile_registry).resolve()
@@ -438,10 +618,23 @@ def _main_v1(args: argparse.Namespace) -> int:
             print("private target backend does not match Runtime Profile", file=sys.stderr)
             return 2
 
-    return _execute_v1(args, registry, profile, target)
+    return _execute_v1(
+        args,
+        registry,
+        profile,
+        target,
+        codex_cli_version=codex_cli_version,
+    )
 
 
-def _execute_v1(args, registry, profile, target) -> int:
+def _execute_v1(
+    args,
+    registry,
+    profile,
+    target,
+    *,
+    codex_cli_version,
+) -> int:
     """Build one frozen v1 request and dispatch it without legacy fallback."""
 
     from op_bench.runtime.adapters import ScriptedCanonicalAdapter
@@ -454,6 +647,11 @@ def _execute_v1(args, registry, profile, target) -> int:
     from op_bench.runtime.codex_adapter import (
         CodexCanonicalAdapter,
         subprocess_command_runner,
+    )
+    from op_bench.runtime.codex_mcp_adapter import CodexMcpCanonicalAdapter
+    from op_bench.runtime.process_group import (
+        ProcessGroupCleanupError,
+        run_process_group,
     )
     from op_bench.runtime.legacy import (
         LegacyV05Defaults,
@@ -479,7 +677,11 @@ def _execute_v1(args, registry, profile, target) -> int:
         if not task_ids:
             print("no verified v1 tasks matched filters", file=sys.stderr)
             return 2
-        agent = agent_spec_for_v1_adapter(args.agent[0])
+        agent = agent_spec_for_v1_adapter(
+            args.agent[0],
+            model_id=args.codex_model,
+            codex_cli_version=codex_cli_version,
+        )
         defaults = LegacyV05Defaults.standard()
         defaults = replace(
             defaults,
@@ -508,6 +710,17 @@ def _execute_v1(args, registry, profile, target) -> int:
     if output_root.is_symlink() or (output_root.exists() and not output_root.is_dir()):
         print("v1 --output-dir must be a real directory or an absent path", file=sys.stderr)
         return 2
+    try:
+        recovery_resolved = _resolve_process_group_recovery(output_root)
+    except (ContractError, OSError, ProcessGroupCleanupError, ValueError):
+        print("exact process group recovery evidence is invalid", file=sys.stderr)
+        return 1
+    if not recovery_resolved:
+        print(
+            "previous exact process group cleanup is still unproven; run is blocked",
+            file=sys.stderr,
+        )
+        return 1
     if target is None:
         if profile.backend != "local":
             print("explicit target is required for this Runtime Profile", file=sys.stderr)
@@ -542,6 +755,12 @@ def _execute_v1(args, registry, profile, target) -> int:
             return ScriptedCanonicalAdapter()
         if adapter_id == "codex_canonical":
             return CodexCanonicalAdapter(subprocess_command_runner)
+        if adapter_id == "codex_mcp_canonical":
+            return CodexMcpCanonicalAdapter(
+                run_process_group,
+                model_id=args.codex_model,
+                codex_cli_version=codex_cli_version,
+            )
         raise ContractError("unsupported v1 Adapter")
 
     origin_ns = time.monotonic_ns()
@@ -575,6 +794,21 @@ def _execute_v1(args, registry, profile, target) -> int:
                 clock_ms=clock_ms,
             )
         )
+    except ProcessGroupCleanupError as exc:
+        process_group_id = exc.process_group_id
+        if process_group_id is None:
+            print("exact process group cleanup failed without recovery identity", file=sys.stderr)
+            return 1
+        try:
+            _write_process_group_recovery(output_root, process_group_id)
+        except (ContractError, OSError, ValueError):
+            print("exact process group cleanup recovery could not be persisted", file=sys.stderr)
+            return 1
+        print(
+            "exact process group cleanup is unproven; recovery evidence persisted",
+            file=sys.stderr,
+        )
+        return 1
     except (ContractError, OSError, ValueError):
         print("v1 orchestration failed before a valid run result", file=sys.stderr)
         return 1

@@ -13,6 +13,7 @@ from op_bench.integrity import replay_spec_hash
 from op_bench.runtime.legacy import (
     LegacyV05Defaults,
     _executable_source_revision,
+    agent_spec_for_v1_adapter,
     full_task_spec_from_v05,
     run_manifest_from_v05_dataset,
     runtime_bundle_from_v05_dataset,
@@ -40,6 +41,64 @@ PROFILE_BY_ENVIRONMENT = {
 
 
 class LegacyV05ProjectionTests(unittest.TestCase):
+    def test_real_mcp_agent_identity_binds_model_cli_protocol_and_prompt(self) -> None:
+        selected = agent_spec_for_v1_adapter(
+            "codex_mcp_canonical",
+            model_id="gpt-5.6-sol",
+            codex_cli_version="codex-cli 0.145.0-alpha.18",
+        )
+        changed_model = agent_spec_for_v1_adapter(
+            "codex_mcp_canonical",
+            model_id="gpt-5.6-terra",
+            codex_cli_version="codex-cli 0.145.0-alpha.18",
+        )
+        changed_cli = agent_spec_for_v1_adapter(
+            "codex_mcp_canonical",
+            model_id="gpt-5.6-sol",
+            codex_cli_version="codex-cli 0.146.0",
+        )
+        with patch(
+            "op_bench.runtime.legacy.MCP_PROTOCOL_VERSIONS",
+            ("2025-06-18",),
+        ):
+            changed_protocol = agent_spec_for_v1_adapter(
+                "codex_mcp_canonical",
+                model_id="gpt-5.6-sol",
+                codex_cli_version="codex-cli 0.145.0-alpha.18",
+            )
+
+        self.assertEqual(selected.agent.identifier, "codex-mcp-v1")
+        self.assertEqual(selected.model.identifier, "gpt-5.6-sol")
+        self.assertEqual(selected.adapter.identifier, "codex_mcp_canonical")
+        self.assertEqual(
+            selected.system_prompt.identifier,
+            "opbench-v0.6-mcp-system-prompt-v1",
+        )
+        self.assertEqual(
+            selected.task_prompt.identifier,
+            "opbench-v0.6-mcp-task-prompt-v1",
+        )
+        self.assertEqual(len({
+            selected.config.digest,
+            changed_model.config.digest,
+            changed_cli.config.digest,
+            changed_protocol.config.digest,
+        }), 4)
+
+    def test_non_mcp_agent_identity_rejects_mcp_only_values(self) -> None:
+        with self.assertRaisesRegex(ContractError, "model_id"):
+            agent_spec_for_v1_adapter(
+                "scripted_canonical",
+                model_id="gpt-5.6-sol",
+            )
+        with self.assertRaisesRegex(ContractError, "codex_cli_version"):
+            agent_spec_for_v1_adapter(
+                "codex_canonical",
+                codex_cli_version="codex-cli 0.145.0-alpha.18",
+            )
+        with self.assertRaisesRegex(ContractError, "model_id"):
+            agent_spec_for_v1_adapter("codex_mcp_canonical")
+
     def test_executable_revision_ignores_ambient_git_authority(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

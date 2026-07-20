@@ -6,11 +6,18 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 import time
 import unittest
+from unittest import mock
 
 from op_bench.runtime.adapters import AdapterActionChannel, AdapterContext
-from op_bench.runtime.codex_adapter import CodexCanonicalAdapter
+from op_bench.runtime import codex_adapter
+from op_bench.runtime.codex_adapter import (
+    CodexCanonicalAdapter,
+    subprocess_command_runner,
+)
+from op_bench.runtime.process_group import ProcessGroupResult
 from op_bench.runtime.task_view import (
     AgentLaunchInput,
     agent_task_view_identity,
@@ -226,6 +233,56 @@ class CodexCanonicalAdapterTests(unittest.TestCase):
                 self.assertEqual(result.terminal_reason, terminal_reason)
                 self.assertNotIn("private executable path", repr(result))
                 self.assertNotIn("quota unavailable", repr(result))
+
+    def test_default_runner_adapts_the_exact_process_group_result(self) -> None:
+        self.assertTrue(hasattr(codex_adapter, "run_process_group"))
+        completed_result = ProcessGroupResult(
+            argv0="codex-fixture",
+            returncode=0,
+            stdout="completed",
+            stderr="",
+            terminal_status="completed",
+        )
+        timeout_result = replace(
+            completed_result,
+            returncode=-15,
+            terminal_status="terminated",
+        )
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            with mock.patch.object(
+                codex_adapter,
+                "run_process_group",
+                return_value=completed_result,
+            ) as exact_runner:
+                result = subprocess_command_runner(
+                    ("codex-fixture", "exec"),
+                    cwd=root,
+                    env={"PATH": "/bin"},
+                    timeout_ms=1_000,
+                )
+
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(result.stdout, "completed")
+            exact_runner.assert_called_once_with(
+                ("codex-fixture", "exec"),
+                cwd=root,
+                env={"PATH": "/bin"},
+                timeout_ms=1_000,
+            )
+
+            with mock.patch.object(
+                codex_adapter,
+                "run_process_group",
+                return_value=timeout_result,
+            ):
+                with self.assertRaises(subprocess.TimeoutExpired):
+                    subprocess_command_runner(
+                        ("codex-fixture", "exec"),
+                        cwd=root,
+                        env={"PATH": "/bin"},
+                        timeout_ms=1_000,
+                    )
 
 
 if __name__ == "__main__":

@@ -6,10 +6,13 @@ import json
 from pathlib import Path
 import re
 import socket
+import stat
 import tempfile
 import unittest
 from unittest.mock import patch
 
+from op_bench.runtime.validation import ContractError
+from scripts import run_experiment
 from op_bench.runtime.integrity import load_run_manifest_artifact, verify_run_artifacts
 from scripts.verify_runtime_resources import main as verify_resources_main
 from scripts.run_experiment import build_parser, main
@@ -36,6 +39,33 @@ def v1_args(output: Path, *extra: str) -> list[str]:
 
 
 class RuntimeV1CliTests(unittest.TestCase):
+    def test_private_cleanup_recovery_blocks_until_exact_pgid_is_absent(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary) / "run"
+            run_experiment._write_process_group_recovery(output, 6767)
+            marker = output / "private_process_group_recovery.json"
+
+            self.assertEqual(stat.S_IMODE(marker.stat().st_mode), 0o600)
+            self.assertEqual(
+                json.loads(marker.read_text(encoding="utf-8"))["process_group_id"],
+                6767,
+            )
+            with patch(
+                "op_bench.runtime.process_group.exact_process_group_is_absent",
+                return_value=False,
+            ) as absent:
+                self.assertFalse(run_experiment._resolve_process_group_recovery(output))
+            absent.assert_called_once_with(6767)
+            self.assertTrue(marker.exists())
+
+            with patch(
+                "op_bench.runtime.process_group.exact_process_group_is_absent",
+                return_value=True,
+            ) as absent:
+                self.assertTrue(run_experiment._resolve_process_group_recovery(output))
+            absent.assert_called_once_with(6767)
+            self.assertFalse(marker.exists())
+
     def test_default_protocol_is_legacy_and_help_exposes_explicit_v1_controls(self) -> None:
         parser = build_parser()
         parsed = parser.parse_args(
@@ -50,6 +80,7 @@ class RuntimeV1CliTests(unittest.TestCase):
             "--runtime-profile-registry",
             "--target-config",
             "--enable-external-canary",
+            "--codex-model",
         ):
             self.assertIn(flag, help_text)
 
@@ -109,6 +140,128 @@ class RuntimeV1CliTests(unittest.TestCase):
             self.assertEqual(result, 2)
             self.assertIn("--enable-external-canary is required", stderr.getvalue())
             self.assertFalse(output.exists())
+
+    def test_mcp_adapter_requires_model_external_opt_in_and_exact_cli_version(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output = root / "mcp"
+            base = v1_args(
+                output,
+                "--runtime-profile",
+                "local-cpu-process-v1",
+            )
+            base[base.index("scripted_canonical")] = "codex_mcp_canonical"
+
+            with redirect_stderr(io.StringIO()) as stderr:
+                result = main(base)
+            self.assertEqual(result, 2)
+            self.assertIn("--codex-model is required", stderr.getvalue())
+            self.assertFalse(output.exists())
+
+            with redirect_stderr(io.StringIO()) as stderr:
+                result = main([*base, "--codex-model", "gpt-5.6-sol"])
+            self.assertEqual(result, 2)
+            self.assertIn("--enable-external-canary is required", stderr.getvalue())
+            self.assertFalse(output.exists())
+
+            accepted = [
+                *base,
+                "--codex-model",
+                "gpt-5.6-sol",
+                "--enable-external-canary",
+            ]
+            with (
+                patch.object(
+                    run_experiment,
+                    "detect_codex_cli_version",
+                    return_value="codex-cli 0.145.0-alpha.18",
+                    create=True,
+                ) as detect,
+                patch.object(run_experiment, "_execute_v1", return_value=0) as execute,
+            ):
+                self.assertEqual(main(accepted), 0)
+
+            detect.assert_called_once_with()
+            self.assertEqual(
+                execute.call_args.kwargs["codex_cli_version"],
+                "codex-cli 0.145.0-alpha.18",
+            )
+            self.assertFalse(output.exists())
+
+    def test_codex_model_is_rejected_outside_the_mcp_v1_adapter(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            v1_output = root / "v1"
+            with redirect_stderr(io.StringIO()) as stderr:
+                result = main(
+                    v1_args(
+                        v1_output,
+                        "--runtime-profile",
+                        "local-cpu-process-v1",
+                        "--codex-model",
+                        "gpt-5.6-sol",
+                    )
+                )
+            self.assertEqual(result, 2)
+            self.assertIn("only supported", stderr.getvalue())
+            self.assertFalse(v1_output.exists())
+
+            legacy_output = root / "legacy"
+            with redirect_stderr(io.StringIO()) as stderr:
+                result = main(
+                    [
+                        "--dataset",
+                        str(DATASET),
+                        "--agent",
+                        "gold",
+                        "--output-dir",
+                        str(legacy_output),
+                        "--codex-model",
+                        "gpt-5.6-sol",
+                    ]
+                )
+            self.assertEqual(result, 2)
+            self.assertIn("require --runtime-protocol v1", stderr.getvalue())
+            self.assertFalse(legacy_output.exists())
+
+    def test_cli_version_detection_uses_one_exact_local_command(self) -> None:
+        detector = getattr(run_experiment, "detect_codex_cli_version", None)
+        self.assertIsNotNone(detector)
+        completed = run_experiment.subprocess.CompletedProcess(
+            ("codex", "--version"),
+            0,
+            stdout="codex-cli 0.145.0-alpha.18\n",
+            stderr="",
+        )
+        with patch.object(
+            run_experiment.subprocess,
+            "run",
+            return_value=completed,
+        ) as invoke:
+            self.assertEqual(detector(), "codex-cli 0.145.0-alpha.18")
+
+        invoke.assert_called_once_with(
+            ("codex", "--version"),
+            check=False,
+            text=True,
+            stdout=run_experiment.subprocess.PIPE,
+            stderr=run_experiment.subprocess.PIPE,
+        )
+        for stdout in ("", "codex 1.0\n", "codex-cli bad version\n"):
+            with (
+                patch.object(
+                    run_experiment.subprocess,
+                    "run",
+                    return_value=run_experiment.subprocess.CompletedProcess(
+                        ("codex", "--version"),
+                        0,
+                        stdout=stdout,
+                        stderr="",
+                    ),
+                ),
+                self.assertRaises(ContractError),
+            ):
+                detector()
 
     def test_v1_rejects_legacy_only_inputs_and_adapter_names_before_resources(self) -> None:
         cases = (

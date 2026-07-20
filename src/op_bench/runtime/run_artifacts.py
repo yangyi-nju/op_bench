@@ -28,6 +28,7 @@ from op_bench.runtime.evaluation import (
     validate_session_evaluation_binding,
 )
 from op_bench.runtime.manifest import ExpectedAttempt, RunManifest
+from op_bench.runtime.mcp import McpAdapterTrace
 from op_bench.runtime.resources import RuntimeCleanupReport
 from op_bench.runtime.task_view import agent_task_view_identity, assert_public_artifact_safe
 from op_bench.runtime.validation import (
@@ -241,6 +242,38 @@ class AttemptArtifactStore:
             public=True,
         )
         return _runtime_conformance_payload(payload)
+
+    def write_adapter_trace(
+        self,
+        attempt_id: str,
+        trace: McpAdapterTrace,
+        *,
+        retry_index: int = 1,
+    ) -> None:
+        if not isinstance(trace, McpAdapterTrace):
+            raise ContractError("trace: expected McpAdapterTrace")
+        payload = trace.to_dict()
+        assert_public_artifact_safe(payload)
+        self._atomic_write(
+            self._retry_fd(attempt_id, retry_index),
+            "adapter_trace.json",
+            _json_bytes(payload),
+            label="adapter_trace.json",
+        )
+
+    def read_adapter_trace(
+        self,
+        attempt_id: str,
+        *,
+        retry_index: int = 1,
+    ) -> McpAdapterTrace:
+        payload = self._read_attempt_json(
+            attempt_id,
+            retry_index,
+            "adapter_trace.json",
+            public=True,
+        )
+        return McpAdapterTrace.from_dict(payload)
 
     def write_run_manifest(self) -> None:
         payload = self.manifest.to_dict()

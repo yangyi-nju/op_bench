@@ -145,6 +145,31 @@ class RuntimeConformanceRunnerTests(unittest.TestCase):
             self.assertEqual(len(payload["entries"]), 4)
             assert_public_artifact_safe(payload)
 
+    def test_stdio_cli_can_use_the_built_in_offline_fixture(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary) / "output"
+
+            exit_code = main(
+                [
+                    "--transport",
+                    "mcp-stdio",
+                    "--output-dir",
+                    str(output),
+                    "--profile-registry",
+                    str(REGISTRY),
+                ]
+            )
+
+            payload = json.loads(
+                (output / "runtime_conformance.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(payload["status"], "passed")
+            self.assertEqual(
+                [entry["transport"] for entry in payload["entries"]],
+                ["cli", "cli", "mcp-stdio", "mcp-stdio"],
+            )
+
     def test_external_mode_blocks_exact_missing_target_without_searching(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

@@ -10,6 +10,7 @@ import unittest
 
 from op_bench.runtime.backends import LocalProcessBackend, RuntimeTargetBinding
 from op_bench.runtime.codex_adapter import CodexAdapterResult
+from op_bench.runtime.canonical import canonical_json
 from op_bench.runtime.contracts import ActionRequest, ContentIdentity, TestSelector
 from op_bench.runtime.integrity import verify_run_artifacts
 from op_bench.runtime.local_evaluation import (
@@ -17,7 +18,9 @@ from op_bench.runtime.local_evaluation import (
     LocalGitSource,
     git_archive_source_identity,
 )
-from op_bench.runtime.orchestrator import V06Orchestrator, V06RunRequest
+from op_bench.runtime.legacy import agent_spec_for_v1_adapter
+from op_bench.runtime.mcp import McpAdapterTrace
+from op_bench.runtime.orchestrator import V1_ADAPTER_IDS, V06Orchestrator, V06RunRequest
 from op_bench.runtime.profiles import load_runtime_profile_registry
 from op_bench.runtime.resources import (
     parse_runtime_lease_store,
@@ -26,6 +29,12 @@ from op_bench.runtime.resources import (
     verify_runtime_resource_ownership,
 )
 from tests.runtime_git_fixture import git, initialize_evaluation_git_fixture
+from tests.runtime_orchestrator_fixture import (
+    PatchAdapter,
+    build_orchestrator_fixture,
+    orchestrator_for,
+    request_for,
+)
 from tests.test_runtime_contracts import (
     agent_spec,
     budget_policy,
@@ -100,7 +109,178 @@ class ScriptedPatchAdapter:
             raise AssertionError(observation)
 
 
+class McpScenarioAdapter:
+    def __init__(self, scenario: str) -> None:
+        self.scenario = scenario
+        self.run_count = 0
+
+    @staticmethod
+    def trace(*, calls: int, terminal: str = "client_closed", initialized: bool = True):
+        return McpAdapterTrace(
+            adapter_id="codex_mcp_canonical",
+            model_id="gpt-5.6-sol",
+            codex_cli_version="codex-cli 0.145.0-alpha.18",
+            negotiated_protocol_version="2025-06-18" if initialized else None,
+            initialize_count=1 if initialized else 0,
+            tools_list_count=1 if initialized else 0,
+            tools_call_count=calls,
+            protocol_error_count=0,
+            server_terminal_status=terminal,
+        )
+
+    def run(self, context) -> CodexAdapterResult:
+        self.run_count += 1
+        if self.scenario == "infrastructure_then_resolved" and self.run_count == 1:
+            return CodexAdapterResult(
+                status="provider_failure",
+                terminal_reason="provider_error",
+                exit_code=1,
+                observation_count=0,
+                finish_count=0,
+                adapter_trace=self.trace(
+                    calls=0,
+                    terminal="start_failed",
+                    initialized=False,
+                ),
+            )
+
+        if self.scenario == "timeout":
+            actions = ()
+            status = "timeout"
+            terminal_reason = "timeout"
+            trace_terminal = "terminated"
+        elif self.scenario == "no_patch":
+            actions = (("session_finish", {}),)
+            status = "completed"
+            terminal_reason = "agent_finished"
+            trace_terminal = "client_closed"
+        else:
+            content = (
+                "def normalize(value):\n"
+                "    # Deliberately preserve the defect for F2P attribution.\n"
+                "    return 0 if value != value else value\n"
+                if self.scenario == "f2p_failed"
+                else "def normalize(value):\n    return value\n"
+            )
+            actions = (
+                ("workspace_read", {"path": "calc.py"}),
+                ("workspace_write", {"path": "calc.py", "content": content}),
+                ("test_run", {"selector_id": P2P}),
+                ("vcs_diff", {}),
+                *(() if self.scenario == "missing_finish" else (("session_finish", {}),)),
+            )
+            status = "missing_finish" if self.scenario == "missing_finish" else "completed"
+            terminal_reason = "agent_exited" if status == "missing_finish" else "agent_finished"
+            trace_terminal = "client_closed"
+
+        for sequence, (name, arguments) in enumerate(actions, start=1):
+            request = ActionRequest(
+                session_id=context.session_id,
+                action_id=f"mcp-scenario-{self.run_count}-{sequence}",
+                action_name=name,
+                arguments=arguments,
+                client_sequence=sequence,
+                deadline_ms=context.launch_input.task_view.budget_policy.wall_clock_ms,
+            )
+            observation = context.action_client.execute(request.to_dict())
+            if not observation["ok"]:
+                raise AssertionError(observation)
+        finish_count = sum(1 for name, _ in actions if name == "session_finish")
+        return CodexAdapterResult(
+            status=status,
+            terminal_reason=terminal_reason,
+            exit_code=None if status == "timeout" else 0,
+            observation_count=len(actions),
+            finish_count=finish_count,
+            adapter_trace=self.trace(
+                calls=len(actions),
+                terminal=trace_terminal,
+            ),
+        )
+
+
 class V06OrchestratorTests(unittest.TestCase):
+    def test_v1_adapter_registry_includes_the_independent_mcp_adapter(self) -> None:
+        self.assertEqual(
+            V1_ADAPTER_IDS,
+            ("scripted_canonical", "codex_canonical", "codex_mcp_canonical"),
+        )
+
+    def test_mcp_trace_is_persisted_and_bound_under_lifecycle_integrity(self) -> None:
+        mcp_agent = agent_spec_for_v1_adapter(
+            "codex_mcp_canonical",
+            model_id="gpt-5.6-sol",
+            codex_cli_version="codex-cli 0.145.0-alpha.18",
+        )
+        trace = McpAdapterTrace(
+            adapter_id="codex_mcp_canonical",
+            model_id="gpt-5.6-sol",
+            codex_cli_version="codex-cli 0.145.0-alpha.18",
+            negotiated_protocol_version="2025-06-18",
+            initialize_count=1,
+            tools_list_count=1,
+            tools_call_count=5,
+            protocol_error_count=0,
+            server_terminal_status="client_closed",
+        )
+        with tempfile.TemporaryDirectory() as temporary:
+            fixture = build_orchestrator_fixture(
+                Path(temporary),
+                selected_agent=mcp_agent,
+            )
+            adapter = PatchAdapter(adapter_trace=trace)
+
+            result = orchestrator_for(
+                fixture,
+                backend_factory=lambda profile, target, phase: LocalProcessBackend(),
+                adapter=adapter,
+            ).run(
+                request_for(
+                    fixture,
+                    adapter_id="codex_mcp_canonical",
+                    enable_external_canary=True,
+                )
+            )
+
+            retry_root = (
+                fixture.output_root
+                / "attempts"
+                / fixture.expected.attempt_id
+                / "retries"
+                / "retry-0001"
+            )
+            trace_path = retry_root / "adapter_trace.json"
+            self.assertTrue(trace_path.is_file())
+            self.assertEqual(json.loads(trace_path.read_text()), trace.to_dict())
+            self.assertEqual(result.integrity.status, "passed")
+            self.assertEqual(len(result.integrity.checks), 14)
+
+            original = trace_path.read_bytes()
+            mutations = (
+                {**trace.to_dict(), "model_id": "gpt-5.6-terra"},
+                {**trace.to_dict(), "tools_call_count": 4},
+                {**trace.to_dict(), "codex_cli_version": "codex-cli 0.146.0"},
+            )
+            for payload in mutations:
+                with self.subTest(payload=payload):
+                    trace_path.write_bytes(
+                        (canonical_json(payload) + "\n").encode("utf-8")
+                    )
+                    report = verify_run_artifacts(
+                        fixture.output_root,
+                        fixture.manifest,
+                    )
+                    checks = {check.check_id: check for check in report.checks}
+                    self.assertEqual(checks["lifecycle_terminal"].status, "failed")
+                    self.assertEqual(len(report.checks), 14)
+                    trace_path.write_bytes(original)
+
+            trace_path.unlink()
+            report = verify_run_artifacts(fixture.output_root, fixture.manifest)
+            checks = {check.check_id: check for check in report.checks}
+            self.assertEqual(checks["lifecycle_terminal"].status, "failed")
+            self.assertEqual(len(report.checks), 14)
+
     def test_local_happy_path_is_complete_and_resume_is_byte_stable(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -312,6 +492,103 @@ class V06OrchestratorTests(unittest.TestCase):
             self.assertEqual(second.skipped_attempt_ids, (expected.attempt_id,))
             self.assertEqual(adapter.run_count, 1)
             self.assertEqual(before, after)
+
+    def test_mcp_infrastructure_invalid_attempt_gets_a_new_retry(self) -> None:
+        mcp_agent = agent_spec_for_v1_adapter(
+            "codex_mcp_canonical",
+            model_id="gpt-5.6-sol",
+            codex_cli_version="codex-cli 0.145.0-alpha.18",
+        )
+        with tempfile.TemporaryDirectory() as temporary:
+            fixture = build_orchestrator_fixture(
+                Path(temporary),
+                selected_agent=mcp_agent,
+            )
+            adapter = McpScenarioAdapter("infrastructure_then_resolved")
+            orchestrator = orchestrator_for(
+                fixture,
+                backend_factory=lambda profile, target, phase: LocalProcessBackend(),
+                adapter=adapter,
+            )
+            request = request_for(
+                fixture,
+                adapter_id="codex_mcp_canonical",
+                enable_external_canary=True,
+            )
+
+            first = orchestrator.run(request)
+            second = orchestrator.run(request)
+
+            self.assertEqual(first.ran_attempt_ids, (fixture.expected.attempt_id,))
+            self.assertEqual(second.ran_attempt_ids, (fixture.expected.attempt_id,))
+            self.assertEqual(second.skipped_attempt_ids, ())
+            self.assertEqual(adapter.run_count, 2)
+            records = [
+                json.loads(line)
+                for line in (fixture.output_root / "attempts.jsonl")
+                .read_text(encoding="utf-8")
+                .splitlines()
+            ]
+            self.assertEqual(
+                [(item["retry_index"], item["attempt_validity"]) for item in records],
+                [(1, "infrastructure_invalid"), (2, "valid")],
+            )
+            self.assertEqual(second.integrity.status, "passed")
+
+    def test_valid_mcp_logical_outcomes_are_skipped_byte_for_byte(self) -> None:
+        mcp_agent = agent_spec_for_v1_adapter(
+            "codex_mcp_canonical",
+            model_id="gpt-5.6-sol",
+            codex_cli_version="codex-cli 0.145.0-alpha.18",
+        )
+        expected = {
+            "timeout": ("timeout", "no_patch"),
+            "missing_finish": ("exited", "resolved"),
+            "no_patch": ("finished", "no_patch"),
+            "f2p_failed": ("finished", "f2p_failed"),
+        }
+        for scenario, (terminal_reason, evaluation_outcome) in expected.items():
+            with self.subTest(scenario=scenario), tempfile.TemporaryDirectory() as temporary:
+                fixture = build_orchestrator_fixture(
+                    Path(temporary),
+                    selected_agent=mcp_agent,
+                )
+                adapter = McpScenarioAdapter(scenario)
+                orchestrator = orchestrator_for(
+                    fixture,
+                    backend_factory=lambda profile, target, phase: LocalProcessBackend(),
+                    adapter=adapter,
+                )
+                request = request_for(
+                    fixture,
+                    adapter_id="codex_mcp_canonical",
+                    enable_external_canary=True,
+                )
+
+                first = orchestrator.run(request)
+                before = {
+                    str(path.relative_to(fixture.output_root)): path.read_bytes()
+                    for path in fixture.output_root.rglob("*")
+                    if path.is_file()
+                }
+                second = orchestrator.run(request)
+                after = {
+                    str(path.relative_to(fixture.output_root)): path.read_bytes()
+                    for path in fixture.output_root.rglob("*")
+                    if path.is_file()
+                }
+
+                result = json.loads(
+                    (fixture.output_root / "results.jsonl").read_text(encoding="utf-8")
+                )
+                self.assertEqual(first.integrity.status, "passed")
+                self.assertEqual(second.ran_attempt_ids, ())
+                self.assertEqual(second.skipped_attempt_ids, (fixture.expected.attempt_id,))
+                self.assertEqual(adapter.run_count, 1)
+                self.assertEqual(result["attempt_validity"], "valid")
+                self.assertEqual(result["agent_terminal"], terminal_reason)
+                self.assertEqual(result["evaluation_outcome"], evaluation_outcome)
+                self.assertEqual(before, after)
 
 
 if __name__ == "__main__":

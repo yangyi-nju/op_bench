@@ -27,6 +27,7 @@ from op_bench.runtime.local_evaluation import (
     EvaluationOnlyTestAsset,
     LocalGitSource,
 )
+from op_bench.runtime.mcp import MCP_PROTOCOL_VERSIONS
 from op_bench.runtime.profiles import load_runtime_profile_registry
 from op_bench.runtime.source_materialization import _git_environment
 from op_bench.runtime.validation import ContractError, require_bool, require_int, require_str
@@ -354,28 +355,94 @@ def _executable_source_revision(repository: Path, logical_revision: str) -> str:
     raise ContractError("source snapshot has no executable frozen commit")
 
 
-def agent_spec_for_v1_adapter(adapter_id: str) -> AgentSpec:
+def agent_spec_for_v1_adapter(
+    adapter_id: str,
+    *,
+    model_id: str | None = None,
+    codex_cli_version: str | None = None,
+) -> AgentSpec:
     selected = require_str(adapter_id, "adapter_id")
-    if selected not in {"scripted_canonical", "codex_canonical"}:
+    if selected not in {
+        "scripted_canonical",
+        "codex_canonical",
+        "codex_mcp_canonical",
+    }:
         raise ContractError("adapter_id: unsupported v1 Adapter")
-    agent_id = "opbench-scripted-v1" if selected == "scripted_canonical" else "codex-v1"
-    model_id = "deterministic-script-v1" if selected == "scripted_canonical" else "codex-cli-configured"
-    agent = _config_identity("agent", agent_id, {"adapter_id": selected})
-    model = _config_identity("model", model_id, {"adapter_id": selected})
-    adapter = _config_identity("adapter", selected, {"protocol": "action-v1"})
+    if selected != "codex_mcp_canonical":
+        if model_id is not None:
+            raise ContractError("model_id: supported only by codex_mcp_canonical")
+        if codex_cli_version is not None:
+            raise ContractError(
+                "codex_cli_version: supported only by codex_mcp_canonical"
+            )
+        agent_id = (
+            "opbench-scripted-v1"
+            if selected == "scripted_canonical"
+            else "codex-v1"
+        )
+        frozen_model_id = (
+            "deterministic-script-v1"
+            if selected == "scripted_canonical"
+            else "codex-cli-configured"
+        )
+        agent_payload = {"adapter_id": selected}
+        model_payload = {"adapter_id": selected}
+        adapter_payload = {"protocol": "action-v1"}
+        system_prompt_id = "opbench-v0.6-system-prompt-v1"
+        task_prompt_id = "opbench-v0.6-task-prompt-v1"
+        task_prompt_payload = {"transport": "canonical-json-actions"}
+        config_suffix = "visible"
+    else:
+        frozen_model_id = require_str(
+            model_id,
+            "model_id",
+            pattern=r"[A-Za-z0-9][A-Za-z0-9._-]*",
+        )
+        frozen_cli_version = require_str(
+            codex_cli_version,
+            "codex_cli_version",
+            pattern=r"codex-cli [A-Za-z0-9][A-Za-z0-9.+-]*",
+        )
+        agent_id = "codex-mcp-v1"
+        agent_payload = {
+            "adapter_id": selected,
+            "model_id": frozen_model_id,
+            "codex_cli_version": frozen_cli_version,
+        }
+        model_payload = {
+            "adapter_id": selected,
+            "model_id": frozen_model_id,
+        }
+        adapter_payload = {
+            "protocol": "action-v1",
+            "transport": "mcp-stdio",
+            "mcp_protocol_versions": list(MCP_PROTOCOL_VERSIONS),
+            "codex_cli_version": frozen_cli_version,
+        }
+        system_prompt_id = "opbench-v0.6-mcp-system-prompt-v1"
+        task_prompt_id = "opbench-v0.6-mcp-task-prompt-v1"
+        task_prompt_payload = {
+            "transport": "mcp-stdio-canonical-actions",
+            "tools": list(ACTION_NAMES),
+            "mcp_protocol_versions": list(MCP_PROTOCOL_VERSIONS),
+        }
+        config_suffix = f"{frozen_cli_version}:visible"
+    agent = _config_identity("agent", agent_id, agent_payload)
+    model = _config_identity("model", frozen_model_id, model_payload)
+    adapter = _config_identity("adapter", selected, adapter_payload)
     system_prompt = _config_identity(
         "prompt",
-        "opbench-v0.6-system-prompt-v1",
+        system_prompt_id,
         {"visibility": "public-task-view-only"},
     )
     task_prompt = _config_identity(
         "prompt",
-        "opbench-v0.6-task-prompt-v1",
-        {"transport": "canonical-json-actions"},
+        task_prompt_id,
+        task_prompt_payload,
     )
     config = _config_identity(
         "agent_config",
-        f"{agent_id}:{model_id}:{selected}:visible",
+        f"{agent_id}:{frozen_model_id}:{selected}:{config_suffix}",
         {
             "agent": agent.to_dict(),
             "model": model.to_dict(),

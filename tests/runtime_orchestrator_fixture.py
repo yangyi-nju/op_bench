@@ -13,6 +13,7 @@ from op_bench.runtime.local_evaluation import (
     LocalGitSource,
     git_archive_source_identity,
 )
+from op_bench.runtime.mcp import McpAdapterTrace
 from op_bench.runtime.profiles import load_runtime_profile_registry
 from tests.runtime_git_fixture import git, initialize_evaluation_git_fixture
 from tests.test_runtime_contracts import (
@@ -40,8 +41,9 @@ class StepClock:
 
 
 class PatchAdapter:
-    def __init__(self) -> None:
+    def __init__(self, *, adapter_trace: McpAdapterTrace | None = None) -> None:
         self.run_count = 0
+        self.adapter_trace = adapter_trace
 
     def run(self, context) -> CodexAdapterResult:
         self.run_count += 1
@@ -76,6 +78,7 @@ class PatchAdapter:
             exit_code=0,
             observation_count=len(actions),
             finish_count=1,
+            adapter_trace=self.adapter_trace,
         )
 
 
@@ -91,7 +94,7 @@ class OrchestratorFixture:
     output_root: Path
 
 
-def build_orchestrator_fixture(root: Path) -> OrchestratorFixture:
+def build_orchestrator_fixture(root: Path, *, selected_agent=None) -> OrchestratorFixture:
     git_fixture = initialize_evaluation_git_fixture(root / "source")
     (git_fixture.repository / "test_public.py").write_text(
         "import unittest\n\n"
@@ -167,7 +170,7 @@ def build_orchestrator_fixture(root: Path) -> OrchestratorFixture:
         patch_scope=("calc.py",),
         hidden_test_asset=hidden_identity,
     )
-    scripted_agent = replace(
+    scripted_agent = selected_agent or replace(
         agent_spec(),
         agent=identity("agent", "scripted", "sha256:" + "d" * 64),
         adapter=identity(
@@ -211,7 +214,13 @@ def orchestrator_for(fixture: OrchestratorFixture, *, backend_factory, adapter):
     )
 
 
-def request_for(fixture: OrchestratorFixture, *, clock=None):
+def request_for(
+    fixture: OrchestratorFixture,
+    *,
+    clock=None,
+    adapter_id: str = "scripted_canonical",
+    enable_external_canary: bool = False,
+):
     from op_bench.runtime.orchestrator import V06RunRequest
 
     return V06RunRequest(
@@ -222,7 +231,7 @@ def request_for(fixture: OrchestratorFixture, *, clock=None):
         target_binding=fixture.target_binding,
         output_root=fixture.output_root,
         resume_policy="retry_infrastructure",
-        adapter_id="scripted_canonical",
-        enable_external_canary=False,
+        adapter_id=adapter_id,
+        enable_external_canary=enable_external_canary,
         clock_ms=clock or StepClock(),
     )

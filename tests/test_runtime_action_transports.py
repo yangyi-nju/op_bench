@@ -10,6 +10,7 @@ from op_bench.runtime.action_cli import ActionCliTransport
 from op_bench.runtime.actions import CanonicalActionService
 from op_bench.runtime.contracts import ACTION_NAMES
 from op_bench.runtime.mcp import CanonicalMcpTransport
+from op_bench.runtime.mcp_stdio import render_mcp_stdio_launcher
 from op_bench.runtime.workspace import AuthoritativeWorkspace
 from tests.runtime_git_fixture import initialize_git_repo
 from tests.test_runtime_actions_service import FakeCommandBackend
@@ -61,6 +62,19 @@ class ActionTransportConformanceTests(unittest.TestCase):
 
         self.assertIs(cli.service, service)
         self.assertIs(mcp.service, service)
+
+    def test_stdio_launcher_is_an_independent_process_boundary(self) -> None:
+        from op_bench.runtime.mcp import canonical_mcp_tools
+
+        source = render_mcp_stdio_launcher(canonical_mcp_tools())
+
+        self.assertIn("subprocess.Popen", source)
+        self.assertIn("selectors.DefaultSelector", source)
+        self.assertIn("MAX_MESSAGE_BYTES", source)
+        self.assertNotIn("subprocess.run", source)
+        self.assertIn('"tools/call"', source)
+        self.assertNotIn("CanonicalMcpTransport", source)
+        self.assertNotIn("from op_bench", source)
 
     def test_scripted_cli_and_mcp_sequences_are_canonical_equivalent(self) -> None:
         cli_service = self.service("cli")

@@ -39,6 +39,7 @@ from op_bench.runtime.local_evaluation import (
 )
 from op_bench.runtime.manifest import RunManifest
 from op_bench.runtime.profiles import RuntimeProfileRegistry
+from op_bench.runtime.process_group import ProcessGroupCleanupError
 from op_bench.runtime.resources import (
     AttemptResourceLedger,
     RuntimeCleanupEntry,
@@ -65,7 +66,17 @@ from op_bench.runtime.workspace import (
 )
 
 
-V1_ADAPTER_IDS = ("scripted_canonical", "codex_canonical")
+V1_ADAPTER_IDS = (
+    "scripted_canonical",
+    "codex_canonical",
+    "codex_mcp_canonical",
+)
+
+
+class _InfrastructureNotEvaluatedBackend:
+    def evaluate(self, spec, frozen_patch):
+        del spec, frozen_patch
+        raise ContractError("infrastructure-invalid session cannot be evaluated")
 
 
 @dataclass(frozen=True)
@@ -107,9 +118,12 @@ class V06RunRequest:
         )
         require_enum(self.adapter_id, "adapter_id", V1_ADAPTER_IDS)
         require_bool(self.enable_external_canary, "enable_external_canary")
-        if self.adapter_id == "codex_canonical" and not self.enable_external_canary:
+        if self.adapter_id in {
+            "codex_canonical",
+            "codex_mcp_canonical",
+        } and not self.enable_external_canary:
             raise ContractError(
-                "codex_canonical requires enable_external_canary"
+                f"{self.adapter_id} requires enable_external_canary"
             )
         if not callable(self.clock_ms):
             raise ContractError("clock_ms: expected callable")
@@ -311,6 +325,7 @@ class V06Orchestrator:
         workspace: AuthoritativeWorkspace | None = None
         cleanup_report: RuntimeCleanupReport | None = None
         interrupted: KeyboardInterrupt | None = None
+        cleanup_uncertain: ProcessGroupCleanupError | None = None
         try:
             agent_backend = self._runtime_backend(
                 profile,
@@ -413,11 +428,27 @@ class V06Orchestrator:
                 except KeyboardInterrupt as exc:
                     interrupted = exc
                     adapter_result = None
+                except ProcessGroupCleanupError as exc:
+                    cleanup_uncertain = exc
+                    adapter_result = None
                 except Exception:  # noqa: BLE001 - private Adapter boundary.
                     adapter_result = None
             if adapter_result is None:
-                session.request_stop("provider_error")
+                session.request_stop(
+                    "runtime_error" if cleanup_uncertain is not None else "provider_error"
+                )
             else:
+                adapter_trace = getattr(adapter_result, "adapter_trace", None)
+                if adapter_trace is not None:
+                    if request.adapter_id != "codex_mcp_canonical":
+                        raise ContractError(
+                            "adapter trace is only valid for codex_mcp_canonical"
+                        )
+                    store.write_adapter_trace(
+                        expected.attempt_id,
+                        adapter_trace,
+                        retry_index=retry_index,
+                    )
                 _converge_adapter_result(session, adapter_result)
             session_result = session.finalize()
             if session_result.final_patch is None:
@@ -444,20 +475,23 @@ class V06Orchestrator:
             workspace = None
             agent_cleanup = agent_backend.cleanup(agent_lease)
             cleanup_report = agent_cleanup.report
-            evaluation_backend = self._runtime_backend(
-                profile,
-                request.target_binding,
-                "evaluation",
-            )
-            runtime_evaluator = RuntimeFreshEvaluationBackend(
-                source=source,
-                hidden_asset=hidden_asset,
-                python_executable=self._python_executable,
-                runtime_backend=evaluation_backend,
-                runtime_profile=profile,
-                attempt_context=attempt_context,
-                source_overlay_paths=self._source_overlay_resolver(task),
-            )
+            if cleanup_uncertain is None:
+                evaluation_backend = self._runtime_backend(
+                    profile,
+                    request.target_binding,
+                    "evaluation",
+                )
+                evaluation_implementation = RuntimeFreshEvaluationBackend(
+                    source=source,
+                    hidden_asset=hidden_asset,
+                    python_executable=self._python_executable,
+                    runtime_backend=evaluation_backend,
+                    runtime_profile=profile,
+                    attempt_context=attempt_context,
+                    source_overlay_paths=self._source_overlay_resolver(task),
+                )
+            else:
+                evaluation_implementation = _InfrastructureNotEvaluatedBackend()
             evaluation_spec = EvaluationSpec(
                 session_id=session_id,
                 attempt_id=expected.attempt_id,
@@ -474,7 +508,10 @@ class V06Orchestrator:
                 scoring=request.manifest.scoring,
             )
             coordinator = AttemptEvaluationCoordinator(
-                FreshEvaluator(runtime_evaluator, clock_ms=request.clock_ms),
+                FreshEvaluator(
+                    evaluation_implementation,
+                    clock_ms=request.clock_ms,
+                ),
                 journal,
                 store,
                 retry_index=retry_index,
@@ -516,6 +553,8 @@ class V06Orchestrator:
             )
             if interrupted is not None:
                 raise interrupted
+            if cleanup_uncertain is not None:
+                raise cleanup_uncertain
             return cleanup_report
         finally:
             if workspace is not None:

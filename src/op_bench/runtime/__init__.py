@@ -5,11 +5,17 @@ from op_bench.runtime.conformance import (
     CONFORMANCE_IGNORED_FIELDS_V1,
     ConformanceComparison,
     ConformanceEntry,
+    ConformanceExecution,
     ConformanceRunReport,
     ConformanceSnapshot,
     RuntimeConformanceRunner,
     compare_conformance_snapshots,
     normalize_conformance_snapshot,
+)
+from op_bench.runtime.experiment_report import (
+    build_mcp_experiment_report,
+    render_mcp_experiment_markdown,
+    write_mcp_experiment_report,
 )
 from op_bench.runtime.actions import (
     CanonicalActionService,
@@ -30,6 +36,7 @@ from op_bench.runtime.codex_adapter import (
     CodexCanonicalAdapter,
     subprocess_command_runner,
 )
+from op_bench.runtime.codex_mcp_adapter import CodexMcpCanonicalAdapter
 from op_bench.runtime.artifacts import ArtifactReference, PublicArtifactStore
 from op_bench.runtime.backends import (
     DockerRuntimeBackend,
@@ -81,6 +88,24 @@ from op_bench.runtime.profiles import (
     load_runtime_profile_registry,
 )
 from op_bench.runtime.process_actions import ProcessActionExchange
+from op_bench.runtime.mcp import (
+    MCP_MAX_MESSAGE_BYTES,
+    MCP_PROTOCOL_VERSIONS,
+    MCP_SERVER_NAME,
+    MCP_SERVER_TERMINAL_STATUSES,
+    MCP_SERVER_VERSION,
+    CanonicalMcpTransport,
+    McpAdapterTrace,
+    McpToolDefinition,
+    canonical_mcp_tools,
+)
+from op_bench.runtime.mcp_stdio import render_mcp_stdio_launcher, serve_mcp_stdio
+from op_bench.runtime.process_group import (
+    PROCESS_GROUP_TERMINAL_STATUSES,
+    ProcessGroupCleanupError,
+    ProcessGroupResult,
+    run_process_group,
+)
 from op_bench.runtime.orchestrator import (
     V1_ADAPTER_IDS,
     V06Orchestrator,
@@ -168,17 +193,20 @@ __all__ = [
     "AuthoritativeWorkspace",
     "CanonicalActionService",
     "CanonicalAgentAdapter",
+    "CanonicalMcpTransport",
     "ScriptedAdapterResult",
     "ScriptedCanonicalAdapter",
     "CODEX_ADAPTER_STATUSES",
     "CodexAdapterResult",
     "CodexCanonicalAdapter",
+    "CodexMcpCanonicalAdapter",
     "CONFORMANCE_IGNORED_FIELDS_V1",
     "CommandExecution",
     "ContractError",
     "CompletedEvaluation",
     "ConformanceComparison",
     "ConformanceEntry",
+    "ConformanceExecution",
     "ConformanceRunReport",
     "ConformanceSnapshot",
     "DockerRuntimeBackend",
@@ -193,6 +221,9 @@ __all__ = [
     "persist_integrity_reports",
     "PrivateEvaluationEvidence",
     "ProcessActionExchange",
+    "PROCESS_GROUP_TERMINAL_STATUSES",
+    "ProcessGroupCleanupError",
+    "ProcessGroupResult",
     "V1_ADAPTER_IDS",
     "V06Orchestrator",
     "V06RunRequest",
@@ -230,6 +261,13 @@ __all__ = [
     "LocalGitEvaluationBackend",
     "LocalGitSource",
     "LocalProcessBackend",
+    "MCP_MAX_MESSAGE_BYTES",
+    "MCP_PROTOCOL_VERSIONS",
+    "MCP_SERVER_NAME",
+    "MCP_SERVER_TERMINAL_STATUSES",
+    "MCP_SERVER_VERSION",
+    "McpAdapterTrace",
+    "McpToolDefinition",
     "LEGACY_ROOTS",
     "ReplayCase",
     "ReplayDifference",
@@ -242,6 +280,7 @@ __all__ = [
     "assert_patch_identity_handoff",
     "assert_public_artifact_safe",
     "build_patch_artifact",
+    "build_mcp_experiment_report",
     "build_replay_inventory",
     "canonical_json",
     "canonical_sha256",
@@ -255,6 +294,11 @@ __all__ = [
     "runtime_raw_handle_hash",
     "runtime_resource_id",
     "runtime_resource_record_hash",
+    "canonical_mcp_tools",
+    "render_mcp_stdio_launcher",
+    "render_mcp_experiment_markdown",
+    "serve_mcp_stdio",
+    "run_process_group",
     "structured_unittest_summary",
     "subprocess_command_runner",
     "project_agent_task_view",
@@ -272,4 +316,5 @@ __all__ = [
     "verify_runtime_resource_evidence",
     "verify_runtime_resource_ownership",
     "write_rebuilt_outputs",
+    "write_mcp_experiment_report",
 ]

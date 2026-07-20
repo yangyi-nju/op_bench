@@ -62,6 +62,21 @@ def snapshot() -> ConformanceSnapshot:
             "all_released": True,
             "entries": [{"resource_id": "resource-1", "status": "released"}],
         },
+        event_sequence=(
+            {"event_type": "action_requested", "action_index": 1},
+            {"event_type": "action_observed", "action_index": 1},
+            {"event_type": "action_requested", "action_index": 2},
+            {"event_type": "action_observed", "action_index": 2},
+        ),
+        workspace_tree=(
+            {
+                "path": "src/operator.py",
+                "mode": 0o644,
+                "size_bytes": 10,
+                "content_sha256": "sha256:" + "f" * 64,
+            },
+        ),
+        finish_count=1,
     )
 
 

@@ -153,6 +153,39 @@ configured target recovered, representative Remote CPU, CUDA Overlay, and CUDA
 Kernel canaries passed, followed by an 85/85 exact replay. OpBench used only the
 configured target; it did not probe or discover replacement targets.
 
+### Real Codex MCP Adapter
+
+`codex_mcp_canonical` is the independent real-Agent MCP path. It starts one
+invocation-local `mcp-stdio` server, passes that server to a single ephemeral
+Codex invocation without changing global Codex configuration, and binds the
+exact model and CLI version into the Agent identity. The frozen v0.6 experiment
+uses `gpt-5.6-sol` and `codex-cli 0.145.0-alpha.18`:
+
+```bash
+PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/run_experiment.py \
+  --dataset runs/v0.6_m6_local_codex_input/dataset/dataset.json \
+  --verified-only \
+  --agent codex_mcp_canonical \
+  --codex-model gpt-5.6-sol \
+  --agent-repeat 1 \
+  --output-dir runs/v0.6_mcp_local_canary \
+  --runtime-protocol v1 \
+  --runtime-profile local-cpu-process-v1 \
+  --enable-external-canary
+```
+
+Provider network access is allowed for the host-side Codex invocation. Task network
+access remains denied, and the Agent reaches the task only through the
+nine canonical MCP Actions. Codex runs in a separate read-only working directory;
+the controller-private launcher, token-bound Action client, and trace are outside
+that directory and are identity-checked after exit. Each selected retry records public-safe
+`adapter_trace.json` initialize/list/call counters; the existing 14-check
+Integrity graph binds those counters to Action events, model/CLI identity,
+terminal state, evaluation, and exact resource cleanup. See the
+[real MCP Agent experiment guide](docs/v0.6/mcp_agent_experiment.md) for the four
+cohorts, resume rules, evidence split, hard output bounds, exact formal-matrix
+contract, report builder, and safety boundary.
+
 ### Legacy v0.5 compatibility
 
 Legacy remains the default protocol during migration. Legacy commands
@@ -230,6 +263,7 @@ Platform development should follow the [v0.6 design](docs/v0.6/design.md), [impl
 - [v0.6 platform design](docs/v0.6/design.md)
 - [v0.6 implementation plan](docs/v0.6/implementation_plan.md)
 - [v0.6 acceptance matrix](docs/v0.6/acceptance_matrix.md)
+- [v0.6 real MCP Agent experiment](docs/v0.6/mcp_agent_experiment.md)
 - [v0.7 Dataset Factory and Boundary design](docs/v0.7/design.md)
 - [v0.5 design](docs/v0.5/design.md)
 - [v0.5 experiment report](docs/v0.5/experiment_report.md)

@@ -12,7 +12,7 @@ Status: `opbench-v0.6.0` is Completed. M1–M7 and every Must gate in the
 | Surface | Selection | Adapters | Result layout | Intended use |
 | --- | --- | --- | --- | --- |
 | v0.5 Legacy | Default; omit `--runtime-protocol` | `gold`, `codex_action_bridge` | Legacy `results.jsonl`/`summary.json` | Historical compatibility and v0.5 reproduction |
-| v0.6 v1 | `--runtime-protocol v1` plus `--runtime-profile` | `scripted_canonical`, `codex_canonical` | Cohort/Attempt/retry Artifact graph | Standard platform evaluation |
+| v0.6 v1 | `--runtime-protocol v1` plus `--runtime-profile` | `scripted_canonical`, `codex_canonical`, `codex_mcp_canonical` | Cohort/Attempt/retry Artifact graph | Standard platform evaluation |
 
 The parser rejects v1-only flags on the Legacy path and rejects Legacy-only
 inputs on the v1 path. There is no automatic fallback between protocols. A v1
@@ -23,6 +23,19 @@ The Scripted Adapter is a deterministic no-edit controller smoke. The Codex
 Adapter is the canonical real-Agent process boundary. Both call the same JSON
 Action Client, Canonical Action Service, Authoritative Workspace, Fresh
 Evaluator, ledger, Artifact store, and Integrity verifier.
+
+The independent `codex_mcp_canonical` Adapter uses a real invocation-local
+`mcp-stdio` server. For the frozen experiment, `--codex-model gpt-5.6-sol`
+binds model `gpt-5.6-sol` and exact executable output
+`codex-cli 0.145.0-alpha.18` into the Agent/model/adapter identities. It supplies
+the server through per-invocation Codex configuration and never runs a global
+MCP add/configuration command. Provider network is allowed only for the
+host-side Codex call; Task network remains denied by the Runtime and Action
+policies. Codex receives a separate read-only cwd. The launcher, trace, and
+Action exchange remain in a controller-private sibling; a per-Attempt transport
+token reaches the MCP server through a one-shot inherited pipe rather than the
+Codex argv, denies direct Action-client calls, and is drained before Agent tool
+execution. Controller executables are inode/mode/hash checked after exit.
 
 ## 2. Runtime support matrix
 
@@ -175,6 +188,7 @@ attempts/<attempt-id>/
     private_runtime_resources.json
     runtime_cleanup.json
     runtime_conformance.json
+    adapter_trace.json          # codex_mcp_canonical only
 ```
 
 `private_evaluation.json` and `private_runtime_resources.json` are
@@ -192,6 +206,18 @@ identity, expected/observed matrix, retry audit, TaskView identity, event
 chain, action pairing, lifecycle terminals, resource ownership, cleanup,
 Session/Patch/Evaluation identity, public/private evaluation binding,
 evaluation/scoring protocols, results rebuild, and summary rebuild.
+
+For an MCP Attempt, `adapter_trace.json` adds the exact Adapter/model/CLI
+identity, negotiated MCP version, initialize/list/call counters,
+`protocol_error_count`, and sanitized server terminal state. Valid selected
+MCP Attempts require one initialize, at least one list, exact tool-call/Event
+pairing, and terminal agreement. Non-MCP Attempts must not contain this file.
+An MCP startup or framing failure may be infrastructure-invalid; normal Action
+denials remain Agent-visible results rather than MCP crashes.
+Malformed/oversized framing and internal bridge corruption are terminal
+`protocol_failed` conditions; unknown methods and invalid Agent parameters stay
+recoverable. Provider and bridge stdout/stderr are drained with streaming hard
+caps rather than accumulated without limit.
 
 ## 7. Resume, verification, and rebuild
 
@@ -218,6 +244,28 @@ PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/verify_runtime_resources.py \
 
 The resource verifier reads only the supplied run root. It does not inspect
 host processes, Docker inventory, remote hosts, or network state.
+
+If exact Codex process-group cleanup cannot be proven, the runner first records
+an immutable infrastructure-invalid retry and then aborts the cohort. A private
+0600 recovery marker retains only the recorded PGID. Resume uses no discovery:
+it performs a zero-signal check on that exact PGID and remains blocked until
+absence is proven; it never signals a possibly reused group from a later run.
+
+Run the real stdio equivalence gate without a Runtime target:
+
+```bash
+PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/run_runtime_conformance.py \
+  --transport mcp-stdio \
+  --output-dir runs/v0.6_mcp_offline_conformance
+```
+
+The full real-Agent procedure and four fixed cohort commands are in
+[mcp_agent_experiment.md](mcp_agent_experiment.md). The report builder performs
+a pure read of the four completed roots, re-runs all 14 Integrity checks, and
+refuses incomplete trace/resource/evaluation identity before producing its
+public index and summary. Its formal contract also freezes the Dataset digest,
+platform version, four Runtime Profiles, exact 17-task partition, and repeats
+1/2/3; matching only the cohort sizes is insufficient.
 
 Backend preparation and command registration are exact-resource transactions.
 If private handle or ledger registration fails after an exclusive workspace,

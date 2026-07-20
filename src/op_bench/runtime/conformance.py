@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import hashlib
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -13,6 +15,7 @@ from op_bench.runtime.source_materialization import _git_environment
 from op_bench.runtime.validation import (
     ContractError,
     require_exact_fields,
+    require_int,
     require_str,
 )
 
@@ -37,6 +40,9 @@ class ConformanceSnapshot:
     session_terminal: dict[str, object]
     evaluation_outcome: str
     cleanup_status: dict[str, object]
+    event_sequence: tuple[dict[str, object], ...]
+    workspace_tree: tuple[dict[str, object], ...]
+    finish_count: int
 
     def __post_init__(self) -> None:
         if self.contract_version != "v1":
@@ -80,6 +86,27 @@ class ConformanceSnapshot:
             if not isinstance(value, dict):
                 raise ContractError(f"{path}: expected object")
             object.__setattr__(self, path, _json_copy(value, path))
+        for value, path in (
+            (self.event_sequence, "event_sequence"),
+            (self.workspace_tree, "workspace_tree"),
+        ):
+            if not isinstance(value, tuple):
+                raise ContractError(f"{path}: expected tuple")
+            frozen = []
+            for index, item in enumerate(value):
+                if not isinstance(item, dict):
+                    raise ContractError(f"{path}[{index}]: expected object")
+                frozen.append(_json_copy(item, f"{path}[{index}]"))
+            object.__setattr__(self, path, tuple(frozen))
+        require_int(self.finish_count, "finish_count", minimum=0)
+        if self.finish_count != names.count("session_finish"):
+            raise ContractError("finish_count: does not match action observations")
+        tree_paths = [
+            require_str(item.get("path"), f"workspace_tree[{index}].path")
+            for index, item in enumerate(self.workspace_tree)
+        ]
+        if tree_paths != sorted(set(tree_paths)):
+            raise ContractError("workspace_tree: expected sorted unique paths")
         require_str(self.evaluation_outcome, "evaluation_outcome")
         if self.session_terminal.get("status") != "terminal":
             raise ContractError("session_terminal: expected terminal status")
@@ -113,6 +140,15 @@ class ConformanceSnapshot:
             ),
             "evaluation_outcome": self.evaluation_outcome,
             "cleanup_status": _json_copy(self.cleanup_status, "cleanup_status"),
+            "event_sequence": _json_copy(
+                list(self.event_sequence),
+                "event_sequence",
+            ),
+            "workspace_tree": _json_copy(
+                list(self.workspace_tree),
+                "workspace_tree",
+            ),
+            "finish_count": self.finish_count,
         }
 
     @property
@@ -132,11 +168,20 @@ class ConformanceSnapshot:
                 "session_terminal",
                 "evaluation_outcome",
                 "cleanup_status",
+                "event_sequence",
+                "workspace_tree",
+                "finish_count",
             ),
         )
         actions = data["action_observations"]
         if not isinstance(actions, list):
             raise ContractError("action_observations: expected list")
+        events = data["event_sequence"]
+        tree = data["workspace_tree"]
+        if not isinstance(events, list):
+            raise ContractError("event_sequence: expected list")
+        if not isinstance(tree, list):
+            raise ContractError("workspace_tree: expected list")
         return cls(
             contract_version=require_str(data["contract_version"], "contract_version"),
             action_observations=tuple(actions),
@@ -148,6 +193,9 @@ class ConformanceSnapshot:
                 "evaluation_outcome",
             ),
             cleanup_status=data["cleanup_status"],
+            event_sequence=tuple(events),
+            workspace_tree=tuple(tree),
+            finish_count=require_int(data["finish_count"], "finish_count", minimum=0),
         )
 
 
@@ -176,7 +224,14 @@ def normalize_conformance_snapshot(
 ) -> dict[str, object]:
     if not isinstance(snapshot, ConformanceSnapshot):
         raise ContractError("snapshot: expected ConformanceSnapshot")
-    return _strip_ignored(snapshot.to_dict())
+    payload = snapshot.to_dict()
+    for index, item in enumerate(payload["action_observations"], start=1):
+        canonical_action_id = f"action-{index}"
+        item["action_id"] = canonical_action_id
+        observation = item.get("observation")
+        if isinstance(observation, dict) and "action_id" in observation:
+            observation["action_id"] = canonical_action_id
+    return _strip_ignored(payload)
 
 
 def compare_conformance_snapshots(
@@ -254,6 +309,7 @@ class ConformanceEntry:
     reason_code: str | None = None
     runtime_profile_id: str | None = None
     runtime_profile_hash: str | None = None
+    transport_counters: dict[str, object] | None = None
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -266,7 +322,28 @@ class ConformanceEntry:
             "reason_code": self.reason_code,
             "runtime_profile_id": self.runtime_profile_id,
             "runtime_profile_hash": self.runtime_profile_hash,
+            "transport_counters": _json_copy(
+                self.transport_counters or {},
+                "transport_counters",
+            ),
         }
+
+
+@dataclass(frozen=True)
+class ConformanceExecution:
+    snapshot: ConformanceSnapshot
+    transport_counters: dict[str, object]
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.snapshot, ConformanceSnapshot):
+            raise ContractError("snapshot: expected ConformanceSnapshot")
+        if not isinstance(self.transport_counters, dict):
+            raise ContractError("transport_counters: expected object")
+        object.__setattr__(
+            self,
+            "transport_counters",
+            _json_copy(self.transport_counters, "transport_counters"),
+        )
 
 
 @dataclass(frozen=True)
@@ -322,38 +399,65 @@ class RuntimeConformanceRunner:
         include_external: bool = False,
         target_config: Path | None = None,
         external_profile=None,
+        transport: str | None = None,
     ) -> ConformanceRunReport:
         if not isinstance(output_dir, Path):
             raise ContractError("output_dir: expected Path")
         output_dir.mkdir(parents=True, exist_ok=True)
-        snapshots: list[tuple[str, str, str, ConformanceSnapshot]] = []
-        for transport in ("cli", "mcp"):
+        if transport is None or transport == "in-process":
+            selected_transports = ("cli", "mcp")
+        elif transport == "mcp-stdio":
+            selected_transports = ("cli", "mcp-stdio")
+        else:
+            raise ContractError("transport: expected in-process or mcp-stdio")
+        snapshots: list[tuple[str, str, str, ConformanceExecution]] = []
+        for selected_transport in selected_transports:
             for semantics in ("local_process", "scripted_remote"):
-                entry_id = f"{transport}-{semantics}"
-                snapshot = self._run_entry(entry_id, transport, semantics)
+                entry_id = f"{selected_transport}-{semantics}"
+                execution = self._run_entry(
+                    entry_id,
+                    selected_transport,
+                    semantics,
+                )
                 override = self.semantic_override.get(entry_id)
                 if override is not None:
-                    snapshot = ConformanceSnapshot.from_dict(
-                        {
-                            **snapshot.to_dict(),
-                            "evaluation_outcome": override,
-                        }
+                    execution = ConformanceExecution(
+                        snapshot=ConformanceSnapshot.from_dict(
+                            {
+                                **execution.snapshot.to_dict(),
+                                "evaluation_outcome": override,
+                            }
+                        ),
+                        transport_counters=execution.transport_counters,
                     )
-                snapshots.append((entry_id, transport, semantics, snapshot))
-        reference = snapshots[0][3]
+                snapshots.append(
+                    (entry_id, selected_transport, semantics, execution)
+                )
+        reference = snapshots[0][3].snapshot
         entries: list[ConformanceEntry] = []
-        for entry_id, transport, semantics, snapshot in snapshots:
-            comparison = compare_conformance_snapshots(reference, snapshot)
+        for entry_id, selected_transport, semantics, execution in snapshots:
+            comparison = compare_conformance_snapshots(
+                reference,
+                execution.snapshot,
+            )
+            counter_differences = _transport_counter_differences(
+                selected_transport,
+                execution.transport_counters,
+            )
+            differences = tuple(
+                sorted(set(comparison.differences) | set(counter_differences))
+            )
             entries.append(
                 ConformanceEntry(
                     entry_id=entry_id,
-                    transport=transport,
+                    transport=selected_transport,
                     backend_semantics=semantics,
-                    status="passed" if comparison.equal else "failed",
+                    status="passed" if not differences else "failed",
                     normalized_snapshot_hash=comparison.right_normalized_hash,
-                    differences=comparison.differences,
+                    differences=differences,
                     runtime_profile_id=self.runtime_profile.profile_id,
                     runtime_profile_hash=self.runtime_profile.content_hash,
+                    transport_counters=execution.transport_counters,
                 )
             )
         if include_external:
@@ -429,7 +533,7 @@ class RuntimeConformanceRunner:
                     if self.external_backend_factory is not None
                     else _runtime_backend(external_profile)
                 )
-                snapshot = self._run_entry(
+                execution = self._run_entry(
                     "external-exact-target",
                     "cli",
                     "external",
@@ -455,13 +559,14 @@ class RuntimeConformanceRunner:
                 reason_code="external_conformance_error",
                 **profile_fields,
             )
-        comparison = compare_conformance_snapshots(reference, snapshot)
+        comparison = compare_conformance_snapshots(reference, execution.snapshot)
         return ConformanceEntry(
             **common,
             status="passed" if comparison.equal else "failed",
             normalized_snapshot_hash=comparison.right_normalized_hash,
             differences=comparison.differences,
             reason_code=None,
+            transport_counters=execution.transport_counters,
             **profile_fields,
         )
 
@@ -474,7 +579,8 @@ class RuntimeConformanceRunner:
         runtime_profile=None,
         target_binding=None,
         backend=None,
-    ) -> ConformanceSnapshot:
+    ) -> ConformanceExecution:
+        from op_bench.runtime.adapters import AdapterActionChannel
         from op_bench.runtime.action_cli import ActionCliTransport
         from op_bench.runtime.actions import CanonicalActionService, RegisteredTest
         from op_bench.runtime.backends import (
@@ -484,7 +590,12 @@ class RuntimeConformanceRunner:
             RuntimeTargetBinding,
             ScriptedRuntimeBackend,
         )
-        from op_bench.runtime.contracts import BudgetPolicy, CapabilityPolicy
+        from op_bench.runtime.contracts import (
+            ActionRequest,
+            BudgetPolicy,
+            CapabilityPolicy,
+        )
+        from op_bench.runtime.events import EventJournal
         from op_bench.runtime.local_evaluation import git_archive_source_identity
         from op_bench.runtime.mcp import CanonicalMcpTransport
         from op_bench.runtime.resources import AttemptResourceLedger, RuntimeLeaseStore
@@ -540,6 +651,7 @@ class RuntimeConformanceRunner:
                 )
             lease = None
             workspace_authority = None
+            event_journal = None
             cleanup = None
             try:
                 lease = selected_backend.prepare(selected_profile, context)
@@ -585,6 +697,10 @@ class RuntimeConformanceRunner:
                         max_patch_bytes=65_536,
                         allow_binary=False,
                     ),
+                )
+                event_journal = EventJournal(
+                    "session-conformance-v1",
+                    clock_ms=_CounterClock(),
                 )
                 service = CanonicalActionService(
                     session_id="session-conformance-v1",
@@ -639,11 +755,7 @@ class RuntimeConformanceRunner:
                         )
                     },
                     clock_ms=lambda: 1_000,
-                )
-                transport = (
-                    ActionCliTransport(service)
-                    if transport_name == "cli"
-                    else CanonicalMcpTransport(service)
+                    event_journal=event_journal,
                 )
                 steps = (
                     ("workspace_list", {"path": ".", "recursive": False}),
@@ -657,36 +769,65 @@ class RuntimeConformanceRunner:
                     ("session_finish", {}),
                 )
                 actions: list[dict[str, object]] = []
-                for sequence, (action_name, arguments) in enumerate(steps, start=1):
-                    envelope = {
-                        "session_id": "session-conformance-v1",
-                        "action_id": f"action-{sequence}",
-                        "client_sequence": sequence,
-                        "deadline_ms": 10_000,
-                        "arguments": arguments,
-                    }
-                    if transport_name == "cli":
-                        observation = transport.execute(
+                transport_counters: dict[str, object] = {}
+                if transport_name == "mcp-stdio":
+                    with AdapterActionChannel(
+                        lambda payload: service.execute(
+                            ActionRequest.from_dict(payload)
+                        ).to_dict()
+                    ) as action_client:
+                        actions, transport_counters = _run_mcp_stdio_steps(
+                            root,
+                            action_client=action_client,
+                            steps=steps,
+                        )
+                else:
+                    selected_transport = (
+                        ActionCliTransport(service)
+                        if transport_name == "cli"
+                        else CanonicalMcpTransport(service)
+                    )
+                    for sequence, (action_name, arguments) in enumerate(
+                        steps,
+                        start=1,
+                    ):
+                        envelope = {
+                            "session_id": "session-conformance-v1",
+                            "action_id": f"action-{sequence}",
+                            "client_sequence": sequence,
+                            "deadline_ms": 10_000,
+                            "arguments": arguments,
+                        }
+                        if transport_name == "cli":
+                            observation = selected_transport.execute(
+                                {
+                                    "contract_type": "action_request",
+                                    "schema_version": "v1",
+                                    "action_name": action_name,
+                                    **envelope,
+                                }
+                            )
+                        else:
+                            observation = selected_transport.call_tool(
+                                action_name,
+                                envelope,
+                            )
+                        actions.append(
                             {
-                                "contract_type": "action_request",
-                                "schema_version": "v1",
+                                "action_id": envelope["action_id"],
                                 "action_name": action_name,
-                                **envelope,
+                                "observation": observation,
                             }
                         )
-                    else:
-                        observation = transport.call_tool(action_name, envelope)
-                    actions.append(
-                        {
-                            "action_id": envelope["action_id"],
-                            "action_name": action_name,
-                            "observation": observation,
-                        }
-                    )
+                frozen = workspace_authority.freeze()
+                event_sequence = _semantic_event_sequence(
+                    service.audit_exchanges,
+                    event_journal.records,
+                )
+                workspace_tree = _workspace_tree(workspace_authority)
                 workspace_authority.close()
                 workspace_authority = None
                 cleanup = selected_backend.cleanup(lease)
-                finish = actions[-1]["observation"]
                 usage = service.usage
                 final_states = {}
                 for record in ledger.records:
@@ -694,31 +835,49 @@ class RuntimeConformanceRunner:
                         record.resource_type,
                         record.transition,
                     )
-                return ConformanceSnapshot(
-                    contract_version="v1",
-                    action_observations=tuple(actions),
-                    budget_usage={
-                        "actions": usage.actions,
-                        "tests": usage.tests,
-                        "commands": usage.commands,
-                        "output_bytes": usage.output_bytes,
-                        "wall_clock_ms": usage.wall_clock_ms,
-                    },
-                    patch_identity=finish["data"]["patch"],
-                    session_terminal={
-                        "status": "terminal",
-                        "terminal_reason": "agent_finished",
-                        "started_at_ms": 100,
-                        "ended_at_ms": 200,
-                    },
-                    evaluation_outcome="resolved",
-                    cleanup_status={
-                        "all_released": cleanup.report.all_released,
-                        "entries": [
-                            {"resource_type": kind, "status": status}
-                            for kind, status in sorted(final_states.values())
-                        ],
-                    },
+                return ConformanceExecution(
+                    snapshot=ConformanceSnapshot(
+                        contract_version="v1",
+                        action_observations=tuple(actions),
+                        budget_usage={
+                            "actions": usage.actions,
+                            "tests": usage.tests,
+                            "commands": usage.commands,
+                            "output_bytes": usage.output_bytes,
+                            "wall_clock_ms": usage.wall_clock_ms,
+                        },
+                        patch_identity={
+                            "patch": frozen.patch.to_dict(),
+                            "size_bytes": len(frozen.patch_bytes),
+                            "changed_paths": list(frozen.changed_paths),
+                            "empty": frozen.empty,
+                            "patch_bytes_sha256": (
+                                "sha256:" + hashlib.sha256(frozen.patch_bytes).hexdigest()
+                            ),
+                        },
+                        session_terminal={
+                            "status": "terminal",
+                            "terminal_reason": "agent_finished",
+                            "started_at_ms": 100,
+                            "ended_at_ms": 200,
+                        },
+                        evaluation_outcome="resolved",
+                        cleanup_status={
+                            "all_released": cleanup.report.all_released,
+                            "entries": [
+                                {"resource_type": kind, "status": status}
+                                for kind, status in sorted(final_states.values())
+                            ],
+                        },
+                        event_sequence=event_sequence,
+                        workspace_tree=workspace_tree,
+                        finish_count=sum(
+                            1
+                            for action in actions
+                            if action["action_name"] == "session_finish"
+                        ),
+                    ),
+                    transport_counters=transport_counters,
                 )
             finally:
                 try:
@@ -729,8 +888,300 @@ class RuntimeConformanceRunner:
                         if lease is not None and cleanup is None:
                             selected_backend.cleanup(lease)
                     finally:
+                        if event_journal is not None:
+                            event_journal.close()
                         ledger.close()
                         lease_store.close()
+
+
+def _transport_counter_differences(
+    transport_name: str,
+    counters: dict[str, object],
+) -> tuple[str, ...]:
+    if transport_name != "mcp-stdio":
+        return () if counters == {} else ("$.transport_counters",)
+    expected = {
+        "initialize_count": 1,
+        "tools_list_count": 1,
+        "tools_call_count": 6,
+        "protocol_error_count": 0,
+        "server_terminal_status": "client_closed",
+    }
+    differences: list[str] = []
+    _difference_paths(expected, counters, "$.transport_counters", differences)
+    return tuple(sorted(set(differences)))
+
+
+def _run_mcp_stdio_steps(
+    root: Path,
+    *,
+    action_client,
+    steps: tuple[tuple[str, dict[str, object]], ...],
+) -> tuple[list[dict[str, object]], dict[str, object]]:
+    from op_bench.runtime.contracts import ActionObservation
+    from op_bench.runtime.mcp import McpAdapterTrace, canonical_mcp_tools
+    from op_bench.runtime.mcp_stdio import render_mcp_stdio_launcher
+    from op_bench.runtime.process_actions import ProcessActionExchange
+    from op_bench.runtime.process_group import run_process_group
+
+    launcher = root / "opbench_mcp_server.py"
+    trace_path = root / "mcp_trace.json"
+    transport_token = "c" * 64
+    exchange = ProcessActionExchange(
+        action_client=action_client,
+        session_id="session-conformance-v1",
+        exchange_root=root / "mcp-action-exchange",
+        timeout_ms=10_000,
+        transport_token=transport_token,
+    )
+    exchange.start()
+    try:
+        launcher.write_text(
+            render_mcp_stdio_launcher(canonical_mcp_tools()),
+            encoding="utf-8",
+        )
+        launcher.chmod(0o700)
+        messages: list[dict[str, object]] = [
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": "2025-06-18",
+                    "capabilities": {},
+                    "clientInfo": {"name": "opbench-conformance", "version": "v1"},
+                },
+            },
+            {"jsonrpc": "2.0", "method": "notifications/initialized"},
+            {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}},
+        ]
+        messages.extend(
+            {
+                "jsonrpc": "2.0",
+                "id": index,
+                "method": "tools/call",
+                "params": {"name": name, "arguments": arguments},
+            }
+            for index, (name, arguments) in enumerate(steps, start=3)
+        )
+        token_descriptor, token_writer = os.pipe()
+        try:
+            os.write(token_writer, transport_token.encode("ascii"))
+        finally:
+            os.close(token_writer)
+        try:
+            result = run_process_group(
+                (
+                    sys.executable,
+                    "-I",
+                    str(launcher),
+                    "--action-client",
+                    str(exchange.client_path),
+                    "--python-executable",
+                    sys.executable,
+                    "--trace-path",
+                    str(trace_path),
+                    "--model-id",
+                    "conformance-model-v1",
+                    "--codex-cli-version",
+                    "conformance-cli-v1",
+                    "--bridge-token-fd",
+                    str(token_descriptor),
+                ),
+                cwd=root,
+                env={
+                    "PATH": os.environ.get("PATH", ""),
+                    "LANG": "C.UTF-8",
+                    "LC_ALL": "C.UTF-8",
+                },
+                timeout_ms=30_000,
+                input_text="".join(
+                    f"{canonical_json(message)}\n" for message in messages
+                ),
+                pass_fds=(token_descriptor,),
+            )
+        finally:
+            os.close(token_descriptor)
+    finally:
+        exchange.close()
+    if result.terminal_status != "completed" or result.returncode != 0:
+        raise ContractError("mcp-stdio conformance subprocess failed")
+    try:
+        responses = [json.loads(line) for line in result.stdout.splitlines()]
+    except ValueError:
+        raise ContractError("mcp-stdio conformance returned invalid JSON") from None
+    if len(responses) != len(steps) + 2 or any(
+        not isinstance(response, dict) or "error" in response
+        for response in responses
+    ):
+        raise ContractError("mcp-stdio conformance returned an RPC error")
+    if responses[0].get("id") != 1 or responses[1].get("id") != 2:
+        raise ContractError("mcp-stdio conformance response ordering changed")
+    expected_tools = [tool.to_dict() for tool in canonical_mcp_tools()]
+    if responses[1].get("result") != {"tools": expected_tools}:
+        raise ContractError("mcp-stdio conformance tool registry changed")
+
+    actions: list[dict[str, object]] = []
+    for (action_name, _), response in zip(steps, responses[2:]):
+        result_payload = response.get("result")
+        if not isinstance(result_payload, dict):
+            raise ContractError("mcp-stdio conformance tool result is missing")
+        observation = ActionObservation.from_dict(
+            result_payload.get("structuredContent")
+        ).to_dict()
+        if result_payload.get("isError") is not (not observation["ok"]):
+            raise ContractError("mcp-stdio conformance error flag is inconsistent")
+        content = result_payload.get("content")
+        if (
+            not isinstance(content, list)
+            or len(content) != 1
+            or not isinstance(content[0], dict)
+            or content[0].get("text") != canonical_json(observation)
+        ):
+            raise ContractError("mcp-stdio conformance text result is inconsistent")
+        actions.append(
+            {
+                "action_id": observation["action_id"],
+                "action_name": action_name,
+                "observation": observation,
+            }
+        )
+    if exchange.server_failure is not None:
+        raise ContractError("mcp-stdio conformance action exchange failed")
+    if exchange.observation_count != len(steps) or exchange.finish_count != 1:
+        raise ContractError("mcp-stdio conformance action counts changed")
+    try:
+        encoded_trace = trace_path.read_bytes()
+        trace = McpAdapterTrace.from_dict(json.loads(encoded_trace))
+    except (OSError, ValueError, ContractError):
+        raise ContractError("mcp-stdio conformance trace is invalid") from None
+    if encoded_trace != (canonical_json(trace.to_dict()) + "\n").encode("utf-8"):
+        raise ContractError("mcp-stdio conformance trace is not canonical")
+    return actions, {
+        "initialize_count": trace.initialize_count,
+        "tools_list_count": trace.tools_list_count,
+        "tools_call_count": trace.tools_call_count,
+        "protocol_error_count": trace.protocol_error_count,
+        "server_terminal_status": trace.server_terminal_status,
+    }
+
+
+def _semantic_event_sequence(exchanges, records) -> tuple[dict[str, object], ...]:
+    action_ids = [exchange.request.action_id for exchange in exchanges]
+    if len(action_ids) != len(set(action_ids)):
+        raise ContractError("conformance events contain duplicate Action IDs")
+    indices = {action_id: index for index, action_id in enumerate(action_ids, start=1)}
+    requested: dict[str, int] = {action_id: 0 for action_id in action_ids}
+    observed: dict[str, int] = {action_id: 0 for action_id in action_ids}
+    projected: list[dict[str, object]] = []
+    selected_types = {
+        "finish_requested",
+        "action_requested",
+        "test_started",
+        "action_observed",
+        "test_completed",
+        "budget_updated",
+    }
+    for record in records:
+        if record.event_type not in selected_types:
+            continue
+        payload = record.to_dict()["public_payload"]
+        action_id = payload.get("action_id")
+        if action_id not in indices:
+            raise ContractError("conformance event is not paired to an Action")
+        if record.event_type == "action_requested":
+            requested[action_id] += 1
+        elif record.event_type == "action_observed":
+            observed[action_id] += 1
+        item: dict[str, object] = {
+            "event_type": record.event_type,
+            "action_index": indices[action_id],
+        }
+        for key in (
+            "action_name",
+            "ok",
+            "error_code",
+            "budget_delta",
+            "mutation_state",
+        ):
+            if key in payload:
+                item[key] = payload[key]
+        projected.append(item)
+    if any(count != 1 for count in requested.values()) or any(
+        count != 1 for count in observed.values()
+    ):
+        raise ContractError("conformance event request/observation pairing changed")
+    return tuple(projected)
+
+
+def _workspace_tree(workspace) -> tuple[dict[str, object], ...]:
+    entries = workspace.list_entries(
+        "src",
+        recursive=True,
+        max_entries=1_000,
+        max_depth=32,
+    )
+    result: list[dict[str, object]] = []
+    for entry in entries:
+        if entry.entry_type != "file":
+            continue
+        read = workspace.read(entry.path)
+        result.append(
+            {
+                "path": entry.path,
+                "mode": read.mode,
+                "size_bytes": len(read.content),
+                "content_sha256": "sha256:" + hashlib.sha256(read.content).hexdigest(),
+            }
+        )
+    return tuple(sorted(result, key=lambda item: item["path"]))
+
+
+def initialize_builtin_conformance_fixture(root: Path) -> Path:
+    if not isinstance(root, Path) or root.exists() or root.is_symlink():
+        raise ContractError("built-in fixture root must be a new Path")
+    root.mkdir(parents=True)
+    (root / "src").mkdir()
+    (root / "tests").mkdir()
+    (root / "src" / "operator.py").write_text("VALUE = 1\n", encoding="utf-8")
+    (root / "src" / "helper.py").write_text(
+        "def helper():\n    return 1\n",
+        encoding="utf-8",
+    )
+    (root / "tests" / "test_operator.py").write_text(
+        "def test_operator():\n    assert True\n",
+        encoding="utf-8",
+    )
+    git_env = {
+        **_git_environment(),
+        "GIT_AUTHOR_DATE": "2026-07-20T00:00:00Z",
+        "GIT_COMMITTER_DATE": "2026-07-20T00:00:00Z",
+    }
+    prefix = (
+        "git",
+        "-c",
+        "core.autocrlf=false",
+        "-c",
+        "user.name=OpBench Conformance",
+        "-c",
+        "user.email=opbench@example.invalid",
+        "-C",
+        str(root),
+    )
+    for arguments in (
+        ("init", "--quiet", "--initial-branch=main"),
+        ("add", "--all"),
+        ("commit", "--quiet", "-m", "conformance fixture"),
+    ):
+        subprocess.run(
+            (*prefix, *arguments),
+            check=True,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=git_env,
+        )
+    return root
 
 
 def _git_head(repository: Path) -> str:
@@ -776,9 +1227,11 @@ __all__ = [
     "CONFORMANCE_IGNORED_FIELDS_V1",
     "ConformanceComparison",
     "ConformanceEntry",
+    "ConformanceExecution",
     "ConformanceRunReport",
     "ConformanceSnapshot",
     "RuntimeConformanceRunner",
     "compare_conformance_snapshots",
+    "initialize_builtin_conformance_fixture",
     "normalize_conformance_snapshot",
 ]

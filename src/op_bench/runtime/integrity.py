@@ -30,6 +30,7 @@ from op_bench.runtime.evaluation import (
 )
 from op_bench.runtime.events import verify_action_pairing, verify_event_chain
 from op_bench.runtime.manifest import RunManifest
+from op_bench.runtime.mcp import MCP_PROTOCOL_VERSIONS, McpAdapterTrace
 from op_bench.runtime.resume import (
     AttemptLedger,
     AttemptLedgerRecord,
@@ -380,6 +381,31 @@ class _IntegrityState:
         )
         return SessionResult.from_dict(payload, path="session_result.json")
 
+    def agent_spec(self, attempt_id: str):
+        expected = self.expected[attempt_id]
+        return next(
+            agent for agent in self.manifest.agents if agent.agent == expected.agent
+        )
+
+    def adapter_trace(
+        self,
+        attempt_id: str,
+        retry_index: int,
+    ) -> McpAdapterTrace | None:
+        raw = self.reader.retry_file_optional(
+            attempt_id,
+            retry_index,
+            "adapter_trace.json",
+        )
+        if raw is None:
+            return None
+        payload = _canonical_json_object(
+            raw,
+            "adapter_trace.json",
+            public=True,
+        )
+        return McpAdapterTrace.from_dict(payload)
+
     def events(self, attempt_id: str, retry_index: int) -> tuple[EventRecord, ...]:
         raw = self.reader.retry_file(attempt_id, retry_index, "events.jsonl")
         payloads = _canonical_json_lines(raw, "events.jsonl", public=True)
@@ -690,6 +716,14 @@ def _check_lifecycle(state: _IntegrityState) -> _CheckEvidence:
             attempt_id,
             retry_index,
         )
+        _verify_adapter_trace(
+            state,
+            attempt_id,
+            retry_index,
+            records,
+            session,
+            public_result,
+        )
         by_type = {record.event_type: record for record in records}
         session_terminal = by_type["session_terminal_emitted"].public_payload
         started = by_type["evaluation_started"].public_payload
@@ -727,6 +761,78 @@ def _check_lifecycle(state: _IntegrityState) -> _CheckEvidence:
         ):
             raise ContractError("final terminal binding mismatch")
     return _CheckEvidence("session, evaluation, and final terminals are bound")
+
+
+def _verify_adapter_trace(
+    state: _IntegrityState,
+    attempt_id: str,
+    retry_index: int,
+    records: Sequence[EventRecord],
+    session: SessionResult,
+    result: EvaluationResultV06,
+) -> None:
+    agent = state.agent_spec(attempt_id)
+    trace = state.adapter_trace(attempt_id, retry_index)
+    if agent.adapter.identifier != "codex_mcp_canonical":
+        if trace is not None:
+            raise ContractError("adapter trace is forbidden for a non-MCP Adapter")
+        return
+    if trace is None:
+        if result.attempt_validity == "valid":
+            raise ContractError("MCP adapter trace is missing for a valid Attempt")
+        return
+
+    if trace.adapter_id != agent.adapter.identifier:
+        raise ContractError("MCP adapter identity mismatch")
+    if trace.model_id != agent.model.identifier:
+        raise ContractError("MCP model identity mismatch")
+    expected_agent_digest = canonical_sha256(
+        {
+            "adapter_id": trace.adapter_id,
+            "model_id": trace.model_id,
+            "codex_cli_version": trace.codex_cli_version,
+        }
+    )
+    expected_model_digest = canonical_sha256(
+        {
+            "adapter_id": trace.adapter_id,
+            "model_id": trace.model_id,
+        }
+    )
+    expected_adapter_digest = canonical_sha256(
+        {
+            "protocol": "action-v1",
+            "transport": "mcp-stdio",
+            "mcp_protocol_versions": list(MCP_PROTOCOL_VERSIONS),
+            "codex_cli_version": trace.codex_cli_version,
+        }
+    )
+    if agent.agent.digest != expected_agent_digest:
+        raise ContractError("MCP Agent identity does not bind adapter metadata")
+    if agent.model.digest != expected_model_digest:
+        raise ContractError("MCP model digest does not bind exact model")
+    if agent.adapter.digest != expected_adapter_digest:
+        raise ContractError("MCP Adapter digest does not bind exact CLI/protocol")
+
+    action_requests = [
+        record for record in records if record.event_type == "action_requested"
+    ]
+    if trace.tools_call_count != len(action_requests):
+        raise ContractError("MCP tool-call count does not match Action trace")
+    if result.attempt_validity == "valid" and (
+        trace.initialize_count != 1
+        or trace.tools_list_count < 1
+        or trace.negotiated_protocol_version not in MCP_PROTOCOL_VERSIONS
+    ):
+        raise ContractError("MCP initialization metadata is incomplete")
+    if session.terminal_reason == "agent_finished" and (
+        trace.server_terminal_status not in {"completed", "client_closed"}
+    ):
+        raise ContractError("MCP server terminal does not match Agent finish")
+    if session.terminal_reason == "timeout" and (
+        trace.server_terminal_status not in {"terminated", "killed"}
+    ):
+        raise ContractError("MCP server terminal does not match Agent timeout")
 
 
 def _check_runtime_resource_ownership(

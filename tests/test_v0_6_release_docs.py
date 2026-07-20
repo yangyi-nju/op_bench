@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 README_FILES = (ROOT / "README.md", ROOT / "README.zh-CN.md")
 INDEX_FILES = (ROOT / "docs" / "README.md", ROOT / "docs" / "README.zh-CN.md")
 GUIDE = ROOT / "docs" / "v0.6" / "developer_guide.md"
+MCP_EXPERIMENT = ROOT / "docs" / "v0.6" / "mcp_agent_experiment.md"
 M7_VERIFICATION = ROOT / "docs" / "v0.6" / "m7_verification.md"
 DEMO_ARTIFACT = (
     ROOT / "configs" / "examples" / "v0.6_scripted_demo_artifact.example.json"
@@ -29,6 +30,7 @@ class V06ReleaseDocumentationTests(unittest.TestCase):
             GUIDE,
             RELEASE_NOTES,
             M7_VERIFICATION,
+            MCP_EXPERIMENT,
         ):
             text = document.read_text(encoding="utf-8")
             for raw_target in LINK_PATTERN.findall(text):
@@ -121,6 +123,48 @@ class V06ReleaseDocumentationTests(unittest.TestCase):
         ):
             with self.subTest(fragment=fragment):
                 self.assertIn(fragment, text)
+
+    def test_real_mcp_experiment_guide_freezes_usage_and_safety_boundaries(self) -> None:
+        for document in (ROOT / "README.md", GUIDE, MCP_EXPERIMENT):
+            text = document.read_text(encoding="utf-8")
+            for fragment in (
+                "codex_mcp_canonical",
+                "--codex-model gpt-5.6-sol",
+                "codex-cli 0.145.0-alpha.18",
+                "adapter_trace.json",
+                "14",
+                "Provider",
+                "Task network",
+                "mcp-stdio",
+            ):
+                with self.subTest(document=document.name, fragment=fragment):
+                    self.assertIn(fragment, text)
+
+        experiment = MCP_EXPERIMENT.read_text(encoding="utf-8")
+        for fragment in (
+            "v0.6_mcp_full_20260720_remote_cpu",
+            "v0.6_mcp_full_20260720_remote_cpu_compile",
+            "v0.6_mcp_full_20260720_cuda_overlay",
+            "v0.6_mcp_full_20260720_cuda_kernel",
+            "scripts/summarize_mcp_experiment.py",
+            "--run-root",
+            "retry_infrastructure",
+            "private_runtime_resources.json",
+            "protocol_error_count",
+            "no ping",
+            "no host/service scan",
+            "no process/container enumeration",
+            "no target discovery",
+            "invocation-local",
+            "transport token",
+            "read-only cwd",
+            "hard byte limits",
+            "zero-signal",
+            "Dataset digest",
+            "17-task partition",
+        ):
+            with self.subTest(fragment=fragment):
+                self.assertIn(fragment, experiment)
 
     def test_representative_demo_artifact_is_public_and_path_independent(self) -> None:
         artifact = json.loads(DEMO_ARTIFACT.read_text(encoding="utf-8"))

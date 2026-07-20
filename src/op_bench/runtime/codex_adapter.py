@@ -9,6 +9,8 @@ import tempfile
 
 from op_bench.runtime.adapters import AdapterContext
 from op_bench.runtime.canonical import canonical_json
+from op_bench.runtime.mcp import McpAdapterTrace
+from op_bench.runtime.process_group import run_process_group
 from op_bench.runtime.process_actions import ProcessActionExchange
 from op_bench.runtime.task_view import assert_public_artifact_safe
 from op_bench.runtime.validation import (
@@ -67,7 +69,7 @@ _ENVIRONMENT_ALLOWLIST = (
 )
 
 
-CommandRunner = Callable[..., subprocess.CompletedProcess[str]]
+CommandRunner = Callable[..., object]
 
 
 @dataclass(frozen=True)
@@ -77,6 +79,7 @@ class CodexAdapterResult:
     exit_code: int | None
     observation_count: int
     finish_count: int
+    adapter_trace: McpAdapterTrace | None = None
 
     def __post_init__(self) -> None:
         selected = require_enum(self.status, "status", CODEX_ADAPTER_STATUSES)
@@ -88,6 +91,11 @@ class CodexAdapterResult:
         require_int(self.finish_count, "finish_count", minimum=0)
         if self.finish_count > self.observation_count:
             raise ContractError("finish_count: cannot exceed observation_count")
+        if self.adapter_trace is not None and not isinstance(
+            self.adapter_trace,
+            McpAdapterTrace,
+        ):
+            raise ContractError("adapter_trace: expected McpAdapterTrace")
 
 
 def subprocess_command_runner(
@@ -97,15 +105,24 @@ def subprocess_command_runner(
     env: Mapping[str, str],
     timeout_ms: int,
 ) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
+    exact = run_process_group(
         tuple(argv),
-        cwd=str(cwd),
-        env=dict(env),
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        timeout=timeout_ms / 1000.0,
-        check=False,
+        cwd=cwd,
+        env=env,
+        timeout_ms=timeout_ms,
+    )
+    if exact.terminal_status != "completed":
+        raise subprocess.TimeoutExpired(
+            tuple(argv),
+            timeout_ms / 1000.0,
+            output=exact.stdout,
+            stderr=exact.stderr,
+        )
+    return subprocess.CompletedProcess(
+        tuple(argv),
+        exact.returncode,
+        stdout=exact.stdout,
+        stderr=exact.stderr,
     )
 
 

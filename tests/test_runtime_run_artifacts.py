@@ -10,6 +10,7 @@ from op_bench.runtime.canonical import canonical_json
 from op_bench.runtime.contracts import EvaluationResultV06, TestExecutionSummary
 from op_bench.runtime.evaluation import CompletedEvaluation, PrivateEvaluationEvidence
 from op_bench.runtime.events import EventJournal
+from op_bench.runtime.mcp import McpAdapterTrace
 from op_bench.runtime.resources import (
     AttemptResourceLedger,
     RuntimeCleanupEntry,
@@ -127,6 +128,54 @@ class AttemptArtifactStoreTests(unittest.TestCase):
             evaluation_spec=spec,
         )
         return frozen, artifact, result, completed
+
+    def mcp_trace(self) -> McpAdapterTrace:
+        return McpAdapterTrace(
+            adapter_id="codex_mcp_canonical",
+            model_id="gpt-5.6-sol",
+            codex_cli_version="codex-cli 0.145.0-alpha.18",
+            negotiated_protocol_version="2025-06-18",
+            initialize_count=1,
+            tools_list_count=1,
+            tools_call_count=5,
+            protocol_error_count=0,
+            server_terminal_status="client_closed",
+        )
+
+    def test_adapter_trace_is_canonical_immutable_and_descriptor_bound(self) -> None:
+        trace = self.mcp_trace()
+        self.store.write_adapter_trace(self.expected.attempt_id, trace)
+
+        self.assertEqual(
+            self.store.read_adapter_trace(self.expected.attempt_id),
+            trace,
+        )
+        path = (
+            self.root
+            / "run"
+            / "attempts"
+            / self.expected.attempt_id
+            / "retries"
+            / "retry-0001"
+            / "adapter_trace.json"
+        )
+        self.assertEqual(
+            path.read_bytes(),
+            (canonical_json(trace.to_dict()) + "\n").encode("utf-8"),
+        )
+        self.store.write_adapter_trace(self.expected.attempt_id, trace)
+        with self.assertRaisesRegex(ContractError, "conflicting artifact"):
+            self.store.write_adapter_trace(
+                self.expected.attempt_id,
+                replace(trace, tools_call_count=6),
+            )
+
+        replacement = self.root / "replacement-trace.json"
+        replacement.write_text("{}\n", encoding="utf-8")
+        path.unlink()
+        path.symlink_to(replacement)
+        with self.assertRaisesRegex(ContractError, "regular file"):
+            self.store.read_adapter_trace(self.expected.attempt_id)
 
     def write_complete_attempt(self):
         frozen, artifact, result, completed = self.attempt_inputs()

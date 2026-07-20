@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -27,6 +28,7 @@ from __future__ import annotations
 import argparse
 import fcntl
 import hashlib
+import hmac
 import json
 import os
 import stat
@@ -43,6 +45,7 @@ DEADLINE_MS = __DEADLINE_MS__
 ROOT_IDENTITY = __ROOT_IDENTITY__
 REQUEST_IDENTITY = __REQUEST_IDENTITY__
 RESPONSE_IDENTITY = __RESPONSE_IDENTITY__
+TRANSPORT_TOKEN_DIGEST = __TRANSPORT_TOKEN_DIGEST__
 STATE_FILENAME = "client_sequence.json"
 LOCK_FILENAME = "client_sequence.lock"
 COMMANDS = (
@@ -281,6 +284,11 @@ def _invoke(request):
 
 
 def main():
+    if TRANSPORT_TOKEN_DIGEST is not None:
+        token = os.environ.get("OPBENCH_ACTION_TRANSPORT_TOKEN", "")
+        observed = hashlib.sha256(token.encode("utf-8")).hexdigest()
+        if not hmac.compare_digest(observed, TRANSPORT_TOKEN_DIGEST):
+            raise RuntimeError("action transport authentication failed")
     parser = argparse.ArgumentParser(prog="opbench_action.py")
     subparsers = parser.add_subparsers(dest="command", required=True)
     for command in COMMANDS:
@@ -394,6 +402,7 @@ class ProcessActionExchange:
         session_id: str,
         exchange_root: Path,
         timeout_ms: int,
+        transport_token: str | None = None,
     ) -> None:
         if not isinstance(action_client, AdapterActionClient):
             raise ContractError("action_client: expected AdapterActionClient")
@@ -405,6 +414,13 @@ class ProcessActionExchange:
             raise ContractError("exchange_root: expected absolute path")
         self.exchange_root = exchange_root
         self.timeout_ms = require_int(timeout_ms, "timeout_ms", minimum=1)
+        if transport_token is None:
+            self._transport_token_digest = None
+        else:
+            selected_token = require_str(transport_token, "transport_token")
+            self._transport_token_digest = hashlib.sha256(
+                selected_token.encode("utf-8")
+            ).hexdigest()
         self.request_directory = exchange_root / _REQUEST_DIRECTORY
         self.response_directory = exchange_root / _RESPONSE_DIRECTORY
         self.client_path = exchange_root / _CLIENT_FILENAME
@@ -452,6 +468,10 @@ class ProcessActionExchange:
             .replace("__ROOT_IDENTITY__", repr(root_identity))
             .replace("__REQUEST_IDENTITY__", repr(self._request_identity))
             .replace("__RESPONSE_IDENTITY__", repr(self._response_identity))
+            .replace(
+                "__TRANSPORT_TOKEN_DIGEST__",
+                repr(self._transport_token_digest),
+            )
         )
         descriptor = os.open(
             self.client_path,

@@ -14,6 +14,7 @@ from op_bench.runtime.backends import (
 )
 from op_bench.runtime.codex_adapter import CodexAdapterResult
 from op_bench.runtime.integrity import verify_run_artifacts
+from op_bench.runtime.process_group import ProcessGroupCleanupError
 from op_bench.runtime.resume import AttemptLedger
 from op_bench.runtime.workspace import WorkspacePolicyError
 from tests.runtime_orchestrator_fixture import (
@@ -89,7 +90,43 @@ class InterruptingAdapter:
         raise KeyboardInterrupt()
 
 
+class CleanupUncertainAdapter:
+    def run(self, context):
+        raise ProcessGroupCleanupError(
+            "exact process group cleanup did not converge",
+            process_group_id=6767,
+        )
+
+
 class V06OrchestratorFailureTests(unittest.TestCase):
+    def test_process_group_cleanup_uncertainty_is_durable_then_propagated(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            fixture = build_orchestrator_fixture(Path(temporary))
+            phases: list[str] = []
+
+            def backend_factory(profile, target, phase):
+                phases.append(phase)
+                return LocalProcessBackend()
+
+            with self.assertRaises(ProcessGroupCleanupError) as raised:
+                orchestrator_for(
+                    fixture,
+                    backend_factory=backend_factory,
+                    adapter=CleanupUncertainAdapter(),
+                ).run(request_for(fixture))
+
+            self.assertEqual(raised.exception.process_group_id, 6767)
+            ledger = AttemptLedger(fixture.output_root / "attempts.jsonl")
+            try:
+                records = ledger.records(fixture.expected.attempt_id)
+            finally:
+                ledger.close()
+            self.assertEqual(len(records), 1)
+            self.assertEqual(records[0].retry_index, 1)
+            self.assertEqual(records[0].attempt_validity, "infrastructure_invalid")
+            self.assertEqual(records[0].session_result.terminal_reason, "runtime_error")
+            self.assertEqual(phases, ["agent"])
+
     def test_keyboard_interrupt_is_durable_and_next_run_retries(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             fixture = build_orchestrator_fixture(Path(temporary))
