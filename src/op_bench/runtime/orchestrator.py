@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
+from contextlib import ExitStack
 from dataclasses import dataclass
 from pathlib import Path
 import shlex
@@ -10,6 +11,7 @@ from op_bench.runtime.actions import (
     RegisteredTest,
 )
 from op_bench.runtime.adapters import AdapterActionChannel, AdapterContext
+from op_bench.runtime.artifacts import PublicArtifactStore
 from op_bench.runtime.backends import (
     RuntimeAttemptContext,
     RuntimeBackend,
@@ -282,44 +284,61 @@ class V06Orchestrator:
         hidden_asset = self._hidden_asset_resolver(task)
         self._validate_private_inputs(task, source, hidden_asset)
 
-        resource_ledger = AttemptResourceLedger(
-            store.runtime_resources_path(
-                expected.attempt_id,
+        construction_cleanup = ExitStack()
+        try:
+            resource_ledger = AttemptResourceLedger(
+                store.runtime_resources_path(
+                    expected.attempt_id,
+                    retry_index=retry_index,
+                ),
+                attempt_id=expected.attempt_id,
                 retry_index=retry_index,
-            ),
-            attempt_id=expected.attempt_id,
-            retry_index=retry_index,
-            runtime_profile_hash=profile.content_hash,
-            clock_ms=request.clock_ms,
-        )
-        lease_store = RuntimeLeaseStore(
-            store.private_runtime_resources_path(
-                expected.attempt_id,
+                runtime_profile_hash=profile.content_hash,
+                clock_ms=request.clock_ms,
+            )
+            construction_cleanup.callback(resource_ledger.close)
+            lease_store = RuntimeLeaseStore(
+                store.private_runtime_resources_path(
+                    expected.attempt_id,
+                    retry_index=retry_index,
+                ),
+                attempt_id=expected.attempt_id,
                 retry_index=retry_index,
-            ),
-            attempt_id=expected.attempt_id,
-            retry_index=retry_index,
-            runtime_profile_hash=profile.content_hash,
-        )
-        attempt_context = RuntimeAttemptContext(
-            attempt_id=expected.attempt_id,
-            retry_index=retry_index,
-            runtime_profile_hash=profile.content_hash,
-            frozen_source_directory=source.repository,
-            frozen_source_revision=source.revision,
-            resource_ledger=resource_ledger,
-            lease_store=lease_store,
-            target_binding=request.target_binding,
-        )
-        session_id = _session_id(expected.attempt_id, retry_index)
-        journal = EventJournal(
-            session_id,
-            clock_ms=request.clock_ms,
-            events_path=store.events_path(
-                expected.attempt_id,
+                runtime_profile_hash=profile.content_hash,
+            )
+            construction_cleanup.callback(lease_store.close)
+            attempt_context = RuntimeAttemptContext(
+                attempt_id=expected.attempt_id,
                 retry_index=retry_index,
-            ),
-        )
+                runtime_profile_hash=profile.content_hash,
+                frozen_source_directory=source.repository,
+                frozen_source_revision=source.revision,
+                resource_ledger=resource_ledger,
+                lease_store=lease_store,
+                target_binding=request.target_binding,
+            )
+            session_id = _session_id(expected.attempt_id, retry_index)
+            action_artifacts = PublicArtifactStore(
+                store.action_artifacts_path(
+                    expected.attempt_id,
+                    retry_index=retry_index,
+                )
+            )
+            construction_cleanup.callback(action_artifacts.close)
+            journal = EventJournal(
+                session_id,
+                clock_ms=request.clock_ms,
+                events_path=store.events_path(
+                    expected.attempt_id,
+                    retry_index=retry_index,
+                ),
+                artifact_store=action_artifacts,
+            )
+            construction_cleanup.callback(journal.close)
+        except BaseException:
+            construction_cleanup.close()
+            raise
+        attempt_resource_cleanup = construction_cleanup.pop_all()
         agent_backend: RuntimeBackend | None = None
         agent_lease = None
         workspace: AuthoritativeWorkspace | None = None
@@ -564,9 +583,7 @@ class V06Orchestrator:
                     cleanup_report = agent_backend.cleanup(agent_lease).report
                 except Exception:
                     pass
-            journal.close()
-            resource_ledger.close()
-            lease_store.close()
+            attempt_resource_cleanup.close()
 
     def _complete_pre_session_failure(
         self,

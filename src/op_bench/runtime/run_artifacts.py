@@ -160,6 +160,14 @@ class AttemptArtifactStore:
     ) -> Path:
         return self._retry_path(attempt_id, retry_index, "runtime_resources.jsonl")
 
+    def action_artifacts_path(
+        self,
+        attempt_id: str,
+        *,
+        retry_index: int = 1,
+    ) -> Path:
+        return self._retry_path(attempt_id, retry_index, "action_artifacts")
+
     def private_runtime_resources_path(
         self,
         attempt_id: str,

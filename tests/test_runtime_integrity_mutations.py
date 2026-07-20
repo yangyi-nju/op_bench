@@ -750,6 +750,22 @@ class RuntimeIntegrityMutationTests(unittest.TestCase):
             self.assertEqual(checks["action_pairing"].status, "passed")
             self.assertEqual(checks["lifecycle_terminal"].status, "failed")
 
+    def test_action_observation_rejects_both_inline_and_artifact_fields(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            complete = build_complete_run(Path(tmp) / "run")
+            update_event_payload_and_rechain(
+                complete,
+                "action_observed",
+                {"data_artifact": None},
+                action_id="test-action-1",
+            )
+
+            report = verify_run_artifacts(complete.root, complete.manifest)
+            checks = {check.check_id: check for check in report.checks}
+
+            self.assertEqual(checks["event_chain"].status, "passed")
+            self.assertEqual(checks["lifecycle_terminal"].status, "failed")
+
     def test_action_auxiliary_payloads_bind_the_observation(self) -> None:
         for name, event_type, updates in (
             (

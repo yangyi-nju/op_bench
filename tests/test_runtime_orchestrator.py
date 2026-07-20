@@ -285,6 +285,15 @@ class V06OrchestratorTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             git_fixture = initialize_evaluation_git_fixture(root / "source")
+            calc_path = git_fixture.repository / "calc.py"
+            calc_path.write_text(
+                calc_path.read_text(encoding="utf-8")
+                + "\n# Public source padding for large Action data.\n"
+                + "# "
+                + "x" * 5_000
+                + "\n",
+                encoding="utf-8",
+            )
             (git_fixture.repository / "test_public.py").write_text(
                 "import unittest\n\n"
                 "from calc import normalize\n\n"
@@ -293,7 +302,7 @@ class V06OrchestratorTests(unittest.TestCase):
                 "        self.assertEqual(normalize(1), 1)\n",
                 encoding="utf-8",
             )
-            git(git_fixture.repository, "add", "test_public.py")
+            git(git_fixture.repository, "add", "calc.py", "test_public.py")
             git(git_fixture.repository, "commit", "--quiet", "-m", "add public test")
             revision = git(
                 git_fixture.repository,
@@ -418,7 +427,7 @@ class V06OrchestratorTests(unittest.TestCase):
 
             self.assertEqual(first.ran_attempt_ids, (expected.attempt_id,))
             self.assertEqual(first.skipped_attempt_ids, ())
-            self.assertEqual(first.integrity.status, "passed")
+            self.assertEqual(first.integrity.status, "passed", first.integrity)
             self.assertEqual(adapter.run_count, 1)
             self.assertEqual(backend_phases, ["agent", "evaluation"])
             self.assertEqual(list(workspaces.iterdir()), [])
@@ -431,10 +440,11 @@ class V06OrchestratorTests(unittest.TestCase):
                 / "retry-0001"
                 / "events.jsonl"
             )
-            event_types = [
-                json.loads(line)["event_type"]
+            event_payloads = [
+                json.loads(line)
                 for line in events_path.read_text(encoding="utf-8").splitlines()
             ]
+            event_types = [item["event_type"] for item in event_payloads]
             self.assertEqual(event_types[0:4], [
                 "session_created",
                 "session_prepared",
@@ -452,6 +462,21 @@ class V06OrchestratorTests(unittest.TestCase):
             self.assertEqual(event_types.count("action_observed"), 5)
 
             retry_root = events_path.parent
+            first_observation = next(
+                item
+                for item in event_payloads
+                if item["event_type"] == "action_observed"
+            )
+            reference = first_observation["public_payload"]["data_artifact"]
+            action_artifact = retry_root / "action_artifacts" / reference["artifact_id"]
+            original_action_artifact = action_artifact.read_bytes()
+            self.assertGreater(reference["size_bytes"], 4_096)
+            action_artifact.write_bytes(b"{}")
+            tampered = verify_run_artifacts(output, frozen_manifest)
+            tampered_checks = {item.check_id: item for item in tampered.checks}
+            self.assertEqual(tampered_checks["lifecycle_terminal"].status, "failed")
+            action_artifact.write_bytes(original_action_artifact)
+
             records = parse_runtime_resource_ledger(
                 (retry_root / "runtime_resources.jsonl").read_bytes(),
                 attempt_id=expected.attempt_id,

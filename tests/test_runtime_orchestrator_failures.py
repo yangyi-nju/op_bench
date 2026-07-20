@@ -99,6 +99,75 @@ class CleanupUncertainAdapter:
 
 
 class V06OrchestratorFailureTests(unittest.TestCase):
+    def test_event_journal_construction_failure_closes_owned_attempt_stores(self) -> None:
+        from op_bench.runtime.artifacts import PublicArtifactStore
+        from op_bench.runtime.resources import (
+            AttemptResourceLedger,
+            RuntimeLeaseStore,
+        )
+
+        with tempfile.TemporaryDirectory() as temporary:
+            fixture = build_orchestrator_fixture(Path(temporary))
+            captured: dict[str, object] = {}
+
+            def resource_ledger_factory(*args, **kwargs):
+                instance = AttemptResourceLedger(*args, **kwargs)
+                captured["resource_ledger"] = instance
+                return instance
+
+            def lease_store_factory(*args, **kwargs):
+                instance = RuntimeLeaseStore(*args, **kwargs)
+                captured["lease_store"] = instance
+                return instance
+
+            def artifact_store_factory(*args, **kwargs):
+                instance = PublicArtifactStore(*args, **kwargs)
+                captured["artifact_store"] = instance
+                return instance
+
+            with (
+                mock.patch(
+                    "op_bench.runtime.orchestrator.AttemptResourceLedger",
+                    side_effect=resource_ledger_factory,
+                ),
+                mock.patch(
+                    "op_bench.runtime.orchestrator.RuntimeLeaseStore",
+                    side_effect=lease_store_factory,
+                ),
+                mock.patch(
+                    "op_bench.runtime.orchestrator.PublicArtifactStore",
+                    side_effect=artifact_store_factory,
+                ),
+                mock.patch(
+                    "op_bench.runtime.orchestrator.EventJournal",
+                    side_effect=RuntimeError("fixture journal construction failed"),
+                ),
+                self.assertRaisesRegex(
+                    RuntimeError,
+                    "fixture journal construction failed",
+                ),
+            ):
+                orchestrator_for(
+                    fixture,
+                    backend_factory=lambda profile, target, phase: LocalProcessBackend(),
+                    adapter=PatchAdapter(),
+                ).run(request_for(fixture))
+
+            closed = {
+                name: getattr(instance, "_closed")
+                for name, instance in captured.items()
+            }
+            for instance in captured.values():
+                instance.close()
+            self.assertEqual(
+                closed,
+                {
+                    "resource_ledger": True,
+                    "lease_store": True,
+                    "artifact_store": True,
+                },
+            )
+
     def test_process_group_cleanup_uncertainty_is_durable_then_propagated(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             fixture = build_orchestrator_fixture(Path(temporary))

@@ -10,6 +10,7 @@ import stat
 from typing import Callable, Sequence
 
 from op_bench.runtime.canonical import canonical_json, canonical_sha256
+from op_bench.runtime.artifacts import ArtifactReference
 from op_bench.runtime.contracts import (
     AgentTaskView,
     EvaluationSpec,
@@ -201,6 +202,50 @@ class _ReadOnlyRun:
             return self._read_file(descriptor, name, name, optional=True)
         finally:
             os.close(descriptor)
+
+    def retry_action_artifact(
+        self,
+        attempt_id: str,
+        retry_index: int,
+        value: object,
+    ) -> dict[str, object]:
+        reference = ArtifactReference.from_dict(value)
+        retry_fd = self._open_retry(attempt_id, retry_index)
+        artifacts_fd: int | None = None
+        public_fd: int | None = None
+        try:
+            artifacts_fd = self._open_child_directory(
+                retry_fd,
+                "action_artifacts",
+                "action artifacts directory",
+            )
+            public_fd = self._open_child_directory(
+                artifacts_fd,
+                "public",
+                "action artifacts public directory",
+            )
+            filename = reference.artifact_id.removeprefix("public/")
+            raw = self._read_file(public_fd, filename, "action data artifact")
+        finally:
+            if public_fd is not None:
+                os.close(public_fd)
+            if artifacts_fd is not None:
+                os.close(artifacts_fd)
+            os.close(retry_fd)
+        if len(raw) != reference.size_bytes:
+            raise ContractError("action data artifact size mismatch")
+        if f"sha256:{hashlib.sha256(raw).hexdigest()}" != reference.digest:
+            raise ContractError("action data artifact digest mismatch")
+        try:
+            payload = json.loads(raw.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ContractError("action data artifact: invalid JSON") from exc
+        if not isinstance(payload, dict):
+            raise ContractError("action data artifact: expected object")
+        if canonical_json(payload).encode("utf-8") != raw:
+            raise ContractError("action data artifact: expected canonical JSON")
+        assert_public_artifact_safe(payload)
+        return payload
 
     def _open_attempt(self, attempt_id: str) -> int:
         require_str(attempt_id, "attempt_id")
@@ -421,6 +466,14 @@ class _IntegrityState:
         if any(record.session_id != session_id for record in records):
             raise ContractError("events.jsonl: session_id mismatch")
         return records
+
+    def action_artifact(
+        self,
+        attempt_id: str,
+        retry_index: int,
+        value: object,
+    ) -> dict[str, object]:
+        return self.reader.retry_action_artifact(attempt_id, retry_index, value)
 
     def runtime_profile_hash(self, attempt_id: str) -> str:
         expected = self.expected[attempt_id]
@@ -715,7 +768,13 @@ def _check_lifecycle(state: _IntegrityState) -> _CheckEvidence:
         if positions != expected_positions:
             raise ContractError("lifecycle terminal ordering is invalid")
         session = state.session(attempt_id, retry_index)
-        _verify_runtime_event_grammar(records, session)
+        _verify_runtime_event_grammar(
+            state,
+            attempt_id,
+            retry_index,
+            records,
+            session,
+        )
         public_result, spec_hash, _, public_payload, private_payload = state.evaluations(
             attempt_id,
             retry_index,
@@ -863,6 +922,9 @@ def _check_runtime_cleanup(state: _IntegrityState) -> _CheckEvidence:
 
 
 def _verify_runtime_event_grammar(
+    state: _IntegrityState,
+    attempt_id: str,
+    retry_index: int,
     records: Sequence[EventRecord],
     session: SessionResult,
 ) -> None:
@@ -909,6 +971,16 @@ def _verify_runtime_event_grammar(
         record for record in records if record.event_type == "budget_updated"
     ]
     for action_id, observation in observed.items():
+        has_inline_data = "data" in observation.public_payload
+        has_data_artifact = "data_artifact" in observation.public_payload
+        if has_inline_data and has_data_artifact:
+            raise ContractError("action observation has duplicate data evidence")
+        if has_data_artifact:
+            state.action_artifact(
+                attempt_id,
+                retry_index,
+                observation.public_payload["data_artifact"],
+            )
         matching = [
             record
             for record in budget_events
