@@ -162,6 +162,31 @@ class ProcessGroupRunnerTests(unittest.TestCase):
             self.assertEqual(result.terminal_status, "completed")
             self.assertTrue(wait_for_exact_exit(child_pid))
 
+    def test_normal_parent_exit_allows_descendant_to_flush_before_cleanup(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            trace_path = root / "trace.json"
+            child_source = (
+                "import pathlib, time; time.sleep(0.05); "
+                f"pathlib.Path({str(trace_path)!r}).write_text('trace\\n')"
+            )
+            parent_source = (
+                "import subprocess, sys; "
+                f"subprocess.Popen([sys.executable, '-c', {child_source!r}])"
+            )
+
+            result = self.runner()(
+                (sys.executable, "-c", parent_source),
+                cwd=root,
+                env=minimal_env(),
+                timeout_ms=2_000,
+                terminate_grace_ms=200,
+            )
+
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(result.terminal_status, "completed")
+            self.assertEqual(trace_path.read_text(encoding="utf-8"), "trace\n")
+
     def test_timeout_terminates_only_the_spawned_process_group(self) -> None:
         runner = self.runner()
         with tempfile.TemporaryDirectory() as temporary:
@@ -289,7 +314,7 @@ class ProcessGroupRunnerTests(unittest.TestCase):
             [call.args for call in kill_group.call_args_list],
             [
                 (4545, 0),
-                (4545, signal.SIGTERM),
+                (4545, 0),
                 (4545, 0),
                 (4545, 0),
             ],

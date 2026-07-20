@@ -245,6 +245,8 @@ def _terminate_timed_out_group(
 def _cleanup_lingering_descendants(process_group_id: int, *, grace_ms: int) -> None:
     if not _exact_group_exists(process_group_id):
         return
+    if _wait_for_exact_group_exit(process_group_id, grace_ms):
+        return
     _signal_exact_group(process_group_id, signal.SIGTERM)
     if _wait_for_exact_group_exit(process_group_id, grace_ms):
         return

@@ -74,7 +74,7 @@ PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/run_experiment.py \
   --verified-only \
   --agent codex_mcp_canonical --codex-model gpt-5.6-sol \
   --agent-repeat 1 \
-  --output-dir runs/v0.6_mcp_local_canary_r3 \
+  --output-dir runs/v0.6_mcp_local_canary_r4 \
   --runtime-protocol v1 --runtime-profile local-cpu-process-v1 \
   --enable-external-canary
 
@@ -83,7 +83,7 @@ PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/run_experiment.py \
   --only-tasks pytorch__149693__lazylinear_init \
   --agent codex_mcp_canonical --codex-model gpt-5.6-sol \
   --agent-repeat 1 \
-  --output-dir runs/v0.6_mcp_remote_cpu_canary_r3 \
+  --output-dir runs/v0.6_mcp_remote_cpu_canary_r4 \
   --runtime-protocol v1 \
   --runtime-profile remote-cpu-pytorch-2.6-py311-v1 \
   --target-config configs/remote_hosts.json --enable-external-canary
@@ -108,9 +108,10 @@ durable and the cohort aborts. A private 0600 marker blocks resume until a
 zero-signal check proves that exact recorded PGID absent; no process listing,
 name lookup, or later signal is used.
 
-The first two local canary roots and the focused diagnostic roots are retained
+The first three local canary roots and the focused diagnostic roots are retained
 as immutable infrastructure-invalid evidence from the pre-fix platforms. The
-`r3` roots above are the clean canaries for the final platform identity.
+`r4` Agent canary roots above are the clean canaries for the final platform
+identity.
 
 ## 4. Four formal cohorts
 
