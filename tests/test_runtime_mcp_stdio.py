@@ -371,6 +371,90 @@ class McpStdioProtocolTests(unittest.TestCase):
 
 
 class RenderedMcpLauncherTests(unittest.TestCase):
+    def test_launcher_flushes_trace_when_controller_terminates_after_client_exit(self) -> None:
+        self.assertIsNotNone(mcp_stdio)
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            launcher = root / "opbench_mcp_server.py"
+            action_client = root / "unused_action_client.py"
+            trace_path = root / "mcp_trace.json"
+            launcher.write_text(
+                mcp_stdio.render_mcp_stdio_launcher(canonical_mcp_tools()),
+                encoding="utf-8",
+            )
+            action_client.write_text("raise SystemExit(1)\n", encoding="utf-8")
+            token_descriptor, token_writer = os.pipe()
+            try:
+                os.write(token_writer, b"c" * 64)
+            finally:
+                os.close(token_writer)
+            process = None
+            try:
+                process = subprocess.Popen(
+                    (
+                        sys.executable,
+                        "-I",
+                        str(launcher),
+                        "--action-client",
+                        str(action_client),
+                        "--python-executable",
+                        sys.executable,
+                        "--trace-path",
+                        str(trace_path),
+                        "--model-id",
+                        "gpt-5.6-sol",
+                        "--codex-cli-version",
+                        "codex-cli 0.145.0-alpha.18",
+                        "--bridge-token-fd",
+                        str(token_descriptor),
+                    ),
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    env={"PATH": os.environ.get("PATH", "")},
+                    pass_fds=(token_descriptor,),
+                )
+            finally:
+                os.close(token_descriptor)
+            self.assertIsNotNone(process.stdin)
+            self.assertIsNotNone(process.stdout)
+            self.assertIsNotNone(process.stderr)
+            initialize = request(
+                1,
+                "initialize",
+                {
+                    "protocolVersion": "2025-06-18",
+                    "capabilities": {},
+                    "clientInfo": {"name": "fixture", "version": "1"},
+                },
+            )
+            process.stdin.write(canonical_json(initialize) + "\n")
+            process.stdin.write(canonical_json(request(2, "tools/list", {})) + "\n")
+            process.stdin.flush()
+            responses = [
+                json.loads(process.stdout.readline()),
+                json.loads(process.stdout.readline()),
+            ]
+            try:
+                process.terminate()
+                returncode = process.wait(timeout=5)
+            finally:
+                if process.poll() is None:
+                    process.kill()
+                    process.wait(timeout=5)
+                process.stdin.close()
+                process.stdout.close()
+                stderr = process.stderr.read()
+                process.stderr.close()
+
+            self.assertEqual([item["id"] for item in responses], [1, 2])
+            self.assertEqual(returncode, 0, stderr)
+            trace = McpAdapterTrace.from_dict(json.loads(trace_path.read_text()))
+            self.assertEqual(trace.initialize_count, 1)
+            self.assertEqual(trace.tools_list_count, 1)
+            self.assertEqual(trace.server_terminal_status, "client_closed")
+
     def test_launcher_stops_a_continuously_overflowing_action_bridge(self) -> None:
         self.assertIsNotNone(mcp_stdio)
         with tempfile.TemporaryDirectory() as temporary:

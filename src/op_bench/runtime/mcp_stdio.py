@@ -253,6 +253,7 @@ import argparse
 import json
 import os
 import selectors
+import signal
 import subprocess
 import sys
 import uuid
@@ -276,6 +277,15 @@ class RpcError(Exception):
         super().__init__(message)
         self.code = code
         self.message = message
+
+
+class ClientClosed(Exception):
+    pass
+
+
+def handle_client_closed(selected_signal, frame):
+    del selected_signal, frame
+    raise ClientClosed()
 
 
 def canonical(value):
@@ -495,6 +505,7 @@ def main():
     parser.add_argument("--bridge-token-fd", required=True, type=int)
     args = parser.parse_args()
     args.bridge_token = read_bridge_token(args.bridge_token_fd)
+    signal.signal(signal.SIGTERM, handle_client_closed)
 
     negotiated = None
     initialize_count = 0
@@ -571,6 +582,9 @@ def main():
                     break
                 continue
             write_response(response(selected_id, result))
+    except ClientClosed:
+        terminal = "client_closed"
+        return_code = 0
     except BaseException:
         terminal = "protocol_failed"
         sys.stderr.write("MCP server failed\n")
