@@ -551,6 +551,30 @@ class RsyncAndRemoteCleanupFailureArgvRunner(RecordingArgvRunner):
         return result
 
 
+class TransientRsyncFailureArgvRunner(RecordingArgvRunner):
+    def __init__(self) -> None:
+        super().__init__()
+        self.rsync_attempts = 0
+
+    def __call__(
+        self,
+        command: tuple[str, ...],
+        cwd: Path | None,
+        timeout_ms: int,
+    ):
+        result = super().__call__(command, cwd, timeout_ms)
+        if command[0] != "rsync-fixture":
+            return result
+        self.rsync_attempts += 1
+        if self.rsync_attempts < 3:
+            return replace(
+                result,
+                exit_code=255,
+                stderr="transient ssh transport interruption",
+            )
+        return result
+
+
 class TransientRemoteCleanupFailureArgvRunner(RecordingArgvRunner):
     def __init__(self) -> None:
         super().__init__()
@@ -867,6 +891,50 @@ class ContainerBackendCommandTests(unittest.TestCase):
             }
             self.assertEqual(final["workspace"], "released")
             self.assertEqual(final["remote_workspace"], "cleanup_failed")
+
+    def test_remote_prepare_continues_partial_sync_after_transient_transport_failures(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspaces = root / "workspaces"
+            workspaces.mkdir()
+            identity_file = root / "id_fixture"
+            identity_file.write_text("fixture", encoding="utf-8")
+            profile = self.profile("remote_docker")
+            binding = RuntimeTargetBinding(
+                backend="remote_docker",
+                local_workspace_parent=workspaces,
+                host_alias="gpu-exact-fixture",
+                remote_user="runner",
+                identity_file=identity_file,
+                docker_binary="docker-fixture",
+                ssh_binary="ssh-fixture",
+                rsync_binary="rsync-fixture",
+            )
+            fixture = LocalBackendFixture(root, profile=profile, binding=binding)
+            runner = TransientRsyncFailureArgvRunner()
+            backend = RemoteDockerRuntimeBackend(argv_runner=runner)
+
+            lease = backend.prepare(profile, fixture.context)
+
+            sync_commands = [
+                command
+                for command, _, _ in runner.calls
+                if command[0] == "rsync-fixture"
+            ]
+            self.assertEqual(runner.rsync_attempts, 3)
+            self.assertEqual(len(sync_commands), 3)
+            self.assertEqual(sync_commands[0], sync_commands[1])
+            self.assertEqual(sync_commands[1], sync_commands[2])
+            self.assertIn("--partial", sync_commands[0])
+            self.assertFalse(
+                any(
+                    command[0] == "ssh-fixture" and "rm -rf --" in command[-1]
+                    for command, _, _ in runner.calls
+                )
+            )
+            self.assertTrue(backend.cleanup(lease).report.all_released)
 
     def test_docker_process_store_failure_never_executes_container_process(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

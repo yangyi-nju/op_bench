@@ -41,6 +41,7 @@ from op_bench.runtime.validation import (
 
 
 _BACKENDS = ("local", "docker", "remote_docker", "scripted")
+_REMOTE_SYNC_MAX_ATTEMPTS = 3
 
 
 class RuntimeBackendUnavailable(Exception):
@@ -1102,18 +1103,14 @@ class RemoteDockerRuntimeBackend(LocalProcessBackend):
                     remote_record.resource_id,
                     remote_handle.raw_handle_hash,
                 )
-                synced = self._argv_runner(
-                    _rsync_command(
-                        binding,
-                        workspace,
-                        remote_path,
-                        exclude_root_ccache=seed_remote_ccache,
-                    ),
-                    None,
-                    profile.timeout_ms,
+                _sync_remote_workspace(
+                    binding,
+                    workspace,
+                    remote_path,
+                    exclude_root_ccache=seed_remote_ccache,
+                    argv_runner=self._argv_runner,
+                    timeout_ms=profile.timeout_ms,
                 )
-                if synced.exit_code != 0 or synced.timed_out:
-                    raise RuntimeBackendUnavailable("remote_source_sync_failed")
                 if seed_remote_ccache:
                     assert binding.remote_ccache_seed is not None
                     seeded = self._argv_runner(
@@ -1931,22 +1928,40 @@ def _sync_remote_workspace_if_changed(
         if handle.resource_type == "remote_workspace"
     )
     remote_path = remote.raw_handle.split(":", 1)[1]
-    synced = argv_runner(
-        _rsync_command(
-            state.context.target_binding,
-            state.workspace,
-            remote_path,
-            exclude_root_ccache=(
-                state.profile.source_loading_mode == "inplace_build"
-                and state.context.target_binding.remote_ccache_seed is not None
-            ),
+    _sync_remote_workspace(
+        state.context.target_binding,
+        state.workspace,
+        remote_path,
+        exclude_root_ccache=(
+            state.profile.source_loading_mode == "inplace_build"
+            and state.context.target_binding.remote_ccache_seed is not None
         ),
-        None,
-        timeout_ms,
+        argv_runner=argv_runner,
+        timeout_ms=timeout_ms,
     )
-    if synced.exit_code != 0 or synced.timed_out:
-        raise RuntimeBackendUnavailable("remote_source_sync_failed")
     state.local_sync_hash = observed
+
+
+def _sync_remote_workspace(
+    binding: RuntimeTargetBinding,
+    source: Path,
+    remote_path: str,
+    *,
+    exclude_root_ccache: bool,
+    argv_runner: ArgvRunner,
+    timeout_ms: int,
+) -> None:
+    command = _rsync_command(
+        binding,
+        source,
+        remote_path,
+        exclude_root_ccache=exclude_root_ccache,
+    )
+    for _ in range(_REMOTE_SYNC_MAX_ATTEMPTS):
+        synced = argv_runner(command, None, timeout_ms)
+        if synced.exit_code == 0 and not synced.timed_out:
+            return
+    raise RuntimeBackendUnavailable("remote_source_sync_failed")
 
 
 def _container_name(context: RuntimeAttemptContext, ordinal: int = 1) -> str:
@@ -2117,6 +2132,7 @@ def _rsync_command(
     return (
         binding.rsync_binary,
         "-a",
+        "--partial",
         "--delete",
         *(("--exclude=/.ccache/",) if exclude_root_ccache else ()),
         "-e",
