@@ -441,6 +441,7 @@ class V06Orchestrator:
                                 task_view_identity=agent_task_view_identity(task_view),
                             ),
                             session_id=session_id,
+                            deadline_ms=session.spec.deadline_ms,
                             action_client=action_client,
                         )
                     )

@@ -9,7 +9,7 @@ import uuid
 
 from op_bench.runtime.task_view import AgentLaunchInput
 from op_bench.runtime.contracts import ActionRequest
-from op_bench.runtime.validation import ContractError, require_str
+from op_bench.runtime.validation import ContractError, require_int, require_str
 
 
 class ActionClient(Protocol):
@@ -73,7 +73,7 @@ class ScriptedCanonicalAdapter:
                 action_name=action_name,
                 arguments=arguments,
                 client_sequence=sequence,
-                deadline_ms=task_view.budget_policy.wall_clock_ms,
+                deadline_ms=context.deadline_ms,
             )
             observation = context.action_client.execute(request.to_dict())
             if not isinstance(observation, dict):
@@ -210,10 +210,11 @@ class AdapterActionChannel:
 
 @dataclass(frozen=True)
 class AdapterContext:
-    """Complete control-plane input available to a standard Agent Adapter."""
+    """Complete public control-plane input available to a standard Agent Adapter."""
 
     launch_input: AgentLaunchInput
     session_id: str
+    deadline_ms: int
     action_client: AdapterActionClient
 
     def __post_init__(self) -> None:
@@ -224,6 +225,7 @@ class AdapterContext:
             task_view_identity=self.launch_input.task_view_identity,
         )
         require_str(self.session_id, "session_id")
+        require_int(self.deadline_ms, "deadline_ms", minimum=1)
         if not isinstance(self.action_client, AdapterActionClient):
             raise ContractError("action_client: expected AdapterActionClient")
 

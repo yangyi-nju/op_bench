@@ -67,7 +67,7 @@ class PatchAdapter:
                 action_name=name,
                 arguments=arguments,
                 client_sequence=sequence,
-                deadline_ms=context.launch_input.task_view.budget_policy.wall_clock_ms,
+                deadline_ms=context.deadline_ms,
             )
             observation = context.action_client.execute(request.to_dict())
             if not observation["ok"]:

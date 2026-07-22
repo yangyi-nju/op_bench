@@ -46,6 +46,7 @@ class CodexCanonicalAdapterTests(unittest.TestCase):
         return AdapterContext(
             launch_input=self.launch_input(),
             session_id="session-codex-adapter",
+            deadline_ms=1_900_000,
             action_client=client,
         )
 

@@ -932,6 +932,7 @@ def _run_mcp_stdio_steps(
         session_id="session-conformance-v1",
         exchange_root=root / "mcp-action-exchange",
         timeout_ms=10_000,
+        deadline_ms=10_000,
         transport_token=transport_token,
     )
     exchange.start()

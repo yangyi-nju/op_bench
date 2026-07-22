@@ -86,7 +86,7 @@ class ScriptedPatchAdapter:
                 action_name=name,
                 arguments=arguments,
                 client_sequence=sequence,
-                deadline_ms=context.launch_input.task_view.budget_policy.wall_clock_ms,
+                deadline_ms=context.deadline_ms,
             )
             observation = context.action_client.execute(request.to_dict())
             observations.append(observation)
@@ -180,7 +180,7 @@ class McpScenarioAdapter:
                 action_name=name,
                 arguments=arguments,
                 client_sequence=sequence,
-                deadline_ms=context.launch_input.task_view.budget_policy.wall_clock_ms,
+                deadline_ms=context.deadline_ms,
             )
             observation = context.action_client.execute(request.to_dict())
             if not observation["ok"]:
@@ -204,6 +204,46 @@ class V06OrchestratorTests(unittest.TestCase):
         self.assertEqual(
             V1_ADAPTER_IDS,
             ("scripted_canonical", "codex_canonical", "codex_mcp_canonical"),
+        )
+
+    def test_session_deadline_stays_absolute_after_the_run_clock_exceeds_the_budget(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            fixture = build_orchestrator_fixture(Path(temporary))
+            adapter = PatchAdapter()
+
+            result = orchestrator_for(
+                fixture,
+                backend_factory=lambda profile, target, phase: LocalProcessBackend(),
+                adapter=adapter,
+            ).run(
+                request_for(
+                    fixture,
+                    clock=StepClock(start=100_000),
+                )
+            )
+
+            events_path = (
+                fixture.output_root
+                / "attempts"
+                / fixture.expected.attempt_id
+                / "retries"
+                / "retry-0001"
+                / "events.jsonl"
+            )
+            requests = [
+                json.loads(line)
+                for line in events_path.read_text(encoding="utf-8").splitlines()
+                if '"event_type":"action_requested"' in line
+            ]
+
+        self.assertEqual(result.integrity.status, "passed")
+        self.assertEqual(adapter.run_count, 1)
+        self.assertEqual(len(requests), 5)
+        self.assertTrue(
+            all(
+                item["public_payload"]["deadline_ms"] > item["occurred_at_ms"]
+                for item in requests
+            )
         )
 
     def test_mcp_trace_is_persisted_and_bound_under_lifecycle_integrity(self) -> None:

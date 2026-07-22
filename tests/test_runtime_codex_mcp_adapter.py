@@ -88,6 +88,7 @@ class CodexMcpCanonicalAdapterTests(unittest.TestCase):
         return AdapterContext(
             launch_input=self.launch_input(),
             session_id="session-codex-mcp-adapter",
+            deadline_ms=1_900_000,
             action_client=client,
         )
 

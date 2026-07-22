@@ -153,6 +153,7 @@ class CodexCanonicalAdapter:
                 session_id=context.session_id,
                 exchange_root=scratch,
                 timeout_ms=timeout_ms,
+                deadline_ms=context.deadline_ms,
             )
             exchange.start()
             try:

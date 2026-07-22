@@ -254,6 +254,7 @@ class CodexMcpCanonicalAdapter:
                 session_id=context.session_id,
                 exchange_root=private_root / "exchange",
                 timeout_ms=timeout_ms,
+                deadline_ms=context.deadline_ms,
                 transport_token=transport_token,
             )
             exchange.start()

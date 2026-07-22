@@ -42,6 +42,7 @@ REQUEST_DIRECTORY = __REQUEST_DIRECTORY__
 RESPONSE_DIRECTORY = __RESPONSE_DIRECTORY__
 SESSION_ID = __SESSION_ID__
 DEADLINE_MS = __DEADLINE_MS__
+TIMEOUT_MS = __TIMEOUT_MS__
 ROOT_IDENTITY = __ROOT_IDENTITY__
 REQUEST_IDENTITY = __REQUEST_IDENTITY__
 RESPONSE_IDENTITY = __RESPONSE_IDENTITY__
@@ -263,7 +264,7 @@ def _invoke(request):
             request_filename,
             _canonical(request).encode("utf-8"),
         )
-        expires = time.monotonic() + DEADLINE_MS / 1000.0
+        expires = time.monotonic() + TIMEOUT_MS / 1000.0
         while True:
             try:
                 encoded = _read_regular(response_descriptor, response_filename)
@@ -402,6 +403,7 @@ class ProcessActionExchange:
         session_id: str,
         exchange_root: Path,
         timeout_ms: int,
+        deadline_ms: int,
         transport_token: str | None = None,
     ) -> None:
         if not isinstance(action_client, AdapterActionClient):
@@ -414,6 +416,7 @@ class ProcessActionExchange:
             raise ContractError("exchange_root: expected absolute path")
         self.exchange_root = exchange_root
         self.timeout_ms = require_int(timeout_ms, "timeout_ms", minimum=1)
+        self.deadline_ms = require_int(deadline_ms, "deadline_ms", minimum=1)
         if transport_token is None:
             self._transport_token_digest = None
         else:
@@ -464,7 +467,8 @@ class ProcessActionExchange:
             .replace("__REQUEST_DIRECTORY__", repr(str(self.request_directory)))
             .replace("__RESPONSE_DIRECTORY__", repr(str(self.response_directory)))
             .replace("__SESSION_ID__", repr(self.session_id))
-            .replace("__DEADLINE_MS__", repr(self.timeout_ms))
+            .replace("__DEADLINE_MS__", repr(self.deadline_ms))
+            .replace("__TIMEOUT_MS__", repr(self.timeout_ms))
             .replace("__ROOT_IDENTITY__", repr(root_identity))
             .replace("__REQUEST_IDENTITY__", repr(self._request_identity))
             .replace("__RESPONSE_IDENTITY__", repr(self._response_identity))
@@ -570,7 +574,7 @@ class ProcessActionExchange:
         except (UnicodeDecodeError, ValueError):
             raise ContractError("action exchange request is invalid JSON") from None
         request = ActionRequest.from_dict(value)
-        if request.session_id != self.session_id or request.deadline_ms != self.timeout_ms:
+        if request.session_id != self.session_id or request.deadline_ms != self.deadline_ms:
             raise ContractError("action exchange request binding mismatch")
         canonical_request = request.to_dict()
         if encoded != canonical_json(canonical_request).encode("utf-8"):

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from dataclasses import replace
+from dataclasses import fields, replace
 
 from op_bench.runtime.adapters import AdapterActionChannel, AdapterActionClient, AdapterContext
 from op_bench.runtime.codex_adapter import CodexCanonicalAdapter
@@ -40,16 +40,23 @@ class AdapterBoundaryTests(unittest.TestCase):
 
     def test_adapter_context_contains_only_public_launch_session_and_action_client(self) -> None:
         client = self.client()
+        deadline_ms = 1_900_000
+        self.assertIn(
+            "deadline_ms",
+            {field.name for field in fields(AdapterContext)},
+        )
         context = AdapterContext(
             launch_input=self.launch_input(),
             session_id="session-adapter",
+            deadline_ms=deadline_ms,
             action_client=client,
         )
 
         self.assertEqual(
             set(vars(context)),
-            {"launch_input", "session_id", "action_client"},
+            {"launch_input", "session_id", "deadline_ms", "action_client"},
         )
+        self.assertEqual(context.deadline_ms, deadline_ms)
         self.assertIs(context.action_client, client)
         self.assertFalse(hasattr(client, "service"))
         self.assertFalse(hasattr(client, "workspace"))
@@ -86,18 +93,21 @@ class AdapterBoundaryTests(unittest.TestCase):
             AdapterContext(  # type: ignore[arg-type]
                 launch_input=full_task_spec(),
                 session_id="session-adapter",
+                deadline_ms=1_900_000,
                 action_client=self.client(),
             )
         with self.assertRaisesRegex(ContractError, "action_client"):
             AdapterContext(
                 launch_input=self.launch_input(),
                 session_id="session-adapter",
+                deadline_ms=1_900_000,
                 action_client=object(),
             )
         with self.assertRaisesRegex(ContractError, "session_id"):
             AdapterContext(
                 launch_input=self.launch_input(),
                 session_id="",
+                deadline_ms=1_900_000,
                 action_client=self.client(),
             )
 
@@ -113,6 +123,7 @@ class AdapterBoundaryTests(unittest.TestCase):
             AdapterContext(
                 launch_input=launch,
                 session_id="session-adapter",
+                deadline_ms=1_900_000,
                 action_client=self.client(),
             )
 
