@@ -1364,22 +1364,19 @@ class RemoteDockerRuntimeBackend(LocalProcessBackend):
             container = next(
                 handle for handle in lease.handles if handle.resource_type == "container"
             )
-            try:
-                removed = self._argv_runner(
-                    _ssh_command(
-                        binding,
-                        (
-                            binding.docker_binary,
-                            "rm",
-                            "--force",
-                            container.raw_handle,
-                        ),
+            removed = _run_exact_cleanup_command_with_retry(
+                self._argv_runner,
+                _ssh_command(
+                    binding,
+                    (
+                        binding.docker_binary,
+                        "rm",
+                        "--force",
+                        container.raw_handle,
                     ),
-                    None,
-                    state.profile.cleanup_policy.timeout_ms,
-                )
-            except RuntimeBackendUnavailable:
-                removed = None
+                ),
+                state.profile.cleanup_policy.timeout_ms,
+            )
             if removed is not None and removed.exit_code == 0 and not removed.timed_out:
                 state.context.resource_ledger.released(container.resource_id)
             else:
@@ -1390,14 +1387,11 @@ class RemoteDockerRuntimeBackend(LocalProcessBackend):
                 if handle.resource_type == "remote_workspace"
             )
             remote_path = remote.raw_handle.split(":", 1)[1]
-            try:
-                workspace_removed = self._argv_runner(
-                    _ssh_command(binding, ("rm", "-rf", "--", remote_path)),
-                    None,
-                    state.profile.cleanup_policy.timeout_ms,
-                )
-            except RuntimeBackendUnavailable:
-                workspace_removed = None
+            workspace_removed = _run_exact_cleanup_command_with_retry(
+                self._argv_runner,
+                _ssh_command(binding, ("rm", "-rf", "--", remote_path)),
+                state.profile.cleanup_policy.timeout_ms,
+            )
             if (
                 workspace_removed is not None
                 and workspace_removed.exit_code == 0
@@ -2168,6 +2162,27 @@ def _default_argv_runner(
         duration_ms=max(0, (time.monotonic_ns() - started) // 1_000_000),
         timed_out=timed_out,
     )
+
+
+def _run_exact_cleanup_command_with_retry(
+    argv_runner: ArgvRunner,
+    command: tuple[str, ...],
+    timeout_ms: int,
+) -> RuntimeCommandResult | None:
+    started = time.monotonic_ns()
+    result: RuntimeCommandResult | None = None
+    for _ in range(3):
+        elapsed_ms = (time.monotonic_ns() - started) // 1_000_000
+        remaining_ms = timeout_ms - elapsed_ms
+        if remaining_ms <= 0:
+            break
+        try:
+            result = argv_runner(command, None, remaining_ms)
+        except RuntimeBackendUnavailable:
+            result = None
+        if result is not None and result.exit_code == 0 and not result.timed_out:
+            return result
+    return result
 
 
 def _validate_command(command: tuple[str, ...]) -> tuple[str, ...]:

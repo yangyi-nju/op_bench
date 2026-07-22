@@ -551,6 +551,33 @@ class RsyncAndRemoteCleanupFailureArgvRunner(RecordingArgvRunner):
         return result
 
 
+class TransientRemoteCleanupFailureArgvRunner(RecordingArgvRunner):
+    def __init__(self) -> None:
+        super().__init__()
+        self.cleanup_attempts: dict[str, int] = {}
+
+    def __call__(
+        self,
+        command: tuple[str, ...],
+        cwd: Path | None,
+        timeout_ms: int,
+    ):
+        result = super().__call__(command, cwd, timeout_ms)
+        if command[0] != "ssh-fixture":
+            return result
+        remote_command = command[-1]
+        if not (
+            "docker-fixture rm --force" in remote_command
+            or "rm -rf --" in remote_command
+        ):
+            return result
+        attempts = self.cleanup_attempts.get(remote_command, 0) + 1
+        self.cleanup_attempts[remote_command] = attempts
+        if attempts == 1:
+            return replace(result, exit_code=255, stderr="transient ssh failure")
+        return result
+
+
 class ContainerBackendCommandTests(unittest.TestCase):
     def test_docker_fresh_evaluation_uses_distinct_exact_owned_containers(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -1235,6 +1262,51 @@ class ContainerBackendCommandTests(unittest.TestCase):
                     ("workspace", "released"),
                 ],
             )
+
+    def test_remote_cleanup_retries_the_same_exact_resources_after_transient_ssh_failure(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspaces = root / "workspaces"
+            workspaces.mkdir()
+            identity_file = root / "id_fixture"
+            identity_file.write_text("fixture", encoding="utf-8")
+            profile = self.profile("remote_docker")
+            binding = RuntimeTargetBinding(
+                backend="remote_docker",
+                local_workspace_parent=workspaces,
+                host_alias="gpu-exact-fixture",
+                remote_user="runner",
+                identity_file=identity_file,
+                docker_binary="docker-fixture",
+                ssh_binary="ssh-fixture",
+                rsync_binary="rsync-fixture",
+            )
+            fixture = LocalBackendFixture(root, profile=profile, binding=binding)
+            runner = TransientRemoteCleanupFailureArgvRunner()
+            backend = RemoteDockerRuntimeBackend(argv_runner=runner)
+            lease = backend.prepare(profile, fixture.context)
+
+            cleanup = backend.cleanup(lease)
+
+            self.assertTrue(cleanup.report.all_released)
+            container = next(
+                handle for handle in lease.handles if handle.resource_type == "container"
+            )
+            remote = next(
+                handle
+                for handle in lease.handles
+                if handle.resource_type == "remote_workspace"
+            )
+            self.assertEqual(
+                runner.cleanup_attempts,
+                {
+                    f"docker-fixture rm --force {container.raw_handle}": 2,
+                    f"rm -rf -- {remote.raw_handle.split(':', 1)[1]}": 2,
+                },
+            )
+
     @staticmethod
     def profile(backend: str, *, gpu: bool = False):
         base = load_runtime_profile_registry(
