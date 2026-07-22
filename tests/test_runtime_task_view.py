@@ -211,6 +211,14 @@ class PublicArtifactBoundaryTests(unittest.TestCase):
 
         assert_public_artifact_safe(view.to_dict())
 
+    def test_recursive_scanner_accepts_c_style_comments_in_public_patch(self) -> None:
+        patch = (
+            "+  at::acc_type<input_t, /*is_cuda=*/true> minvalue = min;\n"
+            "+  return value;  // public source comment\n"
+        )
+
+        assert_public_artifact_safe(patch)
+
     def test_projection_rejects_wrong_input_contracts_and_non_attachment_identity(self) -> None:
         with self.assertRaisesRegex(ContractError, "full_task: expected FullTaskSpec"):
             project_agent_task_view(  # type: ignore[arg-type]

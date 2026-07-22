@@ -70,7 +70,7 @@ _SENSITIVE_TEXT_PATTERNS = (
         re.IGNORECASE,
     ),
     re.compile(r"\b(?:AKIA|ASIA)[A-Z0-9]{16}\b"),
-    re.compile(r"(?:^|[\s:=\"'(<])/(?!/)[^\s\"']+"),
+    re.compile(r"(?:^|[\s:=\"'(<])/(?![/*])[^\s\"']+"),
     re.compile(
         r"(?:^|[\s:=\"'(<])[A-Za-z]:\\+[^\s\"']+",
         re.IGNORECASE,
