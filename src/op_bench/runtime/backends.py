@@ -41,7 +41,7 @@ from op_bench.runtime.validation import (
 
 
 _BACKENDS = ("local", "docker", "remote_docker", "scripted")
-_REMOTE_SYNC_MAX_ATTEMPTS = 3
+_REMOTE_TRANSFER_MAX_ATTEMPTS = 3
 
 
 class RuntimeBackendUnavailable(Exception):
@@ -1113,25 +1113,13 @@ class RemoteDockerRuntimeBackend(LocalProcessBackend):
                 )
                 if seed_remote_ccache:
                     assert binding.remote_ccache_seed is not None
-                    seeded = self._argv_runner(
-                        _ssh_command(
-                            binding,
-                            (
-                                "cp",
-                                "-a",
-                                "--reflink=auto",
-                                "--",
-                                binding.remote_ccache_seed,
-                                f"{remote_path}/.ccache",
-                            ),
-                        ),
-                        None,
-                        profile.timeout_ms,
+                    _copy_remote_ccache_seed(
+                        binding,
+                        binding.remote_ccache_seed,
+                        remote_path,
+                        argv_runner=self._argv_runner,
+                        timeout_ms=profile.timeout_ms,
                     )
-                    if seeded.exit_code != 0 or seeded.timed_out:
-                        raise RuntimeBackendUnavailable(
-                            "remote_ccache_seed_copy_failed"
-                        )
                 container_ordinal = _next_ordinal(
                     attempt_context.resource_ledger,
                     "container",
@@ -1957,11 +1945,37 @@ def _sync_remote_workspace(
         remote_path,
         exclude_root_ccache=exclude_root_ccache,
     )
-    for _ in range(_REMOTE_SYNC_MAX_ATTEMPTS):
+    for _ in range(_REMOTE_TRANSFER_MAX_ATTEMPTS):
         synced = argv_runner(command, None, timeout_ms)
         if synced.exit_code == 0 and not synced.timed_out:
             return
     raise RuntimeBackendUnavailable("remote_source_sync_failed")
+
+
+def _copy_remote_ccache_seed(
+    binding: RuntimeTargetBinding,
+    seed: str,
+    remote_path: str,
+    *,
+    argv_runner: ArgvRunner,
+    timeout_ms: int,
+) -> None:
+    command = _ssh_command(
+        binding,
+        (
+            "cp",
+            "-a",
+            "--reflink=auto",
+            "--",
+            f"{seed.rstrip('/')}/.",
+            f"{remote_path}/.ccache",
+        ),
+    )
+    for _ in range(_REMOTE_TRANSFER_MAX_ATTEMPTS):
+        seeded = argv_runner(command, None, timeout_ms)
+        if seeded.exit_code == 0 and not seeded.timed_out:
+            return
+    raise RuntimeBackendUnavailable("remote_ccache_seed_copy_failed")
 
 
 def _container_name(context: RuntimeAttemptContext, ordinal: int = 1) -> str:

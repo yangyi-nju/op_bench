@@ -575,6 +575,34 @@ class TransientRsyncFailureArgvRunner(RecordingArgvRunner):
         return result
 
 
+class TransientRemoteCcacheSeedCopyFailureArgvRunner(RecordingArgvRunner):
+    def __init__(self) -> None:
+        super().__init__()
+        self.seed_copy_attempts = 0
+
+    def __call__(
+        self,
+        command: tuple[str, ...],
+        cwd: Path | None,
+        timeout_ms: int,
+    ):
+        result = super().__call__(command, cwd, timeout_ms)
+        if not (
+            command[0] == "ssh-fixture"
+            and "cp -a --reflink=auto --" in command[-1]
+            and "/.ccache" in command[-1]
+        ):
+            return result
+        self.seed_copy_attempts += 1
+        if self.seed_copy_attempts < 3:
+            return replace(
+                result,
+                exit_code=255,
+                stderr="transient post-sync ssh failure",
+            )
+        return result
+
+
 class TransientRemoteCleanupFailureArgvRunner(RecordingArgvRunner):
     def __init__(self) -> None:
         super().__init__()
@@ -1904,6 +1932,50 @@ class ContainerBackendCommandTests(unittest.TestCase):
             self.assertTrue(cleanup.report.all_released)
             cleanup_commands = "\n".join(command[-1] for command in commands[-2:])
             self.assertNotIn(seed, cleanup_commands)
+
+    def test_remote_inplace_seed_copy_retries_transient_post_sync_ssh_failure(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspaces = root / "workspaces"
+            workspaces.mkdir()
+            identity_file = root / "id_fixture"
+            identity_file.write_text("fixture", encoding="utf-8")
+            profile = replace(
+                self.profile("remote_docker", gpu=True),
+                source_loading_mode="inplace_build",
+            )
+            seed = "/srv/opbench/cache/ccache/frozen-cuda-environment"
+            binding = RuntimeTargetBinding(
+                backend="remote_docker",
+                local_workspace_parent=workspaces,
+                host_alias="gpu-exact-fixture",
+                remote_user="runner",
+                identity_file=identity_file,
+                docker_binary="docker-fixture",
+                ssh_binary="ssh-fixture",
+                rsync_binary="rsync-fixture",
+                remote_ccache_seed=seed,
+            )
+            fixture = LocalBackendFixture(root, profile=profile, binding=binding)
+            runner = TransientRemoteCcacheSeedCopyFailureArgvRunner()
+            backend = RemoteDockerRuntimeBackend(argv_runner=runner)
+
+            lease = backend.prepare(profile, fixture.context)
+
+            seed_commands = [
+                command
+                for command, _, _ in runner.calls
+                if command[0] == "ssh-fixture"
+                and "cp -a --reflink=auto --" in command[-1]
+            ]
+            self.assertEqual(runner.seed_copy_attempts, 3)
+            self.assertEqual(len(seed_commands), 3)
+            self.assertEqual(seed_commands[0], seed_commands[1])
+            self.assertEqual(seed_commands[1], seed_commands[2])
+            self.assertIn(f"{seed}/.", seed_commands[0][-1])
+            self.assertTrue(backend.cleanup(lease).report.all_released)
 
     def test_remote_inplace_seed_refuses_a_frozen_root_ccache_directory(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
