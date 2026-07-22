@@ -269,17 +269,22 @@ class EventJournal:
             "mutation_state": observation.mutation_state,
         }
         if data:
-            data_bytes = canonical_json(data).encode("utf-8")
-            if len(data_bytes) <= self._max_inline_bytes:
-                payload["data"] = data
+            try:
+                assert_public_artifact_safe(data)
+            except ContractError:
+                payload["data_redacted"] = True
             else:
-                if self._artifact_store is None:
-                    raise ContractError("large event data requires an artifact store")
-                reference = self._artifact_store.put_json(
-                    f"action-observation-{request.action_id}",
-                    data,
-                )
-                payload["data_artifact"] = reference.to_dict()
+                data_bytes = canonical_json(data).encode("utf-8")
+                if len(data_bytes) <= self._max_inline_bytes:
+                    payload["data"] = data
+                else:
+                    if self._artifact_store is None:
+                        raise ContractError("large event data requires an artifact store")
+                    reference = self._artifact_store.put_json(
+                        f"action-observation-{request.action_id}",
+                        data,
+                    )
+                    payload["data_artifact"] = reference.to_dict()
         events: list[tuple[str, Mapping[str, object]]] = [("action_observed", payload)]
         if request.action_name == "test_run":
             events.append(

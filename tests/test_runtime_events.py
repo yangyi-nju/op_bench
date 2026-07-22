@@ -329,6 +329,40 @@ class EventJournalTests(unittest.TestCase):
             journal.record_action_requested(request)
             self.assertNotEqual(verify_action_pairing(journal.records), ())
 
+    def test_unsafe_action_data_is_redacted_without_changing_observation_status(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            store = PublicArtifactStore(root / "artifacts")
+            journal = EventJournal(
+                "session-001",
+                clock_ms=StepClock(),
+                events_path=root / "events.jsonl",
+                artifact_store=store,
+                max_inline_bytes=80,
+            )
+            request = action_request()
+            observation = replace(
+                action_observation(),
+                data={"matches": [{"text": "password = fixture-secret"}]},
+            )
+
+            journal.record_action_requested(request)
+            journal.record_action_observed(request, observation)
+
+            observed = journal.records[1].public_payload
+            self.assertTrue(observed["ok"])
+            self.assertEqual(observed["error_code"], "ok")
+            self.assertTrue(observed["data_redacted"])
+            self.assertNotIn("data", observed)
+            self.assertNotIn("data_artifact", observed)
+            self.assertEqual(verify_action_pairing(journal.records), ())
+            self.assertEqual(
+                tuple(path for path in (root / "artifacts").glob("**/*") if path.is_file()),
+                (),
+            )
+
     def test_action_pairing_rejects_mismatched_request_identity(self) -> None:
         journal = EventJournal("session-001", clock_ms=StepClock())
         requested = action_request()
