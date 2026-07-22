@@ -15,7 +15,7 @@ from op_bench.runtime.actions import (
 )
 from op_bench.runtime.contracts import ACTION_NAMES, ActionRequest
 from op_bench.runtime.workspace import AuthoritativeWorkspace
-from tests.runtime_git_fixture import initialize_git_repo
+from tests.runtime_git_fixture import git, initialize_git_repo
 from tests.test_runtime_contracts import (
     SHA_A,
     budget_policy,
@@ -236,6 +236,53 @@ class CanonicalActionServiceTests(unittest.TestCase):
         self.assertEqual(self.service.usage.commands, 1)
         self.assertEqual(self.service.usage.tests, 1)
         self.assertEqual(len(self.service.audit_exchanges), 9)
+
+    def test_workspace_search_skips_non_utf8_files(self) -> None:
+        root = Path(self.temporary.name) / "binary-search-repo"
+        initialize_git_repo(root)
+        (root / "tests" / "accuracy.png").write_bytes(b"\x89PNG\r\n\x1a\n")
+        git(root, "add", "tests/accuracy.png")
+        git(root, "commit", "--quiet", "-m", "add binary fixture")
+        workspace = AuthoritativeWorkspace.open(
+            root,
+            source=identity("source", "fixture@binary-search", SHA_A),
+            policy=workspace_policy(),
+        )
+        service = CanonicalActionService(
+            session_id="session-actions",
+            workspace=workspace,
+            capability_policy=replace(
+                capability_policy(),
+                allowed_actions=("workspace_search",),
+                max_read_bytes=1_024,
+                max_output_bytes=1_024,
+            ),
+            budget_policy=replace(
+                budget_policy(),
+                wall_clock_ms=100_000,
+                max_actions=10,
+                max_output_bytes=10_000,
+            ),
+            command_backend=self.backend,
+            test_registry={},
+            clock_ms=lambda: 1_000,
+        )
+
+        observation = service.execute(
+            self.request(
+                "search-with-binary",
+                "workspace_search",
+                {"path": ".", "query": "VALUE", "max_files": 10},
+                1,
+            )
+        )
+
+        self.assertTrue(observation.ok)
+        self.assertEqual(observation.error_code, "ok")
+        self.assertEqual(
+            [match["path"] for match in observation.data["matches"]],
+            ["src/operator.py"],
+        )
 
     def test_idempotency_prevents_repeated_mutation_command_test_and_finish(self) -> None:
         write = self.request(

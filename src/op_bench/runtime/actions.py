@@ -529,10 +529,8 @@ class CanonicalActionService:
                     entry.path,
                     max_bytes=self.capability_policy.max_read_bytes,
                 ).content.decode("utf-8", errors="strict")
-            except UnicodeDecodeError as exc:
-                raise _ActionFailure(
-                    "workspace_error", f"path {entry.path!r}: search requires UTF-8 text"
-                ) from exc
+            except UnicodeDecodeError:
+                continue
             except WorkspacePolicyError as exc:
                 raise _ActionFailure("workspace_error", str(exc)) from exc
             for line_number, line in enumerate(content.splitlines(), start=1):
