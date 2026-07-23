@@ -27,7 +27,7 @@ Evaluator, ledger, Artifact store, and Integrity verifier.
 The independent `codex_mcp_canonical` Adapter uses a real invocation-local
 `mcp-stdio` server. For the frozen experiment, `--codex-model gpt-5.6-sol`
 binds model `gpt-5.6-sol` and exact executable output
-`codex-cli 0.145.0-alpha.18` into the Agent/model/adapter identities. It supplies
+`codex-cli 0.145.0-alpha.27` into the Agent/model/adapter identities. It supplies
 the server through per-invocation Codex configuration and never runs a global
 MCP add/configuration command. Provider network is allowed only for the
 host-side Codex call; Task network remains denied by the Runtime and Action
@@ -260,12 +260,14 @@ PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/run_runtime_conformance.py \
 ```
 
 The full real-Agent procedure and four fixed cohort commands are in
-[mcp_agent_experiment.md](mcp_agent_experiment.md). The report builder performs
-a pure read of the four completed roots, re-runs all 14 Integrity checks, and
-refuses incomplete trace/resource/evaluation identity before producing its
-public index and summary. Its formal contract also freezes the Dataset digest,
-platform version, four Runtime Profiles, exact 17-task partition, and repeats
-1/2/3; matching only the cohort sizes is insufficient.
+[mcp_agent_experiment.md](mcp_agent_experiment.md), with observed results and
+gate evidence in
+[mcp_agent_experiment_verification.md](mcp_agent_experiment_verification.md).
+The report builder performs a pure read of the four completed roots, re-runs all
+14 Integrity checks, and refuses incomplete trace/resource/evaluation identity
+before producing its public index and summary. Its formal contract also freezes
+the Dataset digest, platform version, four Runtime Profiles, exact 17-task
+partition, and repeats 1/2/3; matching only the cohort sizes is insufficient.
 
 Backend preparation and command registration are exact-resource transactions.
 If private handle or ledger registration fails after an exclusive workspace,

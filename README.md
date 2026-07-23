@@ -6,7 +6,7 @@ OpBench is an operator-focused benchmark for evaluating coding agents on real fr
 
 v0.1 established the isolated replay/evaluation loop. v0.2 added asset registries and formal admission. v0.3 expanded the dataset to 10 verified tasks and added 3-repeat stability evaluation. v0.4 added CUDA tiers and remote Docker. v0.5 is now complete: the verified cumulative dataset contains 17 tasks, including a 6-task precision slice, and its 51-attempt Codex run reached **72.5% resolved** (37/51) with eight-dimensional reporting and hard experiment-integrity checks.
 
-The v0.6 platform is **Completed** across M1–M7: strict versioned contracts, one authoritative workspace and immutable patch, a server-authoritative CLI/MCP action service, deterministic Attempt/trajectory/evaluation/artifact semantics, versioned Runtime Profiles, exact Attempt-owned Local/Docker/Remote resources, conformance and legacy replay, a process-isolated canonical Codex Adapter with resume and Integrity verification, and an executable public Demo/documentation surface. The recovered exact target passed representative Remote CPU, CUDA Overlay, and CUDA Kernel canaries. The complete frozen replay passed all 17 baseline + 17 gold + 51 historical final-patch cases with zero failures, blocks, or differences, closing the formal `opbench-v0.6.0` release gate. Boundary-task expansion follows in v0.7. See the [global project plan](docs/project_plan.md), [current project state](docs/project_state.md), and [v0.6 release notes](docs/v0.6/release_notes.md).
+The v0.6 platform is **Completed** across M1–M7: strict versioned contracts, one authoritative workspace and immutable patch, a server-authoritative CLI/MCP action service, deterministic Attempt/trajectory/evaluation/artifact semantics, versioned Runtime Profiles, exact Attempt-owned Local/Docker/Remote resources, conformance and legacy replay, a process-isolated canonical Codex Adapter with resume and Integrity verification, and an executable public Demo/documentation surface. The recovered exact target passed representative Remote CPU, CUDA Overlay, and CUDA Kernel canaries. The complete frozen replay passed all 17 baseline + 17 gold + 51 historical final-patch cases with zero failures, blocks, or differences. A subsequent [real MCP full experiment](docs/v0.6/mcp_agent_experiment.md) completed 51/51 valid Attempts with 35 resolved, 15 F2P failures, one P2P regression, zero infrastructure-invalid results, and zero retries. These are descriptive platform-validation results, not a causal comparison with v0.5. Boundary-task expansion follows in v0.7. See the [global project plan](docs/project_plan.md), [current project state](docs/project_state.md), and [v0.6 release notes](docs/v0.6/release_notes.md).
 
 ## What The Current Code Contains
 
@@ -159,7 +159,7 @@ configured target; it did not probe or discover replacement targets.
 invocation-local `mcp-stdio` server, passes that server to a single ephemeral
 Codex invocation without changing global Codex configuration, and binds the
 exact model and CLI version into the Agent identity. The frozen v0.6 experiment
-uses `gpt-5.6-sol` and `codex-cli 0.145.0-alpha.18`:
+uses `gpt-5.6-sol` and `codex-cli 0.145.0-alpha.27`:
 
 ```bash
 PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/run_experiment.py \
@@ -264,6 +264,7 @@ Platform development should follow the [v0.6 design](docs/v0.6/design.md), [impl
 - [v0.6 implementation plan](docs/v0.6/implementation_plan.md)
 - [v0.6 acceptance matrix](docs/v0.6/acceptance_matrix.md)
 - [v0.6 real MCP Agent experiment](docs/v0.6/mcp_agent_experiment.md)
+- [v0.6 real MCP Agent experiment verification](docs/v0.6/mcp_agent_experiment_verification.md)
 - [v0.7 Dataset Factory and Boundary design](docs/v0.7/design.md)
 - [v0.5 design](docs/v0.5/design.md)
 - [v0.5 experiment report](docs/v0.5/experiment_report.md)

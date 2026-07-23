@@ -11,6 +11,19 @@ README_FILES = (ROOT / "README.md", ROOT / "README.zh-CN.md")
 INDEX_FILES = (ROOT / "docs" / "README.md", ROOT / "docs" / "README.zh-CN.md")
 GUIDE = ROOT / "docs" / "v0.6" / "developer_guide.md"
 MCP_EXPERIMENT = ROOT / "docs" / "v0.6" / "mcp_agent_experiment.md"
+MCP_EXPERIMENT_VERIFICATION = (
+    ROOT / "docs" / "v0.6" / "mcp_agent_experiment_verification.md"
+)
+MCP_EXPERIMENT_REPORT = (
+    ROOT
+    / "runs"
+    / "v0.6_mcp_full_20260722_event_redaction_r5_report"
+    / "experiment_report.md"
+)
+MCP_EXPERIMENT_INDEX = MCP_EXPERIMENT_REPORT.with_name("experiment_index.json")
+MCP_EXPERIMENT_SUMMARY = MCP_EXPERIMENT_REPORT.with_name(
+    "experiment_summary.json"
+)
 M7_VERIFICATION = ROOT / "docs" / "v0.6" / "m7_verification.md"
 DEMO_ARTIFACT = (
     ROOT / "configs" / "examples" / "v0.6_scripted_demo_artifact.example.json"
@@ -31,6 +44,7 @@ class V06ReleaseDocumentationTests(unittest.TestCase):
             RELEASE_NOTES,
             M7_VERIFICATION,
             MCP_EXPERIMENT,
+            MCP_EXPERIMENT_VERIFICATION,
         ):
             text = document.read_text(encoding="utf-8")
             for raw_target in LINK_PATTERN.findall(text):
@@ -130,7 +144,7 @@ class V06ReleaseDocumentationTests(unittest.TestCase):
             for fragment in (
                 "codex_mcp_canonical",
                 "--codex-model gpt-5.6-sol",
-                "codex-cli 0.145.0-alpha.18",
+                "codex-cli 0.145.0-alpha.27",
                 "adapter_trace.json",
                 "14",
                 "Provider",
@@ -142,10 +156,10 @@ class V06ReleaseDocumentationTests(unittest.TestCase):
 
         experiment = MCP_EXPERIMENT.read_text(encoding="utf-8")
         for fragment in (
-            "v0.6_mcp_full_20260720_remote_cpu",
-            "v0.6_mcp_full_20260720_remote_cpu_compile",
-            "v0.6_mcp_full_20260720_cuda_overlay",
-            "v0.6_mcp_full_20260720_cuda_kernel",
+            "v0.6_mcp_full_20260722_event_redaction_r5_remote_cpu",
+            "v0.6_mcp_full_20260722_event_redaction_r5_remote_cpu_compile",
+            "v0.6_mcp_full_20260722_event_redaction_r5_cuda_overlay",
+            "v0.6_mcp_full_20260722_event_redaction_r5_cuda_kernel",
             "scripts/summarize_mcp_experiment.py",
             "--run-root",
             "retry_infrastructure",
@@ -165,6 +179,52 @@ class V06ReleaseDocumentationTests(unittest.TestCase):
         ):
             with self.subTest(fragment=fragment):
                 self.assertIn(fragment, experiment)
+
+    def test_real_mcp_report_is_complete_redacted_and_identity_bound(self) -> None:
+        summary = json.loads(MCP_EXPERIMENT_SUMMARY.read_text(encoding="utf-8"))
+        self.assertEqual(summary["totals"]["attempts"], 51)
+        self.assertEqual(summary["totals"]["cohorts"], 4)
+        self.assertEqual(summary["totals"]["trace_complete"], 51)
+        self.assertEqual(summary["totals"]["retries"], 0)
+        self.assertEqual(
+            summary["evaluation_outcomes"],
+            {"f2p_failed": 15, "p2p_regression": 1, "resolved": 35},
+        )
+        self.assertEqual(summary["agent_terminals"], {"finished": 51})
+        self.assertEqual(summary["mcp"]["initialize_count"], 51)
+        self.assertEqual(summary["mcp"]["tools_list_count"], 51)
+        self.assertEqual(summary["mcp"]["tools_call_count"], 747)
+        self.assertEqual(summary["mcp"]["protocol_error_count"], 0)
+        self.assertEqual(summary["model_id"], "gpt-5.6-sol")
+        self.assertEqual(
+            summary["codex_cli_version"], "codex-cli 0.145.0-alpha.27"
+        )
+
+        index = json.loads(MCP_EXPERIMENT_INDEX.read_text(encoding="utf-8"))
+        self.assertEqual(len(index["attempts"]), 51)
+        self.assertEqual(len(index["cohorts"]), 4)
+        self.assertEqual(len({row["attempt_id"] for row in index["attempts"]}), 51)
+        self.assertTrue(all(row["trace_complete"] for row in index["attempts"]))
+        self.assertTrue(all(row["retry_index"] == 1 for row in index["attempts"]))
+
+        public_text = "\n".join(
+            path.read_text(encoding="utf-8")
+            for path in (
+                MCP_EXPERIMENT_REPORT,
+                MCP_EXPERIMENT_INDEX,
+                MCP_EXPERIMENT_SUMMARY,
+            )
+        )
+        for forbidden in (
+            "private_evaluation",
+            "private_runtime_resources",
+            "/Users/",
+            "BEGIN PRIVATE KEY",
+            "Authorization: Bearer",
+            "github_pat_",
+        ):
+            with self.subTest(forbidden=forbidden):
+                self.assertNotIn(forbidden, public_text)
 
     def test_representative_demo_artifact_is_public_and_path_independent(self) -> None:
         artifact = json.loads(DEMO_ARTIFACT.read_text(encoding="utf-8"))

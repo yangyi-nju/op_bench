@@ -15,19 +15,21 @@
 7. [v0.6 M6 验证记录](v0.6/m6_verification.md)：Runtime Conformance、Replay 清单、真实 Codex canary、精确 Remote 原始阻塞及 85/85 关闭附录。
 8. [v0.6 发布说明](v0.6/release_notes.md)：已完成的平台范围、迁移合同、关闭门、冻结证据和明确不作出的结论。
 9. [v0.6 M7 验证记录](v0.6/m7_verification.md)：可执行 Demo、文档、干净环境验证和最终发布判定。
-10. [v0.7 Dataset Factory 与 Boundary 设计](v0.7/design.md)：Boundary 分类、Admission Factory、matched-runtime 恢复和数据集合同。
-11. [v0.5 实验报告](v0.5/experiment_report.md)：verified 17-task 数据集、51-attempt 全量结果、precision 拆解和 8 维指标。
-12. [v0.5 设计方案](v0.5/design.md)：问题维度分类、precision 子类、候选策略和扩展指标。
-13. [v0.5 候选检索](v0.5/candidate_search.md)：兼容 ghstack 的 PyTorch PR 检索和 precision 筛选规则。
-14. [v0.5 远程 agent 配置](v0.5/setup_remote_agent.md)：远程镜像、主机配置和 admission 执行方法。
-15. [v0.5 admission prompt](v0.5/admission_prompt.md)：precision task 批量 admission 说明。
-16. [v0.4 设计方案](v0.4/design.md)：CUDA runtime tier、远程 GPU Docker SSH 执行器、`inplace_build` 源码加载和 public test ablation 设计。
-17. [v0.4 实验报告](v0.4/experiment_report.md)：13-task 3-repeat Codex CLI 评测，84.6% resolved rate，按 tier 拆解。
-18. [v0.4 CUDA 候选 task](v0.4/candidate_tasks_cuda.md)：CUDA task 筛选标准和 PR 候选池。
-19. [v0.3 设计方案](v0.3/design.md)：10-task PyTorch 数据扩展、public/hidden test 分层、multi-file overlay 和 CUDA 试点方案。
-20. [v0.3 实验报告](v0.3/experiment_report.md)：10-task 评测结果，76.7% resolved rate，稳定性分析。
-21. [v0.2 设计文档](v0.2/design.md)：环境管理与数据准入版本的需求和架构。
-22. [v0.2 开发者指南](v0.2/developer_guide.md)：registry、admission、curation、资产检查和容器管理流程。
+10. [v0.6 真实 MCP Agent 实验](v0.6/mcp_agent_experiment.md)：冻结的四组执行流程、51-Attempt 观测结果与发布边界。
+11. [v0.6 真实 MCP 实验验证](v0.6/mcp_agent_experiment_verification.md)：Integrity、trace、cleanup、确定性报告与隐私门禁。
+12. [v0.7 Dataset Factory 与 Boundary 设计](v0.7/design.md)：Boundary 分类、Admission Factory、matched-runtime 恢复和数据集合同。
+13. [v0.5 实验报告](v0.5/experiment_report.md)：verified 17-task 数据集、51-attempt 全量结果、precision 拆解和 8 维指标。
+14. [v0.5 设计方案](v0.5/design.md)：问题维度分类、precision 子类、候选策略和扩展指标。
+15. [v0.5 候选检索](v0.5/candidate_search.md)：兼容 ghstack 的 PyTorch PR 检索和 precision 筛选规则。
+16. [v0.5 远程 agent 配置](v0.5/setup_remote_agent.md)：远程镜像、主机配置和 admission 执行方法。
+17. [v0.5 admission prompt](v0.5/admission_prompt.md)：precision task 批量 admission 说明。
+18. [v0.4 设计方案](v0.4/design.md)：CUDA runtime tier、远程 GPU Docker SSH 执行器、`inplace_build` 源码加载和 public test ablation 设计。
+19. [v0.4 实验报告](v0.4/experiment_report.md)：13-task 3-repeat Codex CLI 评测，84.6% resolved rate，按 tier 拆解。
+20. [v0.4 CUDA 候选 task](v0.4/candidate_tasks_cuda.md)：CUDA task 筛选标准和 PR 候选池。
+21. [v0.3 设计方案](v0.3/design.md)：10-task PyTorch 数据扩展、public/hidden test 分层、multi-file overlay 和 CUDA 试点方案。
+22. [v0.3 实验报告](v0.3/experiment_report.md)：10-task 评测结果，76.7% resolved rate，稳定性分析。
+23. [v0.2 设计文档](v0.2/design.md)：环境管理与数据准入版本的需求和架构。
+24. [v0.2 开发者指南](v0.2/developer_guide.md)：registry、admission、curation、资产检查和容器管理流程。
 23. [v0.2 实验报告](v0.2/experiment_report.md)：3-task verified 数据集、admission、gold 闭环和真实 Codex action bridge 评测结果。
 24. [v0.2 实施计划](v0.2/implementation_plan.md)：开发里程碑和验证命令。
 25. [v0.1 开发者指南](v0.1/developer_guide.md)：v0.1 架构、模块职责、实验流程和扩展规则。

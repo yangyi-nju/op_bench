@@ -6,7 +6,7 @@ OpBench 是一个面向算子问题的 benchmark，用于评测 coding agent 解
 
 v0.1 建立隔离 replay/evaluation 闭环，v0.2 加入资产 registry 和正式 admission，v0.3 扩展到 10 条 verified task 并加入 3-repeat，v0.4 加入 CUDA tier 和 remote Docker。v0.5 现已完成：verified 累计数据集包含 17 条 task，其中 precision slice 为 6 条；51-attempt Codex 全量实验达到 **72.5% resolved**（37/51），并落地 8 维指标与实验完整性硬校验。
 
-v0.6 平台现已 **Completed**：M1～M7 的严格版本化合同、唯一 Authoritative Workspace 与不可变 Patch、服务端权威 CLI/MCP Action Service、确定性的 Attempt/Trajectory/Evaluation/Artifact 语义、版本化 Runtime Profile、精确 Attempt-owned Local/Docker/Remote 资源、Conformance 与 Legacy Replay、支持 Resume/Integrity 的进程隔离 Canonical Codex Adapter，以及可执行的公开 Demo 和文档入口均已落地。已恢复的精确目标通过代表性 Remote CPU、CUDA Overlay 与 CUDA Kernel canary；完整冻结回放的 17 条 baseline、17 条 gold 和 51 条历史 final patch 共 85/85 全部通过，零失败、零阻塞、零差异，正式关闭 `opbench-v0.6.0` 发布门。下一阶段进入 v0.7 Boundary Task 扩充。详见[全局项目方案](docs/project_plan.md)、[当前项目状态](docs/project_state.md)和[v0.6 发布说明](docs/v0.6/release_notes.md)。
+v0.6 平台现已 **Completed**：M1～M7 的严格版本化合同、唯一 Authoritative Workspace 与不可变 Patch、服务端权威 CLI/MCP Action Service、确定性的 Attempt/Trajectory/Evaluation/Artifact 语义、版本化 Runtime Profile、精确 Attempt-owned Local/Docker/Remote 资源、Conformance 与 Legacy Replay、支持 Resume/Integrity 的进程隔离 Canonical Codex Adapter，以及可执行的公开 Demo 和文档入口均已落地。已恢复的精确目标通过代表性 Remote CPU、CUDA Overlay 与 CUDA Kernel canary；完整冻结回放的 17 条 baseline、17 条 gold 和 51 条历史 final patch 共 85/85 全部通过。随后完成的[真实 MCP 全量实验](docs/v0.6/mcp_agent_experiment.md)得到 51/51 个有效 Attempt，其中 35 个 resolved、15 个 F2P failed、1 个 P2P regression，基础设施无效和重试均为 0；该结果用于平台验证，不构成与 v0.5 的因果对比。下一阶段进入 v0.7 Boundary Task 扩充。详见[全局项目方案](docs/project_plan.md)、[当前项目状态](docs/project_state.md)和[v0.6 发布说明](docs/v0.6/release_notes.md)。
 
 ## 当前代码包含什么
 
