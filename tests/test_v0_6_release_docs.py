@@ -95,6 +95,27 @@ class V06ReleaseDocumentationTests(unittest.TestCase):
             with self.subTest(profile_id=profile_id):
                 self.assertIn(profile_id, report)
 
+    def test_v0_6_does_not_publish_redundant_run_evidence(self) -> None:
+        for relative_path in (
+            "v0.6_release3_legacy_replay_exact_complete/replay/replay_manifest.json",
+            "v0.6_release_cuda_kernel_canary/replay/replay_manifest.json",
+            "v0.6_release_cuda_overlay_canary/run_manifest.json",
+            "v0.6_release_remote_cpu_canary/run_manifest.json",
+        ):
+            with self.subTest(relative_path=relative_path):
+                self.assertFalse((ROOT / "runs" / relative_path).exists())
+
+    def test_v0_6_internal_process_drafts_are_not_published(self) -> None:
+        internal_drafts = sorted(
+            path
+            for parent in (
+                ROOT / "docs" / "superpowers" / "plans",
+                ROOT / "docs" / "superpowers" / "specs",
+            )
+            for path in parent.glob("*v0.6*")
+        )
+        self.assertEqual(internal_drafts, [])
+
     def test_bilingual_quickstarts_cover_the_v1_release_surface(self) -> None:
         required = (
             "scripts/prepare_v0_6_demo.py",

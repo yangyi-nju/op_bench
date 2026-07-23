@@ -23,6 +23,10 @@ Platform completed on 2026-07-19; the real MCP full experiment completed on
   15 F2P failed, one P2P regression, zero infrastructure-invalid results, and
   zero retries. All 51 traces, Integrity reports, and exact cleanup gates
   passed; the result is descriptive and not a causal comparison with v0.5.
+- The final repository cleanup retains one three-file redacted MCP report under
+  `runs/`, removes superseded tracked canary/replay trees and internal v0.6
+  process drafts, and preserves their verified facts and hashes in the
+  versioned release documents.
 - v0.6 is one platform release with M1–M7 internal milestones. It does not expand the dataset or run the formal multi-Agent study.
 - v0.7 builds the reusable Dataset Factory, adds the Boundary Slice, and revisits the two matched-runtime Precision candidates.
 - v0.8 adds Device/API Compatibility and freezes Evaluation/Scoring Specification RC; v0.9 runs the formal multi-Agent and feedback-ablation cohorts.

@@ -50,31 +50,11 @@ cleanup was used.
 
 ## 3. Per-task observations
 
-Each row contains three independent Agent repeats.
-
-| Task | Runtime Profile | Outcomes |
-| --- | --- | --- |
-| `pytorch__124385__load_state_dict_prefix` | Remote CPU | 3 resolved |
-| `pytorch__129138__linear_add_bias_autocast` | Remote CPU Compile | 2 resolved, 1 F2P failed |
-| `pytorch__132616__cuda_mem_get_info` | CUDA Overlay | 3 resolved |
-| `pytorch__132835__njt_sdpa_autocast` | CUDA Overlay | 3 resolved |
-| `pytorch__139372__histc_int8_cuda_bounds` | CUDA Kernel | 3 resolved |
-| `pytorch__139999__masked_mean_bool_upcast` | Remote CPU | 3 resolved |
-| `pytorch__140557__layer_norm_decomp_precision` | Remote CPU | 2 resolved, 1 F2P failed |
-| `pytorch__143455__set_submodule` | Remote CPU | 1 resolved, 2 F2P failed |
-| `pytorch__144009__softmax_ilpreduce_size` | CUDA Kernel | 3 resolved |
-| `pytorch__147599__lazylinear_state_forward` | Remote CPU | 3 resolved |
-| `pytorch__149693__lazylinear_init` | Remote CPU | 3 resolved |
-| `pytorch__150975__autograd_backward_inputs` | Remote CPU | 2 F2P failed, 1 P2P regression |
-| `pytorch__160952__bilinear_lazy_check` | Remote CPU | 3 resolved |
-| `pytorch__161488__lbfgs_wolfe` | Remote CPU | 3 F2P failed |
-| `pytorch__162340__nn_arg_length` | Remote CPU | 3 F2P failed |
-| `pytorch__163961__dataloader_subset` | Remote CPU | 3 F2P failed |
-| `pytorch__168295__autograd_create_graph` | Remote CPU | 3 resolved |
-
-The descriptive resolved proportion is 35/51 (68.6%). It is not a causal MCP
-comparison and must not be compared as if it were the same Agent/protocol as
-the v0.5 experiment.
+The deterministic index contains exactly 17 task identities, repeats 1/2/3 for
+each task, and the frozen 12/1/2/2 task partition across the four Profiles.
+The full per-task table and stability analysis live in the
+[experiment report](experiment_report.md), which is the single reader-facing
+source for descriptive outcomes.
 
 ## 4. MCP and Action evidence
 

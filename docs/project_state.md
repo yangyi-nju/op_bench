@@ -47,8 +47,8 @@
 
 ## Next actions
 
-1. 以冻结 hash 保留 v0.6 的 85-case Replay、代表性 Runtime canary 和
-   三文件 MCP 全量实验公开报告；
+1. 在文档中保留 v0.6 的 85-case Replay 与代表性 Runtime canary 冻结 hash，
+   `runs/` 只发布三文件 MCP 全量实验最终报告；
 2. 按 `docs/v0.7/design.md` 启动 Dataset Factory 与 Boundary Slice 实施；
 3. v0.7 正式 Admission 继续执行 verified-only、精确 Runtime 和历史成绩不改写约束；
 4. 反馈因果与跨 Agent 正式研究仍留在后续版本，不从 v0.6 平台验证推断结论。

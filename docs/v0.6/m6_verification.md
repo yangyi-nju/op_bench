@@ -180,21 +180,20 @@ not search for another host and did not run a network probe, host discovery,
 port/service scan, process list, or container list. It invoked only the exact
 target and paths already present in the private target binding.
 
-Representative canaries:
+Representative canaries (historical controller evidence):
 
-| Entry | Artifact root | Result |
-| --- | --- | --- |
-| Remote CPU | `runs/v0.6_release_remote_cpu_canary` | valid/finished/no_patch; 14 Integrity checks Passed; workspace, container, and remote workspace released |
-| CUDA Overlay | `runs/v0.6_release_cuda_overlay_canary` | valid/finished/no_patch; 14 Integrity checks Passed; workspace, container, and remote workspace released |
-| CUDA Kernel Build | `runs/v0.6_release_cuda_kernel_canary` | expected/observed `f2p_failed`; build exit 0; 1/1 Passed, zero differences |
+| Entry | Result |
+| --- | --- |
+| Remote CPU | valid/finished/no_patch; 14 Integrity checks Passed; workspace, container, and remote workspace released |
+| CUDA Overlay | valid/finished/no_patch; 14 Integrity checks Passed; workspace, container, and remote workspace released |
+| CUDA Kernel Build | expected/observed `f2p_failed`; build exit 0; 1/1 Passed, zero differences |
 
 The 14/14 statements above were verified against the complete
-controller-private CPU/Overlay run roots before publication. The repository
-contains redacted public subsets: `private_evaluation.json` and
-`private_runtime_resources.json` are intentionally omitted. Those private
-files are required to rerun the complete Integrity graph, so a checked-out
-public subset is evidence of the recorded public result and cleanup
-attestation, not a standalone reproduction of all 14 private checks.
+controller-private CPU/Overlay run roots. Redacted public subsets were retained
+during release review, then removed after the final full experiment made the
+three deterministic report files the sole published v0.6 run output. The
+recorded release facts and hashes remain historical audit evidence, not a
+standalone reproduction of the private Integrity graph.
 
 The kernel path materializes the exact frozen root tree plus recursive Gitlink
 submodule commits, copies an optional exact ccache seed into the Attempt-owned
@@ -212,7 +211,9 @@ Ordinary Remote CPU/Overlay rsync
 has no cache exclusion. A seeded inplace-build excludes only root `/.ccache/`,
 and a frozen source-owned root `.ccache` fails closed before remote operations.
 
-The public-equivalent parameters of the final invocation were:
+The public-equivalent parameters of the final invocation were the following.
+The output path shown here is a reproduction target and is not retained in the
+repository:
 
 ```bash
 PYTHONPATH=src python3.12 scripts/run_legacy_replay.py \
@@ -264,5 +265,7 @@ hardening. v0.6 does not infer ownership or run broad cleanup in that case.
 | `replay_summary.json` | `1f5fa1515f2e93bbdec9a393e9fc07a3ccf4d121e6d33b175fdb7a1b09b03309` |
 
 All eight historical v0.5 result/summary hashes listed in section 3 remained
-unchanged. This closes R-05, R-06, R-07, R-08, and R-10 without changing the
-historical 37/51 score or claiming a new v0.6 Agent result.
+unchanged. This closed R-05, R-06, R-07, R-08, and R-10 without changing the
+historical 37/51 score. This M6 closure itself was compatibility evidence; the
+later v0.6 MCP full experiment is documented separately in
+[experiment_report.md](experiment_report.md).

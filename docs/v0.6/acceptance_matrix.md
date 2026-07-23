@@ -315,9 +315,9 @@ Replay 17+17+51 result: 85 Passed, 0 Failed, 0 Blocked, 0 differences; baseline/
 Replay inventory hash: sha256:193ef08f68f50a50c67f22b41ca2a31043c78d6b2311d23f16c588a86b80daee
 Replay manifest/results/differences/summary SHA-256: 21f85f547b5efde922616a44390b5c07814aaf59c8db27a9863a37a61ac2b424 / 3c14d5bd462a633b1c4b7b062d1447d6a575ed62244793d5b93154e43db8c9d1 / e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 / 1f5fa1515f2e93bbdec9a393e9fc07a3ccf4d121e6d33b175fdb7a1b09b03309
 Representative Runtime canaries: Remote CPU Passed; CUDA Overlay Passed; CUDA Kernel Passed
-Representative Runtime artifact roots: runs/v0.6_release_remote_cpu_canary / runs/v0.6_release_cuda_overlay_canary / runs/v0.6_release_cuda_kernel_canary
-Public canary evidence boundary: CPU/Overlay omit private_evaluation.json and private_runtime_resources.json; 14/14 was verified on the complete controller-private roots before redaction
-Replay artifact root: runs/v0.6_release3_legacy_replay_exact_complete
+Representative Runtime canaries: Remote CPU / CUDA Overlay / CUDA Kernel Passed; complete controller-private roots verified before final repository cleanup
+Public canary evidence boundary: 14/14 was verified on complete controller-private roots; raw/redacted canary trees are no longer published
+Replay evidence: 85/85 and the four frozen SHA-256 values above; the duplicate raw replay root was removed after release review
 Historical v0.5 results/summaries: all eight recorded SHA-256 values unchanged
 Open P0/P1: none found
 Blocked items: none

@@ -62,7 +62,7 @@ final exact replay.
 - 85/85 Passed for 17 baseline + 17 gold + 51 historical final-patch replay
   cases, with `failed=0`, `blocked=0`, and an empty difference report;
 - 581/581 final full-suite tests with the 17-task verified Dataset, example
-  Runtime contract, tracked JSON, and release-document checks passing.
+  Runtime contract, tracked JSON, and release-document checks passing;
 - the later real MCP full experiment completed 51/51 valid Attempts with
   complete trace, Integrity, and cleanup evidence.
 
@@ -114,23 +114,18 @@ controller-private per-case ledgers are intentionally ephemeral and fail
 closed on cleanup errors; persistent ownership/cleanup proof is supplied by
 the v1 canary artifacts and backend fault-injection coverage.
 
-The final public evidence roots are
-`runs/v0.6_release_remote_cpu_canary`,
-`runs/v0.6_release_cuda_overlay_canary`,
-`runs/v0.6_release_cuda_kernel_canary`, and
-`runs/v0.6_release3_legacy_replay_exact_complete`. The full Replay used the
-same exact configured target with a private in-memory, commit-specific remote
-workspace suffix. An incomplete run that encountered a stale deterministic
-leaf from an earlier interruption correctly failed closed and is excluded from
-release evidence; no target discovery, resource enumeration, or broad cleanup
-was used to obtain the final result.
+The full Replay used the same exact configured target with a private in-memory,
+commit-specific remote workspace suffix. An incomplete run that encountered a
+stale deterministic leaf from an earlier interruption correctly failed closed
+and is excluded from release evidence; no target discovery, resource
+enumeration, or broad cleanup was used to obtain the final result.
 
-The published CPU/Overlay directories are redacted public subsets. The
-complete controller-private roots passed all 14 Integrity checks before
-publication; `private_evaluation.json` and `private_runtime_resources.json`
-were then intentionally omitted. Those private files are necessary to rerun
-the full Integrity graph, so the repository subsets do not claim standalone
-reproduction of all 14 checks.
+Complete controller-private CPU/Overlay roots passed all 14 Integrity checks.
+Their redacted canary subsets and the four replay aggregate files were retained
+through release review, then removed after the final full experiment. The
+repository now keeps only the final three-file MCP experiment report under
+`runs/`; the frozen replay hashes below preserve the release audit record
+without publishing duplicate intermediate run trees.
 
 The final replay inventory hash is
 `sha256:193ef08f68f50a50c67f22b41ca2a31043c78d6b2311d23f16c588a86b80daee`.
