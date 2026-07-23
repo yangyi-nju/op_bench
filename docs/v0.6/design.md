@@ -1,337 +1,490 @@
-# OpBench v0.6 设计方案
+# OpBench v0.6 规范 Agent 评测平台设计
 
-日期：2026-07-11
+日期：2026-07-17
 
-状态：讨论结论已确认，待实现
+状态：已实现并完成统一发布；真实 MCP 全量实验已完成
 
-## 0. 已确认决策
-
-v0.6 采用“双轨增量、统一发布”的版本结构：
-
-1. 主线新增**边界条件问题**维度，接受错误 tensor 结果、crash/越界、缺少异常、异常类型或消息错误，以及非法输入被静默接受等可观测 bug。
-2. 副线建设 matched-wheel/source-build 环境，允许恢复 v0.5 deprecated 的 precision task #129154 和 #144073。恢复成功后进入 v0.6 累计数据集和 precision slice，不计入 boundary slice。
-3. 冻结数据集后使用同一 Codex 版本、同一 remote execution policy 对累计清单全量运行 3-repeat。旧版本实验结果只用于纵向参考，不与新结果拼接计分。
-
-v0.6 不以填满分类表为目标。候选数量是检索目标，正式数据集只接收 admission evidence 完整、baseline 可稳定复现、gold 可稳定解决的 task。
+实现与发布结果见 [v0.6 发布说明](release_notes.md)，真实 Agent 结果见
+[v0.6 实验报告](experiment_report.md)。
 
 ## 1. 版本定位
 
-OpBench 的最终产物是一个按版本冻结、可独立复现的真实算子问题 benchmark。每个版本需要同时交付：
+`opbench-v0.6.0` 的目标是完成 OpBench 从“可运行的真实 Agent 评测集 Demo”到“规范 Agent 评测平台”的转变。
 
-- verified 累计数据集 manifest；
-- 可复用的问题维度 slice；
-- 每条 task 的 source/environment/test/gold admission evidence；
-- 同一 agent/runtime policy 下的完整实验 artifact；
-- 可从原始 attempt 重新计算的结构化 summary 和实验报告。
+v0.5 已经完成真实 Codex Action Bridge、17 条 verified task、CPU/CUDA/Kernel Runtime、Fresh Evaluation、Resume 和 51 次正式 Attempt。v0.6 不否定这些能力，也不重新证明“真实 Agent 能运行”；它要把已有能力收敛为统一、版本化、可扩展、可审计的运行时和评测协议。
 
-v0.5 证明了 precision 维度、remote replay、3-repeat 和完整性校验可以形成发布闭环。v0.6 的核心不是简单增加 task 数，而是验证这套方法能否扩展到第二个问题维度，同时解决“source commit 与预装 wheel API 不匹配”这一类环境真实性问题。
+本版本只建设平台，不扩 Boundary/Compatibility 数据集，不执行正式 Agent 排名或反馈因果研究。
 
-## 2. Release Contract
+## 2. Demo 与平台的差距
 
-### 2.1 数据集目标
-
-以 v0.5 的 17 条 verified task 为基线：
-
-| 增量 | 目标 | 进入的 slice |
-| --- | ---: | --- |
-| 新 boundary task | 4-6 条 verified | `pytorch_v0.6_boundary` |
-| 恢复 precision task | 0-2 条 verified | `pytorch_v0.6_precision` |
-| v0.6 累计数据集 | 21-25 条 verified | `pytorch_v0.6` |
-
-其中 4 条 boundary 是期望的最小有效切片，不是降低 admission 标准的理由。如果最终只有 3 条高质量样本，则质量降级方案是发布 3 条、累计数据集为 20-22 条，并记录 coverage gap；如果候选质量足够，可以超过 6 条，但必须评估全量实验成本。
-
-precision slice 从 v0.5 的 6 条继承。#129154/#144073 若重新 admission verified，则 precision slice 扩为 7-8 条，并首次覆盖 P4；若仍无法建立匹配环境，则继续 deprecated，不阻塞 boundary 主线发布。
-
-### 2.2 实验目标
-
-- 累计数据集目标：21-25 tasks x 3 repeat，即 63-75 个有效 attempt；质量降级方案最低为 20 tasks / 60 attempts。
-- Boundary slice 目标：4-6 tasks x 3 repeat，即 12-18 个有效 attempt；质量降级方案为 3 tasks / 9 attempts。
-- Precision slice：6-8 tasks x 3 repeat，即 18-24 个有效 attempt。
-- 所有 summary 必须通过 dataset x agent x repeat 完整性硬校验。
-- `environment_unavailable/environment_error` 保留原始审计记录，但不占有效 attempt；timeout、runner error 和 agent patch 行为按既定终态规则处理。
-
-## 3. Boundary 分类
-
-分类按**根因**，不按最终表象。边界值触发错误索引、shape 推导或参数验证属于 boundary；低精度计算、dtype promotion 或数值算法导致误差仍属于 precision。
-
-| 子类 | 定义 | 典型症状 | 典型修复 |
-| --- | --- | --- | --- |
-| **B1. Empty / zero-size** | 空 tensor、某维为 0、空 reduction 或空 batch | crash、错误 identity、NaN、错误 shape | empty fast path、正确 reduction identity、跳过非法 launch |
-| **B2. Scalar / degenerate shape** | 0D scalar、size-1、rank 退化、特殊 broadcast | 索引不存在、错误 squeeze、shape 不一致 | scalar branch、规范化 rank、修 broadcast 推导 |
-| **B3. Integer / size overflow** | numel、stride、offset、index、shape product 超过整数范围 | wraparound、负 size、越界读写、错误 kernel 选择 | 使用安全整数类型、checked arithmetic、分块计算 |
-| **B4. Parameter endpoints** | dim/axis、k、groups、padding、dilation、range 端点或非法组合 | 未抛异常、异常不正确、错误输出 | 参数规范化、范围校验、明确异常 contract |
-| **B5. Kernel launch / grid bounds** | grid/block 上限、尾块、超大 shape、设备 launch 边界 | CUDA assert、未处理 tail、launch failure、错误结果 | grid-stride loop、bounds guard、launch 参数修正 |
-
-### 3.1 与其他维度的边界
-
-- 极端输入导致 `log/exp` NaN/Inf，根因是数值算法不稳定：precision P4。
-- 大 shape 的 `numel` 溢出后选择错误 kernel：boundary B3。
-- CPU/CUDA 对普通输入行为不同：后续 device/API compatibility。
-- CPU/CUDA 只在 empty 或最大 grid 边界表现不同：本版本 boundary。
-- 单纯性能退化、额外同步或慢 kernel：performance，v0.6 不接收。
-
-同一 PR 同时涉及多个根因时，task 以 hidden F2P 断言直接验证的根因为主分类，并在 tags 中记录次要维度。不要为了分类完整性复制同一 task 到多个正式 slice。
-
-## 4. 可接受的 Bug 语义
-
-v0.6 接受以下 fail-to-pass 形式：
-
-1. tensor 值、shape、dtype、device 或 layout 错误；
-2. segfault、CUDA assert、越界、内部 assert 或确定性 runtime crash；
-3. 合法边界输入错误抛异常；
-4. 非法输入未抛异常，或异常类型/消息不符合上游 contract；
-5. 边界路径错误 skip、silent fallback 或返回未初始化结果。
-
-异常消息类 task 必须满足至少一个条件：上游测试明确固定该消息、消息属于公开 API contract，或错误消息会影响调用方判断。只做拼写、标点或风格统一且没有行为回归的 PR 仍视为 cleanup，不进入数据集。
-
-## 5. Candidate Search
-
-### 5.1 来源
-
-继续使用 v0.5 已验证的 ghstack-aware 路径：
-
-1. clone PyTorch mirror，使用 `git log` 在目标时间窗内搜索 commit；
-2. 从 commit body 的 `Pull Request resolved` 反查 PR；
-3. `gh pr view` 补齐 issue、文件、diff 和讨论；
-4. `gh pr list --state merged` 仅作为非 ghstack PR 的补充。
-
-首选 author date 时间窗继续使用 `2024-01-01..2025-04-30`。窗口外候选只有在 source snapshot、镜像和 wheel compatibility 可以独立固定时才允许进入 admission，避免 nightly ABI/API 漂移。
-
-### 5.2 Keyword packs
-
-| 子类 | 关键词示例 |
+| v0.5 Demo 现状 | v0.6 平台要求 |
 | --- | --- |
-| B1 | `empty tensor`, `zero size`, `numel == 0`, `empty reduction`, `zero batch` |
-| B2 | `scalar`, `0-d`, `zero dimensional`, `degenerate shape`, `rank 0`, `size one` |
-| B3 | `overflow`, `int32`, `numel overflow`, `stride overflow`, `index overflow`, `large tensor` |
-| B4 | `invalid dim`, `axis bounds`, `k == 0`, `groups`, `padding`, `out of range`, `validation` |
-| B5 | `grid limit`, `block limit`, `tail block`, `launch bounds`, `CUDA illegal memory`, `large index` |
+| Codex Action Bridge 是参考路径 | Agent Adapter 接入统一 Runtime |
+| Action 语义分散在 Bridge/Workspace/Executor | Canonical Action Service 是唯一能力真值 |
+| Runner 隐含 Attempt 生命周期 | AttemptSession 显式管理状态、预算和终止 |
+| 日志主要服务调试 | Versioned Event/Trajectory 可重建 |
+| Result 与 Summary 能聚合 | Manifest→Session→Patch→Evaluation→Summary 全链路 Hash 绑定 |
+| Local/Remote 路径存在行为差异风险 | Runtime Profile 和 Conformance 固定语义 |
+| Resume 以结果记录为中心 | Attempt Identity、Checkpoint 和终态幂等 |
+| Agent 可见输入靠 Adapter 约定 | AgentTaskView 明确白名单和私有边界 |
+| Fresh Evaluation 已存在 | Frozen Patch 是唯一评分输入，Evaluator 合同版本化 |
+| 真实 Codex 已运行 | Codex 通过标准 Adapter/MCP 进入统一平台 |
 
-每个子类初始检索 2-3 组关键词，候选池目标 3-5 条。筛选记录仍保留 accepted/rejected 及具体理由，不因某个子类稀缺而纳入非 boundary PR。
+## 3. Release Contract
 
-### 5.3 自动硬过滤
+### 3.1 Must
 
-以 v0.5 规则为基础：
+v0.6 必须交付：
 
-- author date 落在稳定窗口，或有明确的新环境冻结方案；
-- title 不含 revert/reland，PR 不是纯 refactor/cleanup；
-- 修改文件数通常不超过 3，总改动通常为 20-200 行；
-- source 修复与可定位测试同时存在；
-- base commit 可以获得 sparse snapshot；
-- GPU task 必须可在 V100（sm_70）运行，不依赖 H100、FP8 或 flash-attn 3；
-- kernel build 必须能通过增量 ccache 完成。
+1. 版本化 Task、AgentTaskView、Action、Session、Evaluation、Artifact 和 Run Manifest 合同；
+2. 一个 Authoritative Workspace，所有 Action、Test、Diff 和 Freeze 指向同一状态；
+3. Canonical Action Service，CLI/MCP 共享相同业务实现；
+4. 真实 Codex Adapter 和多轮工具/反馈闭环；
+5. AttemptSession、Budget、Timeout、Cancel、Finish、Resume 和唯一终态；
+6. Action/Observation/Test/Patch/Terminal Trajectory；
+7. 唯一 Final Patch Freeze 和三处一致的 Patch Hash；
+8. Fresh Evaluator，只接收 Frozen Patch 和 EvaluationSpec；
+9. F2P、P2P、Regression、Agent Failure、Task Failure、Infrastructure Failure 和 Evaluator Failure 归因；
+10. Run Manifest、Session Result、Evaluation Result、Integrity 和 Summary Rebuild；
+11. Local CPU、Remote CPU/CUDA、CUDA Kernel 等既有 Runtime 的统一 Profile 与 Conformance；
+12. v0.5 的 17 Baseline、17 Gold 和 51 Legacy Final Patch Replay；
+13. Fake/Scripted 确定性回归和真实 Codex 端到端 Canary；
+14. 统一 CLI、配置示例、开发文档、复现说明和可展示 Demo；
+15. 默认 Legacy 路径兼容，显式选择 v0.6 Runtime，直到迁移完成。
 
-文件数和行数是筛选阈值，不是事实定义。若一个高质量边界修复因生成代码或必要的两端校验略超阈值，可人工记录例外，但不得放宽到大规模重构。
+### 3.2 Should
 
-## 6. Admission 规则
+- Patch Checkpoint 和增量 Diff 统计；
+- 细分 Token/Action/Test/Wall-clock Budget；
+- CLI/MCP Byte-equivalent Conformance；
+- 结构化 Trace Card；
+- 代表性 Runtime 的小规模批量 Codex 验证；
+- 从旧 results.jsonl 导入只读 Legacy Trajectory 摘要。
 
-### 6.1 通用要求
+### 3.3 非目标
 
-每条 task 必须满足：
+- 新增 Boundary 或 Compatibility Task；
+- Web UI、数据库、排行榜和在线提交；
+- 多框架与分布式 Worker；
+- 正式 Agent 排名、Feedback Ablation 或论文主实验；
+- Native/Network-enabled 独立赛道；
+- 任意宿主 Shell 作为 Controlled Track 默认能力；
+- 与 OpBench 评测合同无关的环境安全研究。
 
-- base snapshot 上 F2P 确实失败，失败原因与 issue 一致；
-- gold patch 后 F2P 通过；
-- P2P 覆盖普通路径和至少一个相邻边界，gold 后全部通过；
-- hidden test 有明确断言，不以进程 exit 0 代替测试通过；
-- test 不得被 skip、xfail 或 capability guard 静默绕过；
-- patch scope 足够小，agent 可以在 task 时间预算内定位；
-- CPU/GPU 资源需求可在正式服务器稳定满足。
+## 4. 核心不变量
 
-### 6.2 边界任务附加要求
+### V06-I01. One Attempt, One Authority
 
-- 不使用真实 OOM、随机 allocator 状态或不可控 wall-clock timeout 作为 F2P。
-- 超大 shape 优先使用 meta/fake tensor、mocked launch 参数、small-index surrogate 或低内存构造。
-- crash 类 task 必须能在隔离容器中稳定返回非零状态，不能损坏宿主或后续 attempt。
-- exception 类 task 同时断言异常类型；只有 contract 要求时才断言完整消息。
-- CUDA 边界测试必须显式同步，避免异步错误落到后续 P2P。
+同一 Attempt 的编辑、测试、Diff、Freeze 和最终 Patch 来自同一 Authoritative Workspace。
 
-### 6.3 测试执行真实性
+### V06-I02. Patch-only Evaluation Handoff
 
-v0.5 诊断曾发现 skip 被 exit 0 掩盖、异常被粗分类的问题。v0.6 admission 在平台层增加：
+Agent Workspace 的缓存、构建物、测试修改和未跟踪状态不能直接进入评分。Evaluator 只接收 Frozen Patch 字节和版本化 EvaluationSpec。
 
-1. 记录实际 collected/executed/skipped test 数；
-2. F2P/P2P 声明的 test 若未执行，结果为 `test_not_executed`，不能记 passed；
-3. baseline failure 保存结构化 failure signature（exception type、assertion 或 exit signal）；
-4. gold 的通过必须来自同一个 test selector 和 runtime；
-5. admission evidence 保存 test execution counters，dataset validation 校验字段存在。
+### V06-I03. Agent-visible Whitelist
 
-## 7. Matched-Wheel / Source-Build 副线
+Agent 只看到 AgentTaskView、Capability Policy、Action Schema 和 Action Observation。Gold、Hidden、Admission、来源答案信息和 Evaluator 私有配置不可见。
 
-### 7.1 问题
+### V06-I04. Server-enforced Capability
 
-Python overlay 只有在 source snapshot 的 Python API 与容器内 wheel/runtime 相容时才可信。#129154 和 #144073 的 base commit 与 torch 2.6 wheel 存在 API 代差，导致测试在目标 bug 断言前就因无关 AttributeError 或 compile API 不匹配失败。继续 patch task 定义会掩盖环境错误，因此 v0.5 正确地将其 deprecated。
+Adapter 或 Prompt 中的工具说明不是授权真值。Action Service 对每次请求重新验证 Session、Action、Path、Selector、Budget 和状态。
 
-### 7.2 环境选择顺序
+### V06-I05. One Terminal
 
-对每条待恢复 task 按以下顺序选择：
+每个 Attempt 恰好一个终态。Finish、Timeout、Cancel、Agent Exit 和 Infrastructure Error 竞争时按冻结优先级收敛。
 
-1. **Matched wheel**：优先找到与 base commit 足够接近且 ABI/API 匹配的官方 wheel。
-2. **Source-built wheel**：从 snapshot 构建 wheel，缓存为内容寻址环境资产。
-3. **Source build**：只有 wheel 无法覆盖 compile/kernel 路径时才使用完整 source-build runtime。
+### V06-I06. Immutable Evaluation Input
 
-不允许用更改 hidden test、猴子补 API 或跳过无关失败的方式伪造 compatibility。
+Session Result、Run Manifest 和 Evaluator 使用相同 Patch Hash；不允许评分前后重新读取可变 Workspace 生成不同 Patch。
 
-### 7.3 Compatibility evidence
+### V06-I07. Rebuildable Evidence
 
-环境 registry 和 admission evidence 增加或明确记录：
+Public Summary 能从冻结 Manifest、Session、Trajectory 和 Evaluation 重新生成；重建结果与存储结果不一致时 Release 失败。
 
-- source commit SHA；
-- wheel/build artifact digest；
-- `torch.__version__`、CUDA runtime 和 Python ABI；
-- source-load mode；
-- 目标模块从 snapshot 而非 site-packages 加载的证明；
-- 最小 compatibility probe 及结果；
-- build flags、GPU arch 和 ccache key。
+### V06-I08. Legacy Facts Stay Historical
 
-compatibility probe 只证明环境可用，不能代替 F2P。环境通过后仍需完整 baseline/gold admission。
+v0.5 的 51 次 Attempt 不重新标记为 v0.6 结果。Replay 是兼容性证据，不改变历史分数。
 
-### 7.4 两条恢复候选
-
-| Task | Precision subclass | 当前阻塞 | v0.6 目标 |
-| --- | :---: | --- | --- |
-| `129154_exp_decomp_numerics` | P4 | CUDA refs API 与 2.6 wheel 不匹配 | matched CUDA wheel 或 source-built runtime |
-| `144073_vector_norm_scalar_overflow` | P4 | CPU compile/refs API 与 2.6 wheel 不匹配 | matched CPU compile wheel 或 source build |
-
-恢复成功后保留原 task ID 和 PR provenance，生成新的 admission evidence，并把 status 从 deprecated 改为 verified。失败则保留 deprecated 和本轮环境诊断，不反复修改测试语义。
-
-## 8. 数据模型
-
-boundary task 使用现有 operator 字段：
-
-```json
-{
-  "operator": {
-    "problem_dimension": "boundary",
-    "problem_subclass": "B3",
-    "problem_type": "numel-integer-overflow"
-  }
-}
-```
-
-约束：
-
-- `problem_dimension`: v0.6 新 task 必须为 `boundary`，恢复 task 保持 `precision`；
-- `problem_subclass`: boundary 使用 `B1..B5`，precision 继续使用 `P1..P5`；
-- `problem_type`: 使用稳定、可读的根因名称，不直接复制 PR title；
-- `tags`: 新 task 必须包含一个 `failure_contract:*` tag，值为 `wrong-result`、`exception`、`crash-oob` 或 `silent-acceptance`，用于报告分组；
-- 历史未分类 task 不在 v0.6 强制回填，聚合时继续进入 `unclassified`。
-
-schema 应按 dimension 校验 subclass 前缀，避免 `boundary + P3` 之类组合进入正式数据集。
-
-## 9. 评测与报告
-
-沿用 v0.5 八维指标：
-
-1. resolved rate；
-2. patch conciseness；
-3. pass-to-pass kept rate；
-4. strict resolved rate；
-5. regression rate；
-6. tier-weighted score；
-7. per-problem dimension/subclass/type breakdown；
-8. median evaluator runtime。
-
-v0.6 报告必须额外给出：
-
-- 按 B1-B5 的 task/attempt/resolved rate；
-- 按 failure contract 分组：wrong result、exception、crash/OOB、silent acceptance；
-- boundary 新增 task 与 restored precision task 分开统计；
-- v0.5 的 17-task inherited slice 在新 agent 版本下的结果；
-- v0.5 -> v0.6 波动归因，明确区分 dataset 增量、agent 版本和 runtime 变化；
-- environment retry/raw record 与 logical attempt 的完整性说明。
-
-正式 full summary 与两个 slice summary 都使用 `--expected-repeat 3 --require-complete`。任何 logical transient、缺 baseline、缺 attempt 或 unexpected attempt 都阻塞 release。
-
-## 10. 实施阶段
+## 5. 逻辑架构
 
 ```text
-Phase 0: 设计与平台契约                                    [1-2 天]
-  - boundary taxonomy / schema
-  - test execution counters 与 test_not_executed
-  - matched-wheel compatibility evidence 结构
-
-Phase 1: 环境副线                                          [3-5 天]
-  - #129154 matched CUDA runtime 探索
-  - #144073 matched CPU compile runtime 探索
-  - source-built artifact cache 与 digest
-  - 可恢复则重新 admission，不可恢复则记录诊断
-
-Phase 2: Boundary candidate screening                       [2-4 天]
-  - B1-B5 keyword packs
-  - git log / ghstack PR 反查
-  - 自动硬过滤 + 人工软复审
-  - candidates / rejected / summary 产物
-
-Phase 3: Task 制作与 admission                              [2-3 周]
-  - issue / hidden / gold / task manifest
-  - preflight + remote admission
-  - 目标 4-6 条 verified boundary task
-
-Phase 4: 数据集冻结与实验                                  [2-4 天]
-  - 生成 cumulative / boundary / precision manifests
-  - 同一 Codex 版本全量 3-repeat
-  - 三份完整性校验 summary
-  - experiment report / README / CHANGELOG
+Dataset + Task/Source/Environment Registry
+                    │
+                    ▼
+              Run Manifest
+                    │
+                    ▼
+          Agent Evaluation Runtime
+       ┌────────────┼────────────┐
+       ▼            ▼            ▼
+ AgentTaskView  AttemptSession  Runtime Profile
+       │            │            │
+       ▼            ▼            ▼
+ Agent Adapter → Canonical Action Service
+       │            │
+       │            ▼
+       │     Authoritative Workspace
+       │            │
+       └──── Events/Observations
+                    │
+                    ▼
+              Frozen Patch
+                    │
+                    ▼
+              Fresh Evaluator
+                    │
+                    ▼
+    Session/Evaluation/Integrity/Summary
 ```
 
-环境副线与候选检索可以并行，但 evaluator/test counter 变更必须先完成，避免新 task admission 使用不同判定口径。
+模块边界：
 
-## 11. 完成标准
+- **Control Plane**：Task、Manifest、Session、Budget、Capability、Artifact；
+- **Agent Plane**：AgentTaskView、Adapter、MCP/CLI Transport；
+- **Workspace Plane**：Source Materialization、Canonical Actions、Registered Tests、Patch Freeze；
+- **Evaluation Plane**：Fresh Source、Hidden Injection、F2P/P2P、Result；
+- **Evidence Plane**：Events、Hashes、Integrity、Summary。
 
-v0.6 只有同时满足以下条件才标记 completed：
+Agent Adapter 不接收 Full Task、Gold、Hidden 或 Evaluator 对象。Evaluator 不读取正在运行的 Agent Workspace。
 
-1. `datasets/pytorch_v0.6/dataset.json` 状态为 verified，所有 entry evidence hash 有效；
-2. boundary slice 至少形成一个有区分度的 verified 集合，coverage gap 明确记录；
-3. #129154/#144073 均有明确结论：verified 或带新诊断的 deprecated；
-4. `preflight_task.py --dataset datasets/pytorch_v0.6/dataset.json` 全部 OK；
-5. 每条新 task baseline reproduced、gold resolved、P2P kept；
-6. 累计数据集完成同一 agent 的 3-repeat，完整性检查无缺失；
-7. boundary 和 precision slice summary 可由原始 JSONL 重新聚合；
-8. 全部单测、schema 校验和 `git diff --check` 通过；实验原始 patch 中的格式问题除外；
-9. 实验报告包含累计、boundary、precision、tier、subclass 和 v0.5 对比；
-10. README、CHANGELOG、docs index 与实际冻结结果一致。
+## 6. Versioned Contracts
 
-## 12. 风险与降级策略
+### 6.1 RunManifest
 
-### 候选稀缺
+至少包含：
 
-不使用非 boundary PR 填配额。优先保证根因和 F2P 质量，允许 B1-B5 有空缺，并把候选检索结果留给后续版本。
+- platform/action/evaluation/scoring schema versions；
+- dataset id/content hash；
+- task/source/environment/image identity；
+- agent/model/adapter identity；
+- system/task prompt hash；
+- feedback/capability/budget/termination/retry policy；
+- runtime profile 与 hardware capability；
+- expected task/agent/repeat matrix；
+- creation time 与 cohort id。
 
-### 大 shape 不可复现
+### 6.2 FullTaskSpec 与 AgentTaskView
 
-优先寻找 meta/fake/surrogate 复现。若 bug 只能通过超过服务器内存或超长时间触发，暂不 admission，不把 OOM 当作稳定 F2P。
+`FullTaskSpec` 属于 Control/Evaluation Plane，包含完整 Task、Hidden、Gold、Admission 和环境资产引用。
 
-### Crash 污染环境
+`AgentTaskView` 是白名单投影，只包含：
 
-每个 crash task 在独立容器执行，强制超时、进程清理和 GPU health probe。若一次 crash 会使 GPU reset 或影响后续 task，该候选不适合当前基础设施。
+- task id 和规范化 Issue；
+- 允许公开的 Framework/Operator/Runtime 提示；
+- Public/Registered Test 名称和说明；
+- Capability Policy 摘要；
+- Budget 和终止说明；
+- 禁止暴露答案来源的稳定附件。
 
-### Matched environment 构建成本过高
+生成后进行 Schema Validation 和敏感字段扫描。不得把 FullTaskSpec 作为方便参数继续传给 Adapter。
 
-恢复 precision 是副线，不阻塞 boundary release。构建产物必须内容寻址并可复用；无法稳定缓存的 nightly/source build 不进入正式 registry。
+### 6.3 SessionSpec
 
-### 全量实验成本增长
+包含 Attempt Identity、Workspace Identity、Capability Policy、Budget、Deadline、Adapter Config、Runtime Profile、Artifact Root 和 Resume Policy，不包含 Hidden/Gold。
 
-GPU/kernel task 保持串行，CPU 并发从 1-3 实测。允许拆 batch，不允许复用旧 agent 版本结果拼成累计分数。若 rate limit 中断，使用同一 output-dir resume。
+### 6.4 EvaluationSpec
 
-## 13. 计划产物
+包含 Base Source Identity、Frozen Patch Hash、Hidden/Public Test、F2P/P2P、Runtime Profile、Timeout 和 Scoring Version，只在 Agent 终止后交给 Evaluator。
 
-| 文件 | 用途 |
-| --- | --- |
-| `docs/v0.6/design.md` | 本设计方案 |
-| `docs/v0.6/candidate_search.md` | B1-B5 keyword packs、筛选规则和 schema |
-| `docs/v0.6/setup_matched_runtime.md` | matched wheel/source-build 环境制作与验证 |
-| `docs/v0.6/experiment_report.md` | v0.6 正式实验报告 |
-| `runs/v0.6_pr_screening/` | boundary candidates、rejected 和 summary |
-| `datasets/pytorch_v0.6/dataset.json` | v0.6 累计数据集 |
-| `datasets/pytorch_v0.6_boundary/dataset.json` | boundary slice |
-| `datasets/pytorch_v0.6_precision/dataset.json` | 更新后的 precision slice |
-| `runs/v0.6_codex/summary.json` | 累计完整性与八维指标 |
-| `runs/v0.6_boundary_codex/summary.json` | boundary slice 指标 |
-| `runs/v0.6_precision_codex/summary.json` | precision slice 指标 |
+## 7. Canonical Action Service
 
-## 14. 后续路线
+v0.6 标准 Action：
 
-- v0.7：设备/API 兼容，包括 CPU/CUDA 行为一致性、跨 device 参数、dispatch 与 `.to(device)` 传播。
-- v0.8：性能问题，引入硬件基线、噪声模型和性能 regression 判定。
-- v0.9：在问题维度和评分口径稳定后开展正式多 agent 对比。
-- 后续版本再评估 TorchVision、TorchAudio、JAX 等横向框架扩展。
+| Action | 作用 | 关键约束 |
+| --- | --- | --- |
+| `workspace_list` | 列目录 | Path Policy、数量/深度限制 |
+| `workspace_search` | 搜索源码 | Workspace 内、结果和字节限制 |
+| `workspace_read` | 读文件 | Regular file、范围和大小限制 |
+| `workspace_write` | 写文件 | Write Policy、原子替换、Freeze 后拒绝 |
+| `workspace_apply_patch` | 应用 Patch | Scope、解析、原子性、Freeze 后拒绝 |
+| `command_run` | 运行允许命令 | Policy Allowlist、cwd、timeout、输出限制 |
+| `test_run` | 运行注册测试 | Selector Registry、预算、结构化结果 |
+| `vcs_diff` | 查看当前 Patch | Canonical Git Diff、大小限制 |
+| `session_finish` | 请求结束 | 幂等、触发收敛和 Freeze |
+
+Request 至少包含 `schema_version`、`session_id`、`action_id`、`action_name`、`arguments`、`client_sequence` 和 `deadline_ms`。
+
+Observation 至少包含 `ok`、稳定 `error_code`、公开 `message`、结构化 `data`、`started_at`、`ended_at`、`budget_delta` 和可选 `mutation_state`。
+
+同一 `action_id` 重试返回相同 Observation，不重复执行有副作用的操作。
+
+## 8. Adapter 与 MCP
+
+### 8.1 Adapter Contract
+
+Adapter 只负责：
+
+- 把 AgentTaskView 和 LaunchContext 转换为 Agent 输入；
+- 建立 CLI/MCP Transport；
+- 把模型工具调用转换为 Canonical Action Request；
+- 返回 Agent Exit/Finish 和 Provider 使用信息。
+
+Adapter 不负责 Workspace、预算判定、Patch、Evaluator 或 Scoring。
+
+### 8.2 真实 Codex
+
+Codex 是 v0.6 必须支持的真实 Agent：
+
+- Controller 正常连接 Codex Provider；
+- Codex 通过 attempt-scoped MCP 或 CLI Compatibility Adapter 调用工具；
+- 真实交互必须包含读取、至少一次修改、至少一次注册测试和 Finish；
+- Provider/Rate-limit 记录为运行事实，不与 Agent 修复失败混淆；
+- 现有 `codex_action_bridge` 保持 Legacy 可用，直到新 Adapter 通过兼容验证。
+
+### 8.3 Transport 等价
+
+CLI 与 MCP 调用同一 Service，不复制业务逻辑。相同 Scripted Action Sequence 应得到相同 Patch、Error Code、Budget Delta 和 Event 语义。
+
+## 9. Authoritative Workspace 与 Patch Freeze
+
+Workspace 创建后记录：
+
+- base source digest；
+- materialization mode；
+- runtime profile；
+- writable scope；
+- Git status baseline；
+- workspace id。
+
+所有修改必须通过 Canonical Action Service。`test_run` 与 `vcs_diff` 使用同一目录。
+
+Freeze 顺序：
+
+1. 停止接收新 Action；
+2. 等待或收敛 in-flight Action；
+3. 记录最终 Git status；
+4. 生成 Canonical Patch；
+5. 校验 Path/Mode/Symlink/Size Policy；
+6. 写入 Patch Artifact 和 SHA-256；
+7. 关闭 Workspace 写能力；
+8. 生成 Session Terminal。
+
+Patch 必须覆盖 add/modify/delete，禁止依赖未进入 Patch 的缓存或工作树状态。
+
+## 10. AttemptSession
+
+### 10.1 状态机
+
+```text
+created
+→ preparing
+→ ready
+→ running
+→ stopping
+→ freezing
+→ terminal
+```
+
+异常可以从任一非终态进入 `stopping`，但只能生成一个终态。
+
+### 10.2 终止原因
+
+- `agent_finished`；
+- `agent_exited`；
+- `budget_exhausted`；
+- `timeout`；
+- `cancelled`；
+- `workspace_error`；
+- `runtime_error`；
+- `provider_error`；
+- `platform_error`。
+
+终止原因不直接等于评分结果。例如 Agent 正常 Finish 可能 unresolved；Provider Error 属于 Infrastructure Failure，不计为 Agent 修复失败。
+
+### 10.3 Budget
+
+至少支持：
+
+- wall-clock；
+- action count；
+- test count；
+- command count；
+- output bytes；
+- 可选 provider token/cost。
+
+Budget 在 Service 端扣减。Adapter 自报只用于对账。
+
+### 10.4 Resume
+
+Attempt Identity 由 Cohort、Task、Agent、Repeat 和有效配置 Hash 组成。Resume 不重复已完成有效 Attempt；配置或 Task 内容变化会生成新 Identity。原始 JSONL append-only，聚合按稳定 Identity 去重并保留 Retry Audit。
+
+## 11. Trajectory 与 Artifact
+
+### 11.1 必需事件
+
+- session created/prepared/started；
+- agent launched/exited；
+- action requested/observed；
+- test started/completed；
+- budget updated/exhausted；
+- finish/timeout/cancel requested；
+- patch freeze started/completed/failed；
+- session terminal emitted；
+- evaluation started/completed；
+- attempt terminal emitted。
+
+每个 Event 包含 Schema Version、Session ID、Sequence、Timestamp、Event Type、Public Payload 和前一 Event Hash。大输出单独存 Artifact，只在 Event 中保存 Hash、Size 和 Media Type。
+
+### 11.2 Artifact Layout
+
+```text
+runs/<cohort>/
+  run_manifest.json
+  attempts.jsonl
+  attempts/<attempt-id>/
+    integrity.json
+    retries/
+      retry-0001/
+        agent_task_view.json
+        session_result.json
+        events.jsonl
+        final.patch
+        public_evaluation.json
+        private_evaluation.json
+  results.jsonl
+  summary.json
+  integrity.json
+```
+
+每个 retry 的 Session、Event、Patch 与 Evaluation evidence 都不可变保留；逻辑结果只
+从 ledger 选择一行。Public Artifact 不包含 Hidden 源码、Gold、私有 Test 输出、
+Credential 或宿主路径；完整 EvaluationSpec 只保存在 private evaluation 中，公开侧
+只携带其 canonical hash。
+
+### 11.3 Integrity
+
+`integrity.json` 至少验证：
+
+- Manifest、Task、Source、Environment、Policy Hash；
+- Event Sequence/Pairing/Terminal；
+- Session/Patch/Evaluator 三方 Patch Hash；
+- Evaluation 与 Summary 重建；
+- Expected/Observed Attempt Matrix；
+- 缺失、重复、Unexpected Attempt 和 Retry Audit。
+
+## 12. Fresh Evaluator 与结果模型
+
+Evaluator 在新的 Source Copy/Container 中：
+
+1. 校验 Base Source Identity；
+2. 严格应用 Frozen Patch；
+3. 注入 Evaluation-only Test Asset；
+4. 执行 F2P/P2P；
+5. 记录 collected/executed/skipped/failed；
+6. 生成私有证据和公开结果；
+7. 清理 Evaluator-owned Resource。
+
+不允许 Patch Fuzz Apply、从 Agent Workspace 读取额外文件、把 Hidden 失败反馈给已结束 Agent，或用 exit 0 掩盖未执行 Test。
+
+结果至少分三轴：
+
+- `attempt_validity`：valid / infrastructure_invalid；
+- `agent_terminal`：finished / exited / timeout / budget / cancelled；
+- `evaluation_outcome`：resolved / f2p_failed / p2p_regression / invalid_patch / no_patch / evaluation_error。
+
+Infrastructure Invalid 另有稳定 `invalid_reason`，不计入 Agent resolved denominator，但保留原始记录。
+
+## 13. Runtime Profile 与 Conformance
+
+支持的 Profile 继承现有能力：
+
+- Local/Remote CPU Python Overlay；
+- Remote CUDA Python Overlay；
+- Remote CUDA Kernel Build；
+- 必要的 CPU Compile/Source Build Profile。
+
+Profile 冻结 Executor、Image、Source Loading、Mount、Network、Timeout、Resource 和 Cleanup Policy。
+
+安全边界采用普通工程约束：
+
+- Container/Process 必须带 Attempt-owned 标识；
+- 只清理当前 Attempt 创建并记录的资源；
+- 不使用广域 `pkill` 或不带 Attempt/Container Identity 的清理；
+- 本地配置、Credential 和 Remote Host 信息不进入仓库或 Public Artifact；
+- Controlled Runtime 在可行时关闭 Agent Task Data-plane 网络；Controller 到 Provider 的连接不受此限制；
+- 通过参数断言、Mock、Fixture、Attempt 资源清单和正常集成测试验证。
+
+Conformance 对相同 Canonical Sequence 检查 Action、Patch、Result 和 Cleanup 语义，而不是要求不同硬件耗时一致。
+
+## 14. Compatibility 与 Replay
+
+### 14.1 Legacy Compatibility
+
+- `scripts/run_experiment.py` 保持主入口；
+- 默认行为在迁移前保持 v0.5 Legacy；
+- 新 Runtime 由显式 Profile/Protocol Version 选择；
+- 旧 Dataset/Task Manifest 可读取，新增字段提供确定默认值或显式 Migration；
+- 旧 results.jsonl 和 summary 保持可读。
+
+### 14.2 v0.5 Replay Matrix
+
+v0.6 完成前执行：
+
+- 17/17 Baseline Failure Replay；
+- 17/17 Gold Success Replay；
+- 51/51 Legacy Final Patch Replay；
+- 每个差异给出 Task/Environment/Protocol 归因；
+- Legacy Summary 与 v0.6 Summary 分离。
+
+Replay 证明新 Evaluator/Runtime 没有静默改变历史语义，不生成新的 Agent 成绩。
+
+## 15. CLI 与开发体验
+
+统一入口至少支持：
+
+- `--runtime-profile`；
+- `--action-protocol`；
+- `--evaluation-protocol`；
+- `--feedback-policy`；
+- `--budget-profile`；
+- `--agent` / `--agent-repeat`；
+- `--run-manifest` / `--resume`；
+- `--verify-artifacts` / `--rebuild-summary`；
+- `--verified-only` 和完整性硬校验。
+
+错误信息必须给出稳定 Error Code、相关 Artifact 路径和下一步，不只输出 traceback。
+
+## 16. 内部里程碑
+
+| 里程碑 | 内容 | 退出证据 |
+| --- | --- | --- |
+| M1 | Contract、Schema、Manifest、Compatibility | Schema/round-trip/legacy tests |
+| M2 | AgentTaskView、Workspace、Patch Freeze | denylist、mutation→test、add/delete/hash tests |
+| M3 | Action Service、MCP、真实 Codex | CLI/MCP conformance、真实 CPU interaction |
+| M4 | Session、Budget、Termination、Resume、Trajectory | race/idempotency/resume/event rebuild tests |
+| M5 | Fresh Evaluator、Artifact、Integrity、Summary | bad/gold controls、patch identity、rebuild |
+| M6 | Runtime Conformance、v0.5 Replay、真实批量验证 | Local/Remote matrix、17+17+51、Codex canaries |
+| M7 | 文档、演示、Release Review | quickstart、clean run、无 P0/P1 |
+
+七月底的纵向闭环是 M3/M4 的中间演示，不是独立版本。只有 M1–M7 全部满足才标记 v0.6 Completed。
+
+## 17. 失败严重级别
+
+- **P0**：Hidden/Gold 泄漏、宿主破坏、结果伪造、Patch/Evaluation 身份失效；
+- **P1**：核心评测错误、错误终态、不可重建、Legacy 语义静默变化；
+- **P2**：重要覆盖、诊断、兼容或可维护性缺陷；
+- **P3**：文档、体验和非阻塞改进。
+
+v0.6 Release 不允许 Open P0/P1。P2/P3 可以有明确 Backlog，但不得改变公开结论。
+
+## 18. 完成定义
+
+当且仅当：
+
+1. M1–M7 退出条件全部满足；
+2. `acceptance_matrix.md` 所有 Must 为 Passed；
+3. 全量单元/集成测试和 Dataset Validation 通过；
+4. CLI/MCP 使用同一 Canonical Action Service；
+5. 至少一个真实 Codex CPU Attempt 完成多轮读取、修改、注册测试和 Finish；
+6. CPU、CUDA Overlay、CUDA Kernel Build 各有代表性 Runtime/Replay 证据，真实 Canary 范围按可用资源记录；
+7. Final Patch 在 Session、Artifact、Evaluator 中 Hash 一致；
+8. Fresh Evaluator 的 Bad/Gold/Agent Controls 结果正确；
+9. 17 Baseline、17 Gold、51 Legacy Patch Replay 完整或每个差异有批准解释；
+10. Summary 可从原始 Artifact 精确重建；
+11. README、Quickstart、设计、实现和实际 CLI 一致；
+12. 无 Open P0/P1；
+13. 发布说明不声称 v0.6 已证明 Feedback 因果、Agent 排名或对总体算子任务的泛化。
+
+v0.6 完成后的准确表述是：
+
+> OpBench 已从特定 Agent Bridge 驱动的评测集 Demo，升级为具有版本化任务视图、统一 Action/MCP 接入、Attempt 生命周期、多轮反馈轨迹、唯一 Patch Freeze、Fresh Evaluation、失败归因、兼容回放和可重建 Artifact 的规范 Coding Agent 评测平台，并继续支持真实 Codex 端到端运行。

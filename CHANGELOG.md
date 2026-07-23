@@ -4,6 +4,45 @@ This file records user-visible OpBench version milestones. Detailed design,
 implementation, and experiment evidence remain in the versioned documents
 under `docs/`.
 
+## v0.6 - Completed
+
+Platform completed on 2026-07-19; the real MCP full experiment completed on
+2026-07-23:
+
+- v0.6 upgrades the existing real-Codex benchmark demo into a standardized Agent evaluation platform with versioned contracts, canonical CLI/MCP actions, explicit AttemptSession lifecycle and budgets, trajectory artifacts, patch freeze, fresh evaluation, failure attribution, replay, and rebuildable summaries.
+- v0.6 M1 is complete: strict versioned runtime contracts, canonical JSON/SHA-256, deterministic RunManifest/Cohort/Attempt identities, a frozen expected matrix, v0.5 compatibility projection, independent JSON Schema validation, and offline manifest CLIs are implemented. This is platform evidence, not a new benchmark score.
+- v0.6 M2 is complete: AgentTaskView is an explicit scanned public projection and a Manifest/Attempt identity axis; Authoritative Workspace applies regular-file/path/scope/mode/size/symlink/binary policy; Freeze converges concurrent mutations into one canonical add/modify/delete/empty patch, verifies strict clean-base application, and binds one patch hash across Session, artifact metadata, and EvaluationSpec. Existing v0.5 Action Bridge patch export remains compatible.
+- v0.6 M3 is complete: all nine versioned actions run through one server-authoritative service over the M2 workspace; command/test execution is policy/registry bound; action IDs are idempotent; deadlines and budgets are enforced server-side; CLI/MCP scripted sequences produce equivalent observations, patches, usage, and audit exchanges; and the standard Adapter boundary exposes only a scanned launch view plus a JSON-only client. The v0.5 bridge remains compatible; real Codex standard-adapter conformance remains an M6 release gate.
+- v0.6 M4 is complete: AttemptSession converges lifecycle, all server-owned budgets, concurrent stop reasons, patch freeze, and one terminal result; canonical Action events are atomically paired in a continuous hash chain; public JSON artifacts are content-addressed, rescanned, and descriptor-bound; and the append-only resume ledger preserves retry history while selecting one valid logical result. Journal and ledger writes use bound regular-file descriptors, `O_APPEND`, cross-instance locks, strict reopen validation, and uncertain-commit reconciliation or fail-closed poisoning. Fresh evaluation events and private artifact isolation remain M5 gates.
+- v0.6 M5 is complete: evaluator-owned structured test evidence rejects forged stdout and workspace runner shadowing; immutable retry-specific artifacts preserve and verify every retry; RunManifest/private EvaluationSpec/results/summary bind exact Evaluation identity and frozen task authority; private selector evidence, Session attribution, lifecycle ordering, patch bytes, and outcome semantics can be rebuilt and verified independently; and public/private artifacts produce deterministic results and summaries. Final local verification passed 62 focused, 252 runtime, and 421 full tests, with independent review at Critical/Important/Minor 0/0/0. This is platform work, not a new Agent benchmark score; M6 runtime conformance and real-Codex validation have not started.
+- v0.6 M6 is complete: five versioned Runtime Profiles, exact Attempt-owned resource ledgers, Local/Docker/Remote backends, canonical CLI/MCP conformance, immutable 17+17+51 replay inventory, process-isolated canonical Codex Adapter, explicit v1 orchestration, interruption-safe retry, and resource verification are implemented. Real Codex local CPU single and two-repeat resume canaries passed Integrity and cleanup. The initial exact-target `connection_timeout` was retained as historical evidence; after the same target recovered, representative Remote CPU, CUDA Overlay, and CUDA Kernel canaries passed, followed by an 85/85 exact replay with zero failures, blocks, or differences.
+- v0.6 M7 is complete: a deterministic public v1 Scripted Demo, bilingual executable Quickstart, developer/support guide, representative path-independent Artifact index, and strict release review are delivered. The post-M7 exact-target closure passed R-05–R-08 and R-10, so every unified v0.6 Must gate is Passed.
+- Final v0.6 verification passed 581 full tests, 17-task verified Dataset validation, Runtime contract validation, tracked JSON/diff checks, and historical-result hash checks. This is platform validation and compatibility evidence, not a new Agent ranking or a relabeling of the v0.5 37/51 score.
+- The subsequent real MCP full experiment ran the 17-task Dataset three times
+  through `codex_mcp_canonical`: 51/51 Attempts were valid, with 35 resolved,
+  15 F2P failed, one P2P regression, zero infrastructure-invalid results, and
+  zero retries. All 51 traces, Integrity reports, and exact cleanup gates
+  passed; the result is descriptive and not a causal comparison with v0.5.
+- The final repository cleanup retains one three-file redacted MCP report under
+  `runs/`, removes superseded tracked canary/replay trees and internal v0.6
+  process drafts, and preserves their verified facts and hashes in the
+  versioned release documents.
+- v0.6 is one platform release with M1–M7 internal milestones. It does not expand the dataset or run the formal multi-Agent study.
+- v0.7 builds the reusable Dataset Factory, adds the Boundary Slice, and revisits the two matched-runtime Precision candidates.
+- v0.8 adds Device/API Compatibility and freezes Evaluation/Scoring Specification RC; v0.9 runs the formal multi-Agent and feedback-ablation cohorts.
+
+Planning and evidence documents:
+
+- `docs/project_plan.md`
+- `docs/project_state.md`
+- `docs/v0.6/design.md`
+- `docs/v0.6/implementation_plan.md`
+- `docs/v0.6/acceptance_matrix.md`
+- `docs/v0.6/experiment_report.md`
+- `docs/v0.6/mcp_agent_experiment.md`
+- `docs/v0.6/mcp_agent_experiment_verification.md`
+- `docs/v0.7/design.md`
+
 ## v0.5 - Completed
 
 Development and the full experiment completed on 2026-07-11. v0.5 establishes
@@ -36,8 +75,8 @@ Full experiment result (Codex CLI 0.144.0-alpha.4, 17 tasks x 3 repeats):
 Deferred to later versions:
 
 - Admit a real P4 numerical-instability task; P4 remains N/A rather than being filled with a non-matching task.
-- v0.6 adds boundary tasks; v0.7 adds device/API compatibility tasks.
-- #129154 and #144073 require a matched wheel or source-build environment and remain v0.6 backlog candidates.
+- v0.6 standardizes the Agent evaluation platform; v0.7 adds boundary tasks; v0.8 adds device/API compatibility tasks.
+- #129154 and #144073 require a matched wheel or source-build environment and remain v0.7 backlog candidates.
 
 Documents:
 

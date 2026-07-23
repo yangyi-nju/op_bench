@@ -1,0 +1,18 @@
+{
+  "hidden_test": "test_calc.NormalizeTests.test_nan_is_preserved",
+  "operator": {
+    "framework": "fixture",
+    "operator_name": "normalize"
+  },
+  "patch_scope": [
+    "calc.py"
+  ],
+  "public_test": "test_public.PublicTests.test_number_is_preserved",
+  "runtime_profile_id": "local-cpu-process-v1",
+  "schema_version": "opbench.demo_spec.v1",
+  "statement": {
+    "body": "Exercise the versioned runtime controller with a synthetic local task.",
+    "title": "OpBench v0.6 local scripted demo"
+  },
+  "task_id": "opbench_demo__normalize"
+}

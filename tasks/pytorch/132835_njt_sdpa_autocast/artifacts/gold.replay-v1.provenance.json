@@ -1,0 +1,22 @@
+{
+  "provenance_type": "legacy_gold_strict_replay_normalization",
+  "schema_version": "v1",
+  "task_id": "pytorch__132835__njt_sdpa_autocast",
+  "source_revision": "bbf568aac8ec06bcbfc00cac84747256ac021c5d",
+  "original_patch": {
+    "path": "artifacts/gold.patch",
+    "sha256": "sha256:9ca9044fd33a76a6be04c232317b325d2d0e4e62315d21c45d7791b487173cba"
+  },
+  "strict_patch": {
+    "path": "artifacts/gold.replay-v1.patch",
+    "sha256": "sha256:7716721fa37c07a3782df6c66197e5190f5b649f1d9a621569b7439680f185d5"
+  },
+  "admission_evidence": {
+    "path": "admission/evidence.json",
+    "sha256": "sha256:dd9b7542fed00aa820652a89349a5b8fdc439d05151213266ed3f053dabf76b2"
+  },
+  "normalization": {
+    "reason": "legacy_gold_context_predates_enable_gqa_parameter",
+    "method": "preserve_patch_additions_and_rebase_second_hunk_context_only"
+  }
+}

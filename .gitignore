@@ -6,6 +6,15 @@ runs/**/codex_scratch/
 runs/**/claude_scratch/
 runs/admission/
 runs/_baseline_cache/
+runs/v0.6_m6_codex_cpu_canary/
+runs/v0.6_m6_codex_local_batch/
+runs/v0.6_m6_codex_local_canary/
+runs/v0.6_m6_conformance/
+runs/v0.6_m6_conformance_fixture/
+runs/v0.6_m6_legacy_replay/
+runs/v0.6_m6_local_codex_input/
+runs/v0.6_m7_demo_input/
+runs/v0.6_m7_scripted_demo/
 __pycache__/
 *.pyc
 .DS_Store
