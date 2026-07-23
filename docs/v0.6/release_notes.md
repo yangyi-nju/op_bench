@@ -1,6 +1,8 @@
 # OpBench v0.6 Release Notes
 
-Date: 2026-07-19
+Platform release: 2026-07-19
+
+Real MCP full-experiment addendum: 2026-07-23
 
 Release target: `opbench-v0.6.0`
 
@@ -61,11 +63,34 @@ final exact replay.
   cases, with `failed=0`, `blocked=0`, and an empty difference report;
 - 581/581 final full-suite tests with the 17-task verified Dataset, example
   Runtime contract, tracked JSON, and release-document checks passing.
+- the later real MCP full experiment completed 51/51 valid Attempts with
+  complete trace, Integrity, and cleanup evidence.
 
 The representative public synthetic Artifact index is
 `configs/examples/v0.6_scripted_demo_artifact.example.json`. It contains only
 path-independent public identities, axes, totals, actions, and hashes. It is a
 controller/artifact demonstration, not a benchmark score.
+
+## Real MCP full experiment
+
+After the platform release gates closed, the frozen 17-task Dataset was run
+three times through the independent `codex_mcp_canonical` Adapter. The four
+Runtime Profile cohorts completed 51/51 valid Attempts with 35 resolved,
+15 F2P failed, one P2P regression, zero infrastructure-invalid results, and
+zero logical retries. All Agent terminals were `finished`.
+
+The 51 complete MCP traces contain 747 tool calls and zero protocol errors.
+All four complete controller-private roots passed 14/14 root Integrity,
+all 51 per-Attempt reports passed 10/10, and exact Runtime cleanup passed
+51/51. The deterministic redacted report was reproduced byte-for-byte before
+the private cohort roots and intermediate diagnostics were removed from the
+workspace.
+
+See the [v0.6 experiment report](experiment_report.md) for results and
+analysis, the [execution guide](mcp_agent_experiment.md) for the frozen
+procedure, and the
+[verification record](mcp_agent_experiment_verification.md) for the evidence
+gates.
 
 ## Closed release gates
 
@@ -118,7 +143,9 @@ and `1f5fa1515f2e93bbdec9a393e9fc07a3ccf4d121e6d33b175fdb7a1b09b03309`.
 
 ## Explicit non-claims
 
-- The v0.5 37/51 result remains a v0.5 result; it is not a v0.6 score.
+- The v0.5 37/51 result remains a v0.5 result; it is not a v0.6 score. The
+  later v0.6 MCP result is 35/51; changed Adapter/model/CLI/Runtime identities
+  make the two descriptive, not a causal comparison.
 - The synthetic Scripted Demo and local Codex canaries are not a formal Agent
   ranking.
 - v0.6 does not run the planned feedback-causality experiment.
@@ -126,5 +153,6 @@ and `1f5fa1515f2e93bbdec9a393e9fc07a3ccf4d121e6d33b175fdb7a1b09b03309`.
   generalization.
 - Dataset expansion and Boundary-slice work remain v0.7 scope.
 
-See the [developer guide](developer_guide.md), [M6 verification](m6_verification.md),
-[M7 verification](m7_verification.md), and [acceptance matrix](acceptance_matrix.md).
+See the [developer guide](developer_guide.md), [experiment report](experiment_report.md),
+[M6 verification](m6_verification.md), [M7 verification](m7_verification.md),
+and [acceptance matrix](acceptance_matrix.md).

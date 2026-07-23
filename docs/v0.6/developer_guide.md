@@ -5,6 +5,12 @@ Date: 2026-07-19
 Status: `opbench-v0.6.0` is Completed. M1–M7 and every Must gate in the
 [acceptance matrix](acceptance_matrix.md) have Passed.
 
+The later 51-Attempt real MCP full run is summarized in the
+[v0.6 experiment report](experiment_report.md). Its frozen commands and
+verification gates remain separate in the
+[experiment guide](mcp_agent_experiment.md) and
+[verification record](mcp_agent_experiment_verification.md).
+
 ## 1. Which execution path to use
 
 `scripts/run_experiment.py` has two deliberately separate surfaces:

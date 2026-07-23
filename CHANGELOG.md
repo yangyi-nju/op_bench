@@ -6,7 +6,8 @@ under `docs/`.
 
 ## v0.6 - Completed
 
-Completed on 2026-07-19:
+Platform completed on 2026-07-19; the real MCP full experiment completed on
+2026-07-23:
 
 - v0.6 upgrades the existing real-Codex benchmark demo into a standardized Agent evaluation platform with versioned contracts, canonical CLI/MCP actions, explicit AttemptSession lifecycle and budgets, trajectory artifacts, patch freeze, fresh evaluation, failure attribution, replay, and rebuildable summaries.
 - v0.6 M1 is complete: strict versioned runtime contracts, canonical JSON/SHA-256, deterministic RunManifest/Cohort/Attempt identities, a frozen expected matrix, v0.5 compatibility projection, independent JSON Schema validation, and offline manifest CLIs are implemented. This is platform evidence, not a new benchmark score.
@@ -17,17 +18,25 @@ Completed on 2026-07-19:
 - v0.6 M6 is complete: five versioned Runtime Profiles, exact Attempt-owned resource ledgers, Local/Docker/Remote backends, canonical CLI/MCP conformance, immutable 17+17+51 replay inventory, process-isolated canonical Codex Adapter, explicit v1 orchestration, interruption-safe retry, and resource verification are implemented. Real Codex local CPU single and two-repeat resume canaries passed Integrity and cleanup. The initial exact-target `connection_timeout` was retained as historical evidence; after the same target recovered, representative Remote CPU, CUDA Overlay, and CUDA Kernel canaries passed, followed by an 85/85 exact replay with zero failures, blocks, or differences.
 - v0.6 M7 is complete: a deterministic public v1 Scripted Demo, bilingual executable Quickstart, developer/support guide, representative path-independent Artifact index, and strict release review are delivered. The post-M7 exact-target closure passed R-05–R-08 and R-10, so every unified v0.6 Must gate is Passed.
 - Final v0.6 verification passed 581 full tests, 17-task verified Dataset validation, Runtime contract validation, tracked JSON/diff checks, and historical-result hash checks. This is platform validation and compatibility evidence, not a new Agent ranking or a relabeling of the v0.5 37/51 score.
+- The subsequent real MCP full experiment ran the 17-task Dataset three times
+  through `codex_mcp_canonical`: 51/51 Attempts were valid, with 35 resolved,
+  15 F2P failed, one P2P regression, zero infrastructure-invalid results, and
+  zero retries. All 51 traces, Integrity reports, and exact cleanup gates
+  passed; the result is descriptive and not a causal comparison with v0.5.
 - v0.6 is one platform release with M1–M7 internal milestones. It does not expand the dataset or run the formal multi-Agent study.
 - v0.7 builds the reusable Dataset Factory, adds the Boundary Slice, and revisits the two matched-runtime Precision candidates.
 - v0.8 adds Device/API Compatibility and freezes Evaluation/Scoring Specification RC; v0.9 runs the formal multi-Agent and feedback-ablation cohorts.
 
-Planning documents:
+Planning and evidence documents:
 
 - `docs/project_plan.md`
 - `docs/project_state.md`
 - `docs/v0.6/design.md`
 - `docs/v0.6/implementation_plan.md`
 - `docs/v0.6/acceptance_matrix.md`
+- `docs/v0.6/experiment_report.md`
+- `docs/v0.6/mcp_agent_experiment.md`
+- `docs/v0.6/mcp_agent_experiment_verification.md`
 - `docs/v0.7/design.md`
 
 ## v0.5 - Completed

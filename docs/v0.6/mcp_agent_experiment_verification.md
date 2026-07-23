@@ -6,6 +6,10 @@ Status: Passed. The formal matrix contains 51 distinct valid Attempts, 51
 complete MCP traces, zero infrastructure-invalid results, and zero logical
 retries.
 
+The reader-facing results and analysis are in
+[experiment_report.md](experiment_report.md); this document preserves the
+lower-level verification record.
+
 ## 1. Frozen experiment identity
 
 - Dataset: `pytorch_v0.5`

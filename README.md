@@ -6,7 +6,7 @@ OpBench is an operator-focused benchmark for evaluating coding agents on real fr
 
 v0.1 established the isolated replay/evaluation loop. v0.2 added asset registries and formal admission. v0.3 expanded the dataset to 10 verified tasks and added 3-repeat stability evaluation. v0.4 added CUDA tiers and remote Docker. v0.5 is now complete: the verified cumulative dataset contains 17 tasks, including a 6-task precision slice, and its 51-attempt Codex run reached **72.5% resolved** (37/51) with eight-dimensional reporting and hard experiment-integrity checks.
 
-The v0.6 platform is **Completed** across M1–M7: strict versioned contracts, one authoritative workspace and immutable patch, a server-authoritative CLI/MCP action service, deterministic Attempt/trajectory/evaluation/artifact semantics, versioned Runtime Profiles, exact Attempt-owned Local/Docker/Remote resources, conformance and legacy replay, a process-isolated canonical Codex Adapter with resume and Integrity verification, and an executable public Demo/documentation surface. The recovered exact target passed representative Remote CPU, CUDA Overlay, and CUDA Kernel canaries. The complete frozen replay passed all 17 baseline + 17 gold + 51 historical final-patch cases with zero failures, blocks, or differences. A subsequent [real MCP full experiment](docs/v0.6/mcp_agent_experiment.md) completed 51/51 valid Attempts with 35 resolved, 15 F2P failures, one P2P regression, zero infrastructure-invalid results, and zero retries. These are descriptive platform-validation results, not a causal comparison with v0.5. Boundary-task expansion follows in v0.7. See the [global project plan](docs/project_plan.md), [current project state](docs/project_state.md), and [v0.6 release notes](docs/v0.6/release_notes.md).
+The v0.6 platform is **Completed** across M1–M7: strict versioned contracts, one authoritative workspace and immutable patch, a server-authoritative CLI/MCP action service, deterministic Attempt/trajectory/evaluation/artifact semantics, versioned Runtime Profiles, exact Attempt-owned Local/Docker/Remote resources, conformance and legacy replay, a process-isolated canonical Codex Adapter with resume and Integrity verification, and an executable public Demo/documentation surface. The recovered exact target passed representative Remote CPU, CUDA Overlay, and CUDA Kernel canaries. The complete frozen replay passed all 17 baseline + 17 gold + 51 historical final-patch cases with zero failures, blocks, or differences. A subsequent [real MCP full experiment](docs/v0.6/experiment_report.md) completed 51/51 valid Attempts with 35 resolved, 15 F2P failures, one P2P regression, zero infrastructure-invalid results, and zero retries. These are descriptive platform-validation results, not a causal comparison with v0.5. Boundary-task expansion follows in v0.7. See the [global project plan](docs/project_plan.md), [current project state](docs/project_state.md), and [v0.6 release notes](docs/v0.6/release_notes.md).
 
 ## What The Current Code Contains
 
@@ -50,6 +50,7 @@ Development-only experiment adapters have been removed from the public v0.1 surf
 | `docs/project_plan.md` | Global mission, principles, roadmap, release gates, and research targets. |
 | `docs/project_state.md` | Current baseline, active version, decisions, and next actions. |
 | `docs/v0.6/` | v0.6 standardized Agent evaluation platform design, implementation plan, and acceptance matrix. |
+| `docs/v0.6/experiment_report.md` | v0.6 real MCP full experiment: 51 valid Attempts, outcomes, traces, and integrity evidence. |
 | `docs/v0.7/design.md` | v0.7 Dataset Factory, Boundary Slice, and matched-runtime recovery design. |
 | `docs/v0.5/design.md` | v0.5 dimension taxonomy and extended evaluation metrics. |
 | `docs/v0.5/experiment_report.md` | v0.5 full 17-task, 51-attempt Codex evaluation and precision breakdown. |
@@ -182,9 +183,11 @@ that directory and are identity-checked after exit. Each selected retry records 
 `adapter_trace.json` initialize/list/call counters; the existing 14-check
 Integrity graph binds those counters to Action events, model/CLI identity,
 terminal state, evaluation, and exact resource cleanup. See the
-[real MCP Agent experiment guide](docs/v0.6/mcp_agent_experiment.md) for the four
-cohorts, resume rules, evidence split, hard output bounds, exact formal-matrix
-contract, report builder, and safety boundary.
+[v0.6 experiment report](docs/v0.6/experiment_report.md) for the results and
+analysis, and the
+[real MCP Agent experiment guide](docs/v0.6/mcp_agent_experiment.md) for the
+four cohorts, resume rules, evidence split, hard output bounds, exact
+formal-matrix contract, report builder, and safety boundary.
 
 ### Legacy v0.5 compatibility
 
@@ -263,6 +266,7 @@ Platform development should follow the [v0.6 design](docs/v0.6/design.md), [impl
 - [v0.6 platform design](docs/v0.6/design.md)
 - [v0.6 implementation plan](docs/v0.6/implementation_plan.md)
 - [v0.6 acceptance matrix](docs/v0.6/acceptance_matrix.md)
+- [v0.6 experiment report](docs/v0.6/experiment_report.md)
 - [v0.6 real MCP Agent experiment](docs/v0.6/mcp_agent_experiment.md)
 - [v0.6 real MCP Agent experiment verification](docs/v0.6/mcp_agent_experiment_verification.md)
 - [v0.7 Dataset Factory and Boundary design](docs/v0.7/design.md)

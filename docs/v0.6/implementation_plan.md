@@ -6,6 +6,10 @@
 
 目标版本：`opbench-v0.6.0`
 
+最终真实 Agent 结果见 [v0.6 实验报告](experiment_report.md)，冻结执行流程与
+验证附录分别见 [MCP 实验手册](mcp_agent_experiment.md)和
+[MCP 实验验证](mcp_agent_experiment_verification.md)。
+
 ## 1. 目标与执行约束
 
 本计划把 [v0.6 设计](design.md) 转换为可顺序实施、逐项验证的工程工作。完成后的系统应当把 v0.5 已经可运行的真实 Codex 评测闭环，收敛为具有版本化合同、统一 Action 能力、显式 Attempt 生命周期、Fresh Evaluation 和可重建证据的规范平台。

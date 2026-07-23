@@ -14,6 +14,7 @@ MCP_EXPERIMENT = ROOT / "docs" / "v0.6" / "mcp_agent_experiment.md"
 MCP_EXPERIMENT_VERIFICATION = (
     ROOT / "docs" / "v0.6" / "mcp_agent_experiment_verification.md"
 )
+EXPERIMENT_REPORT = ROOT / "docs" / "v0.6" / "experiment_report.md"
 MCP_EXPERIMENT_REPORT = (
     ROOT
     / "runs"
@@ -45,6 +46,7 @@ class V06ReleaseDocumentationTests(unittest.TestCase):
             M7_VERIFICATION,
             MCP_EXPERIMENT,
             MCP_EXPERIMENT_VERIFICATION,
+            EXPERIMENT_REPORT,
         ):
             text = document.read_text(encoding="utf-8")
             for raw_target in LINK_PATTERN.findall(text):
@@ -53,6 +55,45 @@ class V06ReleaseDocumentationTests(unittest.TestCase):
                     continue
                 with self.subTest(document=document.name, target=target):
                     self.assertTrue((document.parent / target).resolve().exists())
+
+    def test_v0_6_has_a_versioned_human_readable_experiment_report(self) -> None:
+        self.assertTrue(EXPERIMENT_REPORT.exists())
+        report = EXPERIMENT_REPORT.read_text(encoding="utf-8")
+        for fragment in (
+            "# OpBench v0.6 实验报告",
+            "51/51",
+            "35/51",
+            "68.6%",
+            "15",
+            "P2P regression",
+            "747",
+            "0 次基础设施无效",
+            "0 次逻辑重试",
+            "四个 Comparability Key",
+            "mcp_agent_experiment.md",
+            "mcp_agent_experiment_verification.md",
+            "experiment_summary.json",
+        ):
+            with self.subTest(fragment=fragment):
+                self.assertIn(fragment, report)
+
+        for index in (*README_FILES, *INDEX_FILES, RELEASE_NOTES, PROJECT_STATE):
+            with self.subTest(index=index.name):
+                self.assertIn(
+                    "experiment_report.md", index.read_text(encoding="utf-8")
+                )
+
+        experiment_index = json.loads(
+            MCP_EXPERIMENT_INDEX.read_text(encoding="utf-8")
+        )
+        for task_id in {row["task_id"] for row in experiment_index["attempts"]}:
+            with self.subTest(task_id=task_id):
+                self.assertIn(task_id.removeprefix("pytorch__"), report)
+        for profile_id in {
+            row["runtime_profile_id"] for row in experiment_index["attempts"]
+        }:
+            with self.subTest(profile_id=profile_id):
+                self.assertIn(profile_id, report)
 
     def test_bilingual_quickstarts_cover_the_v1_release_surface(self) -> None:
         required = (

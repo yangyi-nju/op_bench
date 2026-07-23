@@ -4,8 +4,10 @@ Date: 2026-07-22 to 2026-07-23
 
 Status: Completed. All four formal cohorts passed the 51-Attempt matrix,
 Integrity, trace, privacy, and exact-cleanup gates. The redacted deterministic
-report is [published with this repository](../../runs/v0.6_mcp_full_20260722_event_redaction_r5_report/experiment_report.md),
-and the complete verification record is in
+Artifact report is
+[published with this repository](../../runs/v0.6_mcp_full_20260722_event_redaction_r5_report/experiment_report.md).
+The human-readable results and analysis are in
+[experiment_report.md](experiment_report.md), and the complete verification record is in
 [mcp_agent_experiment_verification.md](mcp_agent_experiment_verification.md).
 
 ## 1. Purpose and frozen identities
