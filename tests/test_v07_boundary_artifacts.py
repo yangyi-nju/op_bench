@@ -404,6 +404,55 @@ class BoundaryArtifactTests(unittest.TestCase):
                     set(fail_to_pass).isdisjoint(pass_to_pass)
                 )
 
+    def test_b3_storage_overflow_bundle(self) -> None:
+        task_dir = (
+            ROOT
+            / "tasks"
+            / "pytorch"
+            / "147352_storage_offset_overflow"
+        )
+        task = TaskManifest.load(task_dir / "task.json")
+        self.assertEqual(validate_manifest(task.data), [])
+        self.assertEqual(task.admission_status, "draft")
+        self.assertEqual(
+            task.data["operator"]["problem_dimension"],
+            "boundary",
+        )
+        self.assertEqual(
+            task.data["operator"]["problem_subclass"],
+            "B3",
+        )
+        self.assertEqual(
+            task.data["operator"]["problem_type"],
+            "checked-overflow",
+        )
+        self.assertEqual(
+            task.patch_scope_paths,
+            ["aten/src/ATen/native/Resize.h"],
+        )
+        self.assertEqual(
+            extract_patch_paths(
+                task.gold_patch_path.read_text(encoding="utf-8")
+            ),
+            ["aten/src/ATen/native/Resize.h"],
+        )
+        self.assertEqual(
+            task.source_ref,
+            "pytorch-6ccbff1-boundary-kernel-full",
+        )
+        source_loading = task.data["environment"]["source_loading"]
+        self.assertEqual(source_loading["mode"], "inplace_build")
+        build_environment = source_loading["build_environment"]
+        self.assertEqual(build_environment["BUILD_TEST"], "0")
+        self.assertEqual(build_environment["USE_CUDA"], "0")
+        self.assertEqual(build_environment["MAX_JOBS"], "8")
+        hidden = task.hidden_test_patch_path.read_text(encoding="utf-8")
+        self.assertIn("torch.empty((2, 3)", hidden)
+        self.assertNotRegex(
+            hidden,
+            r"torch\.(?:empty|randn|zeros|ones)\([^\n]*(?:17|2\*\*[0-9])",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
