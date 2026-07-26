@@ -1,0 +1,112 @@
+{
+  "task_id": "pytorch__139751__triton_ygrid_mask",
+  "version": "v1",
+  "environment_ref": "pytorch-matched-boundary-torch2.5.1-cu124",
+  "runtime_tier": "cuda_python_overlay",
+  "source_ref": "pytorch-cc98a1b-boundary-overlay",
+  "admission": {
+    "status": "draft"
+  },
+  "patch_scope": {
+    "allowed_paths": [
+      "torch/_inductor/codegen/triton.py"
+    ],
+    "mode": "enforced"
+  },
+  "source": {
+    "pr_url": "https://github.com/pytorch/pytorch/pull/139751",
+    "issue_url": null,
+    "repo": "pytorch/pytorch",
+    "repo_url": "https://github.com/pytorch/pytorch.git",
+    "issue_number": null,
+    "pr_number": 139751,
+    "base_commit": "cc98a1b59909e6f3ce929380e02f0345c862e31d",
+    "merge_commit": "f0b33658f83c9f76a7fe886e4b38af7fa29e54e9",
+    "checkout_mode": "git"
+  },
+  "statement": {
+    "title": "Triton can elide the y-mask when y-grid wrapping still needs it",
+    "body": "TritonKernel._has_constant_mask treats a block-aligned dimension as mask-free. For a Y dimension whose logical size exceeds the hardware y-grid limit, grid wrapping can still create out-of-range lanes unless a Z dimension already handles the overflow. Keep the existing optimization for X, bounded Y, and explicit Z, but conservatively retain the Y mask when the logical Y size can overflow the grid.",
+    "labels": [
+      "module: inductor",
+      "module: triton",
+      "boundary: launch grid"
+    ]
+  },
+  "operator": {
+    "framework": "pytorch",
+    "component": "torch._inductor.codegen.triton.TritonKernel",
+    "operator_name": "TritonKernel._has_constant_mask",
+    "problem_type": "wrong-result",
+    "problem_dimension": "boundary",
+    "problem_subclass": "B5",
+    "tags": [
+      "triton",
+      "y-grid",
+      "constant-mask",
+      "launch-bounds",
+      "low-memory-surrogate"
+    ]
+  },
+  "environment": {
+    "build_mode": "prebuilt-wheel",
+    "source_loading": {
+      "mode": "python_overlay",
+      "installed_package": "torch",
+      "overlay_paths": [
+        "torch/_inductor/codegen/triton.py"
+      ],
+      "runtime_site_packages": "/tmp/op_bench_runtime/site-packages",
+      "sync_before_tests": true
+    }
+  },
+  "compatibility": {
+    "target_module": "torch/_inductor/codegen/triton.py",
+    "target_import": "torch._inductor.codegen.triton",
+    "selector_module": "test/op_bench_boundary/test_triton_ygrid_mask.py",
+    "minimal_operation": "import torch; from torch._inductor.codegen.triton import TritonKernel; assert callable(TritonKernel._has_constant_mask)",
+    "evidence": "compatibility/evidence.json"
+  },
+  "factory_review_requirements": {
+    "surrogate_confirmation_required": true,
+    "production_method": "TritonKernel._has_constant_mask",
+    "predicate": "block_multiple and grid_dim == 1 and not has_zdim and numel > get_max_y_grid()",
+    "gold_path": "torch/_inductor/codegen/triton.py"
+  },
+  "agent_visible": {
+    "repo_setup_commands": [],
+    "known_constraints": [
+      "The hidden test is a low-memory surrogate and must keep calling TritonKernel._has_constant_mask directly.",
+      "Do not allocate tensors sized from get_max_y_grid().",
+      "Modify only torch/_inductor/codegen/triton.py."
+    ],
+    "allowed_test_commands": [
+      "{python} test/op_bench_boundary/test_triton_ygrid_mask.py {test}"
+    ]
+  },
+  "evaluation": {
+    "setup_commands": [],
+    "fail_to_pass": [
+      "BoundaryGridMaskTests.test_overflowing_y_grid_keeps_mask"
+    ],
+    "pass_to_pass": [
+      "BoundaryGridMaskTests.test_safe_grid_shapes_keep_existing_optimization"
+    ],
+    "test_command": "{python} test/op_bench_boundary/test_triton_ygrid_mask.py {test}",
+    "timeout_sec": 300
+  },
+  "artifacts": {
+    "gold_patch": "artifacts/gold.patch",
+    "hidden_test_patch": "artifacts/hidden_test.patch"
+  },
+  "metadata": {
+    "difficulty": "medium",
+    "curation_status": "draft",
+    "deterministic": true,
+    "estimated_runtime_min": 10,
+    "layer": "B",
+    "admission_status": "draft",
+    "source_loading_verified": false,
+    "notes": "Low-memory surrogate invokes the exact production predicate and Gold path; it allocates no tensors from symbolic grid sizes."
+  }
+}

@@ -453,6 +453,56 @@ class BoundaryArtifactTests(unittest.TestCase):
             r"torch\.(?:empty|randn|zeros|ones)\([^\n]*(?:17|2\*\*[0-9])",
         )
 
+    def test_b5_grid_mask_bundle(self) -> None:
+        task_dir = (
+            ROOT
+            / "tasks"
+            / "pytorch"
+            / "139751_triton_ygrid_mask"
+        )
+        task = TaskManifest.load(task_dir / "task.json")
+        self.assertEqual(validate_manifest(task.data), [])
+        self.assertEqual(task.admission_status, "draft")
+        self.assertEqual(task.runtime_tier, "cuda_python_overlay")
+        self.assertEqual(
+            task.environment_ref,
+            "pytorch-matched-boundary-torch2.5.1-cu124",
+        )
+        self.assertEqual(
+            task.data["operator"]["problem_dimension"],
+            "boundary",
+        )
+        self.assertEqual(
+            task.data["operator"]["problem_subclass"],
+            "B5",
+        )
+        self.assertEqual(
+            task.data["operator"]["problem_type"],
+            "wrong-result",
+        )
+        target = "torch/_inductor/codegen/triton.py"
+        self.assertEqual(task.patch_scope_paths, [target])
+        self.assertEqual(
+            extract_patch_paths(
+                task.gold_patch_path.read_text(encoding="utf-8")
+            ),
+            [target],
+        )
+        requirements = task.data["factory_review_requirements"]
+        self.assertIs(requirements["surrogate_confirmation_required"], True)
+        self.assertEqual(
+            requirements["production_method"],
+            "TritonKernel._has_constant_mask",
+        )
+        self.assertEqual(requirements["gold_path"], target)
+        hidden = task.hidden_test_patch_path.read_text(encoding="utf-8")
+        self.assertIn("TritonKernel._has_constant_mask", hidden)
+        self.assertIn("get_max_y_grid() + 1", hidden)
+        self.assertNotRegex(
+            hidden,
+            r"torch\.(?:empty|randn|zeros|ones|tensor)\(",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
