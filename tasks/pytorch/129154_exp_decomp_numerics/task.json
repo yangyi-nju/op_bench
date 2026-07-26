@@ -1,107 +1,140 @@
 {
-  "task_id": "pytorch__129154__exp_decomp_numerics",
-  "version": "v1",
-  "environment_ref": "pytorch-matched-ff89ebc-torch2.4.0-py311-cu124",
-  "runtime_tier": "cuda_python_overlay",
-  "source_ref": "pytorch-ff89ebc-cuda-overlay",
-  "admission": {"status": "deprecated"},
-  "compatibility": {
-    "target_module": "torch/_refs/__init__.py",
-    "target_import": "torch._refs",
-    "selector_module": "test/test_decomp.py",
-    "minimal_operation": "import torch; import torch._refs; torch._refs.abs(torch.tensor([-1.0], device='cuda'))",
-    "evidence": "compatibility/evidence.json"
-  },
-  "patch_scope": {
-    "allowed_paths": ["torch/_refs/__init__.py"],
-    "mode": "enforced"
-  },
-  "source": {
-    "pr_url": "https://github.com/pytorch/pytorch/pull/129154",
-    "issue_url": "https://github.com/pytorch/pytorch/issues/127749",
-    "issue_number": 127749,
-    "repo": "pytorch/pytorch",
-    "repo_url": "https://github.com/pytorch/pytorch.git",
-    "pr_number": 129154,
-    "base_commit": "ff89ebc50a738c734496393dc25313cf197fd0b4",
-    "merge_commit": "8cd9b104568754c088f843eebeb9f2b4f1c426d2",
-    "checkout_mode": "git",
-    "snapshot_path": "../../../.op_bench_cache/sources/pytorch/pytorch/ff89ebc50a738c734496393dc25313cf197fd0b4/source"
-  },
-  "statement": {
-    "title": "torch._refs.exponential can produce Inf for inputs near 1.0 due to log(0) underflow",
-    "body": "The Python decomp of `exponential_` uses `-1/rate * log1p(-rand_like(self))`. When the uniform sample is exactly 1.0 (valid for `curand_uniform` which samples `(0, 1]`), `log1p(-1.0) = log(0) = -inf`, giving `+inf` as the exponential value. Fix: add an epsilon guard — when `uniform >= 1 - eps/2`, substitute `-eps/2` instead of computing log, matching CUDA's numerical behavior.",
-    "labels": ["module: decomposition", "topic: numerical"]
-  },
-  "operator": {
-    "framework": "pytorch",
-    "component": "torch._refs.exponential",
-    "operator_name": "torch.Tensor.exponential_",
-    "problem_type": "log-inf-underflow",
-    "problem_dimension": "precision",
-    "problem_subclass": "P4",
-    "tags": ["exponential", "log", "inf", "cuda", "numerical-stability"]
-  },
-  "environment": {
-    "backend": "remote_docker",
-    "host": "gpu-a10",
-    "tier": "cuda_python_overlay",
-    "image": "op-bench/pytorch-matched-ff89ebc:torch2.4.0-cu124-py311",
-    "image_digest": "sha256:f7fdabf3d4d9fc01c8d0f67961986968b06eb49d3724361c7ce64c1564f865c7",
-    "digest_kind": "local_image_id",
-    "dockerfile": "../../../environments/pytorch-matched-ff89ebc-cu124/Dockerfile",
-    "build_context": "../../../environments/pytorch-matched-ff89ebc-cu124",
-    "workspace_dir": "/workspace",
-    "preflight_workdir": "/tmp",
-    "python_executable": "python",
-    "python_version": "3.11",
-    "os": "linux",
-    "platform": "linux/amd64",
-    "build_mode": "prebuilt-wheel",
-    "hardware": {"device": "cuda", "requires_gpu": true, "cuda": "12.4", "min_memory_gb": 16},
-    "resource_requirements": {"cpu": true, "gpu": true},
-    "dependencies": ["pytorch wheel with selected Python source overlay"],
-    "source_loading": {
-      "mode": "python_overlay",
-      "installed_package": "torch",
-      "overlay_paths": ["torch/_refs/__init__.py"],
-      "runtime_site_packages": "/tmp/op_bench_runtime/site-packages",
-      "sync_before_tests": true
-    },
-    "preflight_commands": [
-      "{python} --version",
-      "{python} -c \"import torch; print(torch.__version__); print(torch.cuda.is_available()); print(torch.cuda.get_device_name(0))\""
-    ]
+  "admission": {
+    "compatibility_evidence": "compatibility/evidence.json",
+    "evidence": "admission/evidence.json",
+    "status": "verified",
+    "verified_at": "2026-07-26T16:08:26Z"
   },
   "agent_visible": {
-    "repo_setup_commands": [],
+    "allowed_test_commands": [
+      "{python} test/test_decomp.py {test}"
+    ],
     "known_constraints": [
       "CUDA GPU is required; the test is @onlyCUDA.",
       "The bug is in torch/_refs/__init__.py in the exponential() decomposition.",
       "Modify only torch/_refs/__init__.py."
     ],
-    "allowed_test_commands": [
-      "{python} test/test_decomp.py {test}"
-    ]
-  },
-  "evaluation": {
-    "setup_commands": [],
-    "fail_to_pass": ["DecompOneOffTestsCUDA.test_exponential_non_inf_cuda"],
-    "pass_to_pass": ["DecompOneOffTestsCUDA.test_contiguous_log_softmax_cuda"],
-    "test_command": "{python} test/test_decomp.py {test}",
-    "timeout_sec": 900
+    "repo_setup_commands": []
   },
   "artifacts": {
     "gold_patch": "artifacts/gold.patch",
     "hidden_test_patch": "artifacts/hidden_test.patch"
   },
+  "compatibility": {
+    "evidence": "compatibility/evidence.json",
+    "minimal_operation": "import torch; import torch._refs; torch._refs.abs(torch.tensor([-1.0], device='cuda'))",
+    "selector_module": "test/test_decomp.py",
+    "target_import": "torch._refs",
+    "target_module": "torch/_refs/__init__.py"
+  },
+  "environment": {
+    "backend": "remote_docker",
+    "build_context": "../../../environments/pytorch-matched-ff89ebc-cu124",
+    "build_mode": "prebuilt-wheel",
+    "dependencies": [
+      "pytorch wheel with selected Python source overlay"
+    ],
+    "digest_kind": "local_image_id",
+    "dockerfile": "../../../environments/pytorch-matched-ff89ebc-cu124/Dockerfile",
+    "hardware": {
+      "cuda": "12.4",
+      "device": "cuda",
+      "min_memory_gb": 16,
+      "requires_gpu": true
+    },
+    "host": "gpu-a10",
+    "image": "op-bench/pytorch-matched-ff89ebc:torch2.4.0-cu124-py311",
+    "image_digest": "sha256:f7fdabf3d4d9fc01c8d0f67961986968b06eb49d3724361c7ce64c1564f865c7",
+    "os": "linux",
+    "platform": "linux/amd64",
+    "preflight_commands": [
+      "{python} --version",
+      "{python} -c \"import torch; print(torch.__version__); print(torch.cuda.is_available()); print(torch.cuda.get_device_name(0))\""
+    ],
+    "preflight_workdir": "/tmp",
+    "python_executable": "python",
+    "python_version": "3.11",
+    "resource_requirements": {
+      "cpu": true,
+      "gpu": true
+    },
+    "source_loading": {
+      "installed_package": "torch",
+      "mode": "python_overlay",
+      "overlay_paths": [
+        "torch/_refs/__init__.py"
+      ],
+      "runtime_site_packages": "/tmp/op_bench_runtime/site-packages",
+      "sync_before_tests": true
+    },
+    "tier": "cuda_python_overlay",
+    "workspace_dir": "/workspace"
+  },
+  "environment_ref": "pytorch-matched-ff89ebc-torch2.4.0-py311-cu124",
+  "evaluation": {
+    "fail_to_pass": [
+      "DecompOneOffTestsCUDA.test_exponential_non_inf_cuda"
+    ],
+    "pass_to_pass": [
+      "DecompOneOffTestsCUDA.test_contiguous_log_softmax_cuda"
+    ],
+    "setup_commands": [],
+    "test_command": "{python} test/test_decomp.py {test}",
+    "timeout_sec": 900
+  },
   "metadata": {
-    "difficulty": "easy",
-    "curation_status": "draft",
+    "admission_status": "verified",
+    "curation_status": "verified",
     "deterministic": false,
+    "difficulty": "easy",
     "estimated_runtime_min": 15,
     "layer": "A",
-    "admission_status": "deprecated",
-    "notes": "v0.7 matched-runtime candidate. The task overlays Base Commit ff89ebc onto the retained, digest-pinned official torch 2.4.0+cu124 CPython 3.11 wheel. Compatibility evidence and Baseline/Gold Admission are required before promotion."
-  }
+    "notes": "Restored by v0.7 matched-runtime compatibility and verified Admission; compatibility evidence sha256:8b444b60b6c61c9f1261dc8d8306ece8db13915208efef5ea9fbf5fd4abf018f.",
+    "source_loading_verified": true
+  },
+  "operator": {
+    "component": "torch._refs.exponential",
+    "framework": "pytorch",
+    "operator_name": "torch.Tensor.exponential_",
+    "problem_dimension": "precision",
+    "problem_subclass": "P4",
+    "problem_type": "log-inf-underflow",
+    "tags": [
+      "exponential",
+      "log",
+      "inf",
+      "cuda",
+      "numerical-stability"
+    ]
+  },
+  "patch_scope": {
+    "allowed_paths": [
+      "torch/_refs/__init__.py"
+    ],
+    "mode": "enforced"
+  },
+  "runtime_tier": "cuda_python_overlay",
+  "source": {
+    "base_commit": "ff89ebc50a738c734496393dc25313cf197fd0b4",
+    "checkout_mode": "git",
+    "issue_number": 127749,
+    "issue_url": "https://github.com/pytorch/pytorch/issues/127749",
+    "merge_commit": "8cd9b104568754c088f843eebeb9f2b4f1c426d2",
+    "pr_number": 129154,
+    "pr_url": "https://github.com/pytorch/pytorch/pull/129154",
+    "repo": "pytorch/pytorch",
+    "repo_url": "https://github.com/pytorch/pytorch.git",
+    "snapshot_path": "../../../.op_bench_cache/sources/pytorch/pytorch/ff89ebc50a738c734496393dc25313cf197fd0b4/source"
+  },
+  "source_ref": "pytorch-ff89ebc-cuda-overlay",
+  "statement": {
+    "body": "The Python decomp of `exponential_` uses `-1/rate * log1p(-rand_like(self))`. When the uniform sample is exactly 1.0 (valid for `curand_uniform` which samples `(0, 1]`), `log1p(-1.0) = log(0) = -inf`, giving `+inf` as the exponential value. Fix: add an epsilon guard \u2014 when `uniform >= 1 - eps/2`, substitute `-eps/2` instead of computing log, matching CUDA's numerical behavior.",
+    "labels": [
+      "module: decomposition",
+      "topic: numerical"
+    ],
+    "title": "torch._refs.exponential can produce Inf for inputs near 1.0 due to log(0) underflow"
+  },
+  "task_id": "pytorch__129154__exp_decomp_numerics",
+  "version": "v1"
 }
