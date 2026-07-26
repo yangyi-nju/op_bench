@@ -5,6 +5,7 @@ from pathlib import Path
 import re
 import unittest
 
+from op_bench.patch_scope import validate_patch_scope
 from op_bench.registry import EnvironmentRegistry, load_resolved_task
 from scripts.validate_task import validate_manifest
 
@@ -23,6 +24,7 @@ TASKS = {
         "selector_module": "test/test_decomp.py",
         "image": "op-bench/pytorch-matched-ff89ebc:torch2.4.0-cu124-py311",
         "base_image": "op-bench/pytorch-cuda:torch2.6.0-cu124-py311",
+        "overlay_paths": ["torch/_refs/__init__.py"],
     },
     "pytorch__144073__vector_norm_scalar_overflow": {
         "task": ROOT / "tasks/pytorch/144073_vector_norm_scalar_overflow/task.json",
@@ -34,6 +36,10 @@ TASKS = {
         "selector_module": "test/inductor/test_torchinductor.py",
         "image": "op-bench/pytorch-matched-06e9dea:torch2.7.0-cpu-py311",
         "base_image": "op-bench/pytorch-cpu-compile:torch2.6.0-py311",
+        "overlay_paths": [
+            "torch/_refs/linalg/__init__.py",
+            "torch/testing/_internal/inductor_utils.py",
+        ],
         "companion_artifacts": [
             {
                 "artifact_id": (
@@ -53,6 +59,23 @@ TASKS = {
 
 
 class MatchedRuntimeRegistryTests(unittest.TestCase):
+    def test_gold_patches_respect_the_matched_task_agent_scope(self) -> None:
+        for task_id, expected in TASKS.items():
+            with self.subTest(task_id=task_id):
+                task = load_resolved_task(
+                    expected["task"],
+                    environment_registry_path=ENVIRONMENTS,
+                    source_registry_path=SOURCES,
+                )
+
+                result = validate_patch_scope(
+                    task.gold_patch_path.read_text(encoding="utf-8"),
+                    task.patch_scope_paths,
+                    "enforced",
+                )
+
+                self.assertEqual(result.status, "in_scope")
+
     def test_registry_binds_pinned_wheel_and_observed_image_identity(self) -> None:
         raw = json.loads(ENVIRONMENTS.read_text(encoding="utf-8"))
         entries = {entry["id"]: entry for entry in raw["environments"]}
@@ -152,6 +175,10 @@ class MatchedRuntimeRegistryTests(unittest.TestCase):
                 self.assertEqual(
                     compatibility["evidence"],
                     "compatibility/evidence.json",
+                )
+                self.assertEqual(
+                    task.data["environment"]["source_loading"]["overlay_paths"],
+                    expected["overlay_paths"],
                 )
                 self.assertEqual(validate_manifest(task.data), [])
 

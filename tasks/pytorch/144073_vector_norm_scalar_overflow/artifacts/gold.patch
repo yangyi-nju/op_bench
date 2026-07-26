@@ -25,21 +25,3 @@ index 00d95445c6f35..c85962f22842c 100644
          if not (is_ord_even and utils.is_float_dtype(x.dtype)):
              x = torch.abs(x)
          return to_result_dtype(torch.pow(reduce_sum(torch.pow(x, ord)), 1.0 / ord))  # type: ignore[return-value]
-diff --git a/torch/testing/_internal/opinfo/definitions/linalg.py b/torch/testing/_internal/opinfo/definitions/linalg.py
-index 26be0b5255efb..822e664270dbd 100644
---- a/torch/testing/_internal/opinfo/definitions/linalg.py
-+++ b/torch/testing/_internal/opinfo/definitions/linalg.py
-@@ -2327,13 +2327,6 @@ def make_input():
-         torch_opinfo_name="linalg.vector_norm",
-         supports_out=True,
-         op_db=op_db,
--        skips=(
--            # FIXME: sum reduces all dimensions when dim=[]
--            DecorateInfo(unittest.expectedFailure, "TestReductions", "test_dim_empty"),
--            DecorateInfo(
--                unittest.expectedFailure, "TestReductions", "test_dim_empty_keepdim"
--            ),
--        ),
-     ),
-     PythonRefInfo(
-         "_refs.linalg.matrix_norm",

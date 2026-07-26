@@ -1,107 +1,139 @@
 {
-  "task_id": "pytorch__144073__vector_norm_scalar_overflow",
-  "version": "v1",
-  "environment_ref": "pytorch-matched-06e9dea-torch2.7.0-py311-cpu",
-  "runtime_tier": "cpu_python_overlay",
-  "source_ref": "pytorch-06e9dea-python-overlay",
-  "admission": {"status": "deprecated"},
-  "compatibility": {
-    "target_module": "torch/_refs/linalg/__init__.py",
-    "target_import": "torch._refs.linalg",
-    "selector_module": "test/inductor/test_torchinductor.py",
-    "minimal_operation": "import torch; import torch._refs.linalg; torch._refs.linalg.vector_norm(torch.ones(1))",
-    "evidence": "compatibility/evidence.json"
-  },
-  "patch_scope": {
-    "allowed_paths": ["torch/_refs/linalg/__init__.py"],
-    "mode": "enforced"
-  },
-  "source": {
-    "pr_url": "https://github.com/pytorch/pytorch/pull/144073",
-    "issue_url": "https://github.com/pytorch/pytorch/issues/143960",
-    "issue_number": 143960,
-    "repo": "pytorch/pytorch",
-    "repo_url": "https://github.com/pytorch/pytorch.git",
-    "pr_number": 144073,
-    "base_commit": "06e9deabb623e004eb6024e703a976c5748d51e6",
-    "merge_commit": "957faaadca78ec453d60f2fe986c1191e2e7c5b6",
-    "checkout_mode": "git",
-    "snapshot_path": "../../../.op_bench_cache/sources/pytorch/pytorch/06e9deabb623e004eb6024e703a976c5748d51e6/source"
-  },
-  "statement": {
-    "title": "torch.linalg.vector_norm overflows for large-ord scalar inputs via pow-then-root",
-    "body": "`torch._refs.linalg.vector_norm` computes `pow(reduce_sum(pow(x, ord)), 1/ord)`. For a scalar input (single element) with large `ord`, `pow(x, ord)` overflows to inf even though the result should be `abs(x)`. Eager `torch.linalg.vector_norm` correctly short-circuits the scalar case. Fix: add an early-exit for scalar (single-element) inputs that returns `abs(x)` directly without the pow-then-root path.",
-    "labels": ["module: linalg", "topic: numerical"]
-  },
-  "operator": {
-    "framework": "pytorch",
-    "component": "torch._refs.linalg.vector_norm",
-    "operator_name": "torch.linalg.vector_norm",
-    "problem_type": "overflow-scalar-norm",
-    "problem_dimension": "precision",
-    "problem_subclass": "P4",
-    "tags": ["linalg", "vector-norm", "overflow", "scalar", "cpu"]
-  },
-  "environment": {
-    "backend": "remote_docker",
-    "host": "gpu-a10",
-    "tier": "cpu_python_overlay",
-    "image": "op-bench/pytorch-matched-06e9dea:torch2.7.0-cpu-py311",
-    "image_digest": "sha256:ccd5eb7b2703b9b2ac7c7a9e47cd56ffe77135e3a62b29be4d821833e318056f",
-    "digest_kind": "local_image_id",
-    "dockerfile": "../../../environments/pytorch-matched-06e9dea-cpu/Dockerfile",
-    "build_context": "../../../environments/pytorch-matched-06e9dea-cpu",
-    "workspace_dir": "/workspace",
-    "preflight_workdir": "/tmp",
-    "python_executable": "python",
-    "python_version": "3.11",
-    "os": "linux",
-    "platform": "linux/amd64",
-    "build_mode": "prebuilt-wheel",
-    "hardware": {"device": "cpu", "min_memory_gb": 8},
-    "resource_requirements": {"cpu": true, "gpu": false},
-    "dependencies": ["pytorch wheel with selected Python source overlay"],
-    "source_loading": {
-      "mode": "python_overlay",
-      "installed_package": "torch",
-      "overlay_paths": ["torch/_refs/linalg/__init__.py"],
-      "runtime_site_packages": "/tmp/op_bench_runtime/site-packages",
-      "sync_before_tests": true
-    },
-    "preflight_commands": [
-      "{python} --version",
-      "{python} -c \"import torch; print(torch.__version__); print(torch.__file__)\""
-    ]
+  "admission": {
+    "compatibility_evidence": "compatibility/evidence.json",
+    "evidence": "admission/evidence.json",
+    "status": "verified",
+    "verified_at": "2026-07-26T16:30:16Z"
   },
   "agent_visible": {
-    "repo_setup_commands": [],
-    "known_constraints": [
-      "CPU-only task; no CUDA required.",
-      "The bug is in torch/_refs/linalg/__init__.py in vector_norm — the scalar path must short-circuit before pow-then-root.",
-      "Modify only torch/_refs/linalg/__init__.py."
-    ],
     "allowed_test_commands": [
       "{python} test/inductor/test_torchinductor.py {test}"
-    ]
-  },
-  "evaluation": {
-    "setup_commands": [],
-    "fail_to_pass": ["CpuTests.test_norm_constant_overflow_cpu"],
-    "pass_to_pass": ["CpuTests.test_add_const_int_cpu"],
-    "test_command": "{python} test/inductor/test_torchinductor.py {test}",
-    "timeout_sec": 900
+    ],
+    "known_constraints": [
+      "CPU-only task; no CUDA required.",
+      "The bug is in torch/_refs/linalg/__init__.py in vector_norm \u2014 the scalar path must short-circuit before pow-then-root.",
+      "Modify only torch/_refs/linalg/__init__.py."
+    ],
+    "repo_setup_commands": []
   },
   "artifacts": {
     "gold_patch": "artifacts/gold.patch",
     "hidden_test_patch": "artifacts/hidden_test.patch"
   },
+  "compatibility": {
+    "evidence": "compatibility/evidence.json",
+    "minimal_operation": "import torch; import torch._refs.linalg; torch._refs.linalg.vector_norm(torch.ones(1))",
+    "selector_module": "test/inductor/test_torchinductor.py",
+    "target_import": "torch._refs.linalg",
+    "target_module": "torch/_refs/linalg/__init__.py"
+  },
+  "environment": {
+    "backend": "remote_docker",
+    "build_context": "../../../environments/pytorch-matched-06e9dea-cpu",
+    "build_mode": "prebuilt-wheel",
+    "dependencies": [
+      "pytorch wheel with selected Python source and test-support overlays"
+    ],
+    "digest_kind": "local_image_id",
+    "dockerfile": "../../../environments/pytorch-matched-06e9dea-cpu/Dockerfile",
+    "hardware": {
+      "device": "cpu",
+      "min_memory_gb": 8
+    },
+    "host": "gpu-a10",
+    "image": "op-bench/pytorch-matched-06e9dea:torch2.7.0-cpu-py311",
+    "image_digest": "sha256:ccd5eb7b2703b9b2ac7c7a9e47cd56ffe77135e3a62b29be4d821833e318056f",
+    "os": "linux",
+    "platform": "linux/amd64",
+    "preflight_commands": [
+      "{python} --version",
+      "{python} -c \"import torch; print(torch.__version__); print(torch.__file__)\""
+    ],
+    "preflight_workdir": "/tmp",
+    "python_executable": "python",
+    "python_version": "3.11",
+    "resource_requirements": {
+      "cpu": true,
+      "gpu": false
+    },
+    "source_loading": {
+      "installed_package": "torch",
+      "mode": "python_overlay",
+      "overlay_paths": [
+        "torch/_refs/linalg/__init__.py",
+        "torch/testing/_internal/inductor_utils.py"
+      ],
+      "runtime_site_packages": "/tmp/op_bench_runtime/site-packages",
+      "sync_before_tests": true
+    },
+    "tier": "cpu_python_overlay",
+    "workspace_dir": "/workspace"
+  },
+  "environment_ref": "pytorch-matched-06e9dea-torch2.7.0-py311-cpu",
+  "evaluation": {
+    "fail_to_pass": [
+      "CpuTests.test_norm_constant_overflow_cpu"
+    ],
+    "pass_to_pass": [
+      "CpuTests.test_add_const_int_cpu"
+    ],
+    "setup_commands": [],
+    "test_command": "{python} test/inductor/test_torchinductor.py {test}",
+    "timeout_sec": 900
+  },
   "metadata": {
-    "difficulty": "medium",
-    "curation_status": "draft",
+    "admission_status": "verified",
+    "curation_status": "verified",
     "deterministic": true,
+    "difficulty": "medium",
     "estimated_runtime_min": 15,
     "layer": "A",
-    "admission_status": "deprecated",
-    "notes": "v0.7 matched-runtime candidate. The task overlays Base Commit 06e9dea onto the retained, digest-pinned official torch 2.7.0+cpu CPython 3.11 wheel. Compatibility evidence and Baseline/Gold Admission are required before promotion."
-  }
+    "notes": "Restored by v0.7 matched-runtime compatibility and verified Admission; compatibility evidence sha256:eb25e02ac1ed39e11911e32c1e0bd97585e4e83ba6df27ce3735628c18817171.",
+    "source_loading_verified": true
+  },
+  "operator": {
+    "component": "torch._refs.linalg.vector_norm",
+    "framework": "pytorch",
+    "operator_name": "torch.linalg.vector_norm",
+    "problem_dimension": "precision",
+    "problem_subclass": "P4",
+    "problem_type": "overflow-scalar-norm",
+    "tags": [
+      "linalg",
+      "vector-norm",
+      "overflow",
+      "scalar",
+      "cpu"
+    ]
+  },
+  "patch_scope": {
+    "allowed_paths": [
+      "torch/_refs/linalg/__init__.py"
+    ],
+    "mode": "enforced"
+  },
+  "runtime_tier": "cpu_python_overlay",
+  "source": {
+    "base_commit": "06e9deabb623e004eb6024e703a976c5748d51e6",
+    "checkout_mode": "git",
+    "issue_number": 143960,
+    "issue_url": "https://github.com/pytorch/pytorch/issues/143960",
+    "merge_commit": "957faaadca78ec453d60f2fe986c1191e2e7c5b6",
+    "pr_number": 144073,
+    "pr_url": "https://github.com/pytorch/pytorch/pull/144073",
+    "repo": "pytorch/pytorch",
+    "repo_url": "https://github.com/pytorch/pytorch.git",
+    "snapshot_path": "../../../.op_bench_cache/sources/pytorch/pytorch/06e9deabb623e004eb6024e703a976c5748d51e6/source"
+  },
+  "source_ref": "pytorch-06e9dea-python-overlay",
+  "statement": {
+    "body": "`torch._refs.linalg.vector_norm` computes `pow(reduce_sum(pow(x, ord)), 1/ord)`. For a scalar input (single element) with large `ord`, `pow(x, ord)` overflows to inf even though the result should be `abs(x)`. Eager `torch.linalg.vector_norm` correctly short-circuits the scalar case. Fix: add an early-exit for scalar (single-element) inputs that returns `abs(x)` directly without the pow-then-root path.",
+    "labels": [
+      "module: linalg",
+      "topic: numerical"
+    ],
+    "title": "torch.linalg.vector_norm overflows for large-ord scalar inputs via pow-then-root"
+  },
+  "task_id": "pytorch__144073__vector_norm_scalar_overflow",
+  "version": "v1"
 }
