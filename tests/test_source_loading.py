@@ -165,6 +165,8 @@ class SourceLoadingTests(unittest.TestCase):
             self.assertIn("setup.py develop", command[2])
             self.assertIn("/workspace", command[2])
             self.assertIn("export TORCH_CUDA_ARCH_LIST=7.0;", command[2])
+            self.assertIn("op_bench_inplace_source.pth", command[2])
+            self.assertIn("sys.path.insert(0", command[2])
 
     def test_builds_inplace_build_command_with_override(self) -> None:
         from op_bench.task import TaskManifest as TM

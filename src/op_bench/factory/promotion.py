@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from datetime import datetime
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 from op_bench.factory.contracts import (
     CandidateRecord,
@@ -188,6 +189,23 @@ def _execution(
             or duration < 0
         ):
             raise ContractError(f"{path}.duration_sec: expected non-negative number")
+        try:
+            decimal_duration = Decimal(str(duration))
+        except InvalidOperation as exc:
+            raise ContractError(
+                f"{path}.duration_sec: expected non-negative number"
+            ) from exc
+        if not decimal_duration.is_finite():
+            raise ContractError(
+                f"{path}.duration_sec: expected non-negative number"
+            )
+        execution.pop("duration_sec")
+        execution["duration_ms"] = int(
+            (decimal_duration * 1000).quantize(
+                Decimal("1"),
+                rounding=ROUND_HALF_UP,
+            )
+        )
     return execution
 
 
@@ -322,6 +340,8 @@ def _validate_inputs(
         task=task,
         baseline=False,
     )
+    admission_data["baseline"] = baseline
+    admission_data["gold"] = gold
     admission_decision = require_exact_fields(
         admission_data["admission"],
         "admission decision",

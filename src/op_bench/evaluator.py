@@ -7,7 +7,7 @@ import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-from op_bench.environment import EnvironmentManager
+from op_bench.environment import EnvironmentManager, source_sync_timeout
 from op_bench.executor import CommandExecutor, CommandResult, LocalExecutor
 from op_bench.patch_scope import validate_patch_scope
 from op_bench.progress import Progress, format_command, format_duration, noop_progress
@@ -141,7 +141,10 @@ class Evaluator:
             sync_to_remote = getattr(runtime_executor, "sync_to_remote", None)
             if callable(sync_to_remote):
                 self.progress(f"{mode}: sync patched workspace to remote")
-                sync_result = sync_to_remote(workspace, timeout_sec=task.timeout_sec)
+                sync_result = sync_to_remote(
+                    workspace,
+                    timeout_sec=source_sync_timeout(task),
+                )
                 command_log.append(sync_result)
                 if sync_result.timed_out:
                     return finish("timeout")

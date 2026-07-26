@@ -565,6 +565,27 @@
       "notes": "v0.7 B1. Overlays torch/_decomp/decompositions.py."
     },
     {
+      "id": "pytorch-38b3375-boundary-kernel-full",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "38b3375a81dc3c21d7c0420773187c7c2c3d5835",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/38b3375a81dc3c21d7c0420773187c7c2c3d5835/kernel-source",
+      "checksum": null,
+      "snapshot_git_commit": "e156d5b8e2eb568148a2fbccda84627fd04732ea",
+      "tracked_file_count": 16541,
+      "submodules": {
+        "policy": "required_for_build",
+        "status": "initialized"
+      },
+      "source_loading_modes": [
+        "inplace_build"
+      ],
+      "related_tasks": [
+        "pytorch__143792__addmv_empty_matrix"
+      ],
+      "snapshot_mode": "kernel_full",
+      "notes": "v0.7 B1 fallback after stable-wheel compatibility failures; exact Base Commit CPU source build."
+    },
+    {
       "id": "pytorch-b9293e7-boundary-overlay",
       "repo_url": "https://github.com/pytorch/pytorch.git",
       "commit": "b9293e74a2b476534fa2aee5a0708e3fca255d8e",

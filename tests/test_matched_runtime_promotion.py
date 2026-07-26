@@ -231,6 +231,36 @@ class MatchedRuntimePromotionTests(unittest.TestCase):
             self.assertIn(selected.content_hash, promoted["metadata"]["notes"])
             self.assertEqual(validate_manifest(promoted), [])
 
+    def test_draft_promotion_uses_verified_not_restored_note(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            task = task_manifest(Path(tmp))
+            manifest = copy.deepcopy(task.data)
+            manifest["admission"] = {"status": "draft"}
+            manifest["metadata"]["admission_status"] = "draft"
+            manifest["metadata"]["notes"] = "New v0.7 boundary task."
+            task.task_json_path.write_text(
+                json.dumps(manifest, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            task = TaskManifest.load(task.task_json_path)
+            selected = compatibility(task)
+            admission_path = write_admission(task, admission(task))
+
+            promoted = promote_matched_runtime_task(
+                task.task_json_path,
+                task.task_dir / "compatibility/evidence.json",
+                admission_path,
+                "2026-07-27T12:20:00Z",
+            )
+
+            self.assertTrue(
+                promoted["metadata"]["notes"].startswith(
+                    "Verified by v0.7 matched-runtime compatibility"
+                )
+            )
+            self.assertNotIn("Restored by", promoted["metadata"]["notes"])
+            self.assertIn(selected.content_hash, promoted["metadata"]["notes"])
+
     def test_identity_and_status_mismatches_are_rejected(self) -> None:
         cases = {
             "task_id mismatch": lambda task, comp, adm: (

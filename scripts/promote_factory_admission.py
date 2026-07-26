@@ -11,6 +11,14 @@ import shutil
 import sys
 import tempfile
 
+
+ROOT = Path(__file__).resolve().parents[1]
+SRC = ROOT / "src"
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
+
 from op_bench.factory.artifacts import (
     FactoryArtifactStore,
     load_factory_contract,
@@ -22,6 +30,7 @@ from op_bench.factory.contracts import (
 )
 from op_bench.factory.lifecycle import validate_admission_chain
 from op_bench.factory.promotion import build_verified_admission_chain
+from op_bench.registry import RegistryError, load_resolved_task
 from op_bench.runtime.canonical import canonical_json
 from op_bench.runtime.validation import ContractError
 from op_bench.task import TaskManifest
@@ -36,6 +45,16 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--task", type=Path, required=True)
     parser.add_argument("--admission-evidence", type=Path, required=True)
     parser.add_argument("--review", type=Path, required=True)
+    parser.add_argument(
+        "--environment-registry",
+        type=Path,
+        default=ROOT / "environments" / "registry.json",
+    )
+    parser.add_argument(
+        "--source-registry",
+        type=Path,
+        default=ROOT / "sources" / "registry.json",
+    )
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--created-at", required=True)
     return parser
@@ -60,6 +79,8 @@ def _load_inputs(
     task_path: Path,
     admission_path: Path,
     review_path: Path,
+    environment_registry_path: Path,
+    source_registry_path: Path,
 ) -> tuple[
     CandidateRecord,
     DecisionRecord,
@@ -76,8 +97,17 @@ def _load_inputs(
     if task_path.is_symlink():
         raise ContractError("task: symlink is denied")
     try:
-        task = TaskManifest.load(task_path)
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        task = load_resolved_task(
+            task_path,
+            environment_registry_path=environment_registry_path,
+            source_registry_path=source_registry_path,
+        )
+    except (
+        OSError,
+        UnicodeDecodeError,
+        json.JSONDecodeError,
+        RegistryError,
+    ) as exc:
         raise ContractError("task: cannot read JSON") from exc
     admission = _json_mapping(admission_path, "admission evidence")
     review = _json_mapping(review_path, "review")
@@ -142,6 +172,8 @@ def main(argv: list[str] | None = None) -> int:
             task_path=args.task,
             admission_path=args.admission_evidence,
             review_path=args.review,
+            environment_registry_path=args.environment_registry,
+            source_registry_path=args.source_registry,
         )
         records = build_verified_admission_chain(
             candidate=candidate,

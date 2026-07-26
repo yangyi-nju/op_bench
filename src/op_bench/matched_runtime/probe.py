@@ -710,6 +710,11 @@ class MatchedRuntimeProbe:
             raise ContractError("task_id: task and probe spec do not match")
         execution = self.backend.execute(task, spec)
         observations = list(execution.observations)
+        commands = spec.commands
+        if len(observations) != len(commands):
+            raise ContractError(
+                "probe observations: expected one observation per command"
+            )
         if tuple(item.name for item in observations) != REQUIRED_CHECKS:
             raise ContractError(
                 "probe observations: expected required checks in canonical order"
@@ -789,7 +794,7 @@ class MatchedRuntimeProbe:
                 status=observation.status,
                 summary=observation.summary,
             )
-            for observation, command in zip(observations, spec.commands, strict=True)
+            for observation, command in zip(observations, commands)
         )
         runtime = self._runtime_identity(spec, execution.runtime_observation)
         timestamp = self.now().astimezone(timezone.utc).isoformat(

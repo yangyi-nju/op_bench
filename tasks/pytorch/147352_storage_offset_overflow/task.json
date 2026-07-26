@@ -1,88 +1,77 @@
 {
-  "task_id": "pytorch__147352__storage_offset_overflow",
-  "version": "v1",
-  "environment_ref": "pytorch-cpu-compile-torch2.6.0-py311",
-  "runtime_tier": "cuda_kernel_build",
-  "source_ref": "pytorch-6ccbff1-boundary-kernel-full",
   "admission": {
-    "status": "draft"
+    "compatibility_evidence": "compatibility/evidence.json",
+    "evidence": "admission/evidence.json",
+    "status": "verified",
+    "verified_at": "2026-07-27T03:30:00Z"
   },
-  "patch_scope": {
-    "allowed_paths": [
-      "aten/src/ATen/native/Resize.h"
+  "agent_visible": {
+    "allowed_test_commands": [
+      "{python} test/op_bench_boundary/test_storage_offset_overflow.py {test}"
     ],
-    "mode": "enforced"
+    "known_constraints": [
+      "This is a CPU-only full-source build; do not enable CUDA or ROCm.",
+      "The zero-size arbitrary-storage-offset behavior must remain valid.",
+      "Modify only aten/src/ATen/native/Resize.h."
+    ],
+    "repo_setup_commands": []
   },
-  "source": {
-    "pr_url": "https://github.com/pytorch/pytorch/pull/147352",
-    "issue_url": null,
-    "repo": "pytorch/pytorch",
-    "repo_url": "https://github.com/pytorch/pytorch.git",
-    "issue_number": null,
-    "pr_number": 147352,
-    "base_commit": "6ccbff1450bb3936636377d3910906f5666ddcfa",
-    "merge_commit": "e64441915fdefdd30ad57edc58d5eaca2ef77470",
-    "checkout_mode": "git"
+  "artifacts": {
+    "gold_patch": "artifacts/gold.patch",
+    "hidden_test_patch": "artifacts/hidden_test.patch"
   },
-  "statement": {
-    "title": "as_strided storage-offset bounds check can overflow",
-    "body": "The storage bounds check multiplies storage_offset by itemsize and then adds the required storage size with unchecked integer arithmetic. Extreme but valid int64 offsets can wrap, allowing an out-of-bounds view instead of raising a controlled exception. Reuse computeStorageNbytes with the offset so the existing checked arithmetic reports overflow, while preserving the zero-size arbitrary-offset rule.",
-    "labels": [
-      "module: aten",
-      "boundary: integer overflow",
-      "operator: as_strided"
-    ]
-  },
-  "operator": {
-    "framework": "pytorch",
-    "component": "aten.native.checkInBoundsForStorage",
-    "operator_name": "torch.as_strided",
-    "problem_type": "checked-overflow",
-    "problem_dimension": "boundary",
-    "problem_subclass": "B3",
-    "tags": [
-      "as-strided",
-      "storage-offset",
-      "overflow",
-      "bounds-check",
-      "cpu-source-build"
-    ]
+  "compatibility": {
+    "evidence": "compatibility/evidence.json",
+    "minimal_operation": "import torch; torch.as_strided(torch.arange(4), (2,), (1,), 1)",
+    "selector_module": "test/op_bench_boundary/test_storage_offset_overflow.py",
+    "target_import": "torch",
+    "target_module": "torch/__init__.py"
   },
   "environment": {
     "backend": "remote_docker",
+    "build_mode": "source-build",
+    "dependencies": [
+      "full PyTorch CPU source build via setup.py develop"
+    ],
+    "hardware": {
+      "device": "cpu",
+      "min_memory_gb": 16,
+      "requires_gpu": false
+    },
     "host": "gpu-a10",
-    "tier": "cuda_kernel_build",
-    "workspace_dir": "/workspace",
+    "os": "linux",
+    "platform": "linux/amd64",
+    "preflight_commands": [
+      "ccache --version",
+      "cmake --version",
+      "g++ --version",
+      "{python} --version",
+      "{python} -c \"import expecttest, yaml; print(yaml.__version__)\"",
+      "{python} -c \"import torch; print(torch.__version__); print(torch.__file__)\""
+    ],
     "preflight_workdir": "/tmp",
     "python_executable": "python",
     "python_version": "3.11",
-    "os": "linux",
-    "platform": "linux/amd64",
-    "build_mode": "source-build",
-    "hardware": {
-      "device": "cpu",
-      "requires_gpu": false,
-      "min_memory_gb": 16
-    },
     "resource_requirements": {
       "cpu": true,
       "gpu": false
     },
-    "dependencies": [
-      "full PyTorch CPU source build via setup.py develop"
-    ],
     "source_loading": {
-      "mode": "inplace_build",
       "build_environment": {
         "BUILD_TEST": "0",
         "CC": "gcc",
+        "CCACHE_BASEDIR": "/workspace",
+        "CCACHE_DIR": "/workspace/.ccache",
+        "CCACHE_NOHASHDIR": "true",
         "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
+        "CMAKE_C_COMPILER_LAUNCHER": "ccache",
         "CXX": "g++",
         "MAX_JOBS": "8",
         "USE_CUDA": "0",
         "USE_DISTRIBUTED": "0",
-        "USE_FLASH_ATTENTION": "0",
         "USE_FBGEMM": "0",
+        "USE_FLASH_ATTENTION": "0",
         "USE_GLOO": "0",
         "USE_KINETO": "0",
         "USE_KLEIDIAI": "0",
@@ -95,56 +84,78 @@
         "USE_TENSORPIPE": "0",
         "USE_XNNPACK": "0"
       },
+      "mode": "inplace_build",
       "sync_before_tests": true
     },
-    "preflight_commands": [
-      "g++ --version",
-      "{python} --version",
-      "{python} -c \"import torch; print(torch.__version__); print(torch.__file__)\""
-    ]
+    "tier": "cuda_kernel_build",
+    "workspace_dir": "/workspace"
   },
-  "compatibility": {
-    "target_module": "torch/__init__.py",
-    "target_import": "torch",
-    "selector_module": "test/op_bench_boundary/test_storage_offset_overflow.py",
-    "minimal_operation": "import torch; torch.as_strided(torch.arange(4), (2,), (1,), 1)",
-    "evidence": "compatibility/evidence.json"
-  },
-  "agent_visible": {
-    "repo_setup_commands": [],
-    "known_constraints": [
-      "This is a CPU-only full-source build; do not enable CUDA or ROCm.",
-      "The zero-size arbitrary-storage-offset behavior must remain valid.",
-      "Modify only aten/src/ATen/native/Resize.h."
-    ],
-    "allowed_test_commands": [
-      "{python} test/op_bench_boundary/test_storage_offset_overflow.py {test}"
-    ]
-  },
+  "environment_ref": "pytorch-boundary-cpu-source-build-py311",
   "evaluation": {
-    "setup_commands": [],
+    "build_timeout_sec": 21600,
     "fail_to_pass": [
       "BoundaryStorageOverflowTests.test_storage_offset_checked_overflow"
     ],
     "pass_to_pass": [
       "BoundaryStorageOverflowTests.test_normal_and_zero_size_views"
     ],
+    "setup_commands": [],
     "test_command": "{python} test/op_bench_boundary/test_storage_offset_overflow.py {test}",
-    "timeout_sec": 300,
-    "build_timeout_sec": 21600
-  },
-  "artifacts": {
-    "gold_patch": "artifacts/gold.patch",
-    "hidden_test_patch": "artifacts/hidden_test.patch"
+    "timeout_sec": 300
   },
   "metadata": {
-    "difficulty": "hard",
-    "curation_status": "draft",
+    "admission_status": "verified",
+    "curation_status": "verified",
     "deterministic": true,
+    "difficulty": "hard",
     "estimated_runtime_min": 90,
     "layer": "B",
-    "admission_status": "draft",
-    "source_loading_verified": false,
-    "notes": "Small-tensor CPU test. Extreme integers are storage offsets only; no large allocation is attempted."
-  }
+    "notes": "Verified by v0.7 matched-runtime compatibility and verified Admission; compatibility evidence sha256:3f8d74cb2f69aa6add78bbae2dee87af2e60b0685010d84b81df605c86c67ff8.",
+    "source_loading_verified": true
+  },
+  "operator": {
+    "component": "aten.native.checkInBoundsForStorage",
+    "framework": "pytorch",
+    "operator_name": "torch.as_strided",
+    "problem_dimension": "boundary",
+    "problem_subclass": "B3",
+    "problem_type": "checked-overflow",
+    "tags": [
+      "as-strided",
+      "storage-offset",
+      "overflow",
+      "bounds-check",
+      "cpu-source-build"
+    ]
+  },
+  "patch_scope": {
+    "allowed_paths": [
+      "aten/src/ATen/native/Resize.h"
+    ],
+    "mode": "enforced"
+  },
+  "runtime_tier": "cuda_kernel_build",
+  "source": {
+    "base_commit": "6ccbff1450bb3936636377d3910906f5666ddcfa",
+    "checkout_mode": "git",
+    "issue_number": null,
+    "issue_url": null,
+    "merge_commit": "e64441915fdefdd30ad57edc58d5eaca2ef77470",
+    "pr_number": 147352,
+    "pr_url": "https://github.com/pytorch/pytorch/pull/147352",
+    "repo": "pytorch/pytorch",
+    "repo_url": "https://github.com/pytorch/pytorch.git"
+  },
+  "source_ref": "pytorch-6ccbff1-boundary-kernel-full",
+  "statement": {
+    "body": "The storage bounds check multiplies storage_offset by itemsize and then adds the required storage size with unchecked integer arithmetic. Extreme but valid int64 offsets can wrap, allowing an out-of-bounds view instead of raising a controlled exception. Reuse computeStorageNbytes with the offset so the existing checked arithmetic reports overflow, while preserving the zero-size arbitrary-offset rule.",
+    "labels": [
+      "module: aten",
+      "boundary: integer overflow",
+      "operator: as_strided"
+    ],
+    "title": "as_strided storage-offset bounds check can overflow"
+  },
+  "task_id": "pytorch__147352__storage_offset_overflow",
+  "version": "v1"
 }

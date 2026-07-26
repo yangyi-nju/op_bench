@@ -197,9 +197,15 @@ def promote_matched_runtime_task(
     metadata["curation_status"] = "verified"
     metadata["admission_status"] = "verified"
     metadata["source_loading_verified"] = True
+    promotion_verb = (
+        "Restored"
+        if task.admission_status == "deprecated"
+        else "Verified"
+    )
     metadata["notes"] = (
-        "Restored by v0.7 matched-runtime compatibility and verified Admission; "
-        f"compatibility evidence {compatibility.content_hash}."
+        f"{promotion_verb} by v0.7 matched-runtime compatibility and "
+        f"verified Admission; compatibility evidence "
+        f"{compatibility.content_hash}."
     )
 
     from scripts.validate_task import validate_manifest

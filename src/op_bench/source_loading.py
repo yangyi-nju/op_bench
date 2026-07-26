@@ -86,6 +86,23 @@ DEFAULT_INPLACE_BUILD_COMMAND = (
     "stdbuf -oL -eL tee .op_bench_build.log"
 )
 
+INPLACE_SOURCE_PTH_CODE = r"""
+import pathlib
+import site
+import sys
+
+workspace = pathlib.Path(sys.argv[1]).resolve()
+site_packages = [pathlib.Path(path) for path in site.getsitepackages()]
+if not site_packages:
+    raise RuntimeError("system site-packages directory is unavailable")
+target = site_packages[0] / "op_bench_inplace_source.pth"
+target.write_text(
+    "import sys; sys.path.insert(0, {!r})\n".format(str(workspace)),
+    encoding="utf-8",
+)
+print(target)
+""".strip()
+
 
 def build_source_loading_command(task: TaskManifest) -> list[str] | None:
     source_loading = task.source_loading
@@ -130,6 +147,12 @@ def _build_inplace_build_command(task: TaskManifest, source_loading: dict) -> li
         template
         .replace("{workspace_dir}", task.environment_workspace_dir)
         .replace("{python}", shlex.quote(task.environment_python_executable))
+    )
+    rendered = (
+        f"{rendered} && "
+        f"{shlex.quote(task.environment_python_executable)} -c "
+        f"{shlex.quote(INPLACE_SOURCE_PTH_CODE)} "
+        f"{shlex.quote(task.environment_workspace_dir)}"
     )
     build_environment = source_loading.get("build_environment", {})
     if build_environment:

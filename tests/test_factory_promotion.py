@@ -23,6 +23,8 @@ from op_bench.factory.lifecycle import validate_admission_chain
 from op_bench.factory.promotion import build_verified_admission_chain
 from op_bench.factory.screening import screen_candidate
 from op_bench.integrity import REPLAY_SPEC_HASH_KIND, replay_spec_hash
+from op_bench.registry import load_resolved_task
+from op_bench.runtime.canonical import canonical_sha256
 from op_bench.runtime.validation import ContractError
 from op_bench.task import TaskManifest
 from tests.test_factory_contracts import candidate
@@ -103,14 +105,15 @@ def admission_evidence(task: TaskManifest) -> dict[str, object]:
             "runtime_tier": task.runtime_tier,
             "backend": task.environment_backend,
             "image": task.environment_image,
-            "image_digest": None,
-            "digest_kind": None,
-            "platform": None,
+            "image_digest": task.environment_image_digest,
+            "digest_kind": task.environment_digest_kind,
+            "platform": task.environment_platform,
         },
         "baseline": {
             "task_id": task.task_id,
             "mode": "baseline",
             "status": "baseline_reproduced",
+            "duration_sec": 1.2345,
             "fail_to_pass_total": 1,
             "fail_to_pass_passed": 0,
             "pass_to_pass_total": 1,
@@ -120,6 +123,7 @@ def admission_evidence(task: TaskManifest) -> dict[str, object]:
             "task_id": task.task_id,
             "mode": "gold",
             "status": "resolved",
+            "duration_sec": 2.5,
             "fail_to_pass_total": 1,
             "fail_to_pass_passed": 1,
             "pass_to_pass_total": 1,
@@ -205,7 +209,60 @@ class FactoryPromotionTests(unittest.TestCase):
             json.dumps(task_data, indent=2) + "\n",
             encoding="utf-8",
         )
-        task = TaskManifest.load(task_path)
+        environment_registry = root / "environments.json"
+        environment_registry.write_text(
+            json.dumps(
+                {
+                    "version": "v1",
+                    "environments": [
+                        {
+                            "id": "pytorch-cpu-fixture",
+                            "framework": "pytorch",
+                            "runtime_tier": "cpu_python_overlay",
+                            "backend": "docker",
+                            "docker": {
+                                "image": "op-bench/pytorch-cpu:fixture",
+                                "digest": "sha256:" + ("a" * 64),
+                                "digest_kind": "local_image_id",
+                                "platform": "linux/amd64",
+                            },
+                            "preflight": {
+                                "workdir": "/tmp",
+                                "commands": ["python --version"],
+                            },
+                        }
+                    ],
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        source_registry = root / "sources.json"
+        source_registry.write_text(
+            json.dumps(
+                {
+                    "version": "v1",
+                    "sources": [
+                        {
+                            "id": "pytorch-source-fixture",
+                            "repo_url": "https://github.com/pytorch/pytorch.git",
+                            "commit": BASE_COMMIT,
+                            "submodules": {
+                                "policy": "none_required",
+                                "status": "not_initialized",
+                            },
+                        }
+                    ],
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        task = load_resolved_task(
+            task_path,
+            environment_registry_path=environment_registry,
+            source_registry_path=source_registry,
+        )
         selected = candidate()
         decision = screen_candidate(selected)
         contracts = root / "contracts"
@@ -230,6 +287,8 @@ class FactoryPromotionTests(unittest.TestCase):
             "task": task_path,
             "admission": admission_path,
             "review": review_path,
+            "environment_registry": environment_registry,
+            "source_registry": source_registry,
         }
 
     def _run_cli(
@@ -253,6 +312,10 @@ class FactoryPromotionTests(unittest.TestCase):
                 str(paths["admission"]),
                 "--review",
                 str(paths["review"]),
+                "--environment-registry",
+                str(paths["environment_registry"]),
+                "--source-registry",
+                str(paths["source_registry"]),
                 "--output-dir",
                 str(output),
                 "--created-at",
@@ -283,6 +346,20 @@ class FactoryPromotionTests(unittest.TestCase):
         self.assertEqual(tuple(record.state for record in records), VALID_STATES)
         validate_admission_chain(records)
         self.assertEqual(records[-1].state, "verified")
+        normalized_admission = admission_evidence(task)
+        for phase, duration_ms in (("baseline", 1235), ("gold", 2500)):
+            execution = normalized_admission[phase]
+            assert isinstance(execution, dict)
+            execution.pop("duration_sec")
+            execution["duration_ms"] = duration_ms
+        self.assertEqual(
+            next(
+                evidence.reference.content_hash
+                for evidence in records[5].evidence
+                if evidence.evidence_type == "gold"
+            ),
+            canonical_sha256(normalized_admission),
+        )
 
     def test_rejects_identity_status_and_taxonomy_mismatches(self) -> None:
         selected = candidate()

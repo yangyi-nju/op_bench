@@ -228,6 +228,8 @@ class RemoteDockerExecutor:
             "rsync",
             "-az",
             "--delete",
+            "--partial",
+            "--partial-dir=.op_bench_rsync_partial",
             "--exclude=.ccache/",
             "--exclude=build/",
             "--exclude=torch.egg-info/",

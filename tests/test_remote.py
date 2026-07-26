@@ -208,6 +208,8 @@ class RemoteDockerExecutorTests(unittest.TestCase):
         self.assertEqual(second_call_cmd[0], "rsync")
         self.assertIn("-az", second_call_cmd)
         self.assertIn("--delete", second_call_cmd)
+        self.assertIn("--partial", second_call_cmd)
+        self.assertIn("--partial-dir=.op_bench_rsync_partial", second_call_cmd)
 
     @mock.patch("op_bench.remote.time.sleep")
     @mock.patch("op_bench.remote.subprocess.run")

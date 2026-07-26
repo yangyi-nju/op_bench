@@ -1,45 +1,73 @@
 {
-  "task_id": "pytorch__118762__weight_norm_default_dim",
-  "version": "v1",
-  "environment_ref": "pytorch-matched-boundary-torch2.2.0-cpu",
-  "runtime_tier": "cpu_python_overlay",
-  "source_ref": "pytorch-e426924-boundary-overlay",
   "admission": {
-    "status": "draft"
+    "compatibility_evidence": "compatibility/evidence.json",
+    "evidence": "admission/evidence.json",
+    "status": "verified",
+    "verified_at": "2026-07-27T03:30:00Z"
   },
-  "patch_scope": {
-    "allowed_paths": [
-      "torch/_decomp/decompositions.py"
+  "agent_visible": {
+    "allowed_test_commands": [
+      "{python} test/op_bench_boundary/test_weight_norm_default_dim.py {test}"
     ],
-    "mode": "enforced"
+    "known_constraints": [
+      "CPU-only task; no CUDA is required.",
+      "The native schema defaults dim to zero.",
+      "Modify only torch/_decomp/decompositions.py."
+    ],
+    "repo_setup_commands": []
   },
-  "source": {
-    "pr_url": "https://github.com/pytorch/pytorch/pull/118762",
-    "issue_url": null,
-    "repo": "pytorch/pytorch",
-    "repo_url": "https://github.com/pytorch/pytorch.git",
-    "issue_number": null,
-    "pr_number": 118762,
-    "base_commit": "e426924c19500011aa419accc251a923fe857b94",
-    "merge_commit": "e87ac82c98c62a4bc46252a8552a974c4b6a5fbd",
-    "checkout_mode": "git"
+  "artifacts": {
+    "gold_patch": "artifacts/gold.patch",
+    "hidden_test_patch": "artifacts/hidden_test.patch"
   },
-  "statement": {
-    "title": "Weight norm decomposition omits the native default dim",
-    "body": "The native _weight_norm_interface schema defaults dim to zero, but the registered Python decomposition requires a third positional argument. Calls through the default endpoint therefore fail only on the decomposition path. Mirror the native default while preserving explicit dimensions.",
-    "labels": [
-      "module: decomposition",
-      "module: nn",
-      "boundary: omitted argument"
-    ]
+  "compatibility": {
+    "evidence": "compatibility/evidence.json",
+    "minimal_operation": "import torch; import torch._decomp.decompositions; torch.ops.aten._weight_norm_interface(torch.ones(2, 2), torch.ones(2, 1))",
+    "selector_module": "test/op_bench_boundary/test_weight_norm_default_dim.py",
+    "target_import": "torch._decomp.decompositions",
+    "target_module": "torch/_decomp/decompositions.py"
+  },
+  "environment": {
+    "build_mode": "prebuilt-wheel",
+    "source_loading": {
+      "installed_package": "torch",
+      "mode": "python_overlay",
+      "overlay_paths": [
+        "torch/_decomp/decompositions.py"
+      ],
+      "runtime_site_packages": "/tmp/op_bench_runtime/site-packages",
+      "sync_before_tests": true
+    }
+  },
+  "environment_ref": "pytorch-matched-boundary-torch2.3.0-cpu",
+  "evaluation": {
+    "fail_to_pass": [
+      "BoundaryWeightNormTests.test_default_dimension"
+    ],
+    "pass_to_pass": [
+      "BoundaryWeightNormTests.test_explicit_dimension"
+    ],
+    "setup_commands": [],
+    "test_command": "{python} test/op_bench_boundary/test_weight_norm_default_dim.py {test}",
+    "timeout_sec": 300
+  },
+  "metadata": {
+    "admission_status": "verified",
+    "curation_status": "verified",
+    "deterministic": true,
+    "difficulty": "easy",
+    "estimated_runtime_min": 5,
+    "layer": "B",
+    "notes": "Verified by v0.7 matched-runtime compatibility and verified Admission; compatibility evidence sha256:4c720559b92305cfb36ca78309ba4796cfbfbfd10662f22240754c85944c5979.",
+    "source_loading_verified": true
   },
   "operator": {
-    "framework": "pytorch",
     "component": "torch._decomp.decompositions._weight_norm_interface",
+    "framework": "pytorch",
     "operator_name": "torch.ops.aten._weight_norm_interface",
-    "problem_type": "default-argument-parity",
     "problem_dimension": "boundary",
     "problem_subclass": "B4",
+    "problem_type": "default-argument-parity",
     "tags": [
       "weight-norm",
       "default-argument",
@@ -48,58 +76,34 @@
       "cpu"
     ]
   },
-  "environment": {
-    "build_mode": "prebuilt-wheel",
-    "source_loading": {
-      "mode": "python_overlay",
-      "installed_package": "torch",
-      "overlay_paths": [
-        "torch/_decomp/decompositions.py"
-      ],
-      "runtime_site_packages": "/tmp/op_bench_runtime/site-packages",
-      "sync_before_tests": true
-    }
-  },
-  "compatibility": {
-    "target_module": "torch/_decomp/decompositions.py",
-    "target_import": "torch._decomp.decompositions",
-    "selector_module": "test/op_bench_boundary/test_weight_norm_default_dim.py",
-    "minimal_operation": "import torch; import torch._decomp.decompositions; torch.ops.aten._weight_norm_interface(torch.ones(2, 2), torch.ones(2, 1))",
-    "evidence": "compatibility/evidence.json"
-  },
-  "agent_visible": {
-    "repo_setup_commands": [],
-    "known_constraints": [
-      "CPU-only task; no CUDA is required.",
-      "The native schema defaults dim to zero.",
-      "Modify only torch/_decomp/decompositions.py."
+  "patch_scope": {
+    "allowed_paths": [
+      "torch/_decomp/decompositions.py"
     ],
-    "allowed_test_commands": [
-      "{python} test/op_bench_boundary/test_weight_norm_default_dim.py {test}"
-    ]
+    "mode": "enforced"
   },
-  "evaluation": {
-    "setup_commands": [],
-    "fail_to_pass": [
-      "BoundaryWeightNormTests.test_default_dimension"
+  "runtime_tier": "cpu_python_overlay",
+  "source": {
+    "base_commit": "e426924c19500011aa419accc251a923fe857b94",
+    "checkout_mode": "git",
+    "issue_number": null,
+    "issue_url": null,
+    "merge_commit": "e87ac82c98c62a4bc46252a8552a974c4b6a5fbd",
+    "pr_number": 118762,
+    "pr_url": "https://github.com/pytorch/pytorch/pull/118762",
+    "repo": "pytorch/pytorch",
+    "repo_url": "https://github.com/pytorch/pytorch.git"
+  },
+  "source_ref": "pytorch-e426924-boundary-overlay",
+  "statement": {
+    "body": "The native _weight_norm_interface schema defaults dim to zero, but the registered Python decomposition requires a third positional argument. Calls through the default endpoint therefore fail only on the decomposition path. Mirror the native default while preserving explicit dimensions.",
+    "labels": [
+      "module: decomposition",
+      "module: nn",
+      "boundary: omitted argument"
     ],
-    "pass_to_pass": [
-      "BoundaryWeightNormTests.test_explicit_dimension"
-    ],
-    "test_command": "{python} test/op_bench_boundary/test_weight_norm_default_dim.py {test}",
-    "timeout_sec": 300
+    "title": "Weight norm decomposition omits the native default dim"
   },
-  "artifacts": {
-    "gold_patch": "artifacts/gold.patch",
-    "hidden_test_patch": "artifacts/hidden_test.patch"
-  },
-  "metadata": {
-    "difficulty": "easy",
-    "curation_status": "draft",
-    "deterministic": true,
-    "estimated_runtime_min": 5,
-    "layer": "B",
-    "admission_status": "draft",
-    "source_loading_verified": false
-  }
+  "task_id": "pytorch__118762__weight_norm_default_dim",
+  "version": "v1"
 }

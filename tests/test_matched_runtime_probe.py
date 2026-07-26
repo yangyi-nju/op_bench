@@ -323,6 +323,15 @@ class MatchedRuntimeProbeTests(unittest.TestCase):
         self.assertEqual(evidence.status, "incompatible")
         self.assertEqual(evidence.failure.code, "cleanup_failed")
 
+    def test_probe_rejects_an_incomplete_observation_sequence(self) -> None:
+        execution = replace(
+            successful_execution(),
+            observations=passed_observations()[:-1],
+        )
+
+        with self.assertRaisesRegex(ContractError, "one observation per command"):
+            self._run(execution)
+
     def test_atomic_writer_round_trips_canonical_evidence_and_refuses_overwrite(self) -> None:
         evidence = self._run(successful_execution())
         with tempfile.TemporaryDirectory() as tmp:

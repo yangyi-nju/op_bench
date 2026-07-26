@@ -1,0 +1,49 @@
+{
+  "admission": {
+    "decision": "verified",
+    "failure_classification": null,
+    "verified": true
+  },
+  "baseline": {
+    "duration_sec": 667.7658435420001,
+    "fail_to_pass_passed": 0,
+    "fail_to_pass_total": 1,
+    "mode": "baseline",
+    "pass_to_pass_passed": 1,
+    "pass_to_pass_total": 1,
+    "status": "baseline_reproduced",
+    "task_id": "pytorch__147352__storage_offset_overflow"
+  },
+  "created_at": "2026-07-26T22:46:03Z",
+  "environment": {
+    "backend": "remote_docker",
+    "digest_kind": "local_image_id",
+    "id": "pytorch-boundary-cpu-source-build-py311",
+    "image": "op-bench/pytorch-boundary-cpu-source-build:py311",
+    "image_digest": "sha256:8288840b43b1f770a34cb1fcbc3429eadd0375bebe23baee18d7fcc10e6dadec",
+    "platform": "linux/amd64",
+    "runtime_tier": "cuda_kernel_build"
+  },
+  "evidence_id": "pytorch__147352__storage_offset_overflow:95c4e9f73ec3:2026-07-26T22:46:03Z",
+  "gold": {
+    "duration_sec": 790.1218982920001,
+    "fail_to_pass_passed": 1,
+    "fail_to_pass_total": 1,
+    "mode": "gold",
+    "pass_to_pass_passed": 1,
+    "pass_to_pass_total": 1,
+    "status": "resolved",
+    "task_id": "pytorch__147352__storage_offset_overflow"
+  },
+  "schema_version": "v1",
+  "source": {
+    "base_commit": "6ccbff1450bb3936636377d3910906f5666ddcfa",
+    "id": "pytorch-6ccbff1-boundary-kernel-full",
+    "repo_url": "https://github.com/pytorch/pytorch.git",
+    "snapshot_hash": null,
+    "snapshot_method": null
+  },
+  "task_id": "pytorch__147352__storage_offset_overflow",
+  "task_manifest_hash": "sha256:95c4e9f73ec39cf400da706a67446540699649ba408b947f317e21714bf16ca0",
+  "task_manifest_hash_kind": "replay_spec_v1"
+}

@@ -13,7 +13,14 @@ from op_bench.factory.artifacts import load_factory_contract
 from op_bench.factory.contracts import (
     CandidateRecord,
     DecisionRecord,
+    FactoryAdmissionRecord,
     factory_content_hash,
+)
+from op_bench.factory.lifecycle import validate_admission_chain
+from op_bench.integrity import replay_spec_hash
+from op_bench.matched_runtime.contracts import CompatibilityEvidence
+from op_bench.matched_runtime.promotion import (
+    validate_matched_runtime_promotion,
 )
 from op_bench.patch_scope import extract_patch_paths
 from op_bench.registry import EnvironmentRegistry, SourceRegistry
@@ -49,7 +56,10 @@ SOURCE_REGISTRY = ROOT / "sources" / "registry.json"
 BOUNDARY_ENVIRONMENTS = {
     "pytorch-matched-boundary-torch2.2.0-cpu": "2.2.0+cpu",
     "pytorch-matched-boundary-torch2.3.0-cpu": "2.3.0+cpu",
+    "pytorch-matched-boundary-torch2.4.0-cpu": "2.4.0+cpu",
     "pytorch-matched-boundary-torch2.5.1-cu124": "2.5.1+cu124",
+    "pytorch-matched-boundary-torch2.6.0-cpu": "2.6.0+cpu",
+    "pytorch-matched-boundary-torch2.6.0-cu124": "2.6.0+cu124",
 }
 BOUNDARY_SOURCES = {
     "pytorch-38b3375-boundary-overlay": (
@@ -111,6 +121,28 @@ PYTHON_BOUNDARY_TASKS = {
         "torch/_decomp/decompositions.py",
     ),
 }
+BOUNDARY_OVERLAY_PATHS = {
+    "117065_index_copy_zero_dim": [
+        "torch/_decomp/decompositions.py",
+    ],
+    "126461_cummin_rank_zero": [
+        "torch/_inductor/lowering.py",
+    ],
+    "118762_weight_norm_default_dim": [
+        "torch/_decomp/decompositions.py",
+    ],
+    "139751_triton_ygrid_mask": [
+        "torch/_inductor/codegen/triton.py",
+    ],
+}
+BOUNDARY_TASK_DIRECTORIES = (
+    "143792_addmv_empty_matrix",
+    "117065_index_copy_zero_dim",
+    "126461_cummin_rank_zero",
+    "147352_storage_offset_overflow",
+    "118762_weight_norm_default_dim",
+    "139751_triton_ygrid_mask",
+)
 
 
 def tree_hashes(root: Path) -> dict[str, str]:
@@ -372,7 +404,7 @@ class BoundaryArtifactTests(unittest.TestCase):
                 task = TaskManifest.load(task_dir / "task.json")
                 self.assertEqual(validate_manifest(task.data), [])
                 self.assertEqual(task.task_id, task_id)
-                self.assertEqual(task.admission_status, "draft")
+                self.assertEqual(task.admission_status, "verified")
                 self.assertEqual(
                     task.data["operator"]["problem_dimension"],
                     "boundary",
@@ -403,6 +435,11 @@ class BoundaryArtifactTests(unittest.TestCase):
                 self.assertTrue(
                     set(fail_to_pass).isdisjoint(pass_to_pass)
                 )
+                if directory in BOUNDARY_OVERLAY_PATHS:
+                    self.assertEqual(
+                        task.source_loading_overlay_paths,
+                        BOUNDARY_OVERLAY_PATHS[directory],
+                    )
 
     def test_b3_storage_overflow_bundle(self) -> None:
         task_dir = (
@@ -413,7 +450,7 @@ class BoundaryArtifactTests(unittest.TestCase):
         )
         task = TaskManifest.load(task_dir / "task.json")
         self.assertEqual(validate_manifest(task.data), [])
-        self.assertEqual(task.admission_status, "draft")
+        self.assertEqual(task.admission_status, "verified")
         self.assertEqual(
             task.data["operator"]["problem_dimension"],
             "boundary",
@@ -462,11 +499,11 @@ class BoundaryArtifactTests(unittest.TestCase):
         )
         task = TaskManifest.load(task_dir / "task.json")
         self.assertEqual(validate_manifest(task.data), [])
-        self.assertEqual(task.admission_status, "draft")
+        self.assertEqual(task.admission_status, "verified")
         self.assertEqual(task.runtime_tier, "cuda_python_overlay")
         self.assertEqual(
             task.environment_ref,
-            "pytorch-matched-boundary-torch2.5.1-cu124",
+            "pytorch-matched-boundary-torch2.6.0-cu124",
         )
         self.assertEqual(
             task.data["operator"]["problem_dimension"],
@@ -488,6 +525,10 @@ class BoundaryArtifactTests(unittest.TestCase):
             ),
             [target],
         )
+        self.assertEqual(
+            task.source_loading_overlay_paths,
+            BOUNDARY_OVERLAY_PATHS["139751_triton_ygrid_mask"],
+        )
         requirements = task.data["factory_review_requirements"]
         self.assertIs(requirements["surrogate_confirmation_required"], True)
         self.assertEqual(
@@ -502,6 +543,102 @@ class BoundaryArtifactTests(unittest.TestCase):
             hidden,
             r"torch\.(?:empty|randn|zeros|ones|tensor)\(",
         )
+
+    def test_verified_boundary_artifacts(self) -> None:
+        for directory in BOUNDARY_TASK_DIRECTORIES:
+            task_dir = ROOT / "tasks" / "pytorch" / directory
+            task = TaskManifest.load(task_dir / "task.json")
+            with self.subTest(task=task.task_id):
+                compatibility = CompatibilityEvidence.from_dict(
+                    json.loads(
+                        (
+                            task_dir
+                            / "compatibility"
+                            / "evidence.json"
+                        ).read_text(encoding="utf-8")
+                    )
+                )
+                admission = json.loads(
+                    (
+                        task_dir / "admission" / "evidence.json"
+                    ).read_text(encoding="utf-8")
+                )
+                self.assertEqual(compatibility.status, "compatible")
+                self.assertEqual(task.admission_status, "verified")
+                self.assertEqual(
+                    admission["task_manifest_hash"],
+                    replay_spec_hash(task),
+                )
+                self.assertEqual(
+                    admission["admission"],
+                    {
+                        "decision": "verified",
+                        "failure_classification": None,
+                        "verified": True,
+                    },
+                )
+                for phase, expected_fail_passed in (
+                    ("baseline", 0),
+                    ("gold", len(task.fail_to_pass_tests)),
+                ):
+                    execution = admission[phase]
+                    self.assertEqual(
+                        execution["fail_to_pass_total"],
+                        len(task.fail_to_pass_tests),
+                    )
+                    self.assertEqual(
+                        execution["fail_to_pass_passed"],
+                        expected_fail_passed,
+                    )
+                    self.assertEqual(
+                        execution["pass_to_pass_total"],
+                        len(task.pass_to_pass_tests),
+                    )
+                    self.assertEqual(
+                        execution["pass_to_pass_passed"],
+                        len(task.pass_to_pass_tests),
+                    )
+                validate_matched_runtime_promotion(
+                    task,
+                    compatibility,
+                    admission,
+                )
+
+                review = json.loads(
+                    (
+                        task_dir / "factory" / "review.json"
+                    ).read_text(encoding="utf-8")
+                )
+                self.assertEqual(review["decision"], "approved")
+                self.assertIs(review["root_cause_confirmed"], True)
+                self.assertIs(review["scope_confirmed"], True)
+                self.assertIs(review["tests_confirmed"], True)
+                if task.problem_subclass == "B5":
+                    self.assertIs(review["surrogate_confirmed"], True)
+                else:
+                    self.assertIsNone(review["surrogate_confirmed"])
+
+                chain = tuple(
+                    load_factory_contract(path)
+                    for path in sorted(
+                        (task_dir / "factory" / "chain").glob("*.json")
+                    )
+                )
+                self.assertEqual(len(chain), 8)
+                self.assertTrue(
+                    all(
+                        isinstance(record, FactoryAdmissionRecord)
+                        for record in chain
+                    )
+                )
+                validate_admission_chain(chain)
+                final = load_factory_contract(
+                    task_dir / "factory" / "admission.json"
+                )
+                self.assertIsInstance(final, FactoryAdmissionRecord)
+                assert isinstance(final, FactoryAdmissionRecord)
+                self.assertEqual(final.state, "verified")
+                self.assertEqual(final, chain[-1])
 
 
 if __name__ == "__main__":
