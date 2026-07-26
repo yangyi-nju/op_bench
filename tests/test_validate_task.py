@@ -135,6 +135,97 @@ class ValidateTaskTests(unittest.TestCase):
 
         self.assertEqual(errors, [])
 
+    def test_accepts_matched_runtime_probe_and_promotion_metadata(self) -> None:
+        manifest = self._manifest()
+        manifest["environment_ref"] = "pytorch-matched"
+        manifest["source_ref"] = "pytorch-source"
+        manifest["runtime_tier"] = "cpu_python_overlay"
+        manifest["environment"] = {
+            "source_loading": {
+                "mode": "python_overlay",
+                "installed_package": "torch",
+                "overlay_paths": ["torch/_refs/__init__.py"],
+                "runtime_site_packages": "/tmp/op_bench_runtime/site-packages",
+                "sync_before_tests": True,
+            }
+        }
+        manifest["compatibility"] = {
+            "target_module": "torch/_refs/__init__.py",
+            "target_import": "torch._refs",
+            "selector_module": "test/test_decomp.py",
+            "minimal_operation": "import torch; torch.ones(1)",
+            "evidence": "compatibility/evidence.json",
+        }
+        manifest["admission"] = {
+            "status": "verified",
+            "evidence": "admission/evidence.json",
+            "compatibility_evidence": "compatibility/evidence.json",
+            "verified_at": "2026-07-26T12:00:00Z",
+        }
+        manifest["metadata"]["curation_status"] = "verified"
+        manifest["metadata"]["admission_status"] = "verified"
+
+        self.assertEqual(validate_manifest(manifest), [])
+
+    def test_rejects_invalid_matched_runtime_probe_metadata(self) -> None:
+        cases = (
+            (
+                "target_module",
+                "../torch/_refs/__init__.py",
+                "compatibility.target_module must be a task-relative path without '..'",
+            ),
+            (
+                "selector_module",
+                "/test/test_decomp.py",
+                "compatibility.selector_module must be a task-relative path without '..'",
+            ),
+            (
+                "minimal_operation",
+                "torch.ones(1)",
+                "compatibility.minimal_operation must begin with 'import torch;'",
+            ),
+            (
+                "evidence",
+                "../evidence.json",
+                "compatibility.evidence must be a task-relative path without '..'",
+            ),
+        )
+        for field, value, message in cases:
+            with self.subTest(field=field):
+                manifest = self._manifest()
+                manifest["compatibility"] = {
+                    "target_module": "torch/_refs/__init__.py",
+                    "target_import": "torch._refs",
+                    "selector_module": "test/test_decomp.py",
+                    "minimal_operation": "import torch; torch.ones(1)",
+                    "evidence": "compatibility/evidence.json",
+                }
+                manifest["compatibility"][field] = value
+
+                self.assertIn(message, validate_manifest(manifest))
+
+    def test_verified_matched_runtime_admission_binds_the_same_evidence_path(self) -> None:
+        manifest = self._manifest()
+        manifest["compatibility"] = {
+            "target_module": "torch/_refs/__init__.py",
+            "target_import": "torch._refs",
+            "selector_module": "test/test_decomp.py",
+            "minimal_operation": "import torch; torch.ones(1)",
+            "evidence": "compatibility/evidence.json",
+        }
+        manifest["admission"] = {
+            "status": "verified",
+            "evidence": "admission/evidence.json",
+            "compatibility_evidence": "compatibility/stale.json",
+            "verified_at": "2026-07-26T12:00:00Z",
+        }
+        manifest["metadata"]["admission_status"] = "verified"
+
+        self.assertIn(
+            "admission.compatibility_evidence must match compatibility.evidence",
+            validate_manifest(manifest),
+        )
+
     def _manifest(self) -> dict[str, object]:
         return {
             "task_id": "fixture",

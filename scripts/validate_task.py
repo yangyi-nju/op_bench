@@ -248,8 +248,68 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
                     errors.append("admission.evidence is required when admission.status is 'verified'")
                 if not admission.get("verified_at"):
                     errors.append("admission.verified_at is required when admission.status is 'verified'")
+                compatibility = data.get("compatibility")
+                if isinstance(compatibility, dict):
+                    compatibility_evidence = admission.get("compatibility_evidence")
+                    if not compatibility_evidence:
+                        errors.append(
+                            "admission.compatibility_evidence is required for a "
+                            "verified matched-runtime task"
+                        )
+                    elif compatibility_evidence != compatibility.get("evidence"):
+                        errors.append(
+                            "admission.compatibility_evidence must match "
+                            "compatibility.evidence"
+                        )
             if admission_status is not None and formal_status != admission_status:
                 errors.append("admission.status must match metadata.admission_status when both are provided")
+
+    compatibility = data.get("compatibility")
+    if compatibility is not None:
+        if not isinstance(compatibility, dict):
+            errors.append("compatibility must be an object")
+        else:
+            required_compatibility_fields = (
+                "target_module",
+                "target_import",
+                "selector_module",
+                "minimal_operation",
+                "evidence",
+            )
+            for field in required_compatibility_fields:
+                if not isinstance(compatibility.get(field), str) or not compatibility.get(field):
+                    errors.append(f"compatibility.{field} must be a non-empty string")
+            for field in ("target_module", "selector_module", "evidence"):
+                value = compatibility.get(field)
+                if isinstance(value, str):
+                    relative = Path(value)
+                    if (
+                        relative.is_absolute()
+                        or ".." in relative.parts
+                        or "\\" in value
+                    ):
+                        errors.append(
+                            f"compatibility.{field} must be a task-relative path "
+                            "without '..'"
+                        )
+            target_import = compatibility.get("target_import")
+            if isinstance(target_import, str) and re.fullmatch(
+                r"[A-Za-z_][A-Za-z0-9_.]*",
+                target_import,
+            ) is None:
+                errors.append(
+                    "compatibility.target_import must be a dotted Python module"
+                )
+            minimal_operation = compatibility.get("minimal_operation")
+            if isinstance(minimal_operation, str) and not minimal_operation.startswith(
+                "import torch;"
+            ):
+                errors.append(
+                    "compatibility.minimal_operation must begin with 'import torch;'"
+                )
+            evidence_path = compatibility.get("evidence")
+            if isinstance(evidence_path, str) and Path(evidence_path).suffix != ".json":
+                errors.append("compatibility.evidence must be a JSON path")
 
     try:
         fail_to_pass = lookup(data, ("evaluation", "fail_to_pass"))

@@ -19,6 +19,7 @@ _REPLAY_FIELDS = (
     "environment_ref",
     "runtime_tier",
     "source_ref",
+    "compatibility",
     "patch_scope",
     "source",
     "environment",
@@ -62,6 +63,10 @@ def replay_spec_hash(task: TaskManifest) -> str:
         "hash_kind": REPLAY_SPEC_HASH_KIND,
         "manifest": manifest,
         "artifact_contents": artifacts,
+        "compatibility_evidence_content": _compatibility_evidence_content(
+            task,
+            manifest_data,
+        ),
     }
     encoded = json.dumps(
         payload,
@@ -70,3 +75,30 @@ def replay_spec_hash(task: TaskManifest) -> str:
         sort_keys=True,
     ).encode("utf-8")
     return f"sha256:{hashlib.sha256(encoded).hexdigest()}"
+
+
+def _compatibility_evidence_content(
+    task: TaskManifest,
+    manifest_data: dict[str, Any],
+) -> dict[str, str | None] | None:
+    compatibility = manifest_data.get("compatibility")
+    if not isinstance(compatibility, dict):
+        return None
+    configured = compatibility.get("evidence")
+    if not isinstance(configured, str):
+        return None
+    relative = Path(configured)
+    safe = (
+        not relative.is_absolute()
+        and ".." not in relative.parts
+        and relative.suffix == ".json"
+    )
+    path = task.task_dir / relative
+    return {
+        "path": configured,
+        "sha256": (
+            f"sha256:{hashlib.sha256(path.read_bytes()).hexdigest()}"
+            if safe and path.is_file()
+            else None
+        ),
+    }

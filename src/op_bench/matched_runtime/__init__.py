@@ -18,6 +18,10 @@ from op_bench.matched_runtime.probe import (
     ProbeSpec,
     write_compatibility_evidence,
 )
+from op_bench.matched_runtime.promotion import (
+    promote_matched_runtime_task,
+    validate_matched_runtime_promotion,
+)
 
 __all__ = [
     "BuildIdentity",
@@ -33,5 +37,7 @@ __all__ = [
     "RuntimeIdentity",
     "SourceIdentity",
     "compatibility_content_hash",
+    "promote_matched_runtime_task",
+    "validate_matched_runtime_promotion",
     "write_compatibility_evidence",
 ]
