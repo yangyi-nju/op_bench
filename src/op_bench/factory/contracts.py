@@ -1357,3 +1357,465 @@ class FactoryAdmissionRecord:
                 f"{path}.content_hash: expected {record.content_hash!r}"
             )
         return record
+
+
+@dataclass(frozen=True)
+class DatasetFreezeEntry:
+    candidate: FactoryArtifactReference
+    decision: FactoryArtifactReference
+    admission: FactoryArtifactReference
+    task: FactoryArtifactReference
+    admission_evidence: FactoryArtifactReference
+    source: FactoryArtifactReference
+    environment: FactoryArtifactReference
+    task_id: str
+    task_path: str
+    admission_evidence_path: str
+    runtime_tier: str
+    problem_dimension: str
+    problem_subclass: str
+    failure_contract: str
+    admission_state: str
+
+    @classmethod
+    def wire_fields(cls) -> tuple[str, ...]:
+        return (
+            "candidate",
+            "decision",
+            "admission",
+            "task",
+            "admission_evidence",
+            "source",
+            "environment",
+            "task_id",
+            "task_path",
+            "admission_evidence_path",
+            "runtime_tier",
+            "problem_dimension",
+            "problem_subclass",
+            "failure_contract",
+            "admission_state",
+        )
+
+    def __post_init__(self) -> None:
+        for value, path, expected_type in (
+            (self.candidate, "candidate", "factory_candidate"),
+            (self.decision, "decision", "factory_decision"),
+            (self.admission, "admission", "factory_admission"),
+            (self.task, "task", "task_bundle"),
+            (
+                self.admission_evidence,
+                "admission_evidence",
+                "admission_evidence",
+            ),
+            (self.source, "source", "source"),
+            (self.environment, "environment", "environment"),
+        ):
+            if not isinstance(value, FactoryArtifactReference):
+                raise ContractError(
+                    f"{path}: expected FactoryArtifactReference"
+                )
+            if value.artifact_type != expected_type:
+                raise ContractError(
+                    f"{path}.artifact_type: expected {expected_type!r}"
+                )
+        require_str(self.task_id, "task_id")
+        _validate_relative_path(self.task_path, "task_path")
+        _validate_relative_path(
+            self.admission_evidence_path,
+            "admission_evidence_path",
+        )
+        if self.admission_evidence_path != self.admission_evidence.relative_path:
+            raise ContractError(
+                "admission_evidence_path: must match Admission evidence reference"
+            )
+        require_str(self.runtime_tier, "runtime_tier")
+        require_enum(
+            self.problem_dimension,
+            "problem_dimension",
+            PROBLEM_DIMENSIONS,
+        )
+        require_enum(
+            self.problem_subclass,
+            "problem_subclass",
+            PROBLEM_SUBCLASSES[self.problem_dimension],
+        )
+        require_enum(
+            self.failure_contract,
+            "failure_contract",
+            (
+                "wrong-result",
+                "exception",
+                "crash-oob",
+                "silent-acceptance",
+            ),
+        )
+        if self.admission_state != "verified":
+            raise ContractError("admission_state: expected 'verified'")
+
+    def references(self) -> tuple[FactoryArtifactReference, ...]:
+        return (
+            self.candidate,
+            self.decision,
+            self.admission,
+            self.task,
+            self.admission_evidence,
+            self.source,
+            self.environment,
+        )
+
+    def dataset_entry(self) -> dict[str, JsonValue]:
+        return {
+            "task_id": self.task_id,
+            "task_path": self.task_path,
+            "admission_status": "verified",
+            "admission_evidence": self.admission_evidence_path,
+            "environment_status": "ready",
+            "runtime_tier": self.runtime_tier,
+            "source_status": "ready",
+            "replay_status": "verified",
+        }
+
+    def to_dict(self) -> dict[str, JsonValue]:
+        return {
+            "candidate": self.candidate.to_dict(),
+            "decision": self.decision.to_dict(),
+            "admission": self.admission.to_dict(),
+            "task": self.task.to_dict(),
+            "admission_evidence": self.admission_evidence.to_dict(),
+            "source": self.source.to_dict(),
+            "environment": self.environment.to_dict(),
+            "task_id": self.task_id,
+            "task_path": self.task_path,
+            "admission_evidence_path": self.admission_evidence_path,
+            "runtime_tier": self.runtime_tier,
+            "problem_dimension": self.problem_dimension,
+            "problem_subclass": self.problem_subclass,
+            "failure_contract": self.failure_contract,
+            "admission_state": self.admission_state,
+        }
+
+    @classmethod
+    def from_dict(
+        cls,
+        value: object,
+        *,
+        path: str = "dataset_freeze_entry",
+    ) -> "DatasetFreezeEntry":
+        data = require_exact_fields(value, path, cls.wire_fields())
+
+        def parse_reference(name: str) -> FactoryArtifactReference:
+            return FactoryArtifactReference.from_dict(
+                data[name],
+                path=f"{path}.{name}",
+            )
+
+        return cls(
+            candidate=parse_reference("candidate"),
+            decision=parse_reference("decision"),
+            admission=parse_reference("admission"),
+            task=parse_reference("task"),
+            admission_evidence=parse_reference("admission_evidence"),
+            source=parse_reference("source"),
+            environment=parse_reference("environment"),
+            task_id=require_str(data["task_id"], f"{path}.task_id"),
+            task_path=_validate_relative_path(
+                data["task_path"],
+                f"{path}.task_path",
+            ),
+            admission_evidence_path=_validate_relative_path(
+                data["admission_evidence_path"],
+                f"{path}.admission_evidence_path",
+            ),
+            runtime_tier=require_str(
+                data["runtime_tier"],
+                f"{path}.runtime_tier",
+            ),
+            problem_dimension=require_str(
+                data["problem_dimension"],
+                f"{path}.problem_dimension",
+            ),
+            problem_subclass=require_str(
+                data["problem_subclass"],
+                f"{path}.problem_subclass",
+            ),
+            failure_contract=require_str(
+                data["failure_contract"],
+                f"{path}.failure_contract",
+            ),
+            admission_state=require_str(
+                data["admission_state"],
+                f"{path}.admission_state",
+            ),
+        )
+
+
+def freeze_dataset_payload(
+    *,
+    dataset_id: str,
+    dataset_version: str,
+    registries: Mapping[str, str],
+    entries: tuple[DatasetFreezeEntry, ...],
+) -> dict[str, JsonValue]:
+    return {
+        "dataset_id": dataset_id,
+        "version": dataset_version,
+        "status": "verified",
+        "registries": dict(registries),
+        "tasks": [entry.dataset_entry() for entry in entries],
+    }
+
+
+@dataclass(frozen=True)
+class DatasetFreezeManifest:
+    contract_type: ClassVar[str] = "dataset_freeze"
+    schema_version: ClassVar[str] = SCHEMA_VERSION
+
+    freeze_id: str
+    dataset_id: str
+    dataset_version: str
+    base_dataset: FactoryArtifactReference
+    factory_protocol: FactoryArtifactReference
+    screening_rule_set: FactoryArtifactReference
+    exclusion_index: FactoryArtifactReference
+    registries: Mapping[str, str]
+    entries: tuple[DatasetFreezeEntry, ...]
+    generated_dataset_hash: str
+    created_at: str
+
+    @classmethod
+    def wire_fields(cls) -> tuple[str, ...]:
+        return (
+            "contract_type",
+            "schema_version",
+            "freeze_id",
+            "dataset_id",
+            "dataset_version",
+            "base_dataset",
+            "factory_protocol",
+            "screening_rule_set",
+            "exclusion_index",
+            "registries",
+            "entries",
+            "generated_dataset_hash",
+            "created_at",
+            "content_hash",
+        )
+
+    @classmethod
+    def freeze_id_for(
+        cls,
+        *,
+        dataset_id: str,
+        dataset_version: str,
+        base_dataset: FactoryArtifactReference,
+        factory_protocol: FactoryArtifactReference,
+        screening_rule_set: FactoryArtifactReference,
+        exclusion_index: FactoryArtifactReference,
+        registries: Mapping[str, str],
+        entries: tuple[DatasetFreezeEntry, ...],
+        generated_dataset_hash: str,
+    ) -> str:
+        digest = canonical_sha256(
+            {
+                "dataset_id": dataset_id,
+                "dataset_version": dataset_version,
+                "base_dataset": base_dataset.to_dict(),
+                "factory_protocol": factory_protocol.to_dict(),
+                "screening_rule_set": screening_rule_set.to_dict(),
+                "exclusion_index": exclusion_index.to_dict(),
+                "registries": dict(registries),
+                "entries": [entry.to_dict() for entry in entries],
+                "generated_dataset_hash": generated_dataset_hash,
+            }
+        )
+        return "freeze:v1:" + digest.removeprefix("sha256:")
+
+    def __post_init__(self) -> None:
+        require_str(
+            self.freeze_id,
+            "freeze_id",
+            pattern=r"freeze:v1:[0-9a-f]{64}",
+        )
+        require_str(self.dataset_id, "dataset_id")
+        require_str(self.dataset_version, "dataset_version")
+        for value, path, expected_type in (
+            (self.base_dataset, "base_dataset", "dataset_manifest"),
+            (self.factory_protocol, "factory_protocol", "factory_protocol"),
+            (
+                self.screening_rule_set,
+                "screening_rule_set",
+                "screening_rule_set",
+            ),
+            (self.exclusion_index, "exclusion_index", "exclusion_index"),
+        ):
+            if not isinstance(value, FactoryArtifactReference):
+                raise ContractError(
+                    f"{path}: expected FactoryArtifactReference"
+                )
+            if value.artifact_type != expected_type:
+                raise ContractError(
+                    f"{path}.artifact_type: expected {expected_type!r}"
+                )
+        if not isinstance(self.registries, Mapping):
+            raise ContractError("registries: expected object")
+        normalized_registries: dict[str, str] = {}
+        for name, value in self.registries.items():
+            if name not in ("environments", "sources"):
+                raise ContractError(f"registries: unsupported registry {name!r}")
+            normalized_registries[name] = _validate_relative_path(
+                value,
+                f"registries.{name}",
+            )
+        if tuple(normalized_registries) != tuple(sorted(normalized_registries)):
+            raise ContractError("registries: expected sorted keys")
+        object.__setattr__(
+            self,
+            "registries",
+            MappingProxyType(normalized_registries),
+        )
+        if not isinstance(self.entries, tuple) or not self.entries:
+            raise ContractError("entries: expected non-empty tuple")
+        for index, entry in enumerate(self.entries):
+            if not isinstance(entry, DatasetFreezeEntry):
+                raise ContractError(
+                    f"entries[{index}]: expected DatasetFreezeEntry"
+                )
+        task_ids = tuple(entry.task_id for entry in self.entries)
+        if task_ids != tuple(sorted(task_ids)):
+            raise ContractError("entries: expected sorted task_id order")
+        if len(set(task_ids)) != len(task_ids):
+            raise ContractError("entries: duplicate Task identity")
+        candidate_ids = tuple(
+            entry.candidate.artifact_id for entry in self.entries
+        )
+        if len(set(candidate_ids)) != len(candidate_ids):
+            raise ContractError("entries: duplicate Candidate identity")
+        require_str(
+            self.generated_dataset_hash,
+            "generated_dataset_hash",
+            pattern=SHA256_PATTERN,
+        )
+        expected_dataset_hash = canonical_sha256(
+            freeze_dataset_payload(
+                dataset_id=self.dataset_id,
+                dataset_version=self.dataset_version,
+                registries=self.registries,
+                entries=self.entries,
+            )
+        )
+        if self.generated_dataset_hash != expected_dataset_hash:
+            raise ContractError(
+                "generated_dataset_hash: does not match rebuilt DatasetManifest"
+            )
+        _validate_utc_seconds(self.created_at, "created_at")
+        expected_id = self.freeze_id_for(
+            dataset_id=self.dataset_id,
+            dataset_version=self.dataset_version,
+            base_dataset=self.base_dataset,
+            factory_protocol=self.factory_protocol,
+            screening_rule_set=self.screening_rule_set,
+            exclusion_index=self.exclusion_index,
+            registries=self.registries,
+            entries=self.entries,
+            generated_dataset_hash=self.generated_dataset_hash,
+        )
+        if self.freeze_id != expected_id:
+            raise ContractError(
+                f"freeze_id: expected derived identity {expected_id!r}"
+            )
+
+    @property
+    def content_hash(self) -> str:
+        return factory_content_hash(self.to_dict(include_hash=False))
+
+    def to_dict(self, *, include_hash: bool = True) -> dict[str, JsonValue]:
+        payload: dict[str, JsonValue] = {
+            "contract_type": self.contract_type,
+            "schema_version": self.schema_version,
+            "freeze_id": self.freeze_id,
+            "dataset_id": self.dataset_id,
+            "dataset_version": self.dataset_version,
+            "base_dataset": self.base_dataset.to_dict(),
+            "factory_protocol": self.factory_protocol.to_dict(),
+            "screening_rule_set": self.screening_rule_set.to_dict(),
+            "exclusion_index": self.exclusion_index.to_dict(),
+            "registries": dict(self.registries),
+            "entries": [entry.to_dict() for entry in self.entries],
+            "generated_dataset_hash": self.generated_dataset_hash,
+            "created_at": self.created_at,
+        }
+        if include_hash:
+            payload["content_hash"] = factory_content_hash(payload)
+        return payload
+
+    @classmethod
+    def from_dict(
+        cls,
+        value: object,
+        *,
+        path: str = "dataset_freeze",
+    ) -> "DatasetFreezeManifest":
+        data = require_exact_fields(value, path, cls.wire_fields())
+        if data["contract_type"] != cls.contract_type:
+            raise ContractError(
+                f"{path}.contract_type: expected {cls.contract_type!r}"
+            )
+        if data["schema_version"] != cls.schema_version:
+            raise ContractError(
+                f"{path}.schema_version: expected {cls.schema_version!r}"
+            )
+        registries_value = data["registries"]
+        if not isinstance(registries_value, Mapping):
+            raise ContractError(f"{path}.registries: expected object")
+        entries_value = require_list(data["entries"], f"{path}.entries")
+        manifest = cls(
+            freeze_id=require_str(data["freeze_id"], f"{path}.freeze_id"),
+            dataset_id=require_str(data["dataset_id"], f"{path}.dataset_id"),
+            dataset_version=require_str(
+                data["dataset_version"],
+                f"{path}.dataset_version",
+            ),
+            base_dataset=FactoryArtifactReference.from_dict(
+                data["base_dataset"],
+                path=f"{path}.base_dataset",
+            ),
+            factory_protocol=FactoryArtifactReference.from_dict(
+                data["factory_protocol"],
+                path=f"{path}.factory_protocol",
+            ),
+            screening_rule_set=FactoryArtifactReference.from_dict(
+                data["screening_rule_set"],
+                path=f"{path}.screening_rule_set",
+            ),
+            exclusion_index=FactoryArtifactReference.from_dict(
+                data["exclusion_index"],
+                path=f"{path}.exclusion_index",
+            ),
+            registries=dict(registries_value),
+            entries=tuple(
+                DatasetFreezeEntry.from_dict(
+                    entry,
+                    path=f"{path}.entries[{index}]",
+                )
+                for index, entry in enumerate(entries_value)
+            ),
+            generated_dataset_hash=require_str(
+                data["generated_dataset_hash"],
+                f"{path}.generated_dataset_hash",
+            ),
+            created_at=_validate_utc_seconds(
+                data["created_at"],
+                f"{path}.created_at",
+            ),
+        )
+        stored_hash = require_str(
+            data["content_hash"],
+            f"{path}.content_hash",
+            pattern=SHA256_PATTERN,
+        )
+        if stored_hash != manifest.content_hash:
+            raise ContractError(
+                f"{path}.content_hash: expected {manifest.content_hash!r}"
+            )
+        return manifest

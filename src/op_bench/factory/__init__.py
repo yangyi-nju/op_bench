@@ -7,12 +7,19 @@ from op_bench.factory.artifacts import (
 from op_bench.factory.contracts import (
     CandidateRecord,
     ChangedFile,
+    DatasetFreezeEntry,
+    DatasetFreezeManifest,
     DecisionRecord,
     FactoryAdmissionRecord,
     FactoryArtifactReference,
     FactoryEvidence,
     ScreeningFinding,
     factory_content_hash,
+)
+from op_bench.factory.freeze import (
+    build_freeze_manifest,
+    freeze_dataset_bytes,
+    rebuild_dataset_manifest,
 )
 from op_bench.factory.lifecycle import (
     FactoryTransitionRequest,
@@ -39,6 +46,8 @@ __all__ = [
     "BoundaryKeywordPack",
     "CandidateRecord",
     "ChangedFile",
+    "DatasetFreezeEntry",
+    "DatasetFreezeManifest",
     "DecisionRecord",
     "FactoryAdmissionRecord",
     "FactoryArtifactStore",
@@ -50,11 +59,14 @@ __all__ = [
     "V07_BOUNDARY_SCREENING_V1",
     "derive_disposition",
     "advance_admission",
+    "build_freeze_manifest",
     "factory_content_hash",
+    "freeze_dataset_bytes",
     "keyword_pack",
     "load_factory_contract",
     "match_keyword_packs",
     "required_evidence",
+    "rebuild_dataset_manifest",
     "screen_candidate",
     "validate_admission_chain",
     "validate_problem_taxonomy",

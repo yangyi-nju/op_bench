@@ -1,0 +1,258 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OpBench DatasetFreezeManifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_type",
+    "schema_version",
+    "freeze_id",
+    "dataset_id",
+    "dataset_version",
+    "base_dataset",
+    "factory_protocol",
+    "screening_rule_set",
+    "exclusion_index",
+    "registries",
+    "entries",
+    "generated_dataset_hash",
+    "created_at",
+    "content_hash"
+  ],
+  "properties": {
+    "contract_type": {
+      "const": "dataset_freeze"
+    },
+    "schema_version": {
+      "const": "v1"
+    },
+    "freeze_id": {
+      "type": "string",
+      "pattern": "^freeze:v1:[0-9a-f]{64}$"
+    },
+    "dataset_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "dataset_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "base_dataset": {
+      "$ref": "#/$defs/artifact_reference"
+    },
+    "factory_protocol": {
+      "$ref": "#/$defs/artifact_reference"
+    },
+    "screening_rule_set": {
+      "$ref": "#/$defs/artifact_reference"
+    },
+    "exclusion_index": {
+      "$ref": "#/$defs/artifact_reference"
+    },
+    "registries": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "environments": {
+          "$ref": "#/$defs/relative_path"
+        },
+        "sources": {
+          "$ref": "#/$defs/relative_path"
+        }
+      }
+    },
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/entry"
+      }
+    },
+    "generated_dataset_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "created_at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "content_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  },
+  "$defs": {
+    "relative_path": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$"
+    },
+    "artifact_reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_type",
+        "artifact_id",
+        "content_hash",
+        "relative_path"
+      ],
+      "properties": {
+        "artifact_type": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "artifact_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "content_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "relative_path": {
+          "$ref": "#/$defs/relative_path"
+        }
+      }
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate",
+        "decision",
+        "admission",
+        "task",
+        "admission_evidence",
+        "source",
+        "environment",
+        "task_id",
+        "task_path",
+        "admission_evidence_path",
+        "runtime_tier",
+        "problem_dimension",
+        "problem_subclass",
+        "failure_contract",
+        "admission_state"
+      ],
+      "properties": {
+        "candidate": {
+          "$ref": "#/$defs/artifact_reference"
+        },
+        "decision": {
+          "$ref": "#/$defs/artifact_reference"
+        },
+        "admission": {
+          "$ref": "#/$defs/artifact_reference"
+        },
+        "task": {
+          "$ref": "#/$defs/artifact_reference"
+        },
+        "admission_evidence": {
+          "$ref": "#/$defs/artifact_reference"
+        },
+        "source": {
+          "$ref": "#/$defs/artifact_reference"
+        },
+        "environment": {
+          "$ref": "#/$defs/artifact_reference"
+        },
+        "task_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "task_path": {
+          "$ref": "#/$defs/relative_path"
+        },
+        "admission_evidence_path": {
+          "$ref": "#/$defs/relative_path"
+        },
+        "runtime_tier": {
+          "type": "string",
+          "minLength": 1
+        },
+        "problem_dimension": {
+          "type": "string",
+          "enum": [
+            "boundary",
+            "precision"
+          ]
+        },
+        "problem_subclass": {
+          "type": "string",
+          "enum": [
+            "B1",
+            "B2",
+            "B3",
+            "B4",
+            "B5",
+            "P1",
+            "P2",
+            "P3",
+            "P4",
+            "P5"
+          ]
+        },
+        "failure_contract": {
+          "type": "string",
+          "enum": [
+            "wrong-result",
+            "exception",
+            "crash-oob",
+            "silent-acceptance"
+          ]
+        },
+        "admission_state": {
+          "const": "verified"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "problem_dimension": {
+                "const": "boundary"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "problem_subclass": {
+                "enum": [
+                  "B1",
+                  "B2",
+                  "B3",
+                  "B4",
+                  "B5"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "problem_dimension": {
+                "const": "precision"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "problem_subclass": {
+                "enum": [
+                  "P1",
+                  "P2",
+                  "P3",
+                  "P4",
+                  "P5"
+                ]
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

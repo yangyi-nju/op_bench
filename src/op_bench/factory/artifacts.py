@@ -13,11 +13,12 @@ import uuid
 
 from op_bench.factory.contracts import (
     CandidateRecord,
+    DatasetFreezeManifest,
     DecisionRecord,
     FactoryAdmissionRecord,
     FactoryArtifactReference,
 )
-from op_bench.runtime.canonical import canonical_json
+from op_bench.runtime.canonical import canonical_json, canonical_sha256
 from op_bench.runtime.validation import ContractError
 
 
@@ -25,12 +26,14 @@ FactoryContract = Union[
     CandidateRecord,
     DecisionRecord,
     FactoryAdmissionRecord,
+    DatasetFreezeManifest,
 ]
 
 _CONTRACT_TYPES = {
     CandidateRecord.contract_type: CandidateRecord,
     DecisionRecord.contract_type: DecisionRecord,
     FactoryAdmissionRecord.contract_type: FactoryAdmissionRecord,
+    DatasetFreezeManifest.contract_type: DatasetFreezeManifest,
 }
 _DIRECTORY_FLAGS = (
     os.O_RDONLY
@@ -84,6 +87,8 @@ def _contract_identity(contract: FactoryContract) -> str:
         return contract.decision_id
     if isinstance(contract, FactoryAdmissionRecord):
         return contract.admission_id
+    if isinstance(contract, DatasetFreezeManifest):
+        return contract.freeze_id
     raise ContractError("contract: unsupported Factory contract")
 
 
@@ -198,7 +203,12 @@ class FactoryArtifactStore:
         path = _validate_relative_json_path(relative_path)
         if not isinstance(
             contract,
-            (CandidateRecord, DecisionRecord, FactoryAdmissionRecord),
+            (
+                CandidateRecord,
+                DecisionRecord,
+                FactoryAdmissionRecord,
+                DatasetFreezeManifest,
+            ),
         ):
             raise ContractError("contract: unsupported Factory contract")
         payload = contract.to_dict()
@@ -210,6 +220,44 @@ class FactoryArtifactStore:
             content_hash=contract.content_hash,
             relative_path=relative_path,
         )
+        installed = self._write_encoded(path, encoded)
+        self._verify_content(reference, installed)
+        return reference
+
+    def write_json(
+        self,
+        relative_path: str,
+        value: object,
+        *,
+        artifact_type: str,
+        artifact_id: str,
+    ) -> FactoryArtifactReference:
+        self._ensure_open()
+        path = _validate_relative_json_path(relative_path)
+        _assert_factory_public_safe(value)
+        encoded = canonical_json(value).encode("utf-8")
+        reference = FactoryArtifactReference(
+            artifact_type=artifact_type,
+            artifact_id=artifact_id,
+            content_hash=canonical_sha256(value),
+            relative_path=relative_path,
+        )
+        installed = self._write_encoded(path, encoded)
+        try:
+            decoded = json.loads(installed.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ContractError("artifact: invalid JSON") from exc
+        if canonical_json(decoded).encode("utf-8") != installed:
+            raise ContractError("artifact: expected canonical JSON")
+        if canonical_sha256(decoded) != reference.content_hash:
+            raise ContractError("artifact content hash mismatch")
+        return reference
+
+    def _write_encoded(
+        self,
+        path: PurePosixPath,
+        encoded: bytes,
+    ) -> bytes:
         with self._lock:
             parent_fd, filename = self._open_parent(path, create=True)
             try:
@@ -219,8 +267,7 @@ class FactoryArtifactStore:
                         raise ContractError(
                             "artifact destination is immutable and contains different bytes"
                         )
-                    self._verify_content(reference, existing)
-                    return reference
+                    return existing
 
                 temporary = f".factory-{uuid.uuid4().hex}.tmp"
                 descriptor: int | None = None
@@ -271,8 +318,7 @@ class FactoryArtifactStore:
                     filename,
                     missing_ok=False,
                 )
-                self._verify_content(reference, installed)
-                return reference
+                return installed
             finally:
                 os.close(parent_fd)
 
