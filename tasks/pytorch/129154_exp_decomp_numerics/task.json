@@ -1,10 +1,17 @@
 {
   "task_id": "pytorch__129154__exp_decomp_numerics",
   "version": "v1",
-  "environment_ref": "pytorch-cuda-torch2.6.0-py311-cu124",
+  "environment_ref": "pytorch-matched-ff89ebc-torch2.4.0-py311-cu124",
   "runtime_tier": "cuda_python_overlay",
   "source_ref": "pytorch-ff89ebc-cuda-overlay",
   "admission": {"status": "deprecated"},
+  "compatibility": {
+    "target_module": "torch/_refs/__init__.py",
+    "target_import": "torch._refs",
+    "selector_module": "test/test_decomp.py",
+    "minimal_operation": "import torch; import torch._refs; torch._refs.abs(torch.tensor([-1.0], device='cuda'))",
+    "evidence": "compatibility/evidence.json"
+  },
   "patch_scope": {
     "allowed_paths": ["torch/_refs/__init__.py"],
     "mode": "enforced"
@@ -39,7 +46,11 @@
     "backend": "remote_docker",
     "host": "gpu-a10",
     "tier": "cuda_python_overlay",
-    "image": "op-bench/pytorch-cuda:torch2.6.0-cu124-py311",
+    "image": "op-bench/pytorch-matched-ff89ebc:torch2.4.0-cu124-py311",
+    "image_digest": "sha256:f7fdabf3d4d9fc01c8d0f67961986968b06eb49d3724361c7ce64c1564f865c7",
+    "digest_kind": "local_image_id",
+    "dockerfile": "../../../environments/pytorch-matched-ff89ebc-cu124/Dockerfile",
+    "build_context": "../../../environments/pytorch-matched-ff89ebc-cu124",
     "workspace_dir": "/workspace",
     "preflight_workdir": "/tmp",
     "python_executable": "python",
@@ -91,6 +102,6 @@
     "estimated_runtime_min": 15,
     "layer": "A",
     "admission_status": "deprecated",
-    "notes": "DEPRECATED for v0.5. base commit ff89ebc (2024-06) overlays torch/_refs/__init__.py onto torch 2.6 wheel, but the wheel's common_methods_invocations.py still expects torch._refs.expand_copy which was added later. Import fails before exponential() is exercised. Fix requires either (a) matched-version wheel image, or (b) full source build — both are scope changes beyond v0.5 python_overlay. Reconsider in v0.6."
+    "notes": "v0.7 matched-runtime candidate. The task overlays Base Commit ff89ebc onto the retained, digest-pinned official torch 2.4.0+cu124 CPython 3.11 wheel. Compatibility evidence and Baseline/Gold Admission are required before promotion."
   }
 }

@@ -68,6 +68,11 @@ class EnvironmentAsset:
     def source_loading_modes(self) -> list[str]:
         return [str(mode) for mode in self.data.get("source_loading_modes", [])]
 
+    @property
+    def runtime_artifact(self) -> dict[str, object]:
+        value = self.data.get("runtime_artifact")
+        return deepcopy(value) if isinstance(value, dict) else {}
+
     def task_environment_defaults(self) -> dict[str, Any]:
         docker = self.data["docker"]
         runtime = self.data.get("runtime", {})
@@ -213,6 +218,26 @@ class EnvironmentRegistry(_Registry[EnvironmentAsset]):
             raise RegistryError(f"environment asset {asset_id}: docker.image is required")
         if not isinstance(item["preflight"], dict):
             raise RegistryError(f"environment asset {asset_id}: preflight must be an object")
+        runtime_artifact = item.get("runtime_artifact")
+        if runtime_artifact is not None:
+            if not isinstance(runtime_artifact, dict):
+                raise RegistryError(
+                    f"environment asset {asset_id}: runtime_artifact must be an object"
+                )
+            for field in (
+                "strategy",
+                "artifact_kind",
+                "artifact_id",
+                "artifact_digest",
+                "artifact_digest_kind",
+                "torch_version",
+                "python_abi",
+            ):
+                if not runtime_artifact.get(field):
+                    raise RegistryError(
+                        f"environment asset {asset_id}: "
+                        f"runtime_artifact.{field} is required"
+                    )
 
 
 class SourceRegistry(_Registry[SourceAsset]):

@@ -22,6 +22,8 @@
               "cpu_package_runtime",
               "cpu_source_snapshot_fuller",
               "cuda_declared",
+              "cuda_python_overlay",
+              "cuda_kernel_build",
               "hardware_specific"
             ]
           },
@@ -32,8 +34,41 @@
             "properties": {
               "image": {"type": "string", "minLength": 1},
               "digest": {"type": ["string", "null"]},
+              "digest_kind": {
+                "type": "string",
+                "enum": ["repo_digest", "local_image_id", "build_hash"]
+              },
               "dockerfile": {"type": "string"},
-              "build_context": {"type": "string"}
+              "build_context": {"type": "string"},
+              "platform": {"type": "string"}
+            }
+          },
+          "runtime_artifact": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "strategy",
+              "artifact_kind",
+              "artifact_id",
+              "artifact_digest",
+              "artifact_digest_kind",
+              "torch_version",
+              "python_abi"
+            ],
+            "properties": {
+              "strategy": {
+                "type": "string",
+                "enum": ["matched_wheel", "source_built_wheel", "full_source_build"]
+              },
+              "artifact_kind": {"type": "string", "minLength": 1},
+              "artifact_id": {"type": "string", "minLength": 1},
+              "artifact_digest": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              },
+              "artifact_digest_kind": {"type": "string", "minLength": 1},
+              "torch_version": {"type": "string", "minLength": 1},
+              "python_abi": {"type": "string", "minLength": 1}
             }
           },
           "preflight": {

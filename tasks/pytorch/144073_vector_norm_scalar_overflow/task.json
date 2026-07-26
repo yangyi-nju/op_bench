@@ -1,10 +1,17 @@
 {
   "task_id": "pytorch__144073__vector_norm_scalar_overflow",
   "version": "v1",
-  "environment_ref": "pytorch-cpu-torch2.6.0-py311",
+  "environment_ref": "pytorch-matched-06e9dea-torch2.7.0-py311-cpu",
   "runtime_tier": "cpu_python_overlay",
   "source_ref": "pytorch-06e9dea-python-overlay",
   "admission": {"status": "deprecated"},
+  "compatibility": {
+    "target_module": "torch/_refs/linalg/__init__.py",
+    "target_import": "torch._refs.linalg",
+    "selector_module": "test/inductor/test_torchinductor.py",
+    "minimal_operation": "import torch; import torch._refs.linalg; torch._refs.linalg.vector_norm(torch.ones(1))",
+    "evidence": "compatibility/evidence.json"
+  },
   "patch_scope": {
     "allowed_paths": ["torch/_refs/linalg/__init__.py"],
     "mode": "enforced"
@@ -38,12 +45,12 @@
   "environment": {
     "backend": "remote_docker",
     "host": "gpu-a10",
-    "tier": "cpu-deterministic",
-    "image": "op-bench/pytorch-cpu:torch2.6.0-py311",
-    "image_digest": "sha256:9507757065fd73fa7a958cd13f01de163a3fa46d826c09142f9522eda0f1e400",
+    "tier": "cpu_python_overlay",
+    "image": "op-bench/pytorch-matched-06e9dea:torch2.7.0-cpu-py311",
+    "image_digest": "sha256:05802b300a4ce9398cfb13956e3d999f2b52a3796f4827b323a3bede653a979d",
     "digest_kind": "local_image_id",
-    "dockerfile": "../../../environments/pytorch-cpu/Dockerfile",
-    "build_context": "../../../environments/pytorch-cpu",
+    "dockerfile": "../../../environments/pytorch-matched-06e9dea-cpu/Dockerfile",
+    "build_context": "../../../environments/pytorch-matched-06e9dea-cpu",
     "workspace_dir": "/workspace",
     "preflight_workdir": "/tmp",
     "python_executable": "python",
@@ -95,6 +102,6 @@
     "estimated_runtime_min": 15,
     "layer": "A",
     "admission_status": "deprecated",
-    "notes": "DEPRECATED for v0.5. base commit 06e9dea (2025-04) is later than torch 2.6 (2024-12). Overlaying its torch/_refs/linalg/__init__.py onto the 2.6 wheel triggers assertion on out_wrapper's tuple[Tensor, ...] type annotation which older _decomp helpers don't accept. Fix requires matched-version wheel or source build. Reconsider in v0.6."
+    "notes": "v0.7 matched-runtime candidate. The task overlays Base Commit 06e9dea onto the retained, digest-pinned official torch 2.7.0+cpu CPython 3.11 wheel. Compatibility evidence and Baseline/Gold Admission are required before promotion."
   }
 }
