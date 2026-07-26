@@ -1,0 +1,426 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OpBench matched-runtime compatibility evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_type",
+    "schema_version",
+    "evidence_id",
+    "task_id",
+    "strategy",
+    "status",
+    "source",
+    "runtime",
+    "build",
+    "checks",
+    "failure",
+    "created_at",
+    "content_hash"
+  ],
+  "properties": {
+    "contract_type": {
+      "const": "matched_runtime_compatibility"
+    },
+    "schema_version": {
+      "const": "v1"
+    },
+    "evidence_id": {
+      "type": "string",
+      "pattern": "^compatibility:v1:[0-9a-f]{64}$"
+    },
+    "task_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._+-]*$"
+    },
+    "strategy": {
+      "type": "string",
+      "enum": [
+        "matched_wheel",
+        "source_built_wheel",
+        "full_source_build"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "compatible",
+        "incompatible",
+        "unavailable"
+      ]
+    },
+    "source": {
+      "$ref": "#/$defs/source"
+    },
+    "runtime": {
+      "$ref": "#/$defs/runtime"
+    },
+    "build": {
+      "$ref": "#/$defs/build"
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": {
+        "$ref": "#/$defs/check"
+      }
+    },
+    "failure": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/failure"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "created_at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "content_hash": {
+      "$ref": "#/$defs/sha256"
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "relative_path": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$"
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_id",
+        "commit",
+        "snapshot_digest",
+        "snapshot_digest_kind",
+        "target_module_path",
+        "target_module_sha256",
+        "runtime_path_suffix"
+      ],
+      "properties": {
+        "source_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "snapshot_digest": {
+          "$ref": "#/$defs/sha256"
+        },
+        "snapshot_digest_kind": {
+          "type": "string",
+          "enum": [
+            "git_archive_sha256",
+            "tree_sha256"
+          ]
+        },
+        "target_module_path": {
+          "$ref": "#/$defs/relative_path"
+        },
+        "target_module_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "runtime_path_suffix": {
+          "$ref": "#/$defs/relative_path"
+        }
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "environment_id",
+        "artifact_kind",
+        "artifact_id",
+        "artifact_digest",
+        "artifact_digest_kind",
+        "torch_version",
+        "python_implementation",
+        "python_abi",
+        "platform",
+        "cuda_build",
+        "cuda_runtime",
+        "device_name",
+        "compute_capability",
+        "source_loading_mode",
+        "target_module_path_suffix",
+        "target_module_sha256"
+      ],
+      "properties": {
+        "environment_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "artifact_kind": {
+          "type": "string",
+          "enum": [
+            "official_wheel",
+            "source_built_wheel",
+            "full_source_build"
+          ]
+        },
+        "artifact_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "artifact_digest": {
+          "$ref": "#/$defs/sha256"
+        },
+        "artifact_digest_kind": {
+          "type": "string",
+          "enum": [
+            "wheel_sha256",
+            "build_artifact_sha256"
+          ]
+        },
+        "torch_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "python_implementation": {
+          "type": "string",
+          "minLength": 1
+        },
+        "python_abi": {
+          "type": "string",
+          "minLength": 1
+        },
+        "platform": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cuda_build": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "cuda_runtime": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "device_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "compute_capability": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_loading_mode": {
+          "type": "string",
+          "enum": [
+            "python_overlay",
+            "inplace_build",
+            "full_source_build"
+          ]
+        },
+        "target_module_path_suffix": {
+          "$ref": "#/$defs/relative_path"
+        },
+        "target_module_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "cuda_build": {
+                "type": "string"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "cuda_runtime": {
+                "type": "string"
+              },
+              "device_name": {
+                "type": "string"
+              },
+              "compute_capability": {
+                "type": "string"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "cuda_runtime": {
+                "type": "null"
+              },
+              "device_name": {
+                "type": "null"
+              },
+              "compute_capability": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "build": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "flags",
+        "gpu_arches",
+        "ccache_key",
+        "artifact_digest",
+        "toolchain"
+      ],
+      "properties": {
+        "flags": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "gpu_arches": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "ccache_key": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "artifact_digest": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/sha256"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "toolchain": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "command_digest",
+        "exit_code",
+        "status",
+        "summary"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "enum": [
+            "source_identity",
+            "runtime_identity",
+            "target_module_provenance",
+            "target_import",
+            "selector_collection",
+            "minimal_operation"
+          ]
+        },
+        "command_digest": {
+          "$ref": "#/$defs/sha256"
+        },
+        "exit_code": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "passed",
+            "failed",
+            "unavailable"
+          ]
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        }
+      }
+    },
+    "failure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "check",
+        "summary"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "enum": [
+            "artifact_not_found",
+            "artifact_digest_mismatch",
+            "source_identity_mismatch",
+            "python_abi_mismatch",
+            "cuda_runtime_mismatch",
+            "compute_capability_unsupported",
+            "target_module_not_from_snapshot",
+            "target_import_failed",
+            "selector_not_collected",
+            "minimal_operation_failed",
+            "build_failed",
+            "runtime_unavailable",
+            "cleanup_failed"
+          ]
+        },
+        "check": {
+          "type": "string",
+          "enum": [
+            "source_identity",
+            "runtime_identity",
+            "target_module_provenance",
+            "target_import",
+            "selector_collection",
+            "minimal_operation"
+          ]
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        }
+      }
+    }
+  }
+}
