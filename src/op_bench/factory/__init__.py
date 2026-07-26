@@ -27,6 +27,7 @@ from op_bench.factory.lifecycle import (
     required_evidence,
     validate_admission_chain,
 )
+from op_bench.factory.promotion import build_verified_admission_chain
 from op_bench.factory.screening import (
     V07_BOUNDARY_SCREENING_V1,
     ScreeningRuleSet,
@@ -59,6 +60,7 @@ __all__ = [
     "V07_BOUNDARY_SCREENING_V1",
     "derive_disposition",
     "advance_admission",
+    "build_verified_admission_chain",
     "build_freeze_manifest",
     "factory_content_hash",
     "freeze_dataset_bytes",
