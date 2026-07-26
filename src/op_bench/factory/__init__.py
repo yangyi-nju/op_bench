@@ -1,5 +1,9 @@
 """Deterministic Dataset Factory contracts for OpBench v0.7."""
 
+from op_bench.factory.artifacts import (
+    FactoryArtifactStore,
+    load_factory_contract,
+)
 from op_bench.factory.contracts import (
     CandidateRecord,
     ChangedFile,
@@ -37,6 +41,7 @@ __all__ = [
     "ChangedFile",
     "DecisionRecord",
     "FactoryAdmissionRecord",
+    "FactoryArtifactStore",
     "FactoryArtifactReference",
     "FactoryEvidence",
     "FactoryTransitionRequest",
@@ -47,6 +52,7 @@ __all__ = [
     "advance_admission",
     "factory_content_hash",
     "keyword_pack",
+    "load_factory_contract",
     "match_keyword_packs",
     "required_evidence",
     "screen_candidate",
