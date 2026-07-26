@@ -1,0 +1,266 @@
+[
+  {
+    "repository": "synthetic/opbench-fixtures",
+    "pr_number": 170101,
+    "base_commit": "1111111111111111111111111111111111111111",
+    "merge_commit": "2111111111111111111111111111111111111111",
+    "author_date": "2025-01-10T10:00:00Z",
+    "merge_date": "2025-01-11T10:00:00Z",
+    "title": "Handle empty tensor reduction",
+    "description": "An empty reduction now returns the documented identity.",
+    "changed_files": [
+      {
+        "path": "aten/src/ATen/native/ReduceOps.cpp",
+        "additions": 24,
+        "deletions": 4,
+        "is_test": false
+      },
+      {
+        "path": "test/test_reductions.py",
+        "additions": 12,
+        "deletions": 0,
+        "is_test": true
+      }
+    ],
+    "proposed_subclass": "B1",
+    "change_kind": "bugfix",
+    "source_available": true,
+    "runtime_supported": true
+  },
+  {
+    "repository": "synthetic/opbench-fixtures",
+    "pr_number": 170102,
+    "base_commit": "2222222222222222222222222222222222222222",
+    "merge_commit": "3222222222222222222222222222222222222222",
+    "author_date": "2025-01-12T10:00:00Z",
+    "merge_date": "2025-01-13T10:00:00Z",
+    "title": "Preserve rank 0 scalar shape",
+    "description": "The scalar branch no longer indexes a missing dimension.",
+    "changed_files": [
+      {
+        "path": "torch/_meta_registrations.py",
+        "additions": 18,
+        "deletions": 5,
+        "is_test": false
+      },
+      {
+        "path": "test/test_meta.py",
+        "additions": 11,
+        "deletions": 0,
+        "is_test": true
+      }
+    ],
+    "proposed_subclass": "B2",
+    "change_kind": "bugfix",
+    "source_available": true,
+    "runtime_supported": true
+  },
+  {
+    "repository": "synthetic/opbench-fixtures",
+    "pr_number": 170103,
+    "base_commit": "3333333333333333333333333333333333333333",
+    "merge_commit": "4333333333333333333333333333333333333333",
+    "author_date": "2025-01-14T10:00:00Z",
+    "merge_date": "2025-01-15T10:00:00Z",
+    "title": "Avoid numel overflow in index arithmetic",
+    "description": "Large tensor offsets use checked size arithmetic.",
+    "changed_files": [
+      {
+        "path": "aten/src/ATen/native/TensorShape.cpp",
+        "additions": 31,
+        "deletions": 8,
+        "is_test": false
+      },
+      {
+        "path": "test/test_tensor_shape.py",
+        "additions": 16,
+        "deletions": 0,
+        "is_test": true
+      }
+    ],
+    "proposed_subclass": "B3",
+    "change_kind": "bugfix",
+    "source_available": true,
+    "runtime_supported": true
+  },
+  {
+    "repository": "synthetic/opbench-fixtures",
+    "pr_number": 170104,
+    "base_commit": "4444444444444444444444444444444444444444",
+    "merge_commit": "5444444444444444444444444444444444444444",
+    "author_date": "2025-01-16T10:00:00Z",
+    "merge_date": "2025-01-17T10:00:00Z",
+    "title": "Reject invalid dim out of range",
+    "description": "Parameter validation enforces the documented axis bounds.",
+    "changed_files": [
+      {
+        "path": "aten/src/ATen/native/Sorting.cpp",
+        "additions": 22,
+        "deletions": 6,
+        "is_test": false
+      },
+      {
+        "path": "test/test_sorting.py",
+        "additions": 14,
+        "deletions": 0,
+        "is_test": true
+      }
+    ],
+    "proposed_subclass": "B4",
+    "change_kind": "bugfix",
+    "source_available": true,
+    "runtime_supported": true
+  },
+  {
+    "repository": "synthetic/opbench-fixtures",
+    "pr_number": 170105,
+    "base_commit": "5555555555555555555555555555555555555555",
+    "merge_commit": "6555555555555555555555555555555555555555",
+    "author_date": "2025-01-18T10:00:00Z",
+    "merge_date": "2025-01-19T10:00:00Z",
+    "title": "Guard CUDA grid limit",
+    "description": "A grid-stride loop avoids launch failure at the device bound.",
+    "changed_files": [
+      {
+        "path": "aten/src/ATen/native/cuda/GridKernel.cu",
+        "additions": 37,
+        "deletions": 9,
+        "is_test": false
+      },
+      {
+        "path": "test/test_cuda_grid.py",
+        "additions": 18,
+        "deletions": 0,
+        "is_test": true
+      }
+    ],
+    "proposed_subclass": "B5",
+    "change_kind": "bugfix",
+    "source_available": true,
+    "runtime_supported": true
+  },
+  {
+    "repository": "synthetic/opbench-fixtures",
+    "pr_number": 170106,
+    "base_commit": "6666666666666666666666666666666666666666",
+    "merge_commit": "7666666666666666666666666666666666666666",
+    "author_date": "2025-01-20T10:00:00Z",
+    "merge_date": "2025-01-21T10:00:00Z",
+    "title": "Refactor empty tensor helpers",
+    "description": "This performance benchmark cleanup changes no behavior.",
+    "changed_files": [
+      {
+        "path": "aten/src/ATen/native/ReduceHelpers.cpp",
+        "additions": 20,
+        "deletions": 20,
+        "is_test": false
+      },
+      {
+        "path": "test/test_reduction_helpers.py",
+        "additions": 4,
+        "deletions": 4,
+        "is_test": true
+      }
+    ],
+    "proposed_subclass": "B1",
+    "change_kind": "refactor",
+    "source_available": true,
+    "runtime_supported": true
+  },
+  {
+    "repository": "synthetic/opbench-fixtures",
+    "pr_number": 170107,
+    "base_commit": "7777777777777777777777777777777777777777",
+    "merge_commit": "8777777777777777777777777777777777777777",
+    "author_date": "2025-01-22T10:00:00Z",
+    "merge_date": "2025-01-23T10:00:00Z",
+    "title": "Handle numel overflow across generated bindings",
+    "description": "The behavioral fix touches generated and handwritten index paths.",
+    "changed_files": [
+      {
+        "path": "aten/src/ATen/native/Indexing.cpp",
+        "additions": 170,
+        "deletions": 0,
+        "is_test": false
+      },
+      {
+        "path": "aten/src/ATen/native/generated/Indexing.cpp",
+        "additions": 15,
+        "deletions": 0,
+        "is_test": false
+      },
+      {
+        "path": "torch/csrc/indexing.cpp",
+        "additions": 8,
+        "deletions": 0,
+        "is_test": false
+      },
+      {
+        "path": "test/test_indexing.py",
+        "additions": 8,
+        "deletions": 0,
+        "is_test": true
+      }
+    ],
+    "proposed_subclass": "B3",
+    "change_kind": "bugfix",
+    "source_available": true,
+    "runtime_supported": true
+  },
+  {
+    "repository": "synthetic/opbench-fixtures",
+    "pr_number": 170108,
+    "base_commit": null,
+    "merge_commit": null,
+    "author_date": null,
+    "merge_date": null,
+    "title": "Validate invalid dim endpoint",
+    "description": "The metadata capture is incomplete and requires source review.",
+    "changed_files": [
+      {
+        "path": "aten/src/ATen/native/Validation.cpp",
+        "additions": 23,
+        "deletions": 3,
+        "is_test": false
+      },
+      {
+        "path": "test/test_validation.py",
+        "additions": 10,
+        "deletions": 0,
+        "is_test": true
+      }
+    ],
+    "proposed_subclass": "B4",
+    "change_kind": "bugfix",
+    "source_available": true,
+    "runtime_supported": true
+  },
+  {
+    "repository": "synthetic/opbench-fixtures",
+    "pr_number": 170109,
+    "base_commit": "9999999999999999999999999999999999999999",
+    "merge_commit": "a999999999999999999999999999999999999999",
+    "author_date": "2025-05-01T00:00:00Z",
+    "merge_date": "2025-05-02T00:00:00Z",
+    "title": "Fix CUDA grid limit outside stable window",
+    "description": "The launch bounds fix lacks a frozen historical environment.",
+    "changed_files": [
+      {
+        "path": "aten/src/ATen/native/cuda/LaunchBounds.cu",
+        "additions": 29,
+        "deletions": 7,
+        "is_test": false
+      },
+      {
+        "path": "test/test_cuda_launch.py",
+        "additions": 13,
+        "deletions": 0,
+        "is_test": true
+      }
+    ],
+    "proposed_subclass": "B5",
+    "change_kind": "bugfix",
+    "source_available": true,
+    "runtime_supported": true
+  }
+]
