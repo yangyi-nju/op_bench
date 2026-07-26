@@ -215,13 +215,108 @@
         "problem_type": {
           "type": "string"
         },
+        "problem_dimension": {
+          "type": "string",
+          "enum": [
+            "boundary",
+            "precision"
+          ]
+        },
+        "problem_subclass": {
+          "type": "string",
+          "enum": [
+            "B1",
+            "B2",
+            "B3",
+            "B4",
+            "B5",
+            "P1",
+            "P2",
+            "P3",
+            "P4",
+            "P5"
+          ]
+        },
+        "failure_contract": {
+          "type": "string",
+          "enum": [
+            "wrong-result",
+            "exception",
+            "crash-oob",
+            "silent-acceptance"
+          ]
+        },
         "tags": {
           "type": "array",
           "items": {
             "type": "string"
           }
         }
-      }
+      },
+      "dependentRequired": {
+        "problem_dimension": [
+          "problem_subclass"
+        ],
+        "problem_subclass": [
+          "problem_dimension"
+        ],
+        "failure_contract": [
+          "problem_dimension",
+          "problem_subclass"
+        ]
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "problem_dimension"
+            ],
+            "properties": {
+              "problem_dimension": {
+                "const": "boundary"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "problem_subclass": {
+                "enum": [
+                  "B1",
+                  "B2",
+                  "B3",
+                  "B4",
+                  "B5"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "problem_dimension"
+            ],
+            "properties": {
+              "problem_dimension": {
+                "const": "precision"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "problem_subclass": {
+                "enum": [
+                  "P1",
+                  "P2",
+                  "P3",
+                  "P4",
+                  "P5"
+                ]
+              }
+            }
+          }
+        }
+      ]
     },
     "environment": {
       "type": "object",

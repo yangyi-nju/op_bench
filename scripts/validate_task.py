@@ -10,6 +10,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from op_bench.factory.taxonomy import validate_problem_taxonomy
+
 
 REQUIRED_PATHS = [
     ("task_id",),
@@ -109,6 +111,12 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
             errors.append(f"empty required field: {'.'.join(path)}")
 
     source = data.get("source", {})
+    operator = data.get("operator", {})
+    if isinstance(operator, dict):
+        errors.extend(validate_problem_taxonomy(operator))
+    else:
+        errors.append("operator must be an object")
+
     for reference in ("environment_ref", "source_ref"):
         value = data.get(reference)
         if value is not None and (not isinstance(value, str) or not value):

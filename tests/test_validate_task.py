@@ -6,6 +6,56 @@ from scripts.validate_task import validate_manifest, validate_source_loading
 
 
 class ValidateTaskTests(unittest.TestCase):
+    def test_boundary_requires_b_subclass(self) -> None:
+        manifest = self._manifest()
+        manifest["operator"].update(
+            {
+                "problem_dimension": "boundary",
+                "problem_subclass": "P3",
+                "failure_contract": "wrong-result",
+            }
+        )
+
+        self.assertIn(
+            "operator.problem_subclass: boundary requires B1..B5",
+            validate_manifest(manifest),
+        )
+
+    def test_historical_task_may_omit_taxonomy(self) -> None:
+        self.assertEqual(validate_manifest(self._manifest()), [])
+
+    def test_historical_precision_pair_may_omit_failure_contract(self) -> None:
+        manifest = self._manifest()
+        manifest["operator"].update(
+            {
+                "problem_dimension": "precision",
+                "problem_subclass": "P3",
+            }
+        )
+
+        self.assertEqual(validate_manifest(manifest), [])
+
+    def test_complete_precision_taxonomy_is_valid(self) -> None:
+        manifest = self._manifest()
+        manifest["operator"].update(
+            {
+                "problem_dimension": "precision",
+                "problem_subclass": "P5",
+                "failure_contract": "crash-oob",
+            }
+        )
+
+        self.assertEqual(validate_manifest(manifest), [])
+
+    def test_partial_taxonomy_is_rejected(self) -> None:
+        manifest = self._manifest()
+        manifest["operator"]["problem_dimension"] = "boundary"
+
+        self.assertIn(
+            "operator taxonomy fields must be provided together",
+            validate_manifest(manifest),
+        )
+
     def test_rejects_invalid_inplace_build_environment(self) -> None:
         errors = validate_source_loading(
             {
