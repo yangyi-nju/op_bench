@@ -59,15 +59,17 @@ def replay_spec_hash(task: TaskManifest) -> str:
                 ),
             }
 
-    payload = {
+    payload: dict[str, object] = {
         "hash_kind": REPLAY_SPEC_HASH_KIND,
         "manifest": manifest,
         "artifact_contents": artifacts,
-        "compatibility_evidence_content": _compatibility_evidence_content(
-            task,
-            manifest_data,
-        ),
     }
+    compatibility_evidence = _compatibility_evidence_content(
+        task,
+        manifest_data,
+    )
+    if compatibility_evidence is not None:
+        payload["compatibility_evidence_content"] = compatibility_evidence
     encoded = json.dumps(
         payload,
         ensure_ascii=True,
