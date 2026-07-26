@@ -1,0 +1,259 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OpBench Factory CandidateRecord",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_type",
+    "schema_version",
+    "candidate_id",
+    "framework",
+    "repository",
+    "pr_number",
+    "pr_url",
+    "base_commit",
+    "merge_commit",
+    "author_date",
+    "merge_date",
+    "title",
+    "description",
+    "changed_files",
+    "total_files",
+    "total_changed_lines",
+    "discovery_source",
+    "keyword_pack_id",
+    "matched_keyword_ids",
+    "proposed_dimension",
+    "proposed_subclass",
+    "raw_metadata",
+    "created_at",
+    "content_hash"
+  ],
+  "properties": {
+    "contract_type": {
+      "const": "factory_candidate"
+    },
+    "schema_version": {
+      "const": "v1"
+    },
+    "candidate_id": {
+      "type": "string",
+      "pattern": "^candidate:v1:[0-9a-f]{64}$"
+    },
+    "framework": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
+    "repository": {
+      "type": "string",
+      "pattern": "^[^/\\s]+/[^/\\s]+$"
+    },
+    "pr_number": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "pr_url": {
+      "type": "string",
+      "pattern": "^https://github\\.com/[^/\\s]+/[^/\\s]+/pull/[1-9][0-9]*$"
+    },
+    "base_commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "merge_commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "author_date": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "merge_date": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4000
+    },
+    "changed_files": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/changed_file"
+      }
+    },
+    "total_files": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "total_changed_lines": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "discovery_source": {
+      "type": "string",
+      "enum": [
+        "fixture",
+        "git_log",
+        "github_pr_list"
+      ]
+    },
+    "keyword_pack_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
+    "matched_keyword_ids": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9._-]*$"
+      }
+    },
+    "proposed_dimension": {
+      "type": "string",
+      "enum": [
+        "boundary",
+        "precision"
+      ]
+    },
+    "proposed_subclass": {
+      "type": "string",
+      "enum": [
+        "B1",
+        "B2",
+        "B3",
+        "B4",
+        "B5",
+        "P1",
+        "P2",
+        "P3",
+        "P4",
+        "P5"
+      ]
+    },
+    "raw_metadata": {
+      "$ref": "#/$defs/artifact_reference"
+    },
+    "created_at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "content_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  },
+  "$defs": {
+    "artifact_reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_type",
+        "artifact_id",
+        "content_hash",
+        "relative_path"
+      ],
+      "properties": {
+        "artifact_type": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "artifact_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "content_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "relative_path": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$"
+        }
+      }
+    },
+    "changed_file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "additions",
+        "deletions",
+        "is_test"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$"
+        },
+        "additions": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "deletions": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "is_test": {
+          "type": "boolean"
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "proposed_dimension": {
+            "const": "boundary"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "proposed_subclass": {
+            "enum": [
+              "B1",
+              "B2",
+              "B3",
+              "B4",
+              "B5"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "proposed_dimension": {
+            "const": "precision"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "proposed_subclass": {
+            "enum": [
+              "P1",
+              "P2",
+              "P3",
+              "P4",
+              "P5"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}
