@@ -59,6 +59,7 @@ _FAILURE_BY_CHECK = {
 }
 
 _RUNTIME_IDENTITY_CODE = """
+import ctypes
 import json
 import platform
 import sysconfig
@@ -76,9 +77,26 @@ payload = {
     "compute_capability": None,
 }
 if cuda_available:
-    payload["cuda_runtime"] = ".".join(
-        str(torch._C._cuda_getRuntimeVersion()).zfill(4)[-4:][index:index + 2].lstrip("0") or "0"
-        for index in (0, 2)
+    cuda_major = str(torch.version.cuda).split(".", 1)[0]
+    cudart = None
+    errors = []
+    for library_name in (f"libcudart.so.{cuda_major}", "libcudart.so"):
+        try:
+            cudart = ctypes.CDLL(library_name)
+            break
+        except OSError as exc:
+            errors.append(str(exc))
+    if cudart is None:
+        raise RuntimeError("CUDA runtime library was not loadable: " + "; ".join(errors))
+    runtime_version = ctypes.c_int()
+    runtime_status = cudart.cudaRuntimeGetVersion(ctypes.byref(runtime_version))
+    if runtime_status != 0:
+        raise RuntimeError(
+            f"cudaRuntimeGetVersion failed with status {runtime_status}"
+        )
+    runtime_raw = runtime_version.value
+    payload["cuda_runtime"] = (
+        f"{runtime_raw // 1000}.{(runtime_raw % 1000) // 10}"
     )
     payload["device_name"] = torch.cuda.get_device_name(0)
     major, minor = torch.cuda.get_device_capability(0)
@@ -297,12 +315,13 @@ class ProbeSpec:
             ),
             ProbeCommand(
                 "runtime_identity",
-                (python, "-c", _RUNTIME_IDENTITY_CODE),
+                (python, "-I", "-c", _RUNTIME_IDENTITY_CODE),
             ),
             ProbeCommand(
                 "target_module_provenance",
                 (
                     python,
+                    "-I",
                     "-c",
                     _TARGET_PROVENANCE_CODE,
                     self.target_import,
@@ -313,6 +332,7 @@ class ProbeSpec:
                 "target_import",
                 (
                     python,
+                    "-I",
                     "-c",
                     f"import {self.target_import}",
                 ),
@@ -321,6 +341,7 @@ class ProbeSpec:
                 "selector_collection",
                 (
                     python,
+                    "-I",
                     "-c",
                     _SELECTOR_COLLECTION_CODE,
                     self.selector_module,
@@ -329,7 +350,7 @@ class ProbeSpec:
             ),
             ProbeCommand(
                 "minimal_operation",
-                (python, "-c", self.minimal_operation),
+                (python, "-I", "-c", self.minimal_operation),
             ),
         )
 
@@ -397,6 +418,55 @@ class EnvironmentProbeBackend:
                     target_hash,
                     source_observation,
                     failure_code="source_identity_mismatch",
+                )
+
+            test_patch_result = self.evaluator.apply_hidden_test_patch(
+                task,
+                workspace,
+            )
+            if (
+                test_patch_result is not None
+                and test_patch_result.exit_code != 0
+            ):
+                return ProbeExecution(
+                    snapshot_digest=snapshot_digest,
+                    source_target_sha256=target_hash,
+                    runtime_observation={},
+                    observations=(
+                        source_observation,
+                        ProbeObservation(
+                            "runtime_identity",
+                            None,
+                            "unavailable",
+                            "not run after hidden test patch failure",
+                        ),
+                        ProbeObservation(
+                            "target_module_provenance",
+                            None,
+                            "unavailable",
+                            "not run after hidden test patch failure",
+                        ),
+                        ProbeObservation(
+                            "target_import",
+                            None,
+                            "unavailable",
+                            "not run after hidden test patch failure",
+                        ),
+                        ProbeObservation(
+                            "selector_collection",
+                            test_patch_result.exit_code,
+                            "failed",
+                            "hidden test patch could not be applied",
+                        ),
+                        ProbeObservation(
+                            "minimal_operation",
+                            None,
+                            "unavailable",
+                            "not run after hidden test patch failure",
+                        ),
+                    ),
+                    cleanup_failed=False,
+                    failure_code="selector_not_collected",
                 )
 
             preparation = self.environment_manager.prepare(task, workspace)

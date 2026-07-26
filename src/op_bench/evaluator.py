@@ -106,11 +106,8 @@ class Evaluator:
                 if result.exit_code != 0:
                     return finish("setup_failed")
 
-            # hidden_test.patch may be empty when the PR fixes a pre-existing test
-            # (no test changes in the PR itself). Skip apply in that case.
-            hidden_test_path = task.hidden_test_patch_path
-            if hidden_test_path.exists() and hidden_test_path.read_text(encoding="utf-8").strip():
-                test_patch_result = self._apply_patch(hidden_test_path, workspace)
+            test_patch_result = self.apply_hidden_test_patch(task, workspace)
+            if test_patch_result is not None:
                 command_log.append(test_patch_result)
                 if test_patch_result.timed_out:
                     return finish("timeout")
@@ -349,6 +346,20 @@ class Evaluator:
                 return fallback
             return result
         return result
+
+    def apply_hidden_test_patch(
+        self,
+        task: TaskManifest,
+        workspace: Path,
+    ) -> CommandResult | None:
+        """Apply the frozen hidden test patch when it contains test changes."""
+        hidden_test_path = task.hidden_test_patch_path
+        if (
+            not hidden_test_path.exists()
+            or not hidden_test_path.read_text(encoding="utf-8").strip()
+        ):
+            return None
+        return self._apply_patch(hidden_test_path, workspace)
 
     def _run_tests(
         self,

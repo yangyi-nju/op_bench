@@ -15,6 +15,7 @@ runs/v0.6_m6_legacy_replay/
 runs/v0.6_m6_local_codex_input/
 runs/v0.6_m7_demo_input/
 runs/v0.6_m7_scripted_demo/
+runs/v0.7_matched_runtime/
 __pycache__/
 *.pyc
 .DS_Store

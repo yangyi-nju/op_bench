@@ -9,6 +9,7 @@ import unittest
 
 from op_bench.matched_runtime.contracts import BuildIdentity
 from op_bench.matched_runtime.probe import (
+    _RUNTIME_IDENTITY_CODE,
     MatchedRuntimeProbe,
     ProbeExecution,
     ProbeObservation,
@@ -149,6 +150,11 @@ class StubBackend:
 
 
 class ProbeSpecTests(unittest.TestCase):
+    def test_runtime_identity_uses_cudart_abi_instead_of_private_torch_api(self) -> None:
+        self.assertIn("ctypes.CDLL", _RUNTIME_IDENTITY_CODE)
+        self.assertIn("cudaRuntimeGetVersion", _RUNTIME_IDENTITY_CODE)
+        self.assertNotIn("_cuda_getRuntimeVersion", _RUNTIME_IDENTITY_CODE)
+
     def test_plan_contains_required_checks_in_canonical_order(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             selected = spec(task_manifest(Path(tmp)))
@@ -161,6 +167,14 @@ class ProbeSpecTests(unittest.TestCase):
             all(command.command_digest.startswith("sha256:") for command in selected.commands)
         )
         self.assertEqual(len({command.command_digest for command in selected.commands}), 6)
+
+    def test_runtime_checks_isolate_imports_from_the_unbuilt_workspace_package(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            selected = spec(task_manifest(Path(tmp)))
+
+        for command in selected.commands[1:]:
+            with self.subTest(command=command.name):
+                self.assertEqual(command.argv[1:3], ("-I", "-c"))
 
     def test_plan_is_deterministic(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
