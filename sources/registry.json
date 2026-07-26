@@ -542,6 +542,132 @@
       "related_tasks": [
         "pytorch__144009__softmax_ilpreduce_size"
       ]
+    },
+    {
+      "id": "pytorch-38b3375-boundary-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "38b3375a81dc3c21d7c0420773187c7c2c3d5835",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/38b3375a81dc3c21d7c0420773187c7c2c3d5835/source",
+      "checksum": null,
+      "snapshot_git_commit": "c720f1a85e15d648ea1cef43d1679482d9b34cb8",
+      "tracked_file_count": 16541,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__143792__addmv_empty_matrix"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 B1. Overlays torch/_decomp/decompositions.py."
+    },
+    {
+      "id": "pytorch-b9293e7-boundary-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "b9293e74a2b476534fa2aee5a0708e3fca255d8e",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/b9293e74a2b476534fa2aee5a0708e3fca255d8e/source",
+      "checksum": null,
+      "snapshot_git_commit": "a6ea302d5cc3cd47bfb1ec6a2cbf18ed04b0c35d",
+      "tracked_file_count": 12556,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__117065__index_copy_zero_dim"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 B2. Overlays torch/_decomp/decompositions.py."
+    },
+    {
+      "id": "pytorch-15ca562-boundary-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "15ca562f863ffe69d76c0ccaf448b27d18ceb2e8",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/15ca562f863ffe69d76c0ccaf448b27d18ceb2e8/source",
+      "checksum": null,
+      "snapshot_git_commit": "fb88768666ce3ebdb4e7b4e95ad65ff3ae2c6710",
+      "tracked_file_count": 16221,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__126461__cummin_rank_zero"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 B2. Overlays torch/_inductor/lowering.py."
+    },
+    {
+      "id": "pytorch-6ccbff1-boundary-kernel-full",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "6ccbff1450bb3936636377d3910906f5666ddcfa",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/6ccbff1450bb3936636377d3910906f5666ddcfa/source",
+      "checksum": null,
+      "snapshot_git_commit": "1e99a8cf7e66d7f55b6d96d5c4e345a60b945019",
+      "tracked_file_count": 16529,
+      "submodules": {
+        "policy": "required_for_build",
+        "status": "initialized"
+      },
+      "source_loading_modes": [
+        "inplace_build"
+      ],
+      "related_tasks": [
+        "pytorch__147352__storage_offset_overflow"
+      ],
+      "snapshot_mode": "kernel_full",
+      "notes": "v0.7 B3. Builds aten/src/ATen/native/Resize.h from the exact Base Commit with BUILD_TEST=0, USE_CUDA=0, USE_ROCM=0, USE_FLASH_ATTENTION=0, USE_MEM_EFF_ATTENTION=0, USE_KLEIDIAI=0, USE_NCCL=0."
+    },
+    {
+      "id": "pytorch-e426924-boundary-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "e426924c19500011aa419accc251a923fe857b94",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/e426924c19500011aa419accc251a923fe857b94/source",
+      "checksum": null,
+      "snapshot_git_commit": "7d878b3067e5070c54faf7b0265c9e37888449bb",
+      "tracked_file_count": 12634,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__118762__weight_norm_default_dim"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 B4. Overlays torch/_decomp/decompositions.py."
+    },
+    {
+      "id": "pytorch-cc98a1b-boundary-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "cc98a1b59909e6f3ce929380e02f0345c862e31d",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/cc98a1b59909e6f3ce929380e02f0345c862e31d/source",
+      "checksum": null,
+      "snapshot_git_commit": "200a65aae3b010ba175670bded648c082efc8b45",
+      "tracked_file_count": 16041,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__139751__triton_ygrid_mask"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 B5. Overlays torch/_inductor/codegen/triton.py."
     }
   ]
 }
