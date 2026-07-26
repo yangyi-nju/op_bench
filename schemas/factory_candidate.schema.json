@@ -27,6 +27,11 @@
     "proposed_subclass",
     "raw_metadata",
     "created_at",
+    "change_kind",
+    "external_test",
+    "environment_freeze",
+    "source_available",
+    "runtime_supported",
     "content_hash"
   ],
   "properties": {
@@ -57,20 +62,48 @@
       "pattern": "^https://github\\.com/[^/\\s]+/[^/\\s]+/pull/[1-9][0-9]*$"
     },
     "base_commit": {
-      "type": "string",
-      "pattern": "^[0-9a-f]{40}$"
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
     },
     "merge_commit": {
-      "type": "string",
-      "pattern": "^[0-9a-f]{40}$"
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
     },
     "author_date": {
-      "type": "string",
-      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        {
+          "type": "null"
+        }
+      ]
     },
     "merge_date": {
-      "type": "string",
-      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        {
+          "type": "null"
+        }
+      ]
     },
     "title": {
       "type": "string",
@@ -145,6 +178,41 @@
     "created_at": {
       "type": "string",
       "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "change_kind": {
+      "type": "string",
+      "enum": [
+        "bugfix",
+        "refactor",
+        "cleanup",
+        "feature"
+      ]
+    },
+    "external_test": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/artifact_reference"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "environment_freeze": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/artifact_reference"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "source_available": {
+      "type": "boolean"
+    },
+    "runtime_supported": {
+      "type": "boolean"
     },
     "content_hash": {
       "type": "string",

@@ -150,6 +150,47 @@ class CandidateContractTests(unittest.TestCase):
                 with self.assertRaisesRegex(ContractError, field):
                     CandidateRecord.from_dict(payload)
 
+    def test_candidate_round_trips_incomplete_discovery_facts_for_screening(self) -> None:
+        selected = candidate()
+        incomplete = replace(
+            selected,
+            candidate_id=CandidateRecord.candidate_id_for(
+                repository=selected.repository,
+                pr_number=selected.pr_number,
+                base_commit=None,
+                merge_commit=None,
+            ),
+            base_commit=None,
+            merge_commit=None,
+            author_date=None,
+            merge_date=None,
+        )
+
+        self.assertEqual(CandidateRecord.from_dict(incomplete.to_dict()), incomplete)
+
+    def test_candidate_round_trips_normalized_screening_facts(self) -> None:
+        selected = candidate()
+        enriched = replace(
+            selected,
+            change_kind="feature",
+            external_test=FactoryArtifactReference(
+                artifact_type="external_test",
+                artifact_id="test:pytorch/pytorch#170001",
+                content_hash=SHA_A,
+                relative_path="raw/external-test.json",
+            ),
+            environment_freeze=FactoryArtifactReference(
+                artifact_type="environment_freeze",
+                artifact_id="runtime:pytorch-vintage",
+                content_hash=SHA_A,
+                relative_path="raw/environment-freeze.json",
+            ),
+            source_available=False,
+            runtime_supported=False,
+        )
+
+        self.assertEqual(CandidateRecord.from_dict(enriched.to_dict()), enriched)
+
     def test_candidate_value_objects_reject_unsafe_paths_and_invalid_hashes(self) -> None:
         with self.assertRaisesRegex(ContractError, "relative"):
             FactoryArtifactReference(
