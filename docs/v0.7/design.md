@@ -2,7 +2,7 @@
 
 日期：2026-07-17
 
-状态：设计方向已确认，等待 v0.6 平台完成后实施
+状态：实施中；P1 Factory Contract 与离线检索已于 2026-07-26 通过
 
 ## 1. 版本定位
 
@@ -290,12 +290,27 @@ v0.7 报告额外给出：
 
 ## 12. 实施阶段
 
-### P1：Factory Contract 与检索
+### P1：Factory Contract 与检索（Passed，2026-07-26）
 
 - 冻结 Candidate、Decision、Admission、Dataset Freeze Schema；
 - 实现 B1–B5 keyword packs 和 ghstack-aware 检索；
 - 生成 accepted/rejected/deferred Artifact；
 - 验证 v0.6 Task/Evaluation 合同可承载新增字段。
+
+P1 采用先离线冻结合同与 synthetic fixture 的实施顺序；`git_log` 和
+`github_pr_list` producer 值已保留在合同中，真实 ghstack-aware 检索随 P2/P3
+候选工作启用。已交付四类合同、四个 Schema、B1–B5 packs、确定性筛选、
+证据门 Admission、不可变 Artifact Store、synthetic Freeze 和三个 CLI。
+9 条离线候选结果为 5 accepted、2 deferred、2 rejected，两次运行逐字节一致。
+验证通过 73 Factory tests、45 compatibility tests、741 full tests、17-task
+v0.5 Dataset 与全部 Schema/compileall/diff checks。P1 未使用 live network、
+真实 Agent、Docker、SSH、CUDA 或远程 Runtime，未发布正式 v0.7 Dataset。
+
+详细设计、执行计划和规则证据：
+
+- `docs/superpowers/specs/2026-07-26-v0.7-p1-factory-contract-design.md`
+- `docs/superpowers/plans/2026-07-26-v0.7-p1-factory-contract.md`
+- `docs/v0.7/candidate_search.md`
 
 ### P2：Matched Runtime
 

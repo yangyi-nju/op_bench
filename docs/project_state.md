@@ -1,6 +1,6 @@
 # OpBench Project State
 
-更新时间：2026-07-23（Asia/Shanghai）
+更新时间：2026-07-26（Asia/Shanghai）
 
 ## Current baseline
 
@@ -9,9 +9,10 @@
 | 当前稳定版本 | v0.6 Completed |
 | 数据集 | `pytorch_v0.5`，17 条 verified task |
 | 正式实验 | v0.6 MCP：51/51 valid，35/51 resolved；v0.5 CLI 历史结果：37/51 |
-| 当前开发版本 | `opbench-v0.7.0`（Planning） |
+| 当前开发版本 | `opbench-v0.7.0`（In Progress） |
 | 当前目标 | Dataset Factory、Boundary Slice 与 matched-runtime recovery |
-| 当前阶段 | `opbench-v0.6.0` 全部 Must 已通过；准备进入 v0.7 |
+| 当前阶段 | v0.7 P1 Factory Contract 与离线检索已通过；进入 P2 Matched Runtime |
+| v0.7 P1 产品代码 | Candidate/Decision/FactoryAdmission/DatasetFreeze 合同、B1–B5 taxonomy、确定性筛选、证据门状态机、不可变 Artifact Store、Validator/Freeze/Screening CLI 与 synthetic fixtures 已实现 |
 | v0.6 产品代码 | 合同、TaskView/Workspace/Action/Session/Evaluation/Artifact、版本化 Runtime Profile、Attempt-owned Local/Docker/Remote Backend、Conformance、Legacy Replay、标准 Codex 进程 Adapter、v1 Orchestrator、公开 Demo 与开发/发布文档均已实现 |
 | v0.6 MCP 实验 | 真实全量实验已完成，报告见 `docs/v0.6/experiment_report.md` |
 
@@ -44,14 +45,17 @@
 | V06-RELEASE | Passed | `opbench-v0.6.0` 统一发布 | R-01～R-12、D-01～D-10 与全部 Must 已通过；85/85 精确 Replay、代表性 Remote CPU/CUDA canary、581 full tests、零开放 P0/P1 |
 | V06-MCP-EXPERIMENT | Passed | 17 task × 3 repeat 真实 MCP 全量实验 | 51/51 valid；35 resolved、15 F2P failed、1 P2P regression；0 infrastructure-invalid、0 retry；Trace/Integrity/Cleanup 全部通过 |
 | REMOTE-CLEANUP | Passed | RemoteDocker timeout/cleanup 收敛到 Attempt-owned exact handles | create/start/command/cleanup 异常注入、精确清理账本和 Remote blocked artifact 均通过 |
+| V07-P1 | Passed | Factory Contract、Boundary taxonomy 与离线确定性筛选/Freeze | 73 Factory tests、45 compatibility tests、741 full tests 通过；4 个 Factory Schema 可解析；v0.5 17-task verified Dataset 有效；9 条 synthetic fixture 为 5 accepted / 2 deferred / 2 rejected，两次输出逐字节一致；未使用网络、真实 Agent、Docker、SSH、CUDA 或远程 Runtime，未发布正式 v0.7 Dataset |
 
 ## Next actions
 
 1. 在文档中保留 v0.6 的 85-case Replay 与代表性 Runtime canary 冻结 hash，
    `runs/` 只发布三文件 MCP 全量实验最终报告；
-2. 按 `docs/v0.7/design.md` 启动 Dataset Factory 与 Boundary Slice 实施；
-3. v0.7 正式 Admission 继续执行 verified-only、精确 Runtime 和历史成绩不改写约束；
-4. 反馈因果与跨 Agent 正式研究仍留在后续版本，不从 v0.6 平台验证推断结论。
+2. 按 `docs/v0.7/design.md` 执行 P2 Matched Runtime，对 #129154/#144073
+   形成 verified 或带新增环境证据的 deprecated 结论；
+3. P3 使用已冻结 Factory 合同制作和 Admission 4–6 条 Boundary Task；
+4. v0.7 正式 Admission 继续执行 verified-only、精确 Runtime 和历史成绩不改写约束；
+5. 反馈因果与跨 Agent 正式研究仍留在后续版本，不从平台验证推断结论。
 
 ## Status rules
 

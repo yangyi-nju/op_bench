@@ -4,6 +4,24 @@ This file records user-visible OpBench version milestones. Detailed design,
 implementation, and experiment evidence remain in the versioned documents
 under `docs/`.
 
+## v0.7 - In Progress
+
+P1 Dataset Factory foundation completed on 2026-07-26:
+
+- Added strict, content-addressed Candidate, Decision, Factory Admission, and Dataset Freeze contracts with four Draft 2020-12 JSON Schemas.
+- Added the frozen B1–B5 Boundary taxonomy, literal keyword packs, optional strict Task taxonomy fields, and compatibility for historical Precision manifests that predate `failure_contract`.
+- Added deterministic automatic screening with stable reason codes, immutable Decision history, evidence-gated Admission transitions, and cross-stage source/runtime/selector identity checks.
+- Added a descriptor-relative immutable Factory Artifact Store plus validation, screening, and synthetic Freeze CLIs.
+- Added nine fully synthetic offline candidate captures covering B1–B5 and accepted/rejected/deferred behavior. The frozen result is 5 accepted, 2 deferred, and 2 rejected; repeated runs are byte-identical. Automatic acceptance is not human review or verified Admission.
+- P1 verification passed 73 Factory tests, 45 compatibility tests, 741 full repository tests, all four Factory Schema parses, compileall/diff checks, and the existing 17-task verified v0.5 Dataset validation.
+- P1 used no live network, real Agent, Docker, SSH, CUDA, or remote Runtime workload and did not publish a formal v0.7 Dataset. Matched Runtime, real Boundary Task Admission, formal Dataset Freeze, and the Codex Validation Cohort remain P2–P4 work.
+
+P1 documents:
+
+- `docs/v0.7/candidate_search.md`
+- `docs/superpowers/specs/2026-07-26-v0.7-p1-factory-contract-design.md`
+- `docs/superpowers/plans/2026-07-26-v0.7-p1-factory-contract.md`
+
 ## v0.6 - Completed
 
 Platform completed on 2026-07-19; the real MCP full experiment completed on
