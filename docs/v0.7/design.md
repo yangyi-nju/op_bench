@@ -2,7 +2,7 @@
 
 日期：2026-07-17
 
-状态：实施中；P1 Factory Contract 与离线检索已于 2026-07-26 通过
+状态：实施中；P1 Factory Contract 与 P2 Matched Runtime 已通过
 
 ## 1. 版本定位
 
@@ -312,11 +312,26 @@ v0.5 Dataset 与全部 Schema/compileall/diff checks。P1 未使用 live network
 - `docs/superpowers/plans/2026-07-26-v0.7-p1-factory-contract.md`
 - `docs/v0.7/candidate_search.md`
 
-### P2：Matched Runtime
+### P2：Matched Runtime（Passed，2026-07-27）
 
 - 依次尝试 Matched Wheel、Source-built Wheel、Source Build；
 - 生成内容寻址环境资产和 Compatibility Evidence；
 - 对 #129154/#144073 给出 verified 或 deprecated 结论。
+
+P2 实现了严格 Compatibility Evidence 合同、Schema、probe/validation CLI
+和 fail-closed promotion gate，并在远端构建两个 digest-pinned matched-wheel
+镜像。#129154 使用 torch 2.4.0+cu124；#144073 使用 torch 2.7.0+cpu、
+匹配的 torchvision 0.22.0+cpu companion，以及同 Base Commit 的单个
+Inductor 测试辅助 overlay。两个任务均通过 6/6 compatibility checks、
+preflight、Baseline Reproduced 与 Gold Resolved，并从 deprecated 原子提升为
+verified。两者都不需要 source-build fallback。
+
+P2 恢复了两条 Precision P4 Task，但按 Release Contract 不在本阶段提前修改
+正式 Dataset Manifest；Precision/Cumulative Slice 的纳入由 P4 Freeze 完成。
+本轮目标 2/2 恢复，仓库仍有 7 条不在 P2 范围内的历史 deprecated Task。
+最终验证通过 47 项 matched-runtime focused tests 与 793 项全仓测试。
+详细复现步骤、镜像/Artifact digest、Admission 计数和诊断见
+`docs/v0.7/setup_matched_runtime.md`。
 
 ### P3：Boundary Task 制作与 Admission
 

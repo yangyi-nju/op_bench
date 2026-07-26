@@ -6,6 +6,24 @@ under `docs/`.
 
 ## v0.7 - In Progress
 
+P2 Matched Runtime completed on 2026-07-27:
+
+- Added a strict, canonical matched-runtime compatibility contract and JSON Schema, six-check live probe, validation CLI, and fail-closed task promotion bound to compatibility evidence, Admission evidence, and replay hashes.
+- Added two reproducible official-wheel environments with observed immutable local image IDs: torch 2.4.0+cu124 for #129154 and torch 2.7.0+cpu plus torchvision 0.22.0+cpu for #144073.
+- Hardened live probing to use the CUDA Runtime C ABI, isolate runtime imports from unbuilt workspace packages, and apply frozen hidden tests before selector collection.
+- Restored #129154 and #144073 from deprecated to verified. Each passed 6/6 compatibility checks, Baseline F2P 0/1 with P2P 1/1, and Gold F2P 1/1 with P2P 1/1.
+- Restored 2/2 tasks in the P2 scope; seven historical deprecated tasks remain outside this milestone.
+- Kept #144073's Agent Patch Scope to the single target linalg module, declared one exact Base-Commit Inductor test-support overlay, and curated its Gold Patch to the same enforced scope.
+- Both tasks passed with matched wheels; source-built wheel and full-source fallbacks were not executed. Formal Precision/Cumulative Dataset inclusion remains a P4 Freeze action.
+- Full private runtime logs remain under ignored run directories; committed task evidence contains only canonical public summaries and hashes.
+- Verification passed 47 matched-runtime focused tests, 793 full repository tests, compileall, all tracked JSON parsing, the verified 17-task v0.5 Dataset, affected Task/Compatibility validation, replay-hash comparison, and diff checks.
+
+P2 documents:
+
+- `docs/v0.7/setup_matched_runtime.md`
+- `docs/superpowers/specs/2026-07-26-v0.7-p2-matched-runtime-design.md`
+- `docs/superpowers/plans/2026-07-26-v0.7-p2-matched-runtime.md`
+
 P1 Dataset Factory foundation completed on 2026-07-26:
 
 - Added strict, content-addressed Candidate, Decision, Factory Admission, and Dataset Freeze contracts with four Draft 2020-12 JSON Schemas.
