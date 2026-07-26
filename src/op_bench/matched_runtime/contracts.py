@@ -229,19 +229,19 @@ class RuntimeIdentity:
     environment_id: str
     artifact_kind: str
     artifact_id: str
-    artifact_digest: str
-    artifact_digest_kind: str
-    torch_version: str
-    python_implementation: str
-    python_abi: str
-    platform: str
+    artifact_digest: str | None
+    artifact_digest_kind: str | None
+    torch_version: str | None
+    python_implementation: str | None
+    python_abi: str | None
+    platform: str | None
     cuda_build: str | None
     cuda_runtime: str | None
     device_name: str | None
     compute_capability: str | None
     source_loading_mode: str
-    target_module_path_suffix: str
-    target_module_sha256: str
+    target_module_path_suffix: str | None
+    target_module_sha256: str | None
 
     @classmethod
     def wire_fields(cls) -> tuple[str, ...]:
@@ -273,23 +273,27 @@ class RuntimeIdentity:
         require_enum(self.artifact_kind, "runtime.artifact_kind", ARTIFACT_KINDS)
         if len(require_str(self.artifact_id, "runtime.artifact_id")) > 300:
             raise ContractError("runtime.artifact_id: must contain at most 300 characters")
-        require_str(
+        _validate_optional_hash(
             self.artifact_digest,
             "runtime.artifact_digest",
-            pattern=SHA256_PATTERN,
         )
-        require_enum(
-            self.artifact_digest_kind,
-            "runtime.artifact_digest_kind",
-            ARTIFACT_DIGEST_KINDS,
-        )
+        if self.artifact_digest_kind is not None:
+            require_enum(
+                self.artifact_digest_kind,
+                "runtime.artifact_digest_kind",
+                ARTIFACT_DIGEST_KINDS,
+            )
+        if (self.artifact_digest is None) != (self.artifact_digest_kind is None):
+            raise ContractError(
+                "runtime artifact digest and digest kind must both be present or null"
+            )
         for value, path in (
             (self.torch_version, "runtime.torch_version"),
             (self.python_implementation, "runtime.python_implementation"),
             (self.python_abi, "runtime.python_abi"),
             (self.platform, "runtime.platform"),
         ):
-            require_str(value, path)
+            _validate_optional_str(value, path)
         cuda_values = (
             self.cuda_build,
             self.cuda_runtime,
@@ -315,15 +319,21 @@ class RuntimeIdentity:
             "runtime.source_loading_mode",
             SOURCE_LOADING_MODES,
         )
-        _validate_relative_path(
-            self.target_module_path_suffix,
-            "runtime.target_module_path_suffix",
-        )
-        require_str(
+        if self.target_module_path_suffix is not None:
+            _validate_relative_path(
+                self.target_module_path_suffix,
+                "runtime.target_module_path_suffix",
+            )
+        _validate_optional_hash(
             self.target_module_sha256,
             "runtime.target_module_sha256",
-            pattern=SHA256_PATTERN,
         )
+        if (self.target_module_path_suffix is None) != (
+            self.target_module_sha256 is None
+        ):
+            raise ContractError(
+                "runtime target module path and digest must both be present or null"
+            )
 
     def to_dict(self) -> dict[str, JsonValue]:
         return {
@@ -359,26 +369,35 @@ class RuntimeIdentity:
                 ARTIFACT_KINDS,
             ),
             artifact_id=require_str(data["artifact_id"], f"{path}.artifact_id"),
-            artifact_digest=require_str(
+            artifact_digest=_validate_optional_hash(
                 data["artifact_digest"],
                 f"{path}.artifact_digest",
-                pattern=SHA256_PATTERN,
             ),
-            artifact_digest_kind=require_enum(
-                data["artifact_digest_kind"],
-                f"{path}.artifact_digest_kind",
-                ARTIFACT_DIGEST_KINDS,
+            artifact_digest_kind=(
+                None
+                if data["artifact_digest_kind"] is None
+                else require_enum(
+                    data["artifact_digest_kind"],
+                    f"{path}.artifact_digest_kind",
+                    ARTIFACT_DIGEST_KINDS,
+                )
             ),
-            torch_version=require_str(
+            torch_version=_validate_optional_str(
                 data["torch_version"],
                 f"{path}.torch_version",
             ),
-            python_implementation=require_str(
+            python_implementation=_validate_optional_str(
                 data["python_implementation"],
                 f"{path}.python_implementation",
             ),
-            python_abi=require_str(data["python_abi"], f"{path}.python_abi"),
-            platform=require_str(data["platform"], f"{path}.platform"),
+            python_abi=_validate_optional_str(
+                data["python_abi"],
+                f"{path}.python_abi",
+            ),
+            platform=_validate_optional_str(
+                data["platform"],
+                f"{path}.platform",
+            ),
             cuda_build=_validate_optional_str(
                 data["cuda_build"],
                 f"{path}.cuda_build",
@@ -400,14 +419,17 @@ class RuntimeIdentity:
                 f"{path}.source_loading_mode",
                 SOURCE_LOADING_MODES,
             ),
-            target_module_path_suffix=_validate_relative_path(
-                data["target_module_path_suffix"],
-                f"{path}.target_module_path_suffix",
+            target_module_path_suffix=(
+                None
+                if data["target_module_path_suffix"] is None
+                else _validate_relative_path(
+                    data["target_module_path_suffix"],
+                    f"{path}.target_module_path_suffix",
+                )
             ),
-            target_module_sha256=require_str(
+            target_module_sha256=_validate_optional_hash(
                 data["target_module_sha256"],
                 f"{path}.target_module_sha256",
-                pattern=SHA256_PATTERN,
             ),
         )
 
@@ -700,6 +722,20 @@ class CompatibilityEvidence:
                 raise ContractError("failure: compatible evidence must not fail")
             if any(check.status != "passed" for check in self.checks):
                 raise ContractError("checks: compatible evidence requires all checks passed")
+            required_runtime_observations = (
+                self.runtime.artifact_digest,
+                self.runtime.artifact_digest_kind,
+                self.runtime.torch_version,
+                self.runtime.python_implementation,
+                self.runtime.python_abi,
+                self.runtime.platform,
+                self.runtime.target_module_path_suffix,
+                self.runtime.target_module_sha256,
+            )
+            if any(value is None for value in required_runtime_observations):
+                raise ContractError(
+                    "runtime: compatible evidence requires complete observations"
+                )
             if (
                 self.source.target_module_sha256
                 != self.runtime.target_module_sha256

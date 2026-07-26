@@ -176,29 +176,55 @@
           "maxLength": 300
         },
         "artifact_digest": {
-          "$ref": "#/$defs/sha256"
+          "oneOf": [
+            {
+              "$ref": "#/$defs/sha256"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "artifact_digest_kind": {
-          "type": "string",
-          "enum": [
-            "wheel_sha256",
-            "build_artifact_sha256"
+          "oneOf": [
+            {
+              "type": "string",
+              "enum": [
+                "wheel_sha256",
+                "build_artifact_sha256"
+              ]
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "torch_version": {
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "minLength": 1
         },
         "python_implementation": {
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "minLength": 1
         },
         "python_abi": {
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "minLength": 1
         },
         "platform": {
-          "type": "string",
+          "type": [
+            "string",
+            "null"
+          ],
           "minLength": 1
         },
         "cuda_build": {
@@ -234,10 +260,24 @@
           ]
         },
         "target_module_path_suffix": {
-          "$ref": "#/$defs/relative_path"
+          "oneOf": [
+            {
+              "$ref": "#/$defs/relative_path"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "target_module_sha256": {
-          "$ref": "#/$defs/sha256"
+          "oneOf": [
+            {
+              "$ref": "#/$defs/sha256"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "allOf": [

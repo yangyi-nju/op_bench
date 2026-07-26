@@ -77,6 +77,27 @@ def runtime_identity(*, target_hash: str = SHA_B) -> RuntimeIdentity:
     )
 
 
+def unavailable_runtime_identity() -> RuntimeIdentity:
+    return RuntimeIdentity(
+        environment_id="pytorch-matched-ff89ebc-torch2.4.0-py311-cu124",
+        artifact_kind="official_wheel",
+        artifact_id="torch-2.4.0+cu124-cp311-linux_x86_64",
+        artifact_digest=None,
+        artifact_digest_kind=None,
+        torch_version=None,
+        python_implementation=None,
+        python_abi=None,
+        platform=None,
+        cuda_build=None,
+        cuda_runtime=None,
+        device_name=None,
+        compute_capability=None,
+        source_loading_mode="python_overlay",
+        target_module_path_suffix=None,
+        target_module_sha256=None,
+    )
+
+
 def wheel_build_identity() -> BuildIdentity:
     return BuildIdentity(
         flags=(),
@@ -278,6 +299,32 @@ class CompatibilityContractTests(unittest.TestCase):
                 code="runtime_unavailable",
                 check="runtime_identity",
                 summary="The declared runtime could not be reached.",
+            ),
+        )
+
+        self.assertEqual(
+            CompatibilityEvidence.from_dict(unavailable.to_dict()),
+            unavailable,
+        )
+
+    def test_unavailable_can_record_an_artifact_that_was_not_observed(self) -> None:
+        selected = compatible_evidence()
+        checks = list(selected.checks)
+        checks[1] = replace(
+            checks[1],
+            exit_code=None,
+            status="unavailable",
+            summary="runtime artifact was unavailable",
+        )
+        unavailable = replace(
+            selected,
+            status="unavailable",
+            runtime=unavailable_runtime_identity(),
+            checks=tuple(checks),
+            failure=CompatibilityFailure(
+                code="artifact_not_found",
+                check="runtime_identity",
+                summary="The declared wheel or image was not available.",
             ),
         )
 
