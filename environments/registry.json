@@ -198,7 +198,7 @@
       "backend": "remote_docker",
       "docker": {
         "image": "op-bench/pytorch-matched-06e9dea:torch2.7.0-cpu-py311",
-        "digest": "sha256:05802b300a4ce9398cfb13956e3d999f2b52a3796f4827b323a3bede653a979d",
+        "digest": "sha256:ccd5eb7b2703b9b2ac7c7a9e47cd56ffe77135e3a62b29be4d821833e318056f",
         "digest_kind": "local_image_id",
         "dockerfile": "pytorch-matched-06e9dea-cpu/Dockerfile",
         "build_context": "pytorch-matched-06e9dea-cpu",
@@ -211,11 +211,20 @@
         "artifact_digest": "sha256:6b7edcbf8bb0b9ac2e6c001434797c5ec3f25394f91eb0ed7aeeeeed9ad4500f",
         "artifact_digest_kind": "wheel_sha256",
         "torch_version": "2.7.0+cpu",
-        "python_abi": "cp311-cp311"
+        "python_abi": "cp311-cp311",
+        "companion_artifacts": [
+          {
+            "artifact_kind": "official_wheel",
+            "artifact_id": "torchvision-0.22.0+cpu-cp311-cp311-manylinux_2_28_x86_64.whl",
+            "artifact_digest": "sha256:670082705cfb51a35ae35090b5a0e66ec09e6d9c3845e16417399adec7a17ff2",
+            "artifact_digest_kind": "wheel_sha256"
+          }
+        ]
       },
       "python": "3.11",
       "packages": {
-        "torch": "2.7.0+cpu"
+        "torch": "2.7.0+cpu",
+        "torchvision": "0.22.0+cpu"
       },
       "hardware": {
         "requires_gpu": false,
@@ -228,7 +237,7 @@
         "commands": [
           "g++ --version",
           "python --version",
-          "python -c \"import torch; print(torch.__version__); print(torch.__file__)\""
+          "python -c \"import torch, torchvision; print(torch.__version__); print(torchvision.__version__); print(torch.__file__)\""
         ]
       },
       "source_loading_modes": [

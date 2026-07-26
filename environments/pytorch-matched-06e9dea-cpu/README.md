@@ -1,9 +1,11 @@
 # PyTorch 06e9dea matched CPU runtime
 
-This image pins the retained official CPython 3.11 PyTorch 2.7.0 CPU wheel used
-to probe `pytorch__144073__vector_norm_scalar_overflow`.
+This image pins the retained official CPython 3.11 PyTorch 2.7.0 CPU wheel and
+its matching torchvision 0.22.0 CPU companion used to probe
+`pytorch__144073__vector_norm_scalar_overflow`.
 
-The image includes a C++ toolchain and Ninja because the frozen P2P/F2P path
+Both wheel URLs and SHA-256 values are embedded in the Dockerfile. The image
+inherits a C++ toolchain and installs Ninja because the frozen P2P/F2P path
 uses `torch.compile` and Inductor. The task overlays only
 `torch/_refs/linalg/__init__.py` from Base Commit
 `06e9deabb623e004eb6024e703a976c5748d51e6`.

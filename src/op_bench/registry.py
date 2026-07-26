@@ -238,6 +238,31 @@ class EnvironmentRegistry(_Registry[EnvironmentAsset]):
                         f"environment asset {asset_id}: "
                         f"runtime_artifact.{field} is required"
                     )
+            companions = runtime_artifact.get("companion_artifacts", [])
+            if not isinstance(companions, list):
+                raise RegistryError(
+                    f"environment asset {asset_id}: "
+                    "runtime_artifact.companion_artifacts must be a list"
+                )
+            for index, companion in enumerate(companions):
+                if not isinstance(companion, dict):
+                    raise RegistryError(
+                        f"environment asset {asset_id}: "
+                        f"runtime_artifact.companion_artifacts[{index}] "
+                        "must be an object"
+                    )
+                for field in (
+                    "artifact_kind",
+                    "artifact_id",
+                    "artifact_digest",
+                    "artifact_digest_kind",
+                ):
+                    if not companion.get(field):
+                        raise RegistryError(
+                            f"environment asset {asset_id}: "
+                            "runtime_artifact.companion_artifacts"
+                            f"[{index}].{field} is required"
+                        )
 
 
 class SourceRegistry(_Registry[SourceAsset]):

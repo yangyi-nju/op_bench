@@ -34,6 +34,20 @@ TASKS = {
         "selector_module": "test/inductor/test_torchinductor.py",
         "image": "op-bench/pytorch-matched-06e9dea:torch2.7.0-cpu-py311",
         "base_image": "op-bench/pytorch-cpu-compile:torch2.6.0-py311",
+        "companion_artifacts": [
+            {
+                "artifact_id": (
+                    "torchvision-0.22.0+cpu-cp311-cp311-"
+                    "manylinux_2_28_x86_64.whl"
+                ),
+                "artifact_digest": (
+                    "sha256:"
+                    "670082705cfb51a35ae35090b5a0e66ec09e6d9c3845e16417399adec7a17ff2"
+                ),
+                "artifact_digest_kind": "wheel_sha256",
+                "artifact_kind": "official_wheel",
+            }
+        ],
     },
 }
 
@@ -74,6 +88,10 @@ class MatchedRuntimeRegistryTests(unittest.TestCase):
                     "wheel_sha256",
                 )
                 self.assertEqual(artifact["python_abi"], "cp311-cp311")
+                self.assertEqual(
+                    artifact.get("companion_artifacts", []),
+                    expected.get("companion_artifacts", []),
+                )
                 self.assertEqual(
                     entry["source_loading_modes"],
                     ["python_overlay"],
@@ -157,6 +175,12 @@ class MatchedRuntimeRegistryTests(unittest.TestCase):
                     f"FROM {expected['base_image']}",
                     dockerfile,
                 )
+                for companion in expected.get("companion_artifacts", []):
+                    self.assertIn(
+                        companion["artifact_digest"].removeprefix("sha256:"),
+                        dockerfile,
+                    )
+                    self.assertIn(companion["artifact_id"], dockerfile)
                 self.assertNotRegex(
                     dockerfile,
                     re.compile(r"torch(?:==|/)(?:latest|nightly)"),

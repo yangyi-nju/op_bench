@@ -47,7 +47,7 @@
     "host": "gpu-a10",
     "tier": "cpu_python_overlay",
     "image": "op-bench/pytorch-matched-06e9dea:torch2.7.0-cpu-py311",
-    "image_digest": "sha256:05802b300a4ce9398cfb13956e3d999f2b52a3796f4827b323a3bede653a979d",
+    "image_digest": "sha256:ccd5eb7b2703b9b2ac7c7a9e47cd56ffe77135e3a62b29be4d821833e318056f",
     "digest_kind": "local_image_id",
     "dockerfile": "../../../environments/pytorch-matched-06e9dea-cpu/Dockerfile",
     "build_context": "../../../environments/pytorch-matched-06e9dea-cpu",
