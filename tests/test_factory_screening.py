@@ -133,6 +133,25 @@ class DeterministicScreeningTests(unittest.TestCase):
             (("review.root_cause_required", "warning"),),
         )
 
+    def test_excluded_keyword_pack_is_rejected_as_not_boundary(self) -> None:
+        selected = replace(
+            candidate(),
+            title="Fix torch._refs.tensor error with empty list",
+            description="An empty list must produce an empty tensor.",
+            matched_keyword_ids=(),
+        )
+
+        result = screen_candidate(selected)
+
+        self.assertEqual(result.disposition, "rejected")
+        self.assertEqual(
+            tuple((item.code, item.severity) for item in result.findings),
+            (
+                ("taxonomy.not_boundary", "reject"),
+                ("review.root_cause_required", "warning"),
+            ),
+        )
+
     def test_revert_or_reland_is_rejected(self) -> None:
         for title in ("Revert empty reduction fix", "Reland zero-size support"):
             with self.subTest(title=title):

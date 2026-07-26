@@ -1,0 +1,342 @@
+[
+  {
+    "repository": "pytorch/pytorch",
+    "pr_number": 143792,
+    "base_commit": "38b3375a81dc3c21d7c0420773187c7c2c3d5835",
+    "merge_commit": "43e1284c9699dfdc3722c2f2913c72aa3b37e869",
+    "author_date": "2025-03-06T02:09:22Z",
+    "merge_date": "2025-03-06T02:09:27Z",
+    "title": "Fix empty matrix handling of addmv in inductor",
+    "description": "A zero-size matrix must preserve beta times self in the addmv decomposition.",
+    "changed_files": [
+      {
+        "path": "test/inductor/test_torchinductor.py",
+        "additions": 11,
+        "deletions": 0,
+        "is_test": true
+      },
+      {
+        "path": "torch/_decomp/decompositions.py",
+        "additions": 2,
+        "deletions": 0,
+        "is_test": false
+      }
+    ],
+    "proposed_subclass": "B1",
+    "change_kind": "bugfix",
+    "source_available": true,
+    "runtime_supported": true,
+    "discovery_source": "git_log",
+    "external_test": null,
+    "environment_freeze": null
+  },
+  {
+    "repository": "pytorch/pytorch",
+    "pr_number": 117065,
+    "base_commit": "b9293e74a2b476534fa2aee5a0708e3fca255d8e",
+    "merge_commit": "d6540038c0fb279fc7040e5a317a98b4999e9fa8",
+    "author_date": "2024-01-10T00:21:15Z",
+    "merge_date": "2024-01-10T22:13:43Z",
+    "title": "Fix 0-dim Index in Index Copy decomp",
+    "description": "A 0-d index must be promoted to the index vector shape expected by index copy.",
+    "changed_files": [
+      {
+        "path": "test/test_decomp.py",
+        "additions": 14,
+        "deletions": 0,
+        "is_test": true
+      },
+      {
+        "path": "torch/_decomp/decompositions.py",
+        "additions": 1,
+        "deletions": 0,
+        "is_test": false
+      }
+    ],
+    "proposed_subclass": "B2",
+    "change_kind": "bugfix",
+    "source_available": true,
+    "runtime_supported": true,
+    "discovery_source": "git_log",
+    "external_test": null,
+    "environment_freeze": null
+  },
+  {
+    "repository": "pytorch/pytorch",
+    "pr_number": 126461,
+    "base_commit": "15ca562f863ffe69d76c0ccaf448b27d18ceb2e8",
+    "merge_commit": "2edaae436ac570949b3595f0c72f6808037555d2",
+    "author_date": "2024-05-16T21:57:57Z",
+    "merge_date": "2024-05-17T07:08:32Z",
+    "title": "Fix cummax and cummin lowering for empty case",
+    "description": "The rank 0 cummin and cummax lowering must stay inside Inductor lowering primitives.",
+    "changed_files": [
+      {
+        "path": "test/inductor/test_torchinductor_opinfo.py",
+        "additions": 2,
+        "deletions": 0,
+        "is_test": true
+      },
+      {
+        "path": "torch/_inductor/lowering.py",
+        "additions": 2,
+        "deletions": 2,
+        "is_test": false
+      }
+    ],
+    "proposed_subclass": "B2",
+    "change_kind": "bugfix",
+    "source_available": true,
+    "runtime_supported": true,
+    "discovery_source": "git_log",
+    "external_test": null,
+    "environment_freeze": null
+  },
+  {
+    "repository": "pytorch/pytorch",
+    "pr_number": 147352,
+    "base_commit": "6ccbff1450bb3936636377d3910906f5666ddcfa",
+    "merge_commit": "e64441915fdefdd30ad57edc58d5eaca2ef77470",
+    "author_date": "2025-02-25T01:12:53Z",
+    "merge_date": "2025-02-27T15:48:50Z",
+    "title": "Fix overflow in checkInBoundsForStorage",
+    "description": "Storage offset and itemsize arithmetic must raise a checked overflow.",
+    "changed_files": [
+      {
+        "path": "aten/src/ATen/native/Resize.h",
+        "additions": 4,
+        "deletions": 3,
+        "is_test": false
+      },
+      {
+        "path": "test/test_view_ops.py",
+        "additions": 12,
+        "deletions": 0,
+        "is_test": true
+      }
+    ],
+    "proposed_subclass": "B3",
+    "change_kind": "bugfix",
+    "source_available": true,
+    "runtime_supported": true,
+    "discovery_source": "git_log",
+    "external_test": null,
+    "environment_freeze": null
+  },
+  {
+    "repository": "pytorch/pytorch",
+    "pr_number": 118762,
+    "base_commit": "e426924c19500011aa419accc251a923fe857b94",
+    "merge_commit": "e87ac82c98c62a4bc46252a8552a974c4b6a5fbd",
+    "author_date": "2024-01-31T18:10:05Z",
+    "merge_date": "2024-01-31T22:10:10Z",
+    "title": "Fix missing default dim param in weight norm interface decomp",
+    "description": "The decomposition must preserve the API parameter endpoint where dim defaults to zero.",
+    "changed_files": [
+      {
+        "path": "test/test_decomp.py",
+        "additions": 8,
+        "deletions": 0,
+        "is_test": true
+      },
+      {
+        "path": "torch/_decomp/decompositions.py",
+        "additions": 1,
+        "deletions": 1,
+        "is_test": false
+      }
+    ],
+    "proposed_subclass": "B4",
+    "change_kind": "bugfix",
+    "source_available": true,
+    "runtime_supported": true,
+    "discovery_source": "git_log",
+    "external_test": null,
+    "environment_freeze": null
+  },
+  {
+    "repository": "pytorch/pytorch",
+    "pr_number": 139751,
+    "base_commit": "cc98a1b59909e6f3ce929380e02f0345c862e31d",
+    "merge_commit": "f0b33658f83c9f76a7fe886e4b38af7fa29e54e9",
+    "author_date": "2024-12-03T22:56:16Z",
+    "merge_date": "2024-12-03T22:56:18Z",
+    "title": "Dont use constant mask if ynumel potentially overflows ygrids",
+    "description": "A non-divisible Y grid limit requires a dynamic mask for the tail block.",
+    "changed_files": [
+      {
+        "path": "test/inductor/test_torchinductor.py",
+        "additions": 44,
+        "deletions": 1,
+        "is_test": true
+      },
+      {
+        "path": "torch/_inductor/codegen/triton.py",
+        "additions": 14,
+        "deletions": 1,
+        "is_test": false
+      }
+    ],
+    "proposed_subclass": "B5",
+    "change_kind": "bugfix",
+    "source_available": true,
+    "runtime_supported": true,
+    "discovery_source": "git_log",
+    "external_test": null,
+    "environment_freeze": null
+  },
+  {
+    "repository": "pytorch/pytorch",
+    "pr_number": 143461,
+    "base_commit": "9e6a6389cee4bf79bba771d99949a5063a9a0281",
+    "merge_commit": "094ca3154dce8beb489e426ca16e8df75829cc2d",
+    "author_date": "2025-01-08T01:28:58Z",
+    "merge_date": "2025-01-08T01:29:00Z",
+    "title": "Fix torch._refs.tensor error with empty list",
+    "description": "An empty list should construct an empty tensor, which is excluded from the B1 task slice.",
+    "changed_files": [
+      {
+        "path": "test/test_tensor_creation_ops.py",
+        "additions": 4,
+        "deletions": 0,
+        "is_test": true
+      },
+      {
+        "path": "torch/_refs/__init__.py",
+        "additions": 5,
+        "deletions": 1,
+        "is_test": false
+      }
+    ],
+    "proposed_subclass": "B1",
+    "change_kind": "bugfix",
+    "source_available": true,
+    "runtime_supported": true,
+    "discovery_source": "git_log",
+    "external_test": null,
+    "environment_freeze": null
+  },
+  {
+    "repository": "pytorch/pytorch",
+    "pr_number": 147433,
+    "base_commit": "9c506aa8a627f8d9d5193b2fa09cd876541c144a",
+    "merge_commit": "1d7397a2d04a4d636559f41511a20f7dadbe5777",
+    "author_date": "2025-03-02T16:07:15Z",
+    "merge_date": "2025-03-02T16:07:15Z",
+    "title": "Avoid tensor slice overflow for large step",
+    "description": "A large slice step near int64 bounds must not overflow the output length.",
+    "changed_files": [
+      {
+        "path": "aten/src/ATen/native/TensorShape.cpp",
+        "additions": 2,
+        "deletions": 1,
+        "is_test": false
+      },
+      {
+        "path": "test/expect/HasDecompTest.test_has_decomposition.expect",
+        "additions": 0,
+        "deletions": 2,
+        "is_test": true
+      },
+      {
+        "path": "test/inductor/test_torchinductor.py",
+        "additions": 11,
+        "deletions": 0,
+        "is_test": true
+      },
+      {
+        "path": "torch/_decomp/__init__.py",
+        "additions": 1,
+        "deletions": 0,
+        "is_test": false
+      },
+      {
+        "path": "torch/_decomp/decompositions.py",
+        "additions": 18,
+        "deletions": 1,
+        "is_test": false
+      }
+    ],
+    "proposed_subclass": "B3",
+    "change_kind": "bugfix",
+    "source_available": true,
+    "runtime_supported": true,
+    "discovery_source": "git_log",
+    "external_test": null,
+    "environment_freeze": null
+  },
+  {
+    "repository": "pytorch/pytorch",
+    "pr_number": 127448,
+    "base_commit": "4935a019e48c31d85c16698455719c5188c8b880",
+    "merge_commit": "2a03bf5a14d13b1f683c18f573cd93a8b1d38212",
+    "author_date": "2024-05-31T08:01:31Z",
+    "merge_date": "2024-05-31T08:01:34Z",
+    "title": "Fix grid z bug for large grid",
+    "description": "A large grid beyond the grid limit must preserve every tail launch.",
+    "changed_files": [
+      {
+        "path": "test/inductor/test_aot_inductor.py",
+        "additions": 8,
+        "deletions": 19,
+        "is_test": true
+      },
+      {
+        "path": "test/inductor/test_torchinductor.py",
+        "additions": 17,
+        "deletions": 0,
+        "is_test": true
+      },
+      {
+        "path": "test/inductor/test_triton_heuristics.py",
+        "additions": 3,
+        "deletions": 4,
+        "is_test": true
+      },
+      {
+        "path": "torch/_inductor/codegen/triton.py",
+        "additions": 4,
+        "deletions": 1,
+        "is_test": false
+      },
+      {
+        "path": "torch/_inductor/runtime/triton_heuristics.py",
+        "additions": 1,
+        "deletions": 1,
+        "is_test": false
+      }
+    ],
+    "proposed_subclass": "B5",
+    "change_kind": "bugfix",
+    "source_available": true,
+    "runtime_supported": true,
+    "discovery_source": "git_log",
+    "external_test": null,
+    "environment_freeze": null
+  },
+  {
+    "repository": "pytorch/pytorch",
+    "pr_number": 139502,
+    "base_commit": "da395384a2acd142cf6971c6f57ff4e3f24fdb79",
+    "merge_commit": "60542eeb33db9ed245fcc47b84d4e530bcdb4e44",
+    "author_date": "2024-11-01T18:56:15Z",
+    "merge_date": "2024-11-01T23:10:21Z",
+    "title": "Set sanitize_overflow false for triton kernels",
+    "description": "Disable overflow sanitization while retaining device assertions.",
+    "changed_files": [
+      {
+        "path": "torch/_inductor/runtime/triton_heuristics.py",
+        "additions": 1,
+        "deletions": 0,
+        "is_test": false
+      }
+    ],
+    "proposed_subclass": "B3",
+    "change_kind": "bugfix",
+    "source_available": true,
+    "runtime_supported": true,
+    "discovery_source": "git_log",
+    "external_test": null,
+    "environment_freeze": null
+  }
+]

@@ -297,15 +297,33 @@ def screen_candidate(
                 expected={"runtime_supported": True},
             )
         )
-    if candidate.proposed_dimension != "boundary":
+    if (
+        (
+            candidate.proposed_dimension != "boundary"
+            or candidate.keyword_pack_id not in candidate.matched_keyword_ids
+        )
+        and not any(finding.severity == "reject" for finding in findings)
+    ):
         findings.append(
             _finding(
                 code="taxonomy.not_boundary",
                 severity="reject",
                 rule_id="v07-boundary-taxonomy",
-                message="The v0.7 Boundary screener only accepts Boundary candidates.",
-                observed=candidate.proposed_dimension,
-                expected={"dimension": "boundary"},
+                message=(
+                    "The v0.7 Boundary screener requires a matched, "
+                    "non-excluded Boundary keyword pack."
+                ),
+                observed={
+                    "dimension": candidate.proposed_dimension,
+                    "keyword_pack_id": candidate.keyword_pack_id,
+                    "matched_keyword_ids": list(
+                        candidate.matched_keyword_ids
+                    ),
+                },
+                expected={
+                    "dimension": "boundary",
+                    "keyword_pack_matched": True,
+                },
             )
         )
 
