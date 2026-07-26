@@ -36,6 +36,19 @@ def tree_hashes(root: Path) -> dict[str, str]:
 
 
 class FactoryScreeningCliTests(unittest.TestCase):
+    def _capture(self) -> dict[str, object]:
+        captures = json.loads(FIXTURE.read_text(encoding="utf-8"))
+        return captures[0]
+
+    def _write_capture(
+        self,
+        root: Path,
+        capture: dict[str, object],
+    ) -> Path:
+        path = root / "capture.json"
+        path.write_text(json.dumps([capture]), encoding="utf-8")
+        return path
+
     def _run(
         self,
         source: Path,
@@ -128,6 +141,84 @@ class FactoryScreeningCliTests(unittest.TestCase):
 
             self.assertEqual(result.returncode, 2)
             self.assertIn("[contract_invalid]", result.stderr)
+            self.assertFalse(output.exists())
+
+    def test_real_capture_preserves_discovery_source(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            capture = self._capture()
+            capture.update(
+                {
+                    "discovery_source": "github_pr_list",
+                    "external_test": None,
+                    "environment_freeze": None,
+                }
+            )
+            output = root / "screened"
+
+            result = self._run(self._write_capture(root, capture), output)
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            candidate = load_factory_contract(
+                output / "candidates" / f"pr-{capture['pr_number']}.json"
+            )
+            self.assertEqual(candidate.discovery_source, "github_pr_list")
+
+    def test_real_capture_round_trips_optional_references(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            external_test = {
+                "artifact_type": "external_test",
+                "artifact_id": "test:pytorch/pytorch#170101",
+                "content_hash": "sha256:" + ("a" * 64),
+                "relative_path": "raw/external-test.json",
+            }
+            environment_freeze = {
+                "artifact_type": "environment_freeze",
+                "artifact_id": "environment:pytorch/pytorch#170101",
+                "content_hash": "sha256:" + ("b" * 64),
+                "relative_path": "raw/environment-freeze.json",
+            }
+            capture = self._capture()
+            capture.update(
+                {
+                    "discovery_source": "git_log",
+                    "external_test": external_test,
+                    "environment_freeze": environment_freeze,
+                }
+            )
+            output = root / "screened"
+
+            result = self._run(self._write_capture(root, capture), output)
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            candidate = load_factory_contract(
+                output / "candidates" / f"pr-{capture['pr_number']}.json"
+            )
+            self.assertEqual(candidate.external_test.to_dict(), external_test)
+            self.assertEqual(
+                candidate.environment_freeze.to_dict(),
+                environment_freeze,
+            )
+
+    def test_real_capture_rejects_unknown_discovery_source(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            capture = self._capture()
+            capture.update(
+                {
+                    "discovery_source": "internet_search",
+                    "external_test": None,
+                    "environment_freeze": None,
+                }
+            )
+            output = root / "screened"
+
+            result = self._run(self._write_capture(root, capture), output)
+
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("[contract_invalid]", result.stderr)
+            self.assertIn("discovery_source", result.stderr)
             self.assertFalse(output.exists())
 
 

@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import argparse
+from collections.abc import Mapping
 import json
 from pathlib import Path
 import sys
 
 from op_bench.factory.artifacts import FactoryArtifactStore
 from op_bench.factory.contracts import (
+    DISCOVERY_SOURCES,
     CandidateRecord,
     ChangedFile,
     FactoryArtifactReference,
@@ -31,7 +33,7 @@ from op_bench.runtime.validation import (
 )
 
 
-_CAPTURE_FIELDS = (
+_LEGACY_CAPTURE_FIELDS = (
     "repository",
     "pr_number",
     "base_commit",
@@ -46,11 +48,19 @@ _CAPTURE_FIELDS = (
     "source_available",
     "runtime_supported",
 )
+_REAL_CAPTURE_FIELDS = _LEGACY_CAPTURE_FIELDS + (
+    "discovery_source",
+    "external_test",
+    "environment_freeze",
+)
+_REAL_ONLY_CAPTURE_FIELDS = frozenset(
+    set(_REAL_CAPTURE_FIELDS) - set(_LEGACY_CAPTURE_FIELDS)
+)
 
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Screen local synthetic Boundary candidate captures.",
+        description="Screen local Boundary candidate captures.",
     )
     parser.add_argument("--input", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
@@ -70,6 +80,15 @@ def _optional_timestamp(value: object, path: str) -> str | None:
     return require_str(value, path)
 
 
+def _optional_reference(
+    value: object,
+    path: str,
+) -> FactoryArtifactReference | None:
+    if value is None:
+        return None
+    return FactoryArtifactReference.from_dict(value, path=path)
+
+
 def _candidate_from_capture(
     value: object,
     *,
@@ -77,7 +96,13 @@ def _candidate_from_capture(
     created_at: str,
 ) -> CandidateRecord:
     path = f"candidates[{index}]"
-    data = require_exact_fields(value, path, _CAPTURE_FIELDS)
+    capture_fields = _LEGACY_CAPTURE_FIELDS
+    if isinstance(value, Mapping) and any(
+        field in value for field in _REAL_ONLY_CAPTURE_FIELDS
+    ):
+        capture_fields = _REAL_CAPTURE_FIELDS
+    data = require_exact_fields(value, path, capture_fields)
+    is_real_capture = capture_fields == _REAL_CAPTURE_FIELDS
     repository = require_str(data["repository"], f"{path}.repository")
     pr_number = require_int(data["pr_number"], f"{path}.pr_number", minimum=1)
     base_commit = _optional_commit(data["base_commit"], f"{path}.base_commit")
@@ -136,7 +161,15 @@ def _candidate_from_capture(
         total_changed_lines=sum(
             item.additions + item.deletions for item in changed_files
         ),
-        discovery_source="fixture",
+        discovery_source=(
+            require_enum(
+                data["discovery_source"],
+                f"{path}.discovery_source",
+                DISCOVERY_SOURCES,
+            )
+            if is_real_capture
+            else "fixture"
+        ),
         keyword_pack_id=f"boundary-{proposed_subclass.lower()}-v1",
         matched_keyword_ids=tuple(sorted(matched_pack_ids)),
         proposed_dimension="boundary",
@@ -153,8 +186,22 @@ def _candidate_from_capture(
             f"{path}.change_kind",
             ("bugfix", "refactor", "cleanup", "feature"),
         ),
-        external_test=None,
-        environment_freeze=None,
+        external_test=(
+            _optional_reference(
+                data["external_test"],
+                f"{path}.external_test",
+            )
+            if is_real_capture
+            else None
+        ),
+        environment_freeze=(
+            _optional_reference(
+                data["environment_freeze"],
+                f"{path}.environment_freeze",
+            )
+            if is_real_capture
+            else None
+        ),
         source_available=require_bool(
             data["source_available"],
             f"{path}.source_available",
@@ -167,7 +214,10 @@ def _candidate_from_capture(
     return CandidateRecord.from_dict(candidate.to_dict())
 
 
-def _load_candidates(path: Path, created_at: str) -> tuple[CandidateRecord, ...]:
+def load_candidate_captures(
+    path: Path,
+    created_at: str,
+) -> tuple[CandidateRecord, ...]:
     try:
         value = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
@@ -193,7 +243,7 @@ def _load_candidates(path: Path, created_at: str) -> tuple[CandidateRecord, ...]
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
-        candidates = _load_candidates(args.input, args.created_at)
+        candidates = load_candidate_captures(args.input, args.created_at)
         decisions = tuple(screen_candidate(item) for item in candidates)
     except (ValueError, ContractError) as exc:
         print(f"[contract_invalid] {exc}", file=sys.stderr)
