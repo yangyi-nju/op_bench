@@ -45,6 +45,69 @@ REASON_CODE_NAMESPACES = (
     "duplicate",
     "review",
 )
+FACTORY_EVIDENCE_TYPES = (
+    "screening_decision",
+    "task_bundle",
+    "preflight",
+    "baseline",
+    "gold",
+    "human_review",
+    "integrity",
+)
+FACTORY_ADMISSION_STATES = (
+    "discovered",
+    "deferred",
+    "screened",
+    "bundled",
+    "preflight_passed",
+    "baseline_reproduced",
+    "gold_resolved",
+    "reviewed",
+    "verified",
+    "rejected",
+    "deprecated",
+)
+FACTORY_ACTOR_KINDS = ("automation", "human")
+ADMISSION_STAGE_EVIDENCE = {
+    "discovered": (),
+    "screened": ("screening_decision",),
+    "bundled": ("screening_decision", "task_bundle"),
+    "preflight_passed": (
+        "screening_decision",
+        "task_bundle",
+        "preflight",
+    ),
+    "baseline_reproduced": (
+        "screening_decision",
+        "task_bundle",
+        "preflight",
+        "baseline",
+    ),
+    "gold_resolved": (
+        "screening_decision",
+        "task_bundle",
+        "preflight",
+        "baseline",
+        "gold",
+    ),
+    "reviewed": (
+        "screening_decision",
+        "task_bundle",
+        "preflight",
+        "baseline",
+        "gold",
+        "human_review",
+    ),
+    "verified": (
+        "screening_decision",
+        "task_bundle",
+        "preflight",
+        "baseline",
+        "gold",
+        "human_review",
+        "integrity",
+    ),
+}
 PROBLEM_SUBCLASSES = {
     "boundary": ("B1", "B2", "B3", "B4", "B5"),
     "precision": ("P1", "P2", "P3", "P4", "P5"),
@@ -944,3 +1007,353 @@ class DecisionRecord:
                 f"{path}.content_hash: expected {decision.content_hash!r}"
             )
         return decision
+
+
+@dataclass(frozen=True)
+class FactoryEvidence:
+    evidence_type: str
+    reference: FactoryArtifactReference
+    claims: Mapping[str, JsonValue]
+
+    @classmethod
+    def wire_fields(cls) -> tuple[str, ...]:
+        return ("evidence_type", "reference", "claims")
+
+    def __post_init__(self) -> None:
+        require_enum(
+            self.evidence_type,
+            "evidence_type",
+            FACTORY_EVIDENCE_TYPES,
+        )
+        if not isinstance(self.reference, FactoryArtifactReference):
+            raise ContractError("reference: expected FactoryArtifactReference")
+        if not isinstance(self.claims, Mapping):
+            raise ContractError("claims: expected object")
+        object.__setattr__(
+            self,
+            "claims",
+            _freeze_json_value(dict(self.claims), "claims"),
+        )
+
+    def to_dict(self) -> dict[str, JsonValue]:
+        return {
+            "evidence_type": self.evidence_type,
+            "reference": self.reference.to_dict(),
+            "claims": _wire_json_value(self.claims),
+        }
+
+    @classmethod
+    def from_dict(
+        cls,
+        value: object,
+        *,
+        path: str = "factory_evidence",
+    ) -> "FactoryEvidence":
+        data = require_exact_fields(value, path, cls.wire_fields())
+        claims = data["claims"]
+        if not isinstance(claims, Mapping):
+            raise ContractError(f"{path}.claims: expected object")
+        return cls(
+            evidence_type=require_enum(
+                data["evidence_type"],
+                f"{path}.evidence_type",
+                FACTORY_EVIDENCE_TYPES,
+            ),
+            reference=FactoryArtifactReference.from_dict(
+                data["reference"],
+                path=f"{path}.reference",
+            ),
+            claims=dict(claims),
+        )
+
+
+def validate_admission_evidence(
+    state: str,
+    evidence: tuple[FactoryEvidence, ...],
+) -> None:
+    required = ADMISSION_STAGE_EVIDENCE.get(state, ())
+    by_type = {item.evidence_type: item for item in evidence}
+    missing = tuple(item for item in required if item not in by_type)
+    if missing:
+        raise ContractError(
+            f"evidence: {state} requires {', '.join(missing)}"
+        )
+    expected_statuses = {
+        "screening_decision": "accepted",
+        "task_bundle": "complete",
+        "preflight": "passed",
+        "baseline": "failed_as_expected",
+        "gold": "resolved",
+        "human_review": "approved",
+        "integrity": "passed",
+    }
+    for evidence_type in required:
+        actual_status = by_type[evidence_type].claims.get("status")
+        expected_status = expected_statuses[evidence_type]
+        if actual_status != expected_status:
+            raise ContractError(
+                f"{evidence_type}: expected status {expected_status!r}"
+            )
+    if "baseline" in required:
+        for name in ("source_hash", "runtime_hash", "selector_hash"):
+            require_str(
+                by_type["baseline"].claims.get(name),
+                f"baseline.{name}",
+                pattern=SHA256_PATTERN,
+            )
+    if "gold" in required:
+        for name in ("source_hash", "runtime_hash", "selector_hash"):
+            baseline_value = by_type["baseline"].claims.get(name)
+            gold_value = require_str(
+                by_type["gold"].claims.get(name),
+                f"gold.{name}",
+                pattern=SHA256_PATTERN,
+            )
+            if gold_value != baseline_value:
+                label = name.removesuffix("_hash")
+                raise ContractError(
+                    f"gold {label}: must match baseline {label}"
+                )
+
+
+@dataclass(frozen=True)
+class FactoryAdmissionRecord:
+    contract_type: ClassVar[str] = "factory_admission"
+    schema_version: ClassVar[str] = SCHEMA_VERSION
+
+    admission_id: str
+    candidate: FactoryArtifactReference
+    decision: FactoryArtifactReference | None
+    task: FactoryArtifactReference | None
+    state: str
+    previous_record_hash: str | None
+    evidence: tuple[FactoryEvidence, ...]
+    transition_reason: str
+    actor_kind: str
+    created_at: str
+
+    @classmethod
+    def wire_fields(cls) -> tuple[str, ...]:
+        return (
+            "contract_type",
+            "schema_version",
+            "admission_id",
+            "candidate",
+            "decision",
+            "task",
+            "state",
+            "previous_record_hash",
+            "evidence",
+            "transition_reason",
+            "actor_kind",
+            "created_at",
+            "content_hash",
+        )
+
+    @classmethod
+    def admission_id_for(
+        cls,
+        *,
+        candidate: FactoryArtifactReference,
+        decision: FactoryArtifactReference | None,
+        task: FactoryArtifactReference | None,
+        state: str,
+        previous_record_hash: str | None,
+        evidence: tuple[FactoryEvidence, ...],
+    ) -> str:
+        digest = canonical_sha256(
+            {
+                "candidate": candidate.to_dict(),
+                "decision": None if decision is None else decision.to_dict(),
+                "task": None if task is None else task.to_dict(),
+                "state": state,
+                "previous_record_hash": previous_record_hash,
+                "evidence": [item.to_dict() for item in evidence],
+            }
+        )
+        return "admission:v1:" + digest.removeprefix("sha256:")
+
+    def __post_init__(self) -> None:
+        require_str(
+            self.admission_id,
+            "admission_id",
+            pattern=r"admission:v1:[0-9a-f]{64}",
+        )
+        if not isinstance(self.candidate, FactoryArtifactReference):
+            raise ContractError("candidate: expected FactoryArtifactReference")
+        if self.candidate.artifact_type != "factory_candidate":
+            raise ContractError(
+                "candidate.artifact_type: expected 'factory_candidate'"
+            )
+        if self.decision is not None:
+            if not isinstance(self.decision, FactoryArtifactReference):
+                raise ContractError(
+                    "decision: expected FactoryArtifactReference or null"
+                )
+            if self.decision.artifact_type != "factory_decision":
+                raise ContractError(
+                    "decision.artifact_type: expected 'factory_decision'"
+                )
+        if self.task is not None and not isinstance(
+            self.task,
+            FactoryArtifactReference,
+        ):
+            raise ContractError("task: expected FactoryArtifactReference or null")
+        require_enum(self.state, "state", FACTORY_ADMISSION_STATES)
+        if self.previous_record_hash is not None:
+            require_str(
+                self.previous_record_hash,
+                "previous_record_hash",
+                pattern=SHA256_PATTERN,
+            )
+        if not isinstance(self.evidence, tuple):
+            raise ContractError("evidence: expected tuple")
+        for index, item in enumerate(self.evidence):
+            if not isinstance(item, FactoryEvidence):
+                raise ContractError(
+                    f"evidence[{index}]: expected FactoryEvidence"
+                )
+        evidence_types = tuple(item.evidence_type for item in self.evidence)
+        if evidence_types != tuple(sorted(evidence_types)):
+            raise ContractError("evidence: expected sorted evidence types")
+        if len(set(evidence_types)) != len(evidence_types):
+            raise ContractError("evidence: duplicate evidence type")
+        if self.state in ADMISSION_STAGE_EVIDENCE:
+            validate_admission_evidence(self.state, self.evidence)
+        if self.state not in ("discovered", "deferred") and self.decision is None:
+            raise ContractError(f"decision: required for state {self.state!r}")
+        if self.state in (
+            "bundled",
+            "preflight_passed",
+            "baseline_reproduced",
+            "gold_resolved",
+            "reviewed",
+            "verified",
+        ) and self.task is None:
+            raise ContractError(f"task: required for state {self.state!r}")
+        _require_bounded_str(
+            self.transition_reason,
+            "transition_reason",
+            maximum=500,
+        )
+        require_enum(self.actor_kind, "actor_kind", FACTORY_ACTOR_KINDS)
+        _validate_utc_seconds(self.created_at, "created_at")
+        expected_id = self.admission_id_for(
+            candidate=self.candidate,
+            decision=self.decision,
+            task=self.task,
+            state=self.state,
+            previous_record_hash=self.previous_record_hash,
+            evidence=self.evidence,
+        )
+        if self.admission_id != expected_id:
+            raise ContractError(
+                f"admission_id: expected derived identity {expected_id!r}"
+            )
+
+    @property
+    def content_hash(self) -> str:
+        return factory_content_hash(self.to_dict(include_hash=False))
+
+    def to_dict(self, *, include_hash: bool = True) -> dict[str, JsonValue]:
+        payload: dict[str, JsonValue] = {
+            "contract_type": self.contract_type,
+            "schema_version": self.schema_version,
+            "admission_id": self.admission_id,
+            "candidate": self.candidate.to_dict(),
+            "decision": (
+                None if self.decision is None else self.decision.to_dict()
+            ),
+            "task": None if self.task is None else self.task.to_dict(),
+            "state": self.state,
+            "previous_record_hash": self.previous_record_hash,
+            "evidence": [item.to_dict() for item in self.evidence],
+            "transition_reason": self.transition_reason,
+            "actor_kind": self.actor_kind,
+            "created_at": self.created_at,
+        }
+        if include_hash:
+            payload["content_hash"] = factory_content_hash(payload)
+        return payload
+
+    @classmethod
+    def from_dict(
+        cls,
+        value: object,
+        *,
+        path: str = "factory_admission",
+    ) -> "FactoryAdmissionRecord":
+        data = require_exact_fields(value, path, cls.wire_fields())
+        if data["contract_type"] != cls.contract_type:
+            raise ContractError(
+                f"{path}.contract_type: expected {cls.contract_type!r}"
+            )
+        if data["schema_version"] != cls.schema_version:
+            raise ContractError(
+                f"{path}.schema_version: expected {cls.schema_version!r}"
+            )
+        evidence_values = require_list(data["evidence"], f"{path}.evidence")
+        previous_hash = data["previous_record_hash"]
+        if previous_hash is not None:
+            previous_hash = require_str(
+                previous_hash,
+                f"{path}.previous_record_hash",
+                pattern=SHA256_PATTERN,
+            )
+        record = cls(
+            admission_id=require_str(
+                data["admission_id"],
+                f"{path}.admission_id",
+            ),
+            candidate=FactoryArtifactReference.from_dict(
+                data["candidate"],
+                path=f"{path}.candidate",
+            ),
+            decision=(
+                None
+                if data["decision"] is None
+                else FactoryArtifactReference.from_dict(
+                    data["decision"],
+                    path=f"{path}.decision",
+                )
+            ),
+            task=(
+                None
+                if data["task"] is None
+                else FactoryArtifactReference.from_dict(
+                    data["task"],
+                    path=f"{path}.task",
+                )
+            ),
+            state=require_str(data["state"], f"{path}.state"),
+            previous_record_hash=previous_hash,
+            evidence=tuple(
+                FactoryEvidence.from_dict(
+                    item,
+                    path=f"{path}.evidence[{index}]",
+                )
+                for index, item in enumerate(evidence_values)
+            ),
+            transition_reason=require_str(
+                data["transition_reason"],
+                f"{path}.transition_reason",
+            ),
+            actor_kind=require_str(
+                data["actor_kind"],
+                f"{path}.actor_kind",
+            ),
+            created_at=_validate_utc_seconds(
+                data["created_at"],
+                f"{path}.created_at",
+            ),
+        )
+        stored_hash = require_str(
+            data["content_hash"],
+            f"{path}.content_hash",
+            pattern=SHA256_PATTERN,
+        )
+        if stored_hash != record.content_hash:
+            raise ContractError(
+                f"{path}.content_hash: expected {record.content_hash!r}"
+            )
+        return record
