@@ -15,7 +15,10 @@ from op_bench.factory.contracts import (
     DecisionRecord,
     factory_content_hash,
 )
+from op_bench.patch_scope import extract_patch_paths
 from op_bench.registry import EnvironmentRegistry, SourceRegistry
+from op_bench.task import TaskManifest
+from scripts.validate_task import validate_manifest
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -84,6 +87,28 @@ BOUNDARY_SOURCES = {
         "overlay",
         "torch/_inductor/codegen/triton.py",
         "pytorch__139751__triton_ygrid_mask",
+    ),
+}
+PYTHON_BOUNDARY_TASKS = {
+    "143792_addmv_empty_matrix": (
+        "pytorch__143792__addmv_empty_matrix",
+        "B1",
+        "torch/_decomp/decompositions.py",
+    ),
+    "117065_index_copy_zero_dim": (
+        "pytorch__117065__index_copy_zero_dim",
+        "B2",
+        "torch/_decomp/decompositions.py",
+    ),
+    "126461_cummin_rank_zero": (
+        "pytorch__126461__cummin_rank_zero",
+        "B2",
+        "torch/_inductor/lowering.py",
+    ),
+    "118762_weight_norm_default_dim": (
+        "pytorch__118762__weight_norm_default_dim",
+        "B4",
+        "torch/_decomp/decompositions.py",
     ),
 }
 
@@ -338,6 +363,46 @@ class BoundaryArtifactTests(unittest.TestCase):
                 self.assertEqual(dirty, "")
                 if mode == "kernel_full":
                     self.assertEqual(asset.submodule_status, "initialized")
+
+    def test_python_task_bundles(self) -> None:
+        for directory, expected in PYTHON_BOUNDARY_TASKS.items():
+            task_id, subclass, allowed_source = expected
+            with self.subTest(task=task_id):
+                task_dir = ROOT / "tasks" / "pytorch" / directory
+                task = TaskManifest.load(task_dir / "task.json")
+                self.assertEqual(validate_manifest(task.data), [])
+                self.assertEqual(task.task_id, task_id)
+                self.assertEqual(task.admission_status, "draft")
+                self.assertEqual(
+                    task.data["operator"]["problem_dimension"],
+                    "boundary",
+                )
+                self.assertEqual(
+                    task.data["operator"]["problem_subclass"],
+                    subclass,
+                )
+                self.assertEqual(task.patch_scope_paths, [allowed_source])
+                self.assertEqual(
+                    extract_patch_paths(
+                        task.gold_patch_path.read_text(encoding="utf-8")
+                    ),
+                    [allowed_source],
+                )
+                hidden_paths = extract_patch_paths(
+                    task.hidden_test_patch_path.read_text(encoding="utf-8")
+                )
+                self.assertEqual(len(hidden_paths), 1)
+                self.assertRegex(
+                    hidden_paths[0],
+                    r"^test/op_bench_boundary/test_[a-z0-9_]+\.py$",
+                )
+                fail_to_pass = task.fail_to_pass_tests
+                pass_to_pass = task.pass_to_pass_tests
+                self.assertTrue(fail_to_pass)
+                self.assertTrue(pass_to_pass)
+                self.assertTrue(
+                    set(fail_to_pass).isdisjoint(pass_to_pass)
+                )
 
 
 if __name__ == "__main__":

@@ -1,0 +1,49 @@
+diff --git a/test/op_bench_boundary/test_addmv_empty_matrix.py b/test/op_bench_boundary/test_addmv_empty_matrix.py
+new file mode 100644
+--- /dev/null
++++ b/test/op_bench_boundary/test_addmv_empty_matrix.py
+@@ -0,0 +1,44 @@
++import unittest
++
++import torch
++
++
++class BoundaryAddmvTests(unittest.TestCase):
++    def tearDown(self):
++        torch._dynamo.reset()
++
++    def test_zero_sized_matrix(self):
++        def fn(input_tensor, matrix, vector):
++            return torch.addmv(input_tensor, matrix, vector)
++
++        compiled = torch.compile(fn, backend="inductor")
++        input_tensor = torch.tensor([2], dtype=torch.int32)
++        matrix = torch.empty((0, 0), dtype=torch.int32)
++        vector = torch.empty((0,), dtype=torch.int32)
++
++        expected = fn(input_tensor, matrix, vector)
++        actual = compiled(input_tensor, matrix, vector)
++
++        torch.testing.assert_close(expected, torch.tensor([2], dtype=torch.int32))
++        torch.testing.assert_close(actual, expected)
++
++    def test_nonempty_and_beta_zero(self):
++        input_tensor = torch.tensor([3.0, -2.0])
++        matrix = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
++        vector = torch.tensor([2.0, -1.0])
++        torch.testing.assert_close(
++            torch._decomp.decompositions.addmv(
++                input_tensor, matrix, vector, beta=2, alpha=3
++            ),
++            torch.addmv(input_tensor, matrix, vector, beta=2, alpha=3),
++        )
++        torch.testing.assert_close(
++            torch._decomp.decompositions.addmv(
++                input_tensor, matrix, vector, beta=0
++            ),
++            torch.addmv(input_tensor, matrix, vector, beta=0),
++        )
++
++
++if __name__ == "__main__":
++    unittest.main()

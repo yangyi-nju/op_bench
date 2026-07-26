@@ -1,0 +1,105 @@
+{
+  "task_id": "pytorch__143792__addmv_empty_matrix",
+  "version": "v1",
+  "environment_ref": "pytorch-matched-boundary-torch2.2.0-cpu",
+  "runtime_tier": "cpu_python_overlay",
+  "source_ref": "pytorch-38b3375-boundary-overlay",
+  "admission": {
+    "status": "draft"
+  },
+  "patch_scope": {
+    "allowed_paths": [
+      "torch/_decomp/decompositions.py"
+    ],
+    "mode": "enforced"
+  },
+  "source": {
+    "pr_url": "https://github.com/pytorch/pytorch/pull/143792",
+    "issue_url": null,
+    "repo": "pytorch/pytorch",
+    "repo_url": "https://github.com/pytorch/pytorch.git",
+    "issue_number": null,
+    "pr_number": 143792,
+    "base_commit": "38b3375a81dc3c21d7c0420773187c7c2c3d5835",
+    "merge_commit": "43e1284c9699dfdc3722c2f2913c72aa3b37e869",
+    "checkout_mode": "git"
+  },
+  "statement": {
+    "title": "Inductor addmv decomposition mishandles a zero-sized matrix",
+    "body": "The addmv decomposition computes an empty matrix-vector product before applying the broadcast input. For a 0x0 matrix and a broadcastable one-element input, the generic addition path loses native addmv's empty-matrix semantics. Preserve beta=0 behavior, then return beta times the input when the matrix-vector result is empty.",
+    "labels": [
+      "module: inductor",
+      "module: decomposition",
+      "boundary: empty"
+    ]
+  },
+  "operator": {
+    "framework": "pytorch",
+    "component": "torch._decomp.decompositions.addmv",
+    "operator_name": "torch.addmv",
+    "problem_type": "empty-matrix-semantics",
+    "problem_dimension": "boundary",
+    "problem_subclass": "B1",
+    "tags": [
+      "addmv",
+      "empty-matrix",
+      "broadcast",
+      "inductor",
+      "cpu"
+    ]
+  },
+  "environment": {
+    "build_mode": "prebuilt-wheel",
+    "source_loading": {
+      "mode": "python_overlay",
+      "installed_package": "torch",
+      "overlay_paths": [
+        "torch/_decomp/decompositions.py"
+      ],
+      "runtime_site_packages": "/tmp/op_bench_runtime/site-packages",
+      "sync_before_tests": true
+    }
+  },
+  "compatibility": {
+    "target_module": "torch/_decomp/decompositions.py",
+    "target_import": "torch._decomp.decompositions",
+    "selector_module": "test/op_bench_boundary/test_addmv_empty_matrix.py",
+    "minimal_operation": "import torch; import torch._decomp.decompositions; torch.addmv(torch.ones(1), torch.ones(1, 1), torch.ones(1))",
+    "evidence": "compatibility/evidence.json"
+  },
+  "agent_visible": {
+    "repo_setup_commands": [],
+    "known_constraints": [
+      "CPU-only task; no CUDA is required.",
+      "Preserve beta=0 semantics.",
+      "Modify only torch/_decomp/decompositions.py."
+    ],
+    "allowed_test_commands": [
+      "{python} test/op_bench_boundary/test_addmv_empty_matrix.py {test}"
+    ]
+  },
+  "evaluation": {
+    "setup_commands": [],
+    "fail_to_pass": [
+      "BoundaryAddmvTests.test_zero_sized_matrix"
+    ],
+    "pass_to_pass": [
+      "BoundaryAddmvTests.test_nonempty_and_beta_zero"
+    ],
+    "test_command": "{python} test/op_bench_boundary/test_addmv_empty_matrix.py {test}",
+    "timeout_sec": 900
+  },
+  "artifacts": {
+    "gold_patch": "artifacts/gold.patch",
+    "hidden_test_patch": "artifacts/hidden_test.patch"
+  },
+  "metadata": {
+    "difficulty": "easy",
+    "curation_status": "draft",
+    "deterministic": true,
+    "estimated_runtime_min": 10,
+    "layer": "B",
+    "admission_status": "draft",
+    "source_loading_verified": false
+  }
+}

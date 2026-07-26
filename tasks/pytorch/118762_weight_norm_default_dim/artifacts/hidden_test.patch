@@ -1,0 +1,42 @@
+diff --git a/test/op_bench_boundary/test_weight_norm_default_dim.py b/test/op_bench_boundary/test_weight_norm_default_dim.py
+new file mode 100644
+--- /dev/null
++++ b/test/op_bench_boundary/test_weight_norm_default_dim.py
+@@ -0,0 +1,37 @@
++import unittest
++
++import torch
++
++
++class BoundaryWeightNormTests(unittest.TestCase):
++    def assert_pair_close(self, actual, expected):
++        torch.testing.assert_close(actual[0], expected[0])
++        torch.testing.assert_close(actual[1], expected[1])
++
++    def test_default_dimension(self):
++        value = torch.arange(1.0, 13.0).reshape(3, 4)
++        weight = torch.tensor([[1.0], [2.0], [3.0]])
++
++        expected = torch.ops.aten._weight_norm_interface(value, weight)
++        actual = torch._decomp.decompositions._weight_norm_interface(
++            value, weight
++        )
++
++        self.assert_pair_close(actual, expected)
++
++    def test_explicit_dimension(self):
++        value = torch.arange(1.0, 13.0).reshape(3, 4)
++        weight = torch.tensor([[1.0, 2.0, 3.0, 4.0]])
++
++        expected = torch.ops.aten._weight_norm_interface(
++            value, weight, 1
++        )
++        actual = torch._decomp.decompositions._weight_norm_interface(
++            value, weight, 1
++        )
++
++        self.assert_pair_close(actual, expected)
++
++
++if __name__ == "__main__":
++    unittest.main()

@@ -1,0 +1,105 @@
+{
+  "task_id": "pytorch__126461__cummin_rank_zero",
+  "version": "v1",
+  "environment_ref": "pytorch-matched-boundary-torch2.3.0-cpu",
+  "runtime_tier": "cpu_python_overlay",
+  "source_ref": "pytorch-15ca562-boundary-overlay",
+  "admission": {
+    "status": "draft"
+  },
+  "patch_scope": {
+    "allowed_paths": [
+      "torch/_inductor/lowering.py"
+    ],
+    "mode": "enforced"
+  },
+  "source": {
+    "pr_url": "https://github.com/pytorch/pytorch/pull/126461",
+    "issue_url": null,
+    "repo": "pytorch/pytorch",
+    "repo_url": "https://github.com/pytorch/pytorch.git",
+    "issue_number": null,
+    "pr_number": 126461,
+    "base_commit": "15ca562f863ffe69d76c0ccaf448b27d18ceb2e8",
+    "merge_commit": "2edaae436ac570949b3595f0c72f6808037555d2",
+    "checkout_mode": "git"
+  },
+  "statement": {
+    "title": "Inductor cummin and cummax lowerings fail for rank-zero inputs",
+    "body": "The scalar fast paths for cummin and cummax construct the index output with torch.empty_like while operating on Inductor IR values. That eager API cannot consume the lowering's TensorBox. Use the registered lowering helper so compiled scalar cumulative reductions return the eager value and index pair.",
+    "labels": [
+      "module: inductor",
+      "boundary: rank-zero",
+      "operator: cumulative reduction"
+    ]
+  },
+  "operator": {
+    "framework": "pytorch",
+    "component": "torch._inductor.lowering.cummin",
+    "operator_name": "torch.cummin/torch.cummax",
+    "problem_type": "rank-zero-lowering",
+    "problem_dimension": "boundary",
+    "problem_subclass": "B2",
+    "tags": [
+      "cummin",
+      "cummax",
+      "rank-zero",
+      "inductor",
+      "cpu"
+    ]
+  },
+  "environment": {
+    "build_mode": "prebuilt-wheel",
+    "source_loading": {
+      "mode": "python_overlay",
+      "installed_package": "torch",
+      "overlay_paths": [
+        "torch/_inductor/lowering.py"
+      ],
+      "runtime_site_packages": "/tmp/op_bench_runtime/site-packages",
+      "sync_before_tests": true
+    }
+  },
+  "compatibility": {
+    "target_module": "torch/_inductor/lowering.py",
+    "target_import": "torch._inductor.lowering",
+    "selector_module": "test/op_bench_boundary/test_cummin_rank_zero.py",
+    "minimal_operation": "import torch; import torch._inductor.lowering; torch.cummin(torch.tensor(1.0), 0)",
+    "evidence": "compatibility/evidence.json"
+  },
+  "agent_visible": {
+    "repo_setup_commands": [],
+    "known_constraints": [
+      "CPU-only task; no CUDA is required.",
+      "Both cummin and cummax scalar lowerings must work.",
+      "Modify only torch/_inductor/lowering.py."
+    ],
+    "allowed_test_commands": [
+      "{python} test/op_bench_boundary/test_cummin_rank_zero.py {test}"
+    ]
+  },
+  "evaluation": {
+    "setup_commands": [],
+    "fail_to_pass": [
+      "BoundaryCumulativeTests.test_rank_zero_cummin_and_cummax"
+    ],
+    "pass_to_pass": [
+      "BoundaryCumulativeTests.test_rank_one_cummin_and_cummax"
+    ],
+    "test_command": "{python} test/op_bench_boundary/test_cummin_rank_zero.py {test}",
+    "timeout_sec": 900
+  },
+  "artifacts": {
+    "gold_patch": "artifacts/gold.patch",
+    "hidden_test_patch": "artifacts/hidden_test.patch"
+  },
+  "metadata": {
+    "difficulty": "medium",
+    "curation_status": "draft",
+    "deterministic": true,
+    "estimated_runtime_min": 15,
+    "layer": "B",
+    "admission_status": "draft",
+    "source_loading_verified": false
+  }
+}
