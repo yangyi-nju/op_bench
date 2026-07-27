@@ -957,11 +957,7 @@ class DockerRuntimeBackend(LocalProcessBackend):
             workdir=target_cwd,
             container_name=container.raw_handle,
             command=argv,
-            python_path=(
-                state.profile.mount_policy.workspace_target
-                if state.profile.source_loading_mode == "inplace_build"
-                else None
-            ),
+            python_path=_runtime_python_path(state.profile),
         )
         try:
             raw = self._argv_runner(executed, None, timeout)
@@ -1315,11 +1311,7 @@ class RemoteDockerRuntimeBackend(LocalProcessBackend):
                 and state.context.target_binding.remote_ccache_seed is not None
                 else "/tmp/op_bench_runtime/ccache"
             ),
-            python_path=(
-                state.profile.mount_policy.workspace_target
-                if state.profile.source_loading_mode == "inplace_build"
-                else None
-            ),
+            python_path=_runtime_python_path(state.profile),
         )
         try:
             raw = self._argv_runner(
@@ -2075,6 +2067,14 @@ def _container_exec_command(
         container_name,
         *command,
     )
+
+
+def _runtime_python_path(profile: RuntimeProfile) -> str | None:
+    if profile.source_loading_mode == "python_overlay":
+        return "/tmp/op_bench_runtime/site-packages"
+    if profile.source_loading_mode == "inplace_build":
+        return profile.mount_policy.workspace_target
+    return None
 
 
 def _logical_container_cwd(target: str, relative: PurePosixPath) -> str:

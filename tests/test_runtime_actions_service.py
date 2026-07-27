@@ -233,7 +233,7 @@ class CanonicalActionServiceTests(unittest.TestCase):
         self.assertEqual(observations[8].data["patch"], observations[7].data["patch"])
         self.assertEqual(self.service.workspace_identity, requests and self.service.workspace_identity)
         self.assertEqual(self.service.usage.actions, 9)
-        self.assertEqual(self.service.usage.commands, 1)
+        self.assertEqual(self.service.usage.commands, 2)
         self.assertEqual(self.service.usage.tests, 1)
         self.assertEqual(len(self.service.audit_exchanges), 9)
 

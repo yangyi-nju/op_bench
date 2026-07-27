@@ -52,6 +52,7 @@ from op_bench.runtime.resume import AttemptLedger
 from op_bench.runtime.run_artifacts import AttemptArtifactStore, retry_directory_name
 from op_bench.runtime.runtime_evaluation import RuntimeFreshEvaluationBackend
 from op_bench.runtime.session import AttemptSession
+from op_bench.runtime.source_loading import build_runtime_source_preparation
 from op_bench.runtime.summary import write_rebuilt_outputs
 from op_bench.runtime.task_view import AgentLaunchInput, agent_task_view_identity
 from op_bench.runtime.validation import (
@@ -283,6 +284,7 @@ class V06Orchestrator:
         source = self._source_resolver(task)
         hidden_asset = self._hidden_asset_resolver(task)
         self._validate_private_inputs(task, source, hidden_asset)
+        source_overlay_paths = self._source_overlay_resolver(task)
 
         construction_cleanup = ExitStack()
         try:
@@ -403,6 +405,8 @@ class V06Orchestrator:
                     request,
                     task,
                     self._python_executable,
+                    runtime_profile=profile,
+                    source_overlay_paths=source_overlay_paths,
                 ),
                 clock_ms=request.clock_ms,
                 event_journal=journal,
@@ -508,7 +512,7 @@ class V06Orchestrator:
                     runtime_backend=evaluation_backend,
                     runtime_profile=profile,
                     attempt_context=attempt_context,
-                    source_overlay_paths=self._source_overlay_resolver(task),
+                    source_overlay_paths=source_overlay_paths,
                 )
             else:
                 evaluation_implementation = _InfrastructureNotEvaluatedBackend()
@@ -769,7 +773,15 @@ def _registered_tests(
     request: V06RunRequest,
     task,
     python_executable: str,
+    *,
+    runtime_profile: RuntimeProfile,
+    source_overlay_paths: tuple[str, ...],
 ) -> dict[str, RegisteredTest]:
+    preparation = build_runtime_source_preparation(
+        runtime_profile,
+        python_executable,
+        source_overlay_paths,
+    )
     selectors = {selector.selector_id: selector for selector in task.public_tests}
     result: dict[str, RegisteredTest] = {}
     for selector_id in request.manifest.capability_policy.registered_tests:
@@ -798,6 +810,7 @@ def _registered_tests(
             command=command,
             cwd=".",
             timeout_ms=task.runtime.timeout_ms,
+            preparation=preparation,
         )
     return result
 

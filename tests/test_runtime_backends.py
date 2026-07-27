@@ -1493,6 +1493,40 @@ class ContainerBackendCommandTests(unittest.TestCase):
                 ("docker-fixture", "rm", "--force", container.raw_handle),
             )
 
+    def test_docker_python_overlay_commands_use_runtime_site_packages(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspaces = root / "workspaces"
+            workspaces.mkdir()
+            profile = replace(
+                self.profile("docker"),
+                source_loading_mode="python_overlay",
+            )
+            binding = RuntimeTargetBinding(
+                backend="docker",
+                local_workspace_parent=workspaces,
+                docker_binary="docker-fixture",
+            )
+            fixture = LocalBackendFixture(root, profile=profile, binding=binding)
+            runner = RecordingArgvRunner()
+            backend = DockerRuntimeBackend(argv_runner=runner)
+
+            lease = backend.prepare(profile, fixture.context)
+            backend.run(lease, ("python", "-V"), ".", 1_000)
+            execute = next(
+                call[0]
+                for call in runner.calls
+                if len(call[0]) >= 2 and call[0][1] == "exec"
+            )
+            cleanup = backend.cleanup(lease)
+
+            self.assertIn(
+                "PYTHONPATH=/tmp/op_bench_runtime/site-packages",
+                execute,
+            )
+            self.assertNotIn("PYTHONPATH=/workspace", execute)
+            self.assertTrue(cleanup.report.all_released)
+
     def test_docker_start_failure_removes_exact_container_and_workspace(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -1625,6 +1659,48 @@ class ContainerBackendCommandTests(unittest.TestCase):
             ):
                 with self.subTest(forbidden=forbidden):
                     self.assertNotIn(forbidden, flattened)
+
+    def test_remote_python_overlay_commands_use_runtime_site_packages(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspaces = root / "workspaces"
+            workspaces.mkdir()
+            identity_file = root / "id_fixture"
+            identity_file.write_text("fixture", encoding="utf-8")
+            profile = replace(
+                self.profile("remote_docker"),
+                source_loading_mode="python_overlay",
+            )
+            binding = RuntimeTargetBinding(
+                backend="remote_docker",
+                local_workspace_parent=workspaces,
+                host_alias="gpu-exact-fixture",
+                remote_user="runner",
+                identity_file=identity_file,
+                docker_binary="docker-fixture",
+                ssh_binary="ssh-fixture",
+                rsync_binary="rsync-fixture",
+            )
+            fixture = LocalBackendFixture(root, profile=profile, binding=binding)
+            runner = RecordingArgvRunner()
+            backend = RemoteDockerRuntimeBackend(argv_runner=runner)
+
+            lease = backend.prepare(profile, fixture.context)
+            backend.run(lease, ("python", "-V"), ".", 1_000)
+            execute = next(
+                command
+                for command, _, _ in runner.calls
+                if command[0] == "ssh-fixture"
+                and "docker-fixture exec" in command[-1]
+            )
+            cleanup = backend.cleanup(lease)
+
+            self.assertIn(
+                "PYTHONPATH=/tmp/op_bench_runtime/site-packages",
+                execute[-1],
+            )
+            self.assertNotIn("PYTHONPATH=/workspace", execute[-1])
+            self.assertTrue(cleanup.report.all_released)
 
     def test_remote_sync_fingerprint_ignores_ambient_git_authority(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

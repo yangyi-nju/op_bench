@@ -18,6 +18,7 @@ from op_bench.runtime.contracts import (
     ContentIdentity,
 )
 from op_bench.runtime.events import EventJournal
+from op_bench.runtime.source_loading import RuntimeSourcePreparation
 from op_bench.runtime.task_view import assert_public_artifact_safe
 from op_bench.runtime.validation import ContractError, require_bool, require_int, require_str
 from op_bench.runtime.workspace import (
@@ -70,6 +71,7 @@ class RegisteredTest:
     command: tuple[str, ...]
     cwd: str
     timeout_ms: int
+    preparation: RuntimeSourcePreparation | None = None
 
     def __post_init__(self) -> None:
         require_str(self.selector_id, "selector_id")
@@ -79,6 +81,13 @@ class RegisteredTest:
             require_str(part, f"command[{index}]")
         _normalize_cwd(self.cwd)
         require_int(self.timeout_ms, "timeout_ms", minimum=1)
+        if self.preparation is not None and not isinstance(
+            self.preparation,
+            RuntimeSourcePreparation,
+        ):
+            raise ContractError(
+                "preparation: expected RuntimeSourcePreparation or None"
+            )
 
 
 @dataclass(frozen=True)
@@ -683,9 +692,57 @@ class CanonicalActionService:
         registered = self._test_registry[selector_id]
         cwd = _normalize_cwd(registered.cwd)
         self._validate_cwd(cwd)
+        command_count = 1 + (1 if registered.preparation is not None else 0)
+        if self._commands + command_count > self.budget_policy.max_commands:
+            raise _ActionFailure("budget_exhausted", "command budget is exhausted")
+        self._tests += 1
+        if registered.preparation is not None:
+            preparation = registered.preparation
+            preparation_cwd = _normalize_cwd(preparation.cwd)
+            self._validate_cwd(preparation_cwd)
+            preparation_timeout_ms = min(
+                preparation.timeout_ms,
+                self._execution_time_limit(request),
+            )
+            self._commands += 1
+            prepared = self._command_backend.run(
+                preparation.command,
+                preparation_cwd,
+                preparation_timeout_ms,
+            )
+            if not isinstance(prepared, CommandExecution):
+                raise _ActionFailure(
+                    "runtime_error",
+                    "command backend returned invalid execution",
+                )
+            if (
+                prepared.command != preparation.command
+                or prepared.cwd != preparation_cwd
+            ):
+                raise _ActionFailure(
+                    "runtime_error",
+                    "command backend returned mismatched execution metadata",
+                )
+            if prepared.timed_out or prepared.exit_code != 0:
+                outcome = self._execution_outcome(prepared)
+                return _Outcome(
+                    data={
+                        "selector_id": selector_id,
+                        "phase": "source_preparation",
+                        **outcome.data,
+                    },
+                    message=(
+                        "test source preparation timed out"
+                        if prepared.timed_out
+                        else "test source preparation failed"
+                    ),
+                    output_bytes=outcome.output_bytes,
+                    ok=False,
+                    error_code="timeout" if prepared.timed_out else "runtime_error",
+                )
         remaining_ms = self._execution_time_limit(request)
         timeout_ms = min(registered.timeout_ms, remaining_ms)
-        self._tests += 1
+        self._commands += 1
         execution = self._command_backend.run(registered.command, cwd, timeout_ms)
         if not isinstance(execution, CommandExecution):
             raise _ActionFailure("runtime_error", "command backend returned invalid execution")
