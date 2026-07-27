@@ -14,7 +14,13 @@ from op_bench.runtime.integrity import load_run_manifest_artifact, verify_run_ar
 from op_bench.runtime.mcp import McpAdapterTrace
 from op_bench.runtime.resume import parse_attempt_ledger
 from op_bench.runtime.task_view import assert_public_artifact_safe
-from op_bench.runtime.validation import ContractError, require_str
+from op_bench.runtime.validation import (
+    ContractError,
+    require_exact_fields,
+    require_int,
+    require_list,
+    require_str,
+)
 from op_bench.runtime.workspace import _patch_paths_from_bytes
 
 
@@ -61,6 +67,64 @@ class McpExperimentCohortContract:
             for repeat in repeats
         )
 
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "profile_id": self.profile_id,
+            "task_repeats": [
+                {
+                    "task_id": task_id,
+                    "repeats": list(repeats),
+                }
+                for task_id, repeats in self.task_repeats
+            ],
+        }
+
+    @classmethod
+    def from_dict(
+        cls,
+        value: object,
+        *,
+        path: str = "cohort",
+    ) -> "McpExperimentCohortContract":
+        data = require_exact_fields(
+            value,
+            path,
+            ("profile_id", "task_repeats"),
+        )
+        task_repeats: list[tuple[str, tuple[int, ...]]] = []
+        for index, item in enumerate(
+            require_list(data["task_repeats"], f"{path}.task_repeats")
+        ):
+            selected = require_exact_fields(
+                item,
+                f"{path}.task_repeats[{index}]",
+                ("task_id", "repeats"),
+            )
+            repeats = require_list(
+                selected["repeats"],
+                f"{path}.task_repeats[{index}].repeats",
+            )
+            task_repeats.append(
+                (
+                    require_str(
+                        selected["task_id"],
+                        f"{path}.task_repeats[{index}].task_id",
+                    ),
+                    tuple(
+                        require_int(
+                            repeat,
+                            f"{path}.task_repeats[{index}].repeats[{repeat_index}]",
+                            minimum=1,
+                        )
+                        for repeat_index, repeat in enumerate(repeats)
+                    ),
+                )
+            )
+        return cls(
+            profile_id=require_str(data["profile_id"], f"{path}.profile_id"),
+            task_repeats=tuple(task_repeats),
+        )
+
 
 @dataclass(frozen=True)
 class McpExperimentContract:
@@ -77,8 +141,8 @@ class McpExperimentContract:
             pattern=r"sha256:[0-9a-f]{64}",
         )
         require_str(self.platform_version, "platform_version")
-        if not isinstance(self.cohorts, tuple) or len(self.cohorts) != 4:
-            raise ContractError("cohorts: expected exactly four cohort contracts")
+        if not isinstance(self.cohorts, tuple) or not self.cohorts:
+            raise ContractError("cohorts: expected non-empty cohort contracts")
         if not all(isinstance(item, McpExperimentCohortContract) for item in self.cohorts):
             raise ContractError("cohorts: expected MCP cohort contracts")
         all_tasks = [task_id for cohort in self.cohorts for task_id in cohort.task_ids]
@@ -88,6 +152,54 @@ class McpExperimentContract:
     @property
     def expected_attempt_count(self) -> int:
         return sum(len(item.expected_attempts) for item in self.cohorts)
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "schema_version": "v1",
+            "dataset_identifier": self.dataset_identifier,
+            "dataset_digest": self.dataset_digest,
+            "platform_version": self.platform_version,
+            "cohorts": [cohort.to_dict() for cohort in self.cohorts],
+        }
+
+    @classmethod
+    def from_dict(cls, value: object) -> "McpExperimentContract":
+        data = require_exact_fields(
+            value,
+            "mcp_experiment_contract",
+            (
+                "schema_version",
+                "dataset_identifier",
+                "dataset_digest",
+                "platform_version",
+                "cohorts",
+            ),
+        )
+        if data["schema_version"] != "v1":
+            raise ContractError("schema_version: expected 'v1'")
+        return cls(
+            dataset_identifier=require_str(
+                data["dataset_identifier"],
+                "dataset_identifier",
+            ),
+            dataset_digest=require_str(
+                data["dataset_digest"],
+                "dataset_digest",
+            ),
+            platform_version=require_str(
+                data["platform_version"],
+                "platform_version",
+            ),
+            cohorts=tuple(
+                McpExperimentCohortContract.from_dict(
+                    item,
+                    path=f"cohorts[{index}]",
+                )
+                for index, item in enumerate(
+                    require_list(data["cohorts"], "cohorts")
+                )
+            ),
+        )
 
 
 FORMAL_MCP_EXPERIMENT_CONTRACT = McpExperimentContract(
@@ -246,6 +358,41 @@ def _canonical_object(raw: bytes, label: str) -> dict[str, object]:
     return value
 
 
+def load_mcp_experiment_contract(path: Path | str) -> McpExperimentContract:
+    contract_path = Path(path)
+    if contract_path.is_symlink():
+        raise ContractError("contract_path: symlink is denied")
+    try:
+        descriptor = os.open(
+            contract_path,
+            os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0),
+        )
+    except OSError as exc:
+        raise ContractError("contract_path: cannot open regular file") from exc
+    try:
+        metadata = os.fstat(descriptor)
+        if not stat.S_ISREG(metadata.st_mode):
+            raise ContractError("contract_path: expected regular file")
+        if metadata.st_size > _MAX_ARTIFACT_BYTES:
+            raise ContractError("contract_path: file exceeds size limit")
+        chunks: list[bytes] = []
+        remaining = _MAX_ARTIFACT_BYTES + 1
+        while remaining:
+            chunk = os.read(descriptor, min(65_536, remaining))
+            if not chunk:
+                break
+            chunks.append(chunk)
+            remaining -= len(chunk)
+        raw = b"".join(chunks)
+        if len(raw) > _MAX_ARTIFACT_BYTES:
+            raise ContractError("contract_path: file exceeds size limit")
+    finally:
+        os.close(descriptor)
+    return McpExperimentContract.from_dict(
+        _canonical_object(raw, "MCP experiment contract")
+    )
+
+
 def _canonical_lines(raw: bytes, label: str) -> list[dict[str, object]]:
     if raw and not raw.endswith(b"\n"):
         raise ContractError(f"{label}: missing final newline")
@@ -298,10 +445,8 @@ def build_mcp_experiment_report(
     experiment_contract: McpExperimentContract,
 ) -> tuple[dict[str, object], dict[str, object]]:
     if isinstance(run_roots, (str, bytes)) or not isinstance(run_roots, Sequence):
-        raise ContractError("run_roots: expected a sequence of four Paths")
+        raise ContractError("run_roots: expected a sequence of Paths")
     roots = tuple(run_roots)
-    if len(roots) != 4:
-        raise ContractError("run_roots: expected exactly four roots")
     adapter_id = require_str(expected_adapter_id, "expected_adapter_id")
     model_id = require_str(expected_model_id, "expected_model_id")
     cli_version = require_str(
@@ -312,6 +457,8 @@ def build_mcp_experiment_report(
         raise ContractError("expected_adapter_id: expected codex_mcp_canonical")
     if not isinstance(experiment_contract, McpExperimentContract):
         raise ContractError("experiment_contract: expected McpExperimentContract")
+    if len(roots) != len(experiment_contract.cohorts):
+        raise ContractError("run_roots: count does not match cohort contract")
 
     cohort_rows: list[dict[str, object]] = []
     attempt_rows: list[dict[str, object]] = []
@@ -616,7 +763,7 @@ def build_mcp_experiment_report(
         sorted(len(item.expected_attempts) for item in experiment_contract.cohorts)
     )
     if tuple(sorted(selected_counts)) != expected_counts:
-        raise ContractError("four cohort selected counts do not match contract")
+        raise ContractError("cohort selected counts do not match contract")
     if matched_contracts != set(range(len(experiment_contract.cohorts))):
         raise ContractError("experiment cohort contract is incomplete")
     attempt_rows.sort(
@@ -630,7 +777,7 @@ def build_mcp_experiment_report(
     cohort_rows.sort(key=lambda item: item["cohort_id"])
     total = len(attempt_rows)
     if total != experiment_contract.expected_attempt_count:
-        raise ContractError("four cohort report has the wrong selected Attempt count")
+        raise ContractError("cohort report has the wrong selected Attempt count")
     identities = {
         "adapter_id": adapter_id,
         "model_id": model_id,
@@ -706,7 +853,10 @@ def render_mcp_experiment_markdown(
 ) -> str:
     totals = summary["totals"]
     lines = [
-        "# OpBench v0.6 MCP Agent Experiment",
+        (
+            f"# OpBench {index['dataset_identifier']} MCP Validation "
+            f"({index['platform_version']})"
+        ),
         "",
         f"- Adapter: `{summary['adapter_id']}`",
         f"- Model: `{summary['model_id']}`",
@@ -779,6 +929,7 @@ __all__ = [
     "McpExperimentCohortContract",
     "McpExperimentContract",
     "build_mcp_experiment_report",
+    "load_mcp_experiment_contract",
     "render_mcp_experiment_markdown",
     "write_mcp_experiment_report",
 ]

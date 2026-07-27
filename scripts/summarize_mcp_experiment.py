@@ -16,6 +16,7 @@ from op_bench.runtime.experiment_report import (
     FORMAL_MCP_EXPERIMENT_CONTRACT,
     McpExperimentContract,
     build_mcp_experiment_report,
+    load_mcp_experiment_contract,
     write_mcp_experiment_report,
 )
 from op_bench.runtime.validation import ContractError
@@ -23,28 +24,34 @@ from op_bench.runtime.validation import ContractError
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Build the deterministic public report for four MCP cohorts."
+        description="Build a deterministic public MCP validation report."
     )
     parser.add_argument("--run-root", action="append", required=True)
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--expected-model", required=True)
     parser.add_argument("--expected-cli-version", required=True)
+    parser.add_argument("--contract")
     return parser
 
 
 def main(
     argv: list[str] | None = None,
     *,
-    experiment_contract: McpExperimentContract = FORMAL_MCP_EXPERIMENT_CONTRACT,
+    experiment_contract: McpExperimentContract | None = None,
 ) -> int:
     args = build_parser().parse_args(argv)
     try:
+        selected_contract = (
+            load_mcp_experiment_contract(Path(args.contract))
+            if args.contract is not None
+            else experiment_contract or FORMAL_MCP_EXPERIMENT_CONTRACT
+        )
         index, summary = build_mcp_experiment_report(
             tuple(Path(value) for value in args.run_root),
             expected_adapter_id="codex_mcp_canonical",
             expected_model_id=args.expected_model,
             expected_codex_cli_version=args.expected_cli_version,
-            experiment_contract=experiment_contract,
+            experiment_contract=selected_contract,
         )
         write_mcp_experiment_report(Path(args.output_dir), index, summary)
     except (ContractError, OSError) as exc:
