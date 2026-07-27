@@ -28,6 +28,14 @@ from op_bench.factory.lifecycle import (
     validate_admission_chain,
 )
 from op_bench.factory.promotion import build_verified_admission_chain
+from op_bench.factory.release import (
+    DatasetReleaseInput,
+    DatasetReleaseManifest,
+    DatasetReleaseOutput,
+    VerifiedReleaseEntry,
+    build_dataset_release,
+    rebuild_release_datasets,
+)
 from op_bench.factory.screening import (
     V07_BOUNDARY_SCREENING_V1,
     ScreeningRuleSet,
@@ -49,6 +57,9 @@ __all__ = [
     "ChangedFile",
     "DatasetFreezeEntry",
     "DatasetFreezeManifest",
+    "DatasetReleaseInput",
+    "DatasetReleaseManifest",
+    "DatasetReleaseOutput",
     "DecisionRecord",
     "FactoryAdmissionRecord",
     "FactoryArtifactStore",
@@ -58,10 +69,12 @@ __all__ = [
     "ScreeningFinding",
     "ScreeningRuleSet",
     "V07_BOUNDARY_SCREENING_V1",
+    "VerifiedReleaseEntry",
     "derive_disposition",
     "advance_admission",
     "build_verified_admission_chain",
     "build_freeze_manifest",
+    "build_dataset_release",
     "factory_content_hash",
     "freeze_dataset_bytes",
     "keyword_pack",
@@ -69,6 +82,7 @@ __all__ = [
     "match_keyword_packs",
     "required_evidence",
     "rebuild_dataset_manifest",
+    "rebuild_release_datasets",
     "screen_candidate",
     "validate_admission_chain",
     "validate_problem_taxonomy",

@@ -1,0 +1,252 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_type",
+    "schema_version",
+    "release_id",
+    "release_version",
+    "inputs",
+    "registries",
+    "entries",
+    "outputs",
+    "created_at",
+    "content_hash"
+  ],
+  "properties": {
+    "contract_type": {
+      "const": "dataset_release"
+    },
+    "schema_version": {
+      "const": "v1"
+    },
+    "release_id": {
+      "type": "string",
+      "pattern": "^release:v1:[0-9a-f]{64}$"
+    },
+    "release_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "inputs": {
+      "type": "array",
+      "minItems": 3,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/input"
+      }
+    },
+    "registries": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "environments",
+        "sources"
+      ],
+      "properties": {
+        "environments": {
+          "$ref": "#/$defs/relative_path"
+        },
+        "sources": {
+          "$ref": "#/$defs/relative_path"
+        }
+      }
+    },
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/entry"
+      }
+    },
+    "outputs": {
+      "type": "array",
+      "minItems": 3,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/output"
+      }
+    },
+    "created_at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "content_hash": {
+      "$ref": "#/$defs/content_hash"
+    }
+  },
+  "$defs": {
+    "content_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "relative_path": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$"
+    },
+    "artifact_reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_type",
+        "artifact_id",
+        "content_hash",
+        "relative_path"
+      ],
+      "properties": {
+        "artifact_type": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "artifact_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "content_hash": {
+          "$ref": "#/$defs/content_hash"
+        },
+        "relative_path": {
+          "$ref": "#/$defs/relative_path"
+        }
+      }
+    },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role",
+        "dataset",
+        "provenance"
+      ],
+      "properties": {
+        "role": {
+          "type": "string",
+          "enum": [
+            "cumulative_base",
+            "precision_base",
+            "boundary_freeze"
+          ]
+        },
+        "dataset": {
+          "$ref": "#/$defs/artifact_reference"
+        },
+        "provenance": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/artifact_reference"
+            }
+          ]
+        }
+      }
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "task",
+        "admission_evidence",
+        "task_id",
+        "task_path",
+        "admission_evidence_path",
+        "runtime_tier",
+        "origin",
+        "slices",
+        "admission_state"
+      ],
+      "properties": {
+        "task": {
+          "$ref": "#/$defs/artifact_reference"
+        },
+        "admission_evidence": {
+          "$ref": "#/$defs/artifact_reference"
+        },
+        "task_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "task_path": {
+          "$ref": "#/$defs/relative_path"
+        },
+        "admission_evidence_path": {
+          "$ref": "#/$defs/relative_path"
+        },
+        "runtime_tier": {
+          "type": "string",
+          "minLength": 1
+        },
+        "origin": {
+          "type": "string",
+          "enum": [
+            "inherited_cumulative",
+            "inherited_precision",
+            "restored_precision",
+            "factory_boundary"
+          ]
+        },
+        "slices": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "cumulative",
+              "boundary",
+              "precision"
+            ]
+          }
+        },
+        "admission_state": {
+          "const": "verified"
+        }
+      }
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role",
+        "dataset_id",
+        "dataset_version",
+        "task_ids",
+        "generated_dataset_hash"
+      ],
+      "properties": {
+        "role": {
+          "type": "string",
+          "enum": [
+            "cumulative",
+            "boundary",
+            "precision"
+          ]
+        },
+        "dataset_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "dataset_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "task_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "generated_dataset_hash": {
+          "$ref": "#/$defs/content_hash"
+        }
+      }
+    }
+  }
+}
