@@ -28,7 +28,10 @@ from op_bench.factory.release import (  # noqa: E402
     build_dataset_release,
     rebuild_release_datasets,
 )
-from op_bench.integrity import replay_spec_hash  # noqa: E402
+from op_bench.integrity import (  # noqa: E402
+    REPLAY_SPEC_HASH_KIND,
+    replay_spec_hash,
+)
 from op_bench.registry import (  # noqa: E402
     EnvironmentRegistry,
     SourceRegistry,
@@ -294,7 +297,24 @@ def _validate_entry(
         raise ContractError(
             f"entries.{entry.task_id}: Admission identity mismatch"
         )
-    if evidence.get("task_manifest_hash") != replay_spec_hash(task):
+    hash_kind = evidence.get("task_manifest_hash_kind")
+    if hash_kind == REPLAY_SPEC_HASH_KIND:
+        expected_task_hash = replay_spec_hash(task)
+    elif hash_kind is None:
+        expected_task_hash = (
+            "sha256:"
+            + hashlib.sha256(
+                _read_regular(
+                    task_path,
+                    f"entries.{entry.task_id}.task",
+                )
+            ).hexdigest()
+        )
+    else:
+        raise ContractError(
+            f"entries.{entry.task_id}: unsupported replay hash kind"
+        )
+    if evidence.get("task_manifest_hash") != expected_task_hash:
         raise ContractError(
             f"entries.{entry.task_id}: replay hash drift"
         )

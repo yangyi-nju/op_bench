@@ -357,6 +357,61 @@ class DatasetReleaseCliTests(unittest.TestCase):
                 {"exception": 1},
             )
 
+    def test_cli_accepts_verified_legacy_raw_task_hash_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            request_path = self._fixture(root)
+            task_id = "pytorch__149693__lazylinear_init"
+            task_path = (
+                root
+                / "tasks"
+                / "pytorch"
+                / TASKS["base"]
+                / "task.json"
+            )
+            evidence_path = (
+                root
+                / "tasks"
+                / "pytorch"
+                / TASKS["base"]
+                / "admission"
+                / "evidence.json"
+            )
+            evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+            evidence.pop("task_manifest_hash_kind")
+            evidence["task_manifest_hash"] = file_hash(task_path)
+            evidence_path.write_text(
+                json.dumps(evidence, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+            request = json.loads(request_path.read_text(encoding="utf-8"))
+            entry = next(
+                item
+                for item in request["entries"]
+                if item["task_id"] == task_id
+            )
+            entry["admission_evidence"]["content_hash"] = file_hash(
+                evidence_path
+            )
+            request_path.write_text(
+                canonical_json(request) + "\n",
+                encoding="utf-8",
+            )
+
+            result = compose_main(
+                [
+                    "--input",
+                    str(request_path),
+                    "--repo-root",
+                    str(root),
+                ]
+            )
+
+            self.assertEqual(result, 0)
+            self.assertTrue(
+                (root / "factory" / "release_manifest.json").is_file()
+            )
+
     def test_cli_rejects_reference_hash_drift_without_output(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
