@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import unittest
 
-from op_bench.curation import curate_dataset, summarize_dataset
+from op_bench.curation import (
+    curate_dataset,
+    summarize_dataset,
+    summarize_verified_dataset,
+)
 
 
 class DatasetCurationTests(unittest.TestCase):
@@ -24,6 +28,29 @@ class DatasetCurationTests(unittest.TestCase):
         self.assertEqual(summary["admission_status"], {"draft": 1, "verified": 1})
         self.assertEqual(summary["environment_status"], {"pending": 1, "ready": 1})
         self.assertEqual(summary["runtime_tier"], {"cpu_python_overlay": 1, "unknown": 1})
+
+    def test_verified_summary_binds_dataset_and_taxonomy(self) -> None:
+        source = self._dataset()
+        source["status"] = "verified"
+        source["tasks"] = [source["tasks"][0]]
+
+        summary = summarize_verified_dataset(
+            source,
+            dataset_hash="sha256:" + "a" * 64,
+            task_metadata={
+                "verified": {
+                    "problem_dimension": "boundary",
+                    "problem_subclass": "B2",
+                    "failure_contract": "exception",
+                }
+            },
+        )
+
+        self.assertEqual(summary["dataset_hash"], "sha256:" + "a" * 64)
+        self.assertEqual(summary["problem_dimension"], {"boundary": 1})
+        self.assertEqual(summary["problem_subclass"], {"B2": 1})
+        self.assertEqual(summary["failure_contract"], {"exception": 1})
+        self.assertEqual(summary["verified_admission_evidence"], 0)
 
     def _dataset(self) -> dict[str, object]:
         return {

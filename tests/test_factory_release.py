@@ -76,7 +76,15 @@ def entry(
     origin: str,
     slices: tuple[str, ...],
     runtime_tier: str = "cpu_python_overlay",
+    problem_subclass: str = "unclassified",
+    failure_contract: str = "unclassified",
 ) -> VerifiedReleaseEntry:
+    problem_dimension = {
+        "inherited_cumulative": "unclassified",
+        "inherited_precision": "precision",
+        "restored_precision": "precision",
+        "factory_boundary": "boundary",
+    }[origin]
     task_dir = f"tasks/pytorch/{task_id}"
     return VerifiedReleaseEntry(
         task=reference(
@@ -95,6 +103,9 @@ def entry(
         task_path=task_dir,
         admission_evidence_path=f"{task_dir}/admission/evidence.json",
         runtime_tier=runtime_tier,
+        problem_dimension=problem_dimension,
+        problem_subclass=problem_subclass,
+        failure_contract=failure_contract,
         origin=origin,
         slices=slices,
         admission_state="verified",
@@ -114,12 +125,14 @@ def fixture_entries() -> tuple[VerifiedReleaseEntry, ...]:
             "2",
             origin="inherited_precision",
             slices=("cumulative", "precision"),
+            problem_subclass="P3",
         ),
         entry(
             "pytorch__100003__restored",
             "3",
             origin="restored_precision",
             slices=("cumulative", "precision"),
+            problem_subclass="P4",
         ),
         entry(
             "pytorch__100004__boundary",
@@ -127,6 +140,8 @@ def fixture_entries() -> tuple[VerifiedReleaseEntry, ...]:
             origin="factory_boundary",
             slices=("cumulative", "boundary"),
             runtime_tier="cpu_source_snapshot_fuller",
+            problem_subclass="B3",
+            failure_contract="exception",
         ),
     )
 
@@ -143,8 +158,18 @@ def build_fixture(
             release_input("boundary_freeze", "c", freeze=True),
         ),
         registries={
-            "environments": "environments/registry.json",
-            "sources": "sources/registry.json",
+            "environments": reference(
+                "environment_registry",
+                "registry:environments:v1",
+                "environments/registry.json",
+                "d",
+            ),
+            "sources": reference(
+                "source_registry",
+                "registry:sources:v1",
+                "sources/registry.json",
+                "e",
+            ),
         },
         entries=fixture_entries(),
         dataset_ids={
@@ -281,6 +306,19 @@ class DatasetReleaseContractTests(unittest.TestCase):
             "generated_dataset_hash",
         ):
             DatasetReleaseManifest.from_dict(payload)
+
+        release = build_fixture()
+        with self.assertRaisesRegex(ContractError, "release_id"):
+            replace(
+                release,
+                registries={
+                    **dict(release.registries),
+                    "sources": replace(
+                        release.registries["sources"],
+                        content_hash="sha256:" + "9" * 64,
+                    ),
+                },
+            )
 
     def test_entry_rejects_identity_and_path_drift(self) -> None:
         selected = fixture_entries()[0]

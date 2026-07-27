@@ -37,6 +37,13 @@ RELEASE_ORIGIN_SLICES = {
     "restored_precision": ("cumulative", "precision"),
     "factory_boundary": ("cumulative", "boundary"),
 }
+RELEASE_FAILURE_CONTRACTS = (
+    "wrong-result",
+    "exception",
+    "crash-oob",
+    "silent-acceptance",
+    "unclassified",
+)
 
 
 @dataclass(frozen=True)
@@ -114,6 +121,9 @@ class VerifiedReleaseEntry:
     task_path: str
     admission_evidence_path: str
     runtime_tier: str
+    problem_dimension: str
+    problem_subclass: str
+    failure_contract: str
     origin: str
     slices: tuple[str, ...]
     admission_state: str
@@ -127,6 +137,9 @@ class VerifiedReleaseEntry:
             "task_path",
             "admission_evidence_path",
             "runtime_tier",
+            "problem_dimension",
+            "problem_subclass",
+            "failure_contract",
             "origin",
             "slices",
             "admission_state",
@@ -174,6 +187,26 @@ class VerifiedReleaseEntry:
             )
         require_str(self.runtime_tier, "runtime_tier")
         require_enum(
+            self.problem_dimension,
+            "problem_dimension",
+            ("boundary", "precision", "unclassified"),
+        )
+        subclasses = {
+            "boundary": ("B1", "B2", "B3", "B4", "B5"),
+            "precision": ("P1", "P2", "P3", "P4", "P5"),
+            "unclassified": ("unclassified",),
+        }[self.problem_dimension]
+        require_enum(
+            self.problem_subclass,
+            "problem_subclass",
+            subclasses,
+        )
+        require_enum(
+            self.failure_contract,
+            "failure_contract",
+            RELEASE_FAILURE_CONTRACTS,
+        )
+        require_enum(
             self.origin,
             "origin",
             RELEASE_ORIGIN_SLICES,
@@ -184,6 +217,24 @@ class VerifiedReleaseEntry:
         if self.slices != expected_slices:
             raise ContractError(
                 f"slices: origin {self.origin!r} requires {expected_slices!r}"
+            )
+        expected_dimension = {
+            "inherited_cumulative": "unclassified",
+            "inherited_precision": "precision",
+            "restored_precision": "precision",
+            "factory_boundary": "boundary",
+        }[self.origin]
+        if self.problem_dimension != expected_dimension:
+            raise ContractError(
+                f"problem_dimension: origin {self.origin!r} requires "
+                f"{expected_dimension!r}"
+            )
+        if (
+            self.origin == "factory_boundary"
+            and self.failure_contract == "unclassified"
+        ):
+            raise ContractError(
+                "failure_contract: factory_boundary must be classified"
             )
         if self.admission_state != "verified":
             raise ContractError("admission_state: expected 'verified'")
@@ -208,6 +259,9 @@ class VerifiedReleaseEntry:
             "task_path": self.task_path,
             "admission_evidence_path": self.admission_evidence_path,
             "runtime_tier": self.runtime_tier,
+            "problem_dimension": self.problem_dimension,
+            "problem_subclass": self.problem_subclass,
+            "failure_contract": self.failure_contract,
             "origin": self.origin,
             "slices": list(self.slices),
             "admission_state": self.admission_state,
@@ -243,6 +297,18 @@ class VerifiedReleaseEntry:
             runtime_tier=require_str(
                 data["runtime_tier"],
                 f"{path}.runtime_tier",
+            ),
+            problem_dimension=require_str(
+                data["problem_dimension"],
+                f"{path}.problem_dimension",
+            ),
+            problem_subclass=require_str(
+                data["problem_subclass"],
+                f"{path}.problem_subclass",
+            ),
+            failure_contract=require_str(
+                data["failure_contract"],
+                f"{path}.failure_contract",
             ),
             origin=require_str(data["origin"], f"{path}.origin"),
             slices=tuple(
@@ -333,7 +399,7 @@ class DatasetReleaseOutput:
 def _dataset_payload(
     output: DatasetReleaseOutput,
     *,
-    registries: Mapping[str, str],
+    registries: Mapping[str, FactoryArtifactReference],
     entries: Sequence[VerifiedReleaseEntry],
 ) -> dict[str, JsonValue]:
     selected = [
@@ -345,7 +411,10 @@ def _dataset_payload(
         "dataset_id": output.dataset_id,
         "version": output.dataset_version,
         "status": "verified",
-        "registries": dict(registries),
+        "registries": {
+            key: value.relative_path
+            for key, value in registries.items()
+        },
         "tasks": selected,
     }
 
@@ -358,7 +427,7 @@ class DatasetReleaseManifest:
     release_id: str
     release_version: str
     inputs: tuple[DatasetReleaseInput, ...]
-    registries: Mapping[str, str]
+    registries: Mapping[str, FactoryArtifactReference]
     entries: tuple[VerifiedReleaseEntry, ...]
     outputs: tuple[DatasetReleaseOutput, ...]
     created_at: str
@@ -384,7 +453,7 @@ class DatasetReleaseManifest:
         *,
         release_version: str,
         inputs: tuple[DatasetReleaseInput, ...],
-        registries: Mapping[str, str],
+        registries: Mapping[str, FactoryArtifactReference],
         entries: tuple[VerifiedReleaseEntry, ...],
         outputs: tuple[DatasetReleaseOutput, ...],
     ) -> str:
@@ -392,7 +461,10 @@ class DatasetReleaseManifest:
             {
                 "release_version": release_version,
                 "inputs": [item.to_dict() for item in inputs],
-                "registries": dict(registries),
+                "registries": {
+                    key: value.to_dict()
+                    for key, value in registries.items()
+                },
                 "entries": [item.to_dict() for item in entries],
                 "outputs": [item.to_dict() for item in outputs],
             }
@@ -421,16 +493,30 @@ class DatasetReleaseManifest:
             )
         if not isinstance(self.registries, Mapping):
             raise ContractError("registries: expected object")
-        normalized_registries: dict[str, str] = {}
+        normalized_registries: dict[
+            str,
+            FactoryArtifactReference,
+        ] = {}
         for name, value in self.registries.items():
             if name not in ("environments", "sources"):
                 raise ContractError(
                     f"registries: unsupported registry {name!r}"
                 )
-            normalized_registries[name] = _validate_relative_path(
-                value,
-                f"registries.{name}",
+            if not isinstance(value, FactoryArtifactReference):
+                raise ContractError(
+                    f"registries.{name}: expected FactoryArtifactReference"
+                )
+            expected_type = (
+                "environment_registry"
+                if name == "environments"
+                else "source_registry"
             )
+            if value.artifact_type != expected_type:
+                raise ContractError(
+                    f"registries.{name}.artifact_type: "
+                    f"expected {expected_type!r}"
+                )
+            normalized_registries[name] = value
         if tuple(normalized_registries) != tuple(
             sorted(normalized_registries)
         ):
@@ -525,7 +611,10 @@ class DatasetReleaseManifest:
             "release_id": self.release_id,
             "release_version": self.release_version,
             "inputs": [item.to_dict() for item in self.inputs],
-            "registries": dict(self.registries),
+            "registries": {
+                key: value.to_dict()
+                for key, value in self.registries.items()
+            },
             "entries": [item.to_dict() for item in self.entries],
             "outputs": [item.to_dict() for item in self.outputs],
             "created_at": self.created_at,
@@ -551,8 +640,8 @@ class DatasetReleaseManifest:
                 f"{path}.schema_version: expected {cls.schema_version!r}"
             )
         inputs = require_list(data["inputs"], f"{path}.inputs")
-        registries = data["registries"]
-        if not isinstance(registries, Mapping):
+        registries_value = data["registries"]
+        if not isinstance(registries_value, Mapping):
             raise ContractError(f"{path}.registries: expected object")
         entries = require_list(data["entries"], f"{path}.entries")
         outputs = require_list(data["outputs"], f"{path}.outputs")
@@ -572,7 +661,13 @@ class DatasetReleaseManifest:
                 )
                 for index, item in enumerate(inputs)
             ),
-            registries=dict(registries),
+            registries={
+                key: FactoryArtifactReference.from_dict(
+                    item,
+                    path=f"{path}.registries.{key}",
+                )
+                for key, item in registries_value.items()
+            },
             entries=tuple(
                 VerifiedReleaseEntry.from_dict(
                     item,
@@ -608,7 +703,7 @@ def build_dataset_release(
     *,
     release_version: str,
     inputs: Sequence[DatasetReleaseInput],
-    registries: Mapping[str, str],
+    registries: Mapping[str, FactoryArtifactReference],
     entries: Sequence[VerifiedReleaseEntry],
     dataset_ids: Mapping[str, str],
     created_at: str,
@@ -643,9 +738,13 @@ def build_dataset_release(
         raise ContractError(
             f"dataset_ids: expected roles {RELEASE_SLICE_ROLES!r}"
         )
-    selected_dataset_ids = tuple(dataset_ids[role] for role in RELEASE_SLICE_ROLES)
+    selected_dataset_ids = tuple(
+        dataset_ids[role] for role in RELEASE_SLICE_ROLES
+    )
     if len(selected_dataset_ids) != len(set(selected_dataset_ids)):
         raise ContractError("dataset_ids: duplicate Dataset identity")
+    if not isinstance(registries, Mapping):
+        raise ContractError("registries: expected object")
     normalized_registries = {
         key: registries[key] for key in sorted(registries)
     }
@@ -740,6 +839,7 @@ __all__ = [
     "DatasetReleaseManifest",
     "DatasetReleaseOutput",
     "RELEASE_INPUT_ROLES",
+    "RELEASE_FAILURE_CONTRACTS",
     "RELEASE_ORIGIN_SLICES",
     "RELEASE_SLICE_ROLES",
     "VerifiedReleaseEntry",
