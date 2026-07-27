@@ -2,9 +2,10 @@
 
 > 状态：已批准的项目方向，本地文档重写稿
 >
-> 更新日期：2026-07-17
+> 更新日期：2026-07-28
 >
-> 当前工程基线：v0.5，17 条 verified task，51 次真实 Codex attempt
+> 当前工程基线：`opbench-v0.7.0` Completed，25 条 verified task；
+> 当前路线：v0.8 Device/API Compatibility 与 Evaluation/Scoring RC
 >
 > 适用范围：v0.6 至 v1.0，并为 v2.0 预留演进边界
 
@@ -191,9 +192,9 @@ v0.5 的 51 次 Attempt 永久标记为 Legacy Baseline，不重命名为 v0.6 P
 | 版本 | 目标窗口 | 核心目标 | 退出条件 |
 | --- | --- | --- | --- |
 | v0.5 | 已完成 | 17 task、51 次真实 Codex Attempt | Legacy Evidence 冻结 |
-| v0.6 | 2026-07-17 至 09-15 | Demo → 规范 Agent 评测平台 | 协议、Runtime、MCP、轨迹、Fresh Eval、Replay、真实 Codex 通过 |
-| v0.7 | 2026-09-16 至 10-31 | Dataset Factory 与 Boundary Slice | 4–6 条高质量 Boundary Task、完整 Admission |
-| v0.8 | 2026-11-01 至 12-20 | Compatibility 与 Evaluation/Scoring RC | Operator Core 分层、Compatibility Slice、Spec RC |
+| v0.6 | 已完成 | Demo → 规范 Agent 评测平台 | 协议、Runtime、MCP、轨迹、Fresh Eval、Replay、真实 Codex 通过 |
+| v0.7 | 已完成 | Dataset Factory 与 Boundary Slice | 6 条高质量 Boundary Task、完整 Admission、25-task Release |
+| v0.8 | 当前计划 | Compatibility 与 Evaluation/Scoring RC | Operator Core 分层、Compatibility Slice、Spec RC |
 | v0.9 | 2026-12-21 至 2027-02-14 | 正式多 Agent 实验与反馈消融 | Cohort 冻结、重复完整、统计和轨迹分析完成 |
 | Contingency | 2027-02-15 至 02-28 | P0/P1 修复与必要重跑 | 不新增研究范围 |
 | v1.0 | 2027-03-01 至 04-15 | 论文级研究发布 | 稳定协议、文档、复现、演示和发布 Artifact 完整 |
@@ -224,6 +225,18 @@ v0.6 不扩数据集。它把 v0.5 的真实 Codex Action Bridge Demo 标准化�
 - 尝试恢复两条 matched-runtime Precision 候选；
 - 审计现有 Operator Core 构念；
 - 标记可用于 v0.9 Feedback Ablation 的 Task。
+
+`opbench-v0.7.0` 已 Completed。最终发布冻结 25-task cumulative、6-task
+Boundary、8-task Precision，Dataset hash 分别为
+`sha256:4d7bde25e747bcc041aa5105ce5ce881a3f1e9fe2a7545667cdbc2c14d85064a`、
+`sha256:810a9cc85c576f44edd2672197ab83b7dfee7f674e597c76c78050bd119d606a`
+和
+`sha256:65818466a02e99466386cb8e038dc4da59d91dcb3bea7b83c8901d31a96aa8eb`。
+真实 Codex 验证为 18/18 valid、14 resolved、3 F2P failed、1 no patch、
+0 accepted-cohort retries；最终 release gate 为 868/868 tests，所有生成物
+逐字节重建。exact-source 路径包含 source-build timeout correction 和分离的
+CPU/CUDA build commands。该证据严格为 **non-leaderboard**、非反馈因果的
+Task/平台验证。
 
 ### 8.3 v0.8：Compatibility 与 Spec RC
 
@@ -323,10 +336,10 @@ v0.6 不扩数据集。它把 v0.5 的真实 Codex Action Bridge Demo 标准化�
 
 ## 14. 当前执行顺序
 
-1. 完成本全局方案、v0.6 设计、实施计划和验收矩阵；
-2. 将 Boundary 设计作为 v0.7 当前设计；
-3. 更新项目状态、README、文档索引和 CHANGELOG；
-4. 审阅本地未提交文档；
-5. 从 v0.6 M1 开始产品实现；
-6. 每个里程碑通过测试和 Artifact 验证后更新状态；
-7. v0.6 完成后再开始 v0.7 正式 Admission。
+1. v0.6 规范平台与 v0.7 Dataset Factory/Boundary Release 已完成并冻结；
+2. 当前进入 v0.8 Device/API Compatibility 候选与 Admission；
+3. 冻结 Evaluation/Scoring Specification RC；
+4. 明确 Operator Core、Legacy Regression、Budget、Retry、Aggregation
+   和排除规则；
+5. 每个里程碑通过测试和 Artifact 验证后更新状态；
+6. v0.9 再冻结正式多 Agent 与 Feedback Ablation cohort。

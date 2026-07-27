@@ -4,7 +4,29 @@ This file records user-visible OpBench version milestones. Detailed design,
 implementation, and experiment evidence remain in the versioned documents
 under `docs/`.
 
-## v0.7 - In Progress
+## v0.7 - Completed
+
+`opbench-v0.7.0` completed on 2026-07-28:
+
+- P1–P5 deliver the reusable Dataset Factory, matched-runtime recovery, six
+  verified Boundary Tasks covering B1–B5, content-addressed Dataset release,
+  real Codex validation, Dataset Card, and bilingual release surface.
+- The final Dataset hashes are cumulative
+  `sha256:4d7bde25e747bcc041aa5105ce5ce881a3f1e9fe2a7545667cdbc2c14d85064a`,
+  Boundary
+  `sha256:810a9cc85c576f44edd2672197ab83b7dfee7f674e597c76c78050bd119d606a`,
+  and Precision
+  `sha256:65818466a02e99466386cb8e038dc4da59d91dcb3bea7b83c8901d31a96aa8eb`.
+- The accepted validation cohort is 18/18 valid, 14 resolved, 3 F2P failed,
+  1 no patch, and 0 accepted-cohort retries. It is descriptive
+  **non-leaderboard**, non-causal Task/platform evidence.
+- Exact-source hardening includes the source-build timeout correction and
+  separate CPU/CUDA build commands, preventing CPU profiles from inheriting
+  CUDA-only build arguments.
+- The final release gate rebuilt P3 screening, P4 Freeze, all three Dataset
+  releases, the validation contract, and the public report byte-for-byte.
+  Verification passed 868/868 tests plus four verified Dataset validations,
+  compileall, all tracked JSON, links, public-safety scans, and diff checks.
 
 P4 Dataset Freeze and Validation Cohort completed on 2026-07-28:
 

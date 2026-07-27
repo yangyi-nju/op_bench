@@ -2,7 +2,7 @@
 
 日期：2026-07-17
 
-状态：实施中；P1–P4 已通过，P5 发布收口待完成
+状态：Completed；P1–P5 与最终发布门全部通过
 
 ## 1. 版本定位
 
@@ -385,30 +385,53 @@ compileall、四个 verified Dataset、全部 tracked JSON、确定性重建和 
 完整结果与限制见 `docs/v0.7/validation_report.md`。该结果是平台与 Task 验证，
 保持 non-leaderboard、非反馈因果范围。
 
-### P5：发布
+### P5：发布（Passed，2026-07-28）
 
 - 冻结 Dataset Card、Candidate Report、Admission Evidence 和 Cohort Report；
 - 更新 README、CHANGELOG、文档索引和项目状态；
 - 确认没有把 Validation Cohort 表述为正式多 Agent 排名。
 
+P5 发布 `opbench-v0.7.0`，Dataset Card 与中英文入口均绑定三份冻结
+Dataset 和 P4 报告。最终 release gate 重建 P3 screening、P4 Boundary Freeze、
+三份 Dataset release、validation contract 与公开验证报告，全部逐字节一致；
+四份 verified Dataset、Schema/JSON、compileall、链接、安全文本和 diff gate
+全部通过。
+
+发布身份冻结为：
+
+- cumulative：
+  `sha256:4d7bde25e747bcc041aa5105ce5ce881a3f1e9fe2a7545667cdbc2c14d85064a`；
+- Boundary：
+  `sha256:810a9cc85c576f44edd2672197ab83b7dfee7f674e597c76c78050bd119d606a`；
+- Precision：
+  `sha256:65818466a02e99466386cb8e038dc4da59d91dcb3bea7b83c8901d31a96aa8eb`。
+
+真实 Codex cohort 为 18/18 valid、14 resolved、3 F2P failed、1 no patch、
+0 accepted-cohort retries。最终全仓验证为 868/868 tests。P3 的 exact-source
+路径同时固化了 source-build timeout correction，并把 CPU 与 CUDA build
+commands 分开选择，防止 CPU source profile 继承 CUDA 构建参数。这些结果只证明
+发布 Artifact、平台路径和 Task 的可复现性，保持 **non-leaderboard**、
+非跨 Agent 排名和非反馈因果范围。
+
 Matched Runtime 与 Candidate Search 可以并行推进，但正式 Admission 必须使用同一冻结 v0.6 Evaluation Protocol。
 
 ## 13. 完成标准
 
-v0.7 只有同时满足以下条件才标记 Completed：
+v0.7 的以下 Completed 条件已全部满足：
 
-1. Dataset Factory 的状态、Schema、reason code 和 Artifact 可复用；
-2. `datasets/pytorch_v0.7/dataset.json` 全部 entry 为 verified 且 evidence hash 有效；
-3. Boundary Slice 形成有区分度的 verified 集合，目标 4–6 条，缺口有明确记录；
-4. #129154/#144073 均有 verified 或带新增环境证据的 deprecated 结论；
-5. 每条新 Task Baseline Reproduced、Gold Resolved、P2P Kept、Test Executed；
-6. cumulative/boundary/precision Manifest 和 Summary 可以从原始 Artifact 重建；
-7. 真实 Codex Validation Cohort 完整，所有缺失或无效 Attempt 有稳定归因；
-8. 全量测试、Schema、Dataset Validation、Integrity 和 `git diff --check` 通过；
-9. Dataset Card 报告 taxonomy、来源、环境、局限、污染风险和 rejected funnel；
-10. README、CHANGELOG、docs index 与冻结结果一致；
-11. 没有降低 Admission 标准以满足数量目标；
-12. 不发布本版本未支持的正式跨 Agent 排名或反馈因果结论。
+1. [x] Dataset Factory 的状态、Schema、reason code 和 Artifact 可复用；
+2. [x] `datasets/pytorch_v0.7/dataset.json` 全部 entry 为 verified 且 evidence hash 有效；
+3. [x] Boundary Slice 为 6 条 verified Task，完整覆盖 B1–B5；
+4. [x] #129154/#144073 均恢复为 verified，并进入 Precision/Cumulative Freeze；
+5. [x] 每条新 Task Baseline Reproduced、Gold Resolved、P2P Kept、Test Executed；
+6. [x] cumulative/boundary/precision Manifest 和 Summary 可从冻结输入逐字节重建；
+7. [x] 真实 Codex Validation Cohort 18/18 valid，0 accepted-cohort retries；
+8. [x] 868/868 全量测试、Schema、Dataset Validation、Integrity、JSON、
+   compileall 和 `git diff --check` 通过；
+9. [x] Dataset Card 已报告 taxonomy、来源、环境、局限、污染风险和 rejected funnel；
+10. [x] README、CHANGELOG、docs index 与冻结结果一致；
+11. [x] 没有降低 Admission 标准以满足数量目标；
+12. [x] 明确保持 non-leaderboard，不发布正式跨 Agent 排名或反馈因果结论。
 
 ## 14. 风险与降级
 

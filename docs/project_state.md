@@ -6,16 +6,18 @@
 
 | 项目 | 当前值 |
 | --- | --- |
-| 当前稳定版本 | v0.6 Completed |
-| 数据集 | `pytorch_v0.5`，17 条 verified task |
-| 正式实验 | v0.6 MCP：51/51 valid，35/51 resolved；v0.5 CLI 历史结果：37/51 |
-| 当前开发版本 | `opbench-v0.7.0`（In Progress） |
-| 当前目标 | 完成 Dataset Factory、Boundary Slice 与 v0.7 发布收口 |
-| 当前阶段 | v0.7 P1–P4 已通过；进入 P5 Dataset Card、双语入口与发布 gate |
+| 当前稳定版本 | v0.7 Completed |
+| 数据集 | `opbench-v0.7.0`：25-task cumulative、6-task Boundary、8-task Precision，全部 verified |
+| 正式实验 | v0.7 Validation：18/18 valid，14 resolved，3 F2P failed，1 no patch，0 accepted-cohort retries；v0.6/v0.5 结果保留为历史事实 |
+| 当前开发版本 | v0.8 Device/API Compatibility（Planned） |
+| 当前目标 | 增加 Compatibility Slice 并冻结 Evaluation/Scoring Specification RC |
+| 当前阶段 | v0.7 P1–P5 与 868/868 最终 release gate 已通过；v0.8 尚未开始 |
 | v0.7 P1 产品代码 | Candidate/Decision/FactoryAdmission/DatasetFreeze 合同、B1–B5 taxonomy、确定性筛选、证据门状态机、不可变 Artifact Store、Validator/Freeze/Screening CLI 与 synthetic fixtures 已实现 |
 | v0.7 P2 产品代码 | Matched-runtime Compatibility 合同/Schema、真实 probe/validation CLI、fail-closed promotion、两个 digest-pinned wheel 镜像和 task-local compatibility/Admission evidence 已实现；#129154/#144073 均恢复为 verified |
 | v0.7 P3 数据资产 | 10 条真实候选的确定性漏斗、6 条覆盖 B1–B5 的 verified Boundary Task、6 份 Compatibility/Admission/review 和 6 条完整 8 阶段 Factory chain 已冻结 |
 | v0.7 P4 数据与验证 | 25-task cumulative、6-task Boundary、8-task Precision Dataset 已内容寻址冻结；真实 Codex 18/18 valid，14 resolved、3 F2P failed、1 no patch，18 trace/Integrity/Cleanup 全部通过；报告为 non-leaderboard |
+| v0.7 P5 发布 | Dataset Card、双语 README/docs index、设计/路线图/状态/CHANGELOG 已同步；generated Artifact 全部逐字节重建；868/868 tests、compileall、JSON、Dataset、link、安全文本与 diff gates 通过 |
+| v0.7 Dataset hashes | cumulative `sha256:4d7bde25e747bcc041aa5105ce5ce881a3f1e9fe2a7545667cdbc2c14d85064a`；Boundary `sha256:810a9cc85c576f44edd2672197ab83b7dfee7f674e597c76c78050bd119d606a`；Precision `sha256:65818466a02e99466386cb8e038dc4da59d91dcb3bea7b83c8901d31a96aa8eb` |
 | v0.6 产品代码 | 合同、TaskView/Workspace/Action/Session/Evaluation/Artifact、版本化 Runtime Profile、Attempt-owned Local/Docker/Remote Backend、Conformance、Legacy Replay、标准 Codex 进程 Adapter、v1 Orchestrator、公开 Demo 与开发/发布文档均已实现 |
 | v0.6 MCP 实验 | 真实全量实验已完成，报告见 `docs/v0.6/experiment_report.md` |
 
@@ -30,6 +32,10 @@
 - v0.6 MCP 全量结果用于平台验证；它与 v0.5 的 Adapter、模型、CLI 和
   Runtime 身份不同，不作因果质量对比。
 - Boundary 数据扩充属于 v0.7。
+- `opbench-v0.7.0` 的 Validation Cohort 是 non-leaderboard、非反馈因果的
+  Task/平台验证，不与历史 Adapter/模型结果作因果质量比较。
+- exact-source Runtime 已修正 source-build timeout，并按 CPU/CUDA profile
+  分离 build commands；二者都是发布复现合同的一部分。
 - 开发直接在当前本地分支按里程碑顺序推进。
 - 验证只覆盖 OpBench 合同和当前 Attempt 持有的资源。
 
@@ -52,14 +58,17 @@
 | V07-P2 | Passed | Matched Runtime、Compatibility Evidence 与两条 Precision P4 恢复 | 两个官方 torch wheel、一个 torchvision companion 和两个实测 image ID 已冻结；目标任务 2/2 恢复为 verified，仓库仍有 7 条不在本阶段范围内的历史 deprecated Task；#129154/#144073 各 6/6 compatibility checks、Baseline F2P 0/1/P2P 1/1、Gold F2P 1/1/P2P 1/1；47 focused、793 full tests 通过；未执行 source-build fallback，正式 Dataset 纳入留到 P4 |
 | V07-P3 | Passed | 真实 Boundary Task 制作、Compatibility、Admission 与 Factory Promotion | 10 条候选为 6 accepted / 2 deferred / 2 rejected，#147433 人工判为上游 revert；6 条任务覆盖 B1–B5，合计 36/36 compatibility checks，逐条 Baseline F2P 0/1/P2P 1/1、Gold F2P 1/1/P2P 1/1，人工 review 与 8 阶段 Factory chain 均 verified；90 focused、53 final focused、818 full tests 通过，详见 `docs/v0.7/boundary_tasks.md` |
 | V07-P4 | Passed | Dataset Freeze、Release Composition 与真实 Codex Validation Cohort | cumulative/boundary/precision 为 25/6/8 verified Tasks；5 cohorts、18/18 valid、14 resolved、3 F2P failed、1 no patch、0 accepted-cohort retry；五个 root fresh Integrity 14/14、resource ownership/cleanup 和 18 traces 全部通过；68 focused、865 full tests、确定性重建、compile/JSON/Dataset/diff gates 通过，详见 `docs/v0.7/validation_report.md` |
+| V07-P5 | Passed | Dataset Card、双语入口、完成记录与可复现发布门 | `opbench-v0.7.0` 的三份 Dataset hash、18/18 cohort 与 non-leaderboard 边界已冻结；全部 generated Artifact 逐字节重建；最终 868/868 tests 及 compile/JSON/Dataset/link/safety/diff gates 通过 |
+| V07-RELEASE | Passed | v0.7 release closure | P1–P5 全部 Passed；25/6/8 verified Dataset、B1–B5、P1–P5、真实 Codex Validation 和公开文档合同一致 |
 
 ## Next actions
 
-1. P5 从冻结的 P4 Artifact 生成 Dataset Card，不改变 Task、Admission、
-   Dataset membership、Agent、模型或评分；
-2. 更新 README、双语 docs index、project plan/state 与 changelog；
-3. 重建全部 v0.7 generated Artifact 并运行最终 release gate；
-4. 反馈因果与跨 Agent 正式研究仍留在后续版本，不从平台验证推断结论。
+1. 按 v0.8 既定范围筛选 4–6 条 Device/API Compatibility Task；
+2. 在不改写 v0.7 历史 Artifact 的前提下冻结 Evaluation/Scoring
+   Specification RC；
+3. 明确 Operator Core、Legacy Regression、Budget、Retry、Aggregation
+   和排除规则；
+4. 正式跨 Agent 与 Feedback Ablation 继续留在 v0.9。
 
 ## Status rules
 
