@@ -547,8 +547,18 @@ def _runtime_profile(task: TaskManifest) -> RuntimeProfile:
             f"runtime_tier: task {task.runtime_tier!r} does not match Profile "
             f"{profile.runtime_tier!r}"
         )
-    if profile.requires_gpu != task.requires_gpu:
+    task_hardware = _mapping(
+        _mapping(task.data.get("environment")).get("hardware", {})
+    )
+    if (
+        "requires_gpu" in task_hardware
+        and profile.requires_gpu != task.requires_gpu
+    ):
         raise ContractError("requires_gpu: task does not match Runtime Profile")
+    if profile.source_loading_mode != (task.source_loading_mode or "none"):
+        raise ContractError(
+            "source_loading_mode: task does not match Runtime Profile"
+        )
     if profile.timeout_ms != task.timeout_sec * 1000:
         raise ContractError("timeout_ms: task does not match Runtime Profile")
     return profile
@@ -556,10 +566,15 @@ def _runtime_profile(task: TaskManifest) -> RuntimeProfile:
 
 _PROFILE_BY_ENVIRONMENT = {
     "opbench-local-cpu-process-v1": "local-cpu-process-v1",
+    "pytorch-boundary-cpu-source-build-py311": "remote-cpu-source-boundary-py311-v1",
     "pytorch-cpu-torch2.6.0-py311": "remote-cpu-pytorch-2.6-py311-v1",
     "pytorch-cpu-compile-torch2.6.0-py311": "remote-cpu-compile-pytorch-2.6-py311-v1",
     "pytorch-cuda-torch2.6.0-py311-cu124": "remote-cuda-overlay-pytorch-2.6-cu124-v1",
     "pytorch-cuda-devel-torch2.6.0-py311-cu124": "remote-cuda-kernel-pytorch-2.6-cu124-v1",
+    "pytorch-matched-boundary-torch2.2.0-cpu": "remote-cpu-boundary-torch2.2-py311-v1",
+    "pytorch-matched-boundary-torch2.3.0-cpu": "remote-cpu-boundary-torch2.3-py311-v1",
+    "pytorch-matched-boundary-torch2.4.0-cpu": "remote-cpu-boundary-torch2.4-py311-v1",
+    "pytorch-matched-boundary-torch2.6.0-cu124": "remote-cuda-boundary-torch2.6-cu124-v1",
 }
 
 
@@ -733,7 +748,10 @@ def _require_v05_task_shape(task: TaskManifest) -> None:
 
     environment = _require_object(data.get("environment"), "environment")
     require_str(environment.get("backend", "local"), "environment.backend")
-    require_str(environment.get("image"), "environment.image")
+    if environment.get("image") is not None:
+        require_str(environment.get("image"), "environment.image")
+    elif data.get("environment_ref") not in _PROFILE_BY_ENVIRONMENT:
+        raise ContractError("environment.image: expected string")
     for name in ("platform", "image_digest", "digest_kind", "python_version", "os", "build_mode"):
         if environment.get(name) is not None:
             require_str(environment[name], f"environment.{name}")

@@ -34,14 +34,53 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 DATASET_PATH = REPO_ROOT / "datasets" / "pytorch_v0.5" / "dataset.json"
 PROFILE_REGISTRY_PATH = REPO_ROOT / "configs" / "runtime_profiles.v1.json"
 PROFILE_BY_ENVIRONMENT = {
+    "pytorch-boundary-cpu-source-build-py311": "remote-cpu-source-boundary-py311-v1",
     "pytorch-cpu-torch2.6.0-py311": "remote-cpu-pytorch-2.6-py311-v1",
     "pytorch-cpu-compile-torch2.6.0-py311": "remote-cpu-compile-pytorch-2.6-py311-v1",
     "pytorch-cuda-torch2.6.0-py311-cu124": "remote-cuda-overlay-pytorch-2.6-cu124-v1",
     "pytorch-cuda-devel-torch2.6.0-py311-cu124": "remote-cuda-kernel-pytorch-2.6-cu124-v1",
+    "pytorch-matched-boundary-torch2.2.0-cpu": "remote-cpu-boundary-torch2.2-py311-v1",
+    "pytorch-matched-boundary-torch2.3.0-cpu": "remote-cpu-boundary-torch2.3-py311-v1",
+    "pytorch-matched-boundary-torch2.4.0-cpu": "remote-cpu-boundary-torch2.4-py311-v1",
+    "pytorch-matched-boundary-torch2.6.0-cu124": "remote-cuda-boundary-torch2.6-cu124-v1",
 }
 
 
 class LegacyV05ProjectionTests(unittest.TestCase):
+    def test_projects_all_boundary_environments_to_exact_runtime_profiles(
+        self,
+    ) -> None:
+        registry = load_runtime_profile_registry(PROFILE_REGISTRY_PATH)
+        profiles = {profile.profile_id: profile for profile in registry.profiles}
+        matched = 0
+
+        for path in sorted((REPO_ROOT / "tasks" / "pytorch").glob("*/task.json")):
+            task = TaskManifest.load(path)
+            if task.environment_ref not in {
+                "pytorch-boundary-cpu-source-build-py311",
+                "pytorch-matched-boundary-torch2.2.0-cpu",
+                "pytorch-matched-boundary-torch2.3.0-cpu",
+                "pytorch-matched-boundary-torch2.4.0-cpu",
+                "pytorch-matched-boundary-torch2.6.0-cu124",
+            }:
+                continue
+            matched += 1
+            projected = full_task_spec_from_v05(task)
+            with self.subTest(task=task.task_id):
+                self.assertEqual(
+                    projected.runtime,
+                    profiles[PROFILE_BY_ENVIRONMENT[task.environment_ref]],
+                )
+                self.assertEqual(
+                    projected.runtime.source_loading_mode,
+                    task.source_loading_mode,
+                )
+                self.assertEqual(
+                    projected.runtime.timeout_ms,
+                    task.timeout_sec * 1_000,
+                )
+        self.assertEqual(matched, 6)
+
     def test_real_mcp_agent_identity_binds_model_cli_protocol_and_prompt(self) -> None:
         selected = agent_spec_for_v1_adapter(
             "codex_mcp_canonical",
