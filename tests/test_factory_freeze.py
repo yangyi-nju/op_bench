@@ -70,6 +70,7 @@ def candidate_for(pr_number: int, subclass: str) -> CandidateRecord:
         merge_commit=merge_commit,
         proposed_subclass=subclass,
         keyword_pack_id=f"boundary-{subclass.lower()}-v1",
+        matched_keyword_ids=(f"boundary-{subclass.lower()}-v1",),
         raw_metadata=replace(
             selected.raw_metadata,
             artifact_id=f"pr:pytorch/pytorch#{pr_number}",

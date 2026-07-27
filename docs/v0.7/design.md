@@ -2,7 +2,7 @@
 
 日期：2026-07-17
 
-状态：实施中；P1 Factory Contract 与 P2 Matched Runtime 已通过
+状态：实施中；P1 Factory Contract、P2 Matched Runtime 与 P3 Boundary Tasks 已通过
 
 ## 1. 版本定位
 
@@ -333,12 +333,25 @@ P2 恢复了两条 Precision P4 Task，但按 Release Contract 不在本阶段�
 详细复现步骤、镜像/Artifact digest、Admission 计数和诊断见
 `docs/v0.7/setup_matched_runtime.md`。
 
-### P3：Boundary Task 制作与 Admission
+### P3：Boundary Task 制作与 Admission（Passed，2026-07-27）
 
 - Issue、Hidden/Public、Gold、Manifest、Scope；
 - Preflight、Baseline、Gold、P2P 和人工复审；
 - 目标 4–6 条 verified Boundary Task；
 - 对重复、脆弱、成本过高候选保留拒绝证据。
+
+P3 冻结了 10 条真实 PyTorch 候选，自动筛选结果为 6 accepted、2 deferred、
+2 rejected；人工复核把随后被上游 revert 的 #147433 从 deferred 判为 rejected，
+#127448 保持 deferred。最终 6 条任务全部完成 6/6 Compatibility checks、
+Baseline F2P 0/1/P2P 1/1、Gold F2P 1/1/P2P 1/1、人工复核和 8 阶段
+Factory Admission，覆盖 B1–B5 且均为 verified。
+
+四条任务使用 digest-pinned matched wheel，#143792 与 #147352 使用 exact Base
+Commit CPU full-source build。B3 使用小 tensor 加极端整数检查 checked arithmetic；
+B5 使用调用同一生产 predicate 和 Gold 路径的低内存 surrogate，不申请超大
+Tensor。完整候选漏斗、Runtime/Source digest、Admission 和日志边界见
+`docs/v0.7/boundary_tasks.md`。正式 Dataset Freeze 和真实 Codex Validation
+Cohort 仍由 P4 完成。
 
 ### P4：Dataset Freeze 与 Validation Cohort
 
@@ -391,6 +404,7 @@ v0.7 只有同时满足以下条件才标记 Completed：
 | `docs/v0.7/design.md` | 本设计 |
 | `docs/v0.7/candidate_search.md` | Keyword Pack、筛选规则和候选报告 |
 | `docs/v0.7/setup_matched_runtime.md` | Matched Wheel/Source Build 制作与验证 |
+| `docs/v0.7/boundary_tasks.md` | P3 候选漏斗、任务、Runtime 与 Admission 报告 |
 | `docs/v0.7/dataset_card.md` | 数据来源、Taxonomy、Admission、限制和统计 |
 | `docs/v0.7/validation_report.md` | 真实 Codex Validation Cohort 和失败分析 |
 | `runs/v0.7_pr_screening/` | Candidate/Rejected/Decision Artifact |

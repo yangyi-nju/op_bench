@@ -11,9 +11,10 @@
 | 正式实验 | v0.6 MCP：51/51 valid，35/51 resolved；v0.5 CLI 历史结果：37/51 |
 | 当前开发版本 | `opbench-v0.7.0`（In Progress） |
 | 当前目标 | Dataset Factory、Boundary Slice 与 matched-runtime recovery |
-| 当前阶段 | v0.7 P1 Factory Contract 与 P2 Matched Runtime 已通过；进入 P3 Boundary Task 制作与 Admission |
+| 当前阶段 | v0.7 P1 Factory Contract、P2 Matched Runtime 与 P3 Boundary Tasks 已通过；进入 P4 Dataset Freeze 与 Validation Cohort |
 | v0.7 P1 产品代码 | Candidate/Decision/FactoryAdmission/DatasetFreeze 合同、B1–B5 taxonomy、确定性筛选、证据门状态机、不可变 Artifact Store、Validator/Freeze/Screening CLI 与 synthetic fixtures 已实现 |
 | v0.7 P2 产品代码 | Matched-runtime Compatibility 合同/Schema、真实 probe/validation CLI、fail-closed promotion、两个 digest-pinned wheel 镜像和 task-local compatibility/Admission evidence 已实现；#129154/#144073 均恢复为 verified |
+| v0.7 P3 数据资产 | 10 条真实候选的确定性漏斗、6 条覆盖 B1–B5 的 verified Boundary Task、6 份 Compatibility/Admission/review 和 6 条完整 8 阶段 Factory chain 已冻结 |
 | v0.6 产品代码 | 合同、TaskView/Workspace/Action/Session/Evaluation/Artifact、版本化 Runtime Profile、Attempt-owned Local/Docker/Remote Backend、Conformance、Legacy Replay、标准 Codex 进程 Adapter、v1 Orchestrator、公开 Demo 与开发/发布文档均已实现 |
 | v0.6 MCP 实验 | 真实全量实验已完成，报告见 `docs/v0.6/experiment_report.md` |
 
@@ -48,12 +49,13 @@
 | REMOTE-CLEANUP | Passed | RemoteDocker timeout/cleanup 收敛到 Attempt-owned exact handles | create/start/command/cleanup 异常注入、精确清理账本和 Remote blocked artifact 均通过 |
 | V07-P1 | Passed | Factory Contract、Boundary taxonomy 与离线确定性筛选/Freeze | 73 Factory tests、45 compatibility tests、741 full tests 通过；4 个 Factory Schema 可解析；v0.5 17-task verified Dataset 有效；9 条 synthetic fixture 为 5 accepted / 2 deferred / 2 rejected，两次输出逐字节一致；未使用网络、真实 Agent、Docker、SSH、CUDA 或远程 Runtime，未发布正式 v0.7 Dataset |
 | V07-P2 | Passed | Matched Runtime、Compatibility Evidence 与两条 Precision P4 恢复 | 两个官方 torch wheel、一个 torchvision companion 和两个实测 image ID 已冻结；目标任务 2/2 恢复为 verified，仓库仍有 7 条不在本阶段范围内的历史 deprecated Task；#129154/#144073 各 6/6 compatibility checks、Baseline F2P 0/1/P2P 1/1、Gold F2P 1/1/P2P 1/1；47 focused、793 full tests 通过；未执行 source-build fallback，正式 Dataset 纳入留到 P4 |
+| V07-P3 | Passed | 真实 Boundary Task 制作、Compatibility、Admission 与 Factory Promotion | 10 条候选为 6 accepted / 2 deferred / 2 rejected，#147433 人工判为上游 revert；6 条任务覆盖 B1–B5，合计 36/36 compatibility checks，逐条 Baseline F2P 0/1/P2P 1/1、Gold F2P 1/1/P2P 1/1，人工 review 与 8 阶段 Factory chain 均 verified；90 focused、53 final focused、818 full tests 通过，详见 `docs/v0.7/boundary_tasks.md` |
 
 ## Next actions
 
 1. 在文档中保留 v0.6 的 85-case Replay 与代表性 Runtime canary 冻结 hash，
    `runs/` 只发布三文件 MCP 全量实验最终报告；
-2. P3 使用已冻结 Factory 合同制作和 Admission 4–6 条 Boundary Task；
+2. P4 生成 cumulative/boundary/precision 三个内容寻址 Manifest，并运行真实 Codex 新任务 3-repeat Validation Cohort；
 3. P4 Freeze 时把已恢复的 #129154/#144073 纳入 Precision/Cumulative Manifest，
    不在 P2 提前发布正式 Dataset；
 4. v0.7 正式 Admission 继续执行 verified-only、精确 Runtime 和历史成绩不改写约束；

@@ -6,6 +6,21 @@ under `docs/`.
 
 ## v0.7 - In Progress
 
+P3 Boundary Tasks completed on 2026-07-27:
+
+- Froze a deterministic funnel of ten real PyTorch candidates: six accepted, two deferred, and two rejected. Human review additionally rejected #147433 because its landed fix was reverted upstream; #127448 remains deferred.
+- Added six verified Boundary tasks covering B1–B5: empty `addmv`, zero-dimensional index copy, rank-zero cumulative lowering, checked storage-offset overflow, the default weight-norm `dim` endpoint, and a non-divisible Triton Y-grid mask.
+- Added four digest-pinned official-wheel runtimes and an exact-source CPU build runtime. #143792 and #147352 use full-source builds; the other tasks use matched Python overlays.
+- Every task passed 6/6 compatibility checks, Baseline F2P 0/1 with P2P 1/1, Gold F2P 1/1 with P2P 1/1, replay-hash verification, human review, and an immutable eight-stage Factory Admission chain ending in `verified`.
+- Kept B3 and B5 memory-bounded: B3 exercises checked arithmetic with a small tensor and extreme integer, while B5 calls the production mask predicate through a reviewed low-memory surrogate.
+- Hardened exact-source loading, resumable remote source synchronization, source-build timeout selection, Python 3.9 probe compatibility, registry-aware Factory promotion, canonical Admission duration conversion, and draft-versus-restored promotion notes.
+- Kept failed runtime probes and full private build/Admission logs under ignored run directories; committed evidence contains only bounded public identities, summaries, hashes, reviews, and chains.
+- Focused verification passed 90 core/evidence tests and 53 final Factory/P3 tests; full repository verification passed 818/818 tests in 1174.098 seconds, plus all six Task/Compatibility/Admission/Factory validations and the existing verified 17-task v0.5 Dataset. Formal v0.7 Dataset Freeze and the real Codex Validation Cohort remain P4 work.
+
+P3 document:
+
+- `docs/v0.7/boundary_tasks.md`
+
 P2 Matched Runtime completed on 2026-07-27:
 
 - Added a strict, canonical matched-runtime compatibility contract and JSON Schema, six-check live probe, validation CLI, and fail-closed task promotion bound to compatibility evidence, Admission evidence, and replay hashes.
