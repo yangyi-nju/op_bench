@@ -17,6 +17,8 @@ runs/v0.6_m7_demo_input/
 runs/v0.6_m7_scripted_demo/
 runs/v0.7_matched_runtime/
 runs/v0.7_boundary_failed_probes/
+runs/v0.7_boundary_refresh/
+runs/v0.7_validation/
 __pycache__/
 *.pyc
 .DS_Store

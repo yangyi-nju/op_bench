@@ -396,6 +396,49 @@ class BoundaryArtifactTests(unittest.TestCase):
                 if mode == "kernel_full":
                     self.assertEqual(asset.submodule_status, "initialized")
 
+    def test_task_runtime_contract_matches_registry(self) -> None:
+        environment_registry = EnvironmentRegistry.load(
+            ENVIRONMENT_REGISTRY
+        )
+        source_registry = SourceRegistry.load(SOURCE_REGISTRY)
+        for directory in BOUNDARY_TASK_DIRECTORIES:
+            task = TaskManifest.load(
+                ROOT / "tasks" / "pytorch" / directory / "task.json"
+            )
+            environment = environment_registry.get(task.environment_ref)
+            source = source_registry.get(task.source_ref)
+            with self.subTest(task=task.task_id):
+                self.assertEqual(
+                    task.runtime_tier,
+                    environment.runtime_tier,
+                )
+                self.assertEqual(
+                    task.data["environment"].get(
+                        "tier",
+                        task.runtime_tier,
+                    ),
+                    environment.runtime_tier,
+                )
+                self.assertIn(
+                    task.source_loading_mode,
+                    environment.source_loading_modes,
+                )
+                self.assertIn(
+                    task.source_loading_mode,
+                    source.source_loading_modes,
+                )
+                task_hardware = task.data["environment"].get("hardware")
+                if task_hardware is not None:
+                    self.assertEqual(
+                        task_hardware["requires_gpu"],
+                        environment.data["hardware"]["requires_gpu"],
+                    )
+                if (
+                    task.environment_ref
+                    == "pytorch-boundary-cpu-source-build-py311"
+                ):
+                    self.assertGreaterEqual(task.timeout_sec, 900)
+
     def test_python_task_bundles(self) -> None:
         for directory, expected in PYTHON_BOUNDARY_TASKS.items():
             task_id, subclass, allowed_source = expected

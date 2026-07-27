@@ -40,7 +40,7 @@ Gold Resolved、P2P Kept、人工复核和 8 阶段 Factory Admission，最终�
 | `pytorch__143792__addmv_empty_matrix` | B1 | exact CPU full-source build | 0/1、1/1 | 1/1、1/1 | 780.653s / 768.724s |
 | `pytorch__117065__index_copy_zero_dim` | B2 | torch 2.2.0+cpu overlay | 0/1、1/1 | 1/1、1/1 | 70.104s / 70.887s |
 | `pytorch__126461__cummin_rank_zero` | B2 | torch 2.4.0+cpu overlay | 0/1、1/1 | 1/1、1/1 | 87.227s / 93.528s |
-| `pytorch__147352__storage_offset_overflow` | B3 | exact CPU full-source build | 0/1、1/1 | 1/1、1/1 | 667.766s / 790.122s |
+| `pytorch__147352__storage_offset_overflow` | B3 | exact CPU full-source build | 0/1、1/1 | 1/1、1/1 | 660.095s / 665.119s |
 | `pytorch__118762__weight_norm_default_dim` | B4 | torch 2.3.0+cpu overlay | 0/1、1/1 | 1/1、1/1 | 80.870s / 80.164s |
 | `pytorch__139751__triton_ygrid_mask` | B5 | torch 2.6.0+cu124 overlay | 0/1、1/1 | 1/1、1/1 | 88.690s / 90.966s |
 
@@ -100,6 +100,13 @@ P2P 覆盖 X grid、未超限 Y grid 和已有 Z grid。
 - probe 对 observation 数量显式 fail closed，并兼容 Python 3.9；
 - draft task 的 promotion note 使用 `Verified by`，只有 deprecated 恢复继续使用
   `Restored by`。
+- P4 Freeze 预检发现 147352 的 Task metadata 把共享 CPU full-source 环境误标为
+  `cuda_kernel_build`。修正为 Registry 的
+  `cpu_source_snapshot_fuller` 并把 selector timeout 统一为 900 秒后，重新运行了
+  6/6 Compatibility、Baseline/Gold Admission 和 8 阶段 Factory promotion；
+  新 evidence replay hash 为
+  `sha256:f89e5e74340408e56b58515de38da7791e69923bf01be956d0a95a68cb90fc4f`，
+  未复用旧 Admission 结果。
 
 ## 7. 日志与公开证据策略
 

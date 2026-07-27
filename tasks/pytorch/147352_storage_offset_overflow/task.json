@@ -87,7 +87,7 @@
       "mode": "inplace_build",
       "sync_before_tests": true
     },
-    "tier": "cuda_kernel_build",
+    "tier": "cpu_source_snapshot_fuller",
     "workspace_dir": "/workspace"
   },
   "environment_ref": "pytorch-boundary-cpu-source-build-py311",
@@ -101,7 +101,7 @@
     ],
     "setup_commands": [],
     "test_command": "{python} test/op_bench_boundary/test_storage_offset_overflow.py {test}",
-    "timeout_sec": 300
+    "timeout_sec": 900
   },
   "metadata": {
     "admission_status": "verified",
@@ -110,7 +110,7 @@
     "difficulty": "hard",
     "estimated_runtime_min": 90,
     "layer": "B",
-    "notes": "Verified by v0.7 matched-runtime compatibility and verified Admission; compatibility evidence sha256:3f8d74cb2f69aa6add78bbae2dee87af2e60b0685010d84b81df605c86c67ff8.",
+    "notes": "Verified by v0.7 matched-runtime compatibility and verified Admission; compatibility evidence sha256:93223f57b8175ceb6490d81c425cfcc273ccfa9a39c04c5eb2797b4b4e475af5.",
     "source_loading_verified": true
   },
   "operator": {
@@ -134,7 +134,7 @@
     ],
     "mode": "enforced"
   },
-  "runtime_tier": "cuda_kernel_build",
+  "runtime_tier": "cpu_source_snapshot_fuller",
   "source": {
     "base_commit": "6ccbff1450bb3936636377d3910906f5666ddcfa",
     "checkout_mode": "git",
