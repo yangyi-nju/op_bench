@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 from pathlib import Path, PurePosixPath
+import re
 import shutil
 import shlex
 import signal
@@ -43,6 +44,7 @@ from op_bench.runtime.validation import (
 _BACKENDS = ("local", "docker", "remote_docker", "scripted")
 _REMOTE_COMMAND_MAX_ATTEMPTS = 3
 _REMOTE_TRANSFER_MAX_ATTEMPTS = 3
+_REMOTE_COMMAND_STARTED_SENTINEL = "__OPBENCH_REMOTE_COMMAND_STARTED_V1__"
 _SSH_TRANSPORT_ERROR_MARKERS = (
     "kex_exchange_identification:",
     "ssh_exchange_identification:",
@@ -1331,7 +1333,10 @@ class RemoteDockerRuntimeBackend(LocalProcessBackend):
         try:
             raw = _run_remote_command_with_pre_execution_retry(
                 self._argv_runner,
-                _ssh_command(state.context.target_binding, inner),
+                _ssh_command(
+                    state.context.target_binding,
+                    _remote_command_with_started_sentinel(inner),
+                ),
                 timeout,
             )
             if _is_ssh_transport_failure(raw):
@@ -2218,18 +2223,77 @@ def _is_ssh_transport_failure(result: RuntimeCommandResult) -> bool:
     if result.exit_code != 255 or result.timed_out:
         return False
     stderr = result.stderr.casefold()
-    return any(marker in stderr for marker in _SSH_TRANSPORT_ERROR_MARKERS)
+    return (
+        any(marker in stderr for marker in _SSH_TRANSPORT_ERROR_MARKERS)
+        or _has_openssh_disconnect_line(result.stderr)
+    )
 
 
 def _is_pre_execution_ssh_transport_failure(
     result: RuntimeCommandResult,
+    *,
+    remote_started: bool,
 ) -> bool:
-    if result.exit_code != 255 or result.timed_out:
+    if result.exit_code != 255 or result.timed_out or remote_started:
         return False
     stderr = result.stderr.casefold()
     return (
         "kex_exchange_identification:" in stderr
         or "ssh_exchange_identification:" in stderr
+        or _has_openssh_disconnect_line(result.stderr)
+    )
+
+
+def _has_openssh_disconnect_line(stderr: str) -> bool:
+    return any(
+        re.fullmatch(
+            r"connection (?:closed|reset) by \S+ port \d+",
+            line.strip(),
+            flags=re.IGNORECASE,
+        )
+        is not None
+        for line in stderr.splitlines()
+    )
+
+
+def _remote_command_with_started_sentinel(
+    command: tuple[str, ...],
+) -> tuple[str, ...]:
+    return (
+        "sh",
+        "-c",
+        (
+            "printf '%s\\n' "
+            + shlex.quote(_REMOTE_COMMAND_STARTED_SENTINEL)
+            + ' >&2; exec "$@"'
+        ),
+        "opbench-remote-command",
+        *command,
+    )
+
+
+def _consume_remote_started_sentinel(
+    result: RuntimeCommandResult,
+) -> tuple[RuntimeCommandResult, bool]:
+    lines = result.stderr.splitlines(keepends=True)
+    retained = [
+        line
+        for line in lines
+        if line.rstrip("\r\n") != _REMOTE_COMMAND_STARTED_SENTINEL
+    ]
+    if len(retained) == len(lines):
+        return result, False
+    return (
+        RuntimeCommandResult(
+            command=result.command,
+            cwd=result.cwd,
+            exit_code=result.exit_code,
+            stdout=result.stdout,
+            stderr="".join(retained),
+            duration_ms=result.duration_ms,
+            timed_out=result.timed_out,
+        ),
+        True,
     )
 
 
@@ -2249,7 +2313,11 @@ def _run_remote_command_with_pre_execution_retry(
             None,
             max(1, timeout_ms - elapsed_ms),
         )
-        if not _is_pre_execution_ssh_transport_failure(result):
+        result, remote_started = _consume_remote_started_sentinel(result)
+        if not _is_pre_execution_ssh_transport_failure(
+            result,
+            remote_started=remote_started,
+        ):
             return result
         if attempt + 1 == _REMOTE_COMMAND_MAX_ATTEMPTS:
             return result
