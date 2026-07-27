@@ -4,7 +4,7 @@
 
 文档按版本归档。根目录只保留索引，新增版本时使用 `docs/vX.Y/` 目录，文件名保持小写 snake_case，例如 `design.md`、`developer_guide.md`、`experiment_report.md`、`implementation_plan.md`。
 
-当前发布候选是 `opbench-v0.7.0`：[25-task cumulative](../datasets/pytorch_v0.7/dataset.json)、[6-task Boundary](../datasets/pytorch_v0.7_boundary/dataset.json)和 [8-task Precision](../datasets/pytorch_v0.7_precision/dataset.json)。验证结果是描述性的 **non-leaderboard** 证据；历史 [v0.6 实验报告](v0.6/experiment_report.md)继续保留。
+当前发布是 `opbench-v0.7.0`：[25-task cumulative](../datasets/pytorch_v0.7/dataset.json)、[6-task Boundary](../datasets/pytorch_v0.7_boundary/dataset.json)和 [8-task Precision](../datasets/pytorch_v0.7_precision/dataset.json)。验证结果是描述性的 **non-leaderboard** 证据；历史 [v0.6 实验报告](v0.6/experiment_report.md)继续保留。
 
 建议按以下顺序阅读：
 

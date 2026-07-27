@@ -4,7 +4,7 @@ Language: English | [中文](README.zh-CN.md)
 
 Documents are archived by version. The docs root keeps only indexes; new versions should use a `docs/vX.Y/` directory with lower snake_case filenames such as `design.md`, `developer_guide.md`, `experiment_report.md`, and `implementation_plan.md`.
 
-The current release candidate is `opbench-v0.7.0`: [25-task cumulative](../datasets/pytorch_v0.7/dataset.json), [6-task Boundary](../datasets/pytorch_v0.7_boundary/dataset.json), and [8-task Precision](../datasets/pytorch_v0.7_precision/dataset.json). Its validation evidence is descriptive and **non-leaderboard**. The historical [v0.6 experiment report](v0.6/experiment_report.md) remains available.
+The current release is `opbench-v0.7.0`: [25-task cumulative](../datasets/pytorch_v0.7/dataset.json), [6-task Boundary](../datasets/pytorch_v0.7_boundary/dataset.json), and [8-task Precision](../datasets/pytorch_v0.7_precision/dataset.json). Its validation evidence is descriptive and **non-leaderboard**. The historical [v0.6 experiment report](v0.6/experiment_report.md) remains available.
 
 Use these documents in this order:
 
