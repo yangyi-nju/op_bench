@@ -2,7 +2,7 @@
 
 日期：2026-07-17
 
-状态：实施中；P1 Factory Contract、P2 Matched Runtime 与 P3 Boundary Tasks 已通过
+状态：实施中；P1–P4 已通过，P5 发布收口待完成
 
 ## 1. 版本定位
 
@@ -350,15 +350,40 @@ Factory Admission，覆盖 B1–B5 且均为 verified。
 Commit CPU full-source build。B3 使用小 tensor 加极端整数检查 checked arithmetic；
 B5 使用调用同一生产 predicate 和 Gold 路径的低内存 surrogate，不申请超大
 Tensor。完整候选漏斗、Runtime/Source digest、Admission 和日志边界见
-`docs/v0.7/boundary_tasks.md`。正式 Dataset Freeze 和真实 Codex Validation
-Cohort 仍由 P4 完成。
+`docs/v0.7/boundary_tasks.md`。
 
-### P4：Dataset Freeze 与 Validation Cohort
+### P4：Dataset Freeze 与 Validation Cohort（Passed，2026-07-28）
 
 - 生成 cumulative/boundary/precision manifests；
 - 运行真实 Codex 新 Task 3-repeat Validation Cohort；
 - 重建 Integrity 和 Slice Summary；
 - 处理地板/天花板、异常失败和环境漂移。
+
+P4 冻结了 25-task cumulative、6-task Boundary 与 8-task Precision Dataset。
+三个 generated Dataset hash 分别为
+`sha256:4d7bde25e747bcc041aa5105ce5ce881a3f1e9fe2a7545667cdbc2c14d85064a`、
+`sha256:810a9cc85c576f44edd2672197ab83b7dfee7f674e597c76c78050bd119d606a`
+和
+`sha256:65818466a02e99466386cb8e038dc4da59d91dcb3bea7b83c8901d31a96aa8eb`。
+Boundary Freeze、Release Composition、三份 Summary 与公开验证报告均在独立
+临时目录重建并逐字节一致。
+
+真实 Codex Validation Cohort 使用 `gpt-5.6-sol`、
+`codex-cli 0.146.0-alpha.3.1` 和 `codex_mcp_canonical`，覆盖 5 个 Runtime
+Profile、6 个 Task、18 个 Attempt。18/18 选择均 valid，结果为 14 resolved、
+3 f2p_failed、1 no_patch；17 finished、1 timeout；18 条 trace 完整且
+MCP protocol error 为 0。五个 root 的 fresh Integrity 均与持久化结果一致，
+每个 14/14 checks 通过，资源 ownership/cleanup 全部通过。
+
+预验收审计发现并修复了远端命令开始前 SSH 断连被误归因为逻辑 selector 失败的
+问题；最终 source cohort 从统一修复快照完整重跑，6/6 resolved 且无 transport
+痕迹。被污染的预验收 root 未进入正式报告。Accepted cohort 全部来自
+`retry_index=1`，公开 retry 数为 0。
+
+P4 聚焦测试 68/68 通过；全仓验证 865/865 通过（1183.222 秒），同时通过
+compileall、四个 verified Dataset、全部 tracked JSON、确定性重建和 diff gate。
+完整结果与限制见 `docs/v0.7/validation_report.md`。该结果是平台与 Task 验证，
+保持 non-leaderboard、非反馈因果范围。
 
 ### P5：发布
 

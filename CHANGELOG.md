@@ -6,6 +6,22 @@ under `docs/`.
 
 ## v0.7 - In Progress
 
+P4 Dataset Freeze and Validation Cohort completed on 2026-07-28:
+
+- Froze content-addressed 25-task cumulative, 6-task Boundary, and 8-task Precision Datasets. Their generated Dataset hashes are `sha256:4d7bde25e747bcc041aa5105ce5ce881a3f1e9fe2a7545667cdbc2c14d85064a`, `sha256:810a9cc85c576f44edd2672197ab83b7dfee7f674e597c76c78050bd119d606a`, and `sha256:65818466a02e99466386cb8e038dc4da59d91dcb3bea7b83c8901d31a96aa8eb`.
+- Added deterministic Release Composition, manifest-aware slice summaries, five exact Boundary Runtime Profiles, and evaluator-side current-source preparation before registered tests.
+- Ran the six new Boundary Tasks three times through `codex_mcp_canonical`, `gpt-5.6-sol`, and `codex-cli 0.146.0-alpha.3.1`: 18/18 Attempts are valid, with 14 resolved, 3 F2P failed, and 1 no patch; Agent terminals are 17 finished and 1 timeout.
+- Verified 18/18 complete Adapter traces with zero MCP protocol errors. Every accepted root passed fresh 14/14 Integrity checks, exact runtime resource ownership, and cleanup; all accepted logical Attempts came from retry index 1.
+- Audited floor/ceiling Tasks without changing Admission or tests. Five Tasks resolved 3/3; rank-zero `cummin` resolved 2/3 with one no-patch result; the Triton Y-grid Task failed F2P 3/3 because of Agent patch regressions, not infrastructure.
+- Fixed remote transport attribution discovered during pre-acceptance source-cohort audit. Pre-execution SSH failures are bounded retries; a remote-start sentinel prevents replay after possible command execution. Polluted pre-acceptance roots are excluded, and the uniformly rerun source cohort resolved 6/6 without transport evidence.
+- Published a deterministic three-file public report plus `docs/v0.7/validation_report.md`. The cohort is descriptive platform/Task evidence and explicitly non-leaderboard and non-causal.
+- P4 verification passed 68 focused tests and 865/865 full repository tests in 1183.222 seconds, plus byte-for-byte Freeze/Release/report rebuilds, compileall, all tracked JSON parsing, 17/25/6/8 verified Dataset validation, and diff checks.
+
+P4 documents:
+
+- `docs/v0.7/validation_report.md`
+- `runs/v0.7_validation_report/experiment_report.md`
+
 P3 Boundary Tasks completed on 2026-07-27:
 
 - Froze a deterministic funnel of ten real PyTorch candidates: six accepted, two deferred, and two rejected. Human review additionally rejected #147433 because its landed fix was reverted upstream; #127448 remains deferred.
