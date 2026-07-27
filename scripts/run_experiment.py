@@ -772,6 +772,7 @@ def _execute_v1(
         source_resolver=bundle.source_for,
         hidden_asset_resolver=bundle.hidden_asset_for,
         source_overlay_resolver=bundle.source_overlay_paths_for,
+        source_loading_timeout_resolver=bundle.source_loading_timeout_ms_for,
         backend_factory=backend_factory,
         adapter_factory=adapter_factory,
         python_executable=(sys.executable if profile.backend == "local" else "python"),

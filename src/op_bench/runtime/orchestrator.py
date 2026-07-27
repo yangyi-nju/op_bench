@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping
 from contextlib import ExitStack
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 import shlex
 
@@ -59,6 +59,7 @@ from op_bench.runtime.validation import (
     ContractError,
     require_bool,
     require_enum,
+    require_int,
     require_str,
 )
 from op_bench.runtime.workspace import (
@@ -166,6 +167,7 @@ class V06Orchestrator:
         adapter_factory: object,
         python_executable: str,
         source_overlay_resolver: object | None = None,
+        source_loading_timeout_resolver: object | None = None,
     ) -> None:
         for value, path in (
             (source_resolver, "source_resolver"),
@@ -183,6 +185,16 @@ class V06Orchestrator:
             self._source_overlay_resolver = source_overlay_resolver
         else:
             raise ContractError("source_overlay_resolver: expected callable")
+        if source_loading_timeout_resolver is None:
+            self._source_loading_timeout_resolver = (
+                lambda task: task.runtime.timeout_ms
+            )
+        elif callable(source_loading_timeout_resolver):
+            self._source_loading_timeout_resolver = source_loading_timeout_resolver
+        else:
+            raise ContractError(
+                "source_loading_timeout_resolver: expected callable"
+            )
         self._backend_factory = backend_factory
         self._adapter_factory = adapter_factory
         self._python_executable = require_str(
@@ -285,6 +297,11 @@ class V06Orchestrator:
         hidden_asset = self._hidden_asset_resolver(task)
         self._validate_private_inputs(task, source, hidden_asset)
         source_overlay_paths = self._source_overlay_resolver(task)
+        source_loading_timeout_ms = require_int(
+            self._source_loading_timeout_resolver(task),
+            "source_loading_timeout_ms",
+            minimum=1,
+        )
 
         construction_cleanup = ExitStack()
         try:
@@ -407,6 +424,7 @@ class V06Orchestrator:
                     self._python_executable,
                     runtime_profile=profile,
                     source_overlay_paths=source_overlay_paths,
+                    source_loading_timeout_ms=source_loading_timeout_ms,
                 ),
                 clock_ms=request.clock_ms,
                 event_journal=journal,
@@ -513,6 +531,7 @@ class V06Orchestrator:
                     runtime_profile=profile,
                     attempt_context=attempt_context,
                     source_overlay_paths=source_overlay_paths,
+                    source_loading_timeout_ms=source_loading_timeout_ms,
                 )
             else:
                 evaluation_implementation = _InfrastructureNotEvaluatedBackend()
@@ -776,12 +795,22 @@ def _registered_tests(
     *,
     runtime_profile: RuntimeProfile,
     source_overlay_paths: tuple[str, ...],
+    source_loading_timeout_ms: int,
 ) -> dict[str, RegisteredTest]:
     preparation = build_runtime_source_preparation(
         runtime_profile,
         python_executable,
         source_overlay_paths,
     )
+    if preparation is not None:
+        preparation = replace(
+            preparation,
+            timeout_ms=require_int(
+                source_loading_timeout_ms,
+                "source_loading_timeout_ms",
+                minimum=1,
+            ),
+        )
     selectors = {selector.selector_id: selector for selector in task.public_tests}
     result: dict[str, RegisteredTest] = {}
     for selector_id in request.manifest.capability_policy.registered_tests:

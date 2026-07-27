@@ -487,6 +487,7 @@ class RuntimeAgentSourceLoadingTests(unittest.TestCase):
             "python-fixture",
             runtime_profile=profile,
             source_overlay_paths=("calc/__init__.py",),
+            source_loading_timeout_ms=21_600_000,
         )
 
         selected = registered[next(iter(registered))]
@@ -499,12 +500,14 @@ class RuntimeAgentSourceLoadingTests(unittest.TestCase):
                 "paths": ["calc/__init__.py"],
             },
         )
+        self.assertEqual(selected.preparation.timeout_ms, 21_600_000)
         without_loading = _registered_tests(
             request,
             fixture.manifest.tasks[0],
             "python-fixture",
             runtime_profile=replace(profile, source_loading_mode="none"),
             source_overlay_paths=(),
+            source_loading_timeout_ms=21_600_000,
         )
         self.assertIsNone(without_loading[next(iter(without_loading))].preparation)
 

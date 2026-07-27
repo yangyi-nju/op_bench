@@ -108,6 +108,7 @@ class LegacyV05PrivateTaskBinding:
     source: LocalGitSource
     hidden_asset: EvaluationOnlyTestAsset
     source_overlay_paths: tuple[str, ...]
+    source_loading_timeout_ms: int
 
     def __post_init__(self) -> None:
         require_str(self.task_id, "task_id")
@@ -117,6 +118,11 @@ class LegacyV05PrivateTaskBinding:
             raise ContractError("hidden_asset: expected EvaluationOnlyTestAsset")
         if not isinstance(self.source_overlay_paths, tuple):
             raise ContractError("source_overlay_paths: expected tuple")
+        require_int(
+            self.source_loading_timeout_ms,
+            "source_loading_timeout_ms",
+            minimum=1,
+        )
         if len(set(self.source_overlay_paths)) != len(self.source_overlay_paths):
             raise ContractError("source_overlay_paths: duplicate path")
         for index, value in enumerate(self.source_overlay_paths):
@@ -151,6 +157,9 @@ class LegacyV05RuntimeBundle:
 
     def source_overlay_paths_for(self, task: FullTaskSpec) -> tuple[str, ...]:
         return self._binding_for(task).source_overlay_paths
+
+    def source_loading_timeout_ms_for(self, task: FullTaskSpec) -> int:
+        return self._binding_for(task).source_loading_timeout_ms
 
     def _binding_for(self, task: FullTaskSpec) -> LegacyV05PrivateTaskBinding:
         if not isinstance(task, FullTaskSpec):
@@ -326,6 +335,7 @@ def runtime_bundle_from_v05_dataset(
                 source_overlay_paths=tuple(
                     legacy_task.source_loading_overlay_paths
                 ),
+                source_loading_timeout_ms=legacy_task.build_timeout_sec * 1_000,
             )
         )
     return LegacyV05RuntimeBundle(

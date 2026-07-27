@@ -32,7 +32,7 @@ from op_bench.runtime.local_evaluation import (
 )
 from op_bench.runtime.source_materialization import _git_environment
 from op_bench.runtime.source_loading import build_runtime_source_preparation
-from op_bench.runtime.validation import ContractError, require_str
+from op_bench.runtime.validation import ContractError, require_int, require_str
 from op_bench.runtime.workspace import FrozenPatch
 
 
@@ -67,6 +67,7 @@ class RuntimeFreshEvaluationBackend:
         runtime_profile: RuntimeProfile,
         attempt_context: RuntimeAttemptContext,
         source_overlay_paths: tuple[str, ...] = (),
+        source_loading_timeout_ms: int | None = None,
     ) -> None:
         if not isinstance(source, LocalGitSource):
             raise ContractError("source: expected LocalGitSource")
@@ -102,6 +103,15 @@ class RuntimeFreshEvaluationBackend:
                 )
             normalized_paths.append(str(pure))
         self.source_overlay_paths = tuple(normalized_paths)
+        self.source_loading_timeout_ms = (
+            None
+            if source_loading_timeout_ms is None
+            else require_int(
+                source_loading_timeout_ms,
+                "source_loading_timeout_ms",
+                minimum=1,
+            )
+        )
         if (
             runtime_profile.source_loading_mode == "python_overlay"
             and not self.source_overlay_paths
@@ -481,7 +491,11 @@ class RuntimeFreshEvaluationBackend:
             lease,
             preparation.command,
             preparation.cwd,
-            timeout_ms,
+            (
+                timeout_ms
+                if self.source_loading_timeout_ms is None
+                else self.source_loading_timeout_ms
+            ),
         )
         if result.timed_out:
             raise EvaluationInfrastructureError("evaluation_timeout")

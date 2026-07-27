@@ -232,6 +232,29 @@ class LegacyV05ProjectionTests(unittest.TestCase):
             set_submodule.source_overlay_paths,
         )
 
+    def test_private_runtime_bindings_preserve_source_build_timeout(self) -> None:
+        dataset_path = REPO_ROOT / "datasets" / "pytorch_v0.7_boundary" / "dataset.json"
+        bundle = runtime_bundle_from_v05_dataset(
+            dataset_path,
+            agents=(agent_spec(),),
+            repeat=1,
+            created_at="2026-07-27T00:00:00Z",
+            selected_task_ids=("pytorch__143792__addmv_empty_matrix",),
+        )
+
+        task = TaskManifest.load(
+            REPO_ROOT / "tasks" / "pytorch" / "143792_addmv_empty_matrix" / "task.json"
+        )
+        binding = bundle.private_tasks[0]
+        self.assertEqual(
+            binding.source_loading_timeout_ms,
+            task.build_timeout_sec * 1_000,
+        )
+        self.assertEqual(
+            bundle.source_loading_timeout_ms_for(bundle.manifest.tasks[0]),
+            task.build_timeout_sec * 1_000,
+        )
+
     def test_private_runtime_bindings_use_resolvable_executable_commits(self) -> None:
         bundle = runtime_bundle_from_v05_dataset(
             DATASET_PATH,

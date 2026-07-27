@@ -41,10 +41,52 @@ for relative in paths:
     shutil.copy2(source, target)
 print(json.dumps({"mode": "python_overlay", "overlay_count": len(paths)}, sort_keys=True))
 """.strip()
-_INPLACE_BUILD_COMMAND = (
+_CPU_INPLACE_BUILD_ENVIRONMENT = (
+    ("BUILD_TEST", "0"),
+    ("CC", "gcc"),
+    ("CCACHE_BASEDIR", "/workspace"),
+    ("CCACHE_DIR", "/workspace/.ccache"),
+    ("CCACHE_NOHASHDIR", "true"),
+    ("CMAKE_BUILD_TYPE", "Release"),
+    ("CMAKE_CXX_COMPILER_LAUNCHER", "ccache"),
+    ("CMAKE_C_COMPILER_LAUNCHER", "ccache"),
+    ("CXX", "g++"),
+    ("MAX_JOBS", "8"),
+    ("USE_CUDA", "0"),
+    ("USE_DISTRIBUTED", "0"),
+    ("USE_FBGEMM", "0"),
+    ("USE_FLASH_ATTENTION", "0"),
+    ("USE_GLOO", "0"),
+    ("USE_KINETO", "0"),
+    ("USE_KLEIDIAI", "0"),
+    ("USE_MEM_EFF_ATTENTION", "0"),
+    ("USE_MKLDNN", "0"),
+    ("USE_NCCL", "0"),
+    ("USE_NNPACK", "0"),
+    ("USE_QNNPACK", "0"),
+    ("USE_ROCM", "0"),
+    ("USE_TENSORPIPE", "0"),
+    ("USE_XNNPACK", "0"),
+)
+_CPU_INPLACE_BUILD_EXPORTS = " ".join(
+    f"export {key}={shlex.quote(value)};"
+    for key, value in _CPU_INPLACE_BUILD_ENVIRONMENT
+)
+_INPLACE_BUILD_PREFIX = (
     "set -o pipefail; "
+    "unset PYTHONPATH; "
     "test -f setup.py || { echo 'setup.py missing' >&2; exit 2; }; "
-    "export BUILD_TEST=0; "
+)
+_CPU_INPLACE_BUILD_COMMAND = (
+    _INPLACE_BUILD_PREFIX
+    + "mkdir -p -- third_party/nccl; "
+    f"{_CPU_INPLACE_BUILD_EXPORTS} "
+    "export TORCH_CUDA_ARCH_LIST=7.0; "
+    "{python} setup.py build_ext --inplace"
+)
+_CUDA_INPLACE_BUILD_COMMAND = (
+    _INPLACE_BUILD_PREFIX
+    + "export BUILD_TEST=0; "
     "export TORCH_CUDA_ARCH_LIST=7.0; "
     "export MAX_JOBS=${MAX_JOBS:-8}; "
     "{python} setup.py build_ext --inplace"
@@ -118,10 +160,15 @@ def build_runtime_source_preparation(
             ),
         )
     elif mode == "inplace_build":
+        command_template = (
+            _CPU_INPLACE_BUILD_COMMAND
+            if profile.runtime_tier == "cpu_source_snapshot_fuller"
+            else _CUDA_INPLACE_BUILD_COMMAND
+        )
         command = (
             "bash",
             "-lc",
-            _INPLACE_BUILD_COMMAND.replace(
+            command_template.replace(
                 "{python}",
                 shlex.quote(selected_python),
             ),
