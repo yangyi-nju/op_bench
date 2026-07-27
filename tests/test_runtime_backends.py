@@ -489,6 +489,61 @@ class RecordingArgvRunner:
         )
 
 
+class RemoteExecuteFailureArgvRunner(RecordingArgvRunner):
+    def __init__(self, stderr: str) -> None:
+        super().__init__()
+        self.stderr = stderr
+
+    def __call__(
+        self,
+        command: tuple[str, ...],
+        cwd: Path | None,
+        timeout_ms: int,
+    ):
+        result = super().__call__(command, cwd, timeout_ms)
+        if (
+            command[0] == "ssh-fixture"
+            and "docker-fixture exec" in command[-1]
+        ):
+            return replace(
+                result,
+                exit_code=255,
+                stderr=self.stderr,
+            )
+        return result
+
+
+class TransientRemoteExecuteHandshakeFailureArgvRunner(RecordingArgvRunner):
+    def __init__(self, failures: int) -> None:
+        super().__init__()
+        self.failures = failures
+        self.execute_attempts = 0
+
+    def __call__(
+        self,
+        command: tuple[str, ...],
+        cwd: Path | None,
+        timeout_ms: int,
+    ):
+        result = super().__call__(command, cwd, timeout_ms)
+        if not (
+            command[0] == "ssh-fixture"
+            and "docker-fixture exec" in command[-1]
+        ):
+            return result
+        self.execute_attempts += 1
+        if self.execute_attempts <= self.failures:
+            return replace(
+                result,
+                exit_code=255,
+                stderr=(
+                    "kex_exchange_identification: read: "
+                    "Connection reset by peer\n"
+                ),
+            )
+        return result
+
+
 class StartFailureArgvRunner(RecordingArgvRunner):
     def __call__(
         self,
@@ -1659,6 +1714,118 @@ class ContainerBackendCommandTests(unittest.TestCase):
             ):
                 with self.subTest(forbidden=forbidden):
                     self.assertNotIn(forbidden, flattened)
+
+    def test_remote_run_attributes_ssh_transport_reset_to_infrastructure(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspaces = root / "workspaces"
+            workspaces.mkdir()
+            identity_file = root / "id_fixture"
+            identity_file.write_text("fixture", encoding="utf-8")
+            profile = self.profile("remote_docker")
+            binding = RuntimeTargetBinding(
+                backend="remote_docker",
+                local_workspace_parent=workspaces,
+                host_alias="gpu-exact-fixture",
+                remote_user="runner",
+                ssh_port=2222,
+                identity_file=identity_file,
+                docker_binary="docker-fixture",
+                ssh_binary="ssh-fixture",
+                rsync_binary="rsync-fixture",
+            )
+            fixture = LocalBackendFixture(root, profile=profile, binding=binding)
+            runner = RemoteExecuteFailureArgvRunner(
+                "kex_exchange_identification: read: Connection reset by peer\n"
+                "Connection reset by fixture port 2222\n"
+            )
+            backend = RemoteDockerRuntimeBackend(argv_runner=runner)
+
+            lease = backend.prepare(profile, fixture.context)
+            with self.assertRaises(RuntimeBackendUnavailable) as raised:
+                backend.run(lease, ("python", "-V"), ".", 1_000)
+            cleanup = backend.cleanup(lease)
+
+            self.assertEqual(
+                raised.exception.reason_code,
+                "remote_command_transport_failed",
+            )
+            self.assertEqual(
+                sum(
+                    command[0] == "ssh-fixture"
+                    and "docker-fixture exec" in command[-1]
+                    for command, _, _ in runner.calls
+                ),
+                3,
+            )
+            self.assertTrue(cleanup.report.all_released)
+
+    def test_remote_run_retries_pre_execution_handshake_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspaces = root / "workspaces"
+            workspaces.mkdir()
+            identity_file = root / "id_fixture"
+            identity_file.write_text("fixture", encoding="utf-8")
+            profile = self.profile("remote_docker")
+            binding = RuntimeTargetBinding(
+                backend="remote_docker",
+                local_workspace_parent=workspaces,
+                host_alias="gpu-exact-fixture",
+                remote_user="runner",
+                ssh_port=2222,
+                identity_file=identity_file,
+                docker_binary="docker-fixture",
+                ssh_binary="ssh-fixture",
+                rsync_binary="rsync-fixture",
+            )
+            fixture = LocalBackendFixture(root, profile=profile, binding=binding)
+            runner = TransientRemoteExecuteHandshakeFailureArgvRunner(2)
+            backend = RemoteDockerRuntimeBackend(argv_runner=runner)
+
+            lease = backend.prepare(profile, fixture.context)
+            result = backend.run(lease, ("python", "-V"), ".", 1_000)
+            cleanup = backend.cleanup(lease)
+
+            self.assertEqual(result.exit_code, 0)
+            self.assertEqual(runner.execute_attempts, 3)
+            self.assertTrue(cleanup.report.all_released)
+
+    def test_remote_run_preserves_non_transport_exit_255(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspaces = root / "workspaces"
+            workspaces.mkdir()
+            identity_file = root / "id_fixture"
+            identity_file.write_text("fixture", encoding="utf-8")
+            profile = self.profile("remote_docker")
+            binding = RuntimeTargetBinding(
+                backend="remote_docker",
+                local_workspace_parent=workspaces,
+                host_alias="gpu-exact-fixture",
+                remote_user="runner",
+                ssh_port=2222,
+                identity_file=identity_file,
+                docker_binary="docker-fixture",
+                ssh_binary="ssh-fixture",
+                rsync_binary="rsync-fixture",
+            )
+            fixture = LocalBackendFixture(root, profile=profile, binding=binding)
+            runner = RemoteExecuteFailureArgvRunner(
+                "application deliberately returned 255\n"
+            )
+            backend = RemoteDockerRuntimeBackend(argv_runner=runner)
+
+            lease = backend.prepare(profile, fixture.context)
+            result = backend.run(lease, ("python", "-V"), ".", 1_000)
+            cleanup = backend.cleanup(lease)
+
+            self.assertEqual(result.exit_code, 255)
+            self.assertEqual(
+                result.stderr,
+                "application deliberately returned 255\n",
+            )
+            self.assertTrue(cleanup.report.all_released)
 
     def test_remote_python_overlay_commands_use_runtime_site_packages(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

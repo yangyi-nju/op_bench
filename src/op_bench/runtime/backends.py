@@ -41,7 +41,22 @@ from op_bench.runtime.validation import (
 
 
 _BACKENDS = ("local", "docker", "remote_docker", "scripted")
+_REMOTE_COMMAND_MAX_ATTEMPTS = 3
 _REMOTE_TRANSFER_MAX_ATTEMPTS = 3
+_SSH_TRANSPORT_ERROR_MARKERS = (
+    "kex_exchange_identification:",
+    "ssh_exchange_identification:",
+    "connection closed by remote host",
+    "connection reset by peer",
+    "connection timed out",
+    "connection refused",
+    "no route to host",
+    "could not resolve hostname",
+    "host key verification failed",
+    "permission denied (publickey",
+    "client_loop: send disconnect:",
+    "broken pipe",
+)
 
 
 class RuntimeBackendUnavailable(Exception):
@@ -1314,11 +1329,16 @@ class RemoteDockerRuntimeBackend(LocalProcessBackend):
             python_path=_runtime_python_path(state.profile),
         )
         try:
-            raw = self._argv_runner(
+            raw = _run_remote_command_with_pre_execution_retry(
+                self._argv_runner,
                 _ssh_command(state.context.target_binding, inner),
-                None,
                 timeout,
             )
+            if _is_ssh_transport_failure(raw):
+                raise RuntimeBackendUnavailable(
+                    "remote_command_transport_failed",
+                    raw.stderr,
+                )
             return RuntimeCommandResult(
                 command=argv,
                 cwd=cwd,
@@ -2192,6 +2212,50 @@ def _default_argv_runner(
         duration_ms=max(0, (time.monotonic_ns() - started) // 1_000_000),
         timed_out=timed_out,
     )
+
+
+def _is_ssh_transport_failure(result: RuntimeCommandResult) -> bool:
+    if result.exit_code != 255 or result.timed_out:
+        return False
+    stderr = result.stderr.casefold()
+    return any(marker in stderr for marker in _SSH_TRANSPORT_ERROR_MARKERS)
+
+
+def _is_pre_execution_ssh_transport_failure(
+    result: RuntimeCommandResult,
+) -> bool:
+    if result.exit_code != 255 or result.timed_out:
+        return False
+    stderr = result.stderr.casefold()
+    return (
+        "kex_exchange_identification:" in stderr
+        or "ssh_exchange_identification:" in stderr
+    )
+
+
+def _run_remote_command_with_pre_execution_retry(
+    argv_runner: ArgvRunner,
+    command: tuple[str, ...],
+    timeout_ms: int,
+) -> RuntimeCommandResult:
+    started = time.monotonic_ns()
+    result: RuntimeCommandResult | None = None
+    for attempt in range(_REMOTE_COMMAND_MAX_ATTEMPTS):
+        elapsed_ms = (time.monotonic_ns() - started) // 1_000_000
+        if elapsed_ms >= timeout_ms:
+            break
+        result = argv_runner(
+            command,
+            None,
+            max(1, timeout_ms - elapsed_ms),
+        )
+        if not _is_pre_execution_ssh_transport_failure(result):
+            return result
+        if attempt + 1 == _REMOTE_COMMAND_MAX_ATTEMPTS:
+            return result
+    if result is not None:
+        return result
+    raise RuntimeBackendUnavailable("remote_command_transport_failed")
 
 
 def _run_exact_cleanup_command_with_retry(
