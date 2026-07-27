@@ -6,7 +6,9 @@ OpBench is an operator-focused benchmark for evaluating coding agents on real fr
 
 v0.1 established the isolated replay/evaluation loop. v0.2 added asset registries and formal admission. v0.3 expanded the dataset to 10 verified tasks and added 3-repeat stability evaluation. v0.4 added CUDA tiers and remote Docker. v0.5 is now complete: the verified cumulative dataset contains 17 tasks, including a 6-task precision slice, and its 51-attempt Codex run reached **72.5% resolved** (37/51) with eight-dimensional reporting and hard experiment-integrity checks.
 
-The v0.6 platform is **Completed** across M1–M7: strict versioned contracts, one authoritative workspace and immutable patch, a server-authoritative CLI/MCP action service, deterministic Attempt/trajectory/evaluation/artifact semantics, versioned Runtime Profiles, exact Attempt-owned Local/Docker/Remote resources, conformance and legacy replay, a process-isolated canonical Codex Adapter with resume and Integrity verification, and an executable public Demo/documentation surface. The recovered exact target passed representative Remote CPU, CUDA Overlay, and CUDA Kernel canaries. The complete frozen replay passed all 17 baseline + 17 gold + 51 historical final-patch cases with zero failures, blocks, or differences. A subsequent [real MCP full experiment](docs/v0.6/experiment_report.md) completed 51/51 valid Attempts with 35 resolved, 15 F2P failures, one P2P regression, zero infrastructure-invalid results, and zero retries. These are descriptive platform-validation results, not a causal comparison with v0.5. Boundary-task expansion follows in v0.7. See the [global project plan](docs/project_plan.md), [current project state](docs/project_state.md), and [v0.6 release notes](docs/v0.6/release_notes.md).
+The v0.6 platform is **Completed** across M1–M7: strict versioned contracts, one authoritative workspace and immutable patch, a server-authoritative CLI/MCP action service, deterministic Attempt/trajectory/evaluation/artifact semantics, versioned Runtime Profiles, exact Attempt-owned Local/Docker/Remote resources, conformance and legacy replay, a process-isolated canonical Codex Adapter with resume and Integrity verification, and an executable public Demo/documentation surface. The recovered exact target passed representative Remote CPU, CUDA Overlay, and CUDA Kernel canaries. The complete frozen replay passed all 17 baseline + 17 gold + 51 historical final-patch cases with zero failures, blocks, or differences. A subsequent [real MCP full experiment](docs/v0.6/experiment_report.md) completed 51/51 valid Attempts with 35 resolved, 15 F2P failures, one P2P regression, zero infrastructure-invalid results, and zero retries. These are descriptive platform-validation results, not a causal comparison with v0.5. See the [v0.6 release notes](docs/v0.6/release_notes.md).
+
+The current release candidate is `opbench-v0.7.0`: a reproducible Dataset Factory release with a [25-task cumulative Dataset](datasets/pytorch_v0.7/dataset.json), [6-task Boundary Slice](datasets/pytorch_v0.7_boundary/dataset.json), and [8-task Precision Slice](datasets/pytorch_v0.7_precision/dataset.json). All Tasks are verified, the Boundary Slice spans B1–B5, and the Precision Slice spans P1–P5. Its 18-attempt real Codex validation produced 14 resolved, three F2P failures, one no-patch outcome, and zero accepted-cohort retries. This is descriptive Task/platform evidence with a strict **non-leaderboard** scope, not a formal multi-Agent ranking or causal claim. See the [Dataset Card](docs/v0.7/dataset_card.md), [validation report](docs/v0.7/validation_report.md), [global project plan](docs/project_plan.md), and [current project state](docs/project_state.md).
 
 ## What The Current Code Contains
 
@@ -52,6 +54,8 @@ Development-only experiment adapters have been removed from the public v0.1 surf
 | `docs/v0.6/` | v0.6 standardized Agent evaluation platform design, implementation plan, and acceptance matrix. |
 | `docs/v0.6/experiment_report.md` | v0.6 real MCP full experiment: 51 valid Attempts, outcomes, traces, and integrity evidence. |
 | `docs/v0.7/design.md` | v0.7 Dataset Factory, Boundary Slice, and matched-runtime recovery design. |
+| `docs/v0.7/dataset_card.md` | v0.7 release identity, Dataset provenance, taxonomy, validation scope, and limitations. |
+| `docs/v0.7/validation_report.md` | v0.7 18-Attempt real Codex validation and integrity evidence. |
 | `docs/v0.5/design.md` | v0.5 dimension taxonomy and extended evaluation metrics. |
 | `docs/v0.5/experiment_report.md` | v0.5 full 17-task, 51-attempt Codex evaluation and precision breakdown. |
 | `docs/v0.4/design.md` | v0.4 CUDA tiers, remote GPU Docker executor over SSH, and `inplace_build` source loading. |
@@ -62,8 +66,8 @@ Development-only experiment adapters have been removed from the public v0.1 surf
 
 ## Quick Start
 
-OpBench v0.6 has no third-party Python dependency. Create a clean environment,
-run the full suite, and validate the frozen v0.5 Dataset:
+OpBench has no third-party Python dependency. Create a clean environment, run
+the full suite, and validate all three frozen v0.7 Datasets:
 
 ```bash
 python3 -m venv .venv
@@ -73,7 +77,11 @@ PATH=.venv/bin:$PATH PYTHONPATH=src python -m unittest discover \
   -s tests -p 'test_*.py'
 
 PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/validate_dataset.py \
-  datasets/pytorch_v0.5/dataset.json --require-verified
+  datasets/pytorch_v0.7/dataset.json --require-verified
+PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/validate_dataset.py \
+  datasets/pytorch_v0.7_boundary/dataset.json --require-verified
+PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/validate_dataset.py \
+  datasets/pytorch_v0.7_precision/dataset.json --require-verified
 ```
 
 Build and validate an offline v0.6 RunManifest. This command does not launch an
@@ -212,7 +220,20 @@ exact-target configuration.
 
 ## Current Dataset
 
-The verified [pytorch_v0.5 manifest](datasets/pytorch_v0.5/dataset.json) contains all 13 v0.4 tasks plus four newly admitted precision tasks. Deprecated tasks #129154 and #144073 are excluded. The complete run scored **37/51 (72.5%)**; the reusable [precision slice](datasets/pytorch_v0.5_precision/dataset.json) scored **13/18 (72.2%)**:
+`opbench-v0.7.0` freezes three verified views over the same Task bundles:
+
+- [25-task cumulative](datasets/pytorch_v0.7/dataset.json): 17 inherited v0.5 Tasks, two restored P4 Tasks, and six new Boundary Tasks.
+- [6-task Boundary](datasets/pytorch_v0.7_boundary/dataset.json): one reusable slice covering B1–B5.
+- [8-task Precision](datasets/pytorch_v0.7_precision/dataset.json): the six historical Precision Tasks plus two restored P4 Tasks, covering P1–P5.
+
+The [Dataset Card](docs/v0.7/dataset_card.md) freezes membership, hashes,
+provenance, admission, contamination risks, and limitations. The
+[validation report](docs/v0.7/validation_report.md) records the descriptive
+18-Attempt cohort. It is intentionally non-leaderboard evidence.
+
+### Historical v0.5 result
+
+The verified [pytorch_v0.5 manifest](datasets/pytorch_v0.5/dataset.json) contains all 13 v0.4 tasks plus four newly admitted precision tasks. Deprecated tasks #129154 and #144073 are excluded. Its historical complete run scored **37/51 (72.5%)**; the reusable [precision slice](datasets/pytorch_v0.5_precision/dataset.json) scored **13/18 (72.2%)**:
 
 | Task | PR | Subclass | Tier | Rate |
 | --- | ---: | :---: | --- | ---: |
@@ -248,7 +269,7 @@ For Docker tasks, preflight commands, setup commands, test commands, and action-
 
 ## Adding More Work
 
-Platform development should follow the [v0.6 design](docs/v0.6/design.md), [implementation plan](docs/v0.6/implementation_plan.md), and [acceptance matrix](docs/v0.6/acceptance_matrix.md). Dataset expansion follows the existing admission workflow below and the [v0.7 design](docs/v0.7/design.md):
+Platform development follows the stable [v0.6 design](docs/v0.6/design.md), [implementation plan](docs/v0.6/implementation_plan.md), and [acceptance matrix](docs/v0.6/acceptance_matrix.md). Dataset expansion follows the existing admission workflow and the [v0.7 design](docs/v0.7/design.md):
 
 1. Add or curate task bundles under `tasks/<framework>/`.
 2. Register reusable environment/source assets under `environments/registry.json` and `sources/registry.json`.
@@ -270,6 +291,8 @@ Platform development should follow the [v0.6 design](docs/v0.6/design.md), [impl
 - [v0.6 real MCP Agent experiment](docs/v0.6/mcp_agent_experiment.md)
 - [v0.6 real MCP Agent experiment verification](docs/v0.6/mcp_agent_experiment_verification.md)
 - [v0.7 Dataset Factory and Boundary design](docs/v0.7/design.md)
+- [v0.7 Dataset Card](docs/v0.7/dataset_card.md)
+- [v0.7 validation report](docs/v0.7/validation_report.md)
 - [v0.5 design](docs/v0.5/design.md)
 - [v0.5 experiment report](docs/v0.5/experiment_report.md)
 - [v0.4 design](docs/v0.4/design.md)

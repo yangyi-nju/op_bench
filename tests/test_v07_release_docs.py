@@ -16,6 +16,12 @@ SUMMARY_PATHS = {
         REPO_ROOT / "datasets" / "pytorch_v0.7_precision" / "summary.json"
     ),
 }
+ENTRYPOINTS = (
+    REPO_ROOT / "README.md",
+    REPO_ROOT / "README.zh-CN.md",
+    REPO_ROOT / "docs" / "README.md",
+    REPO_ROOT / "docs" / "README.zh-CN.md",
+)
 
 
 class V07ReleaseDocsTests(unittest.TestCase):
@@ -121,6 +127,32 @@ class V07ReleaseDocsTests(unittest.TestCase):
             validation["evaluation_outcomes"],
             {"f2p_failed": 3, "no_patch": 1, "resolved": 14},
         )
+
+    def test_bilingual_entrypoints_publish_the_same_v07_release(self) -> None:
+        for path in ENTRYPOINTS:
+            text = path.read_text(encoding="utf-8")
+            for required in (
+                "opbench-v0.7.0",
+                "25-task cumulative",
+                "6-task Boundary",
+                "8-task Precision",
+                "datasets/pytorch_v0.7/dataset.json",
+                "datasets/pytorch_v0.7_boundary/dataset.json",
+                "datasets/pytorch_v0.7_precision/dataset.json",
+                "v0.7/dataset_card.md",
+                "v0.7/validation_report.md",
+                "v0.6/experiment_report.md",
+                "non-leaderboard",
+            ):
+                with self.subTest(path=path.name, required=required):
+                    self.assertIn(required, text)
+            for forbidden in (
+                "v0.7 is a formal multi-Agent ranking",
+                "v0.7 是正式多 Agent 排名",
+                "v0.7 cohort establishes a leaderboard",
+            ):
+                with self.subTest(path=path.name, forbidden=forbidden):
+                    self.assertNotIn(forbidden, text)
 
 
 if __name__ == "__main__":
