@@ -19,6 +19,7 @@ from op_bench.factory.prompt_quality import (
     build_prompt_quality_evidence,
     empty_private_index,
 )
+from op_bench.factory.complexity import ComplexityEvidence, build_complexity_evidence
 from op_bench.runtime.canonical import canonical_json
 from op_bench.runtime.validation import ContractError
 from tests.test_factory_contracts import candidate
@@ -48,6 +49,28 @@ def prompt_quality() -> PromptQualityEvidence:
         },
         decision="accepted",
         created_at="2026-07-29T00:00:00Z",
+    )
+
+
+def complexity_evidence() -> ComplexityEvidence:
+    return build_complexity_evidence(
+        task_id="pytorch__empty_addmv",
+        localization=2,
+        diagnosis=2,
+        repair_regression=1,
+        dimension_evidence={
+            "localization": "The prompt requires tracing the public operation.",
+            "diagnosis": "The failure requires comparing behavior contracts.",
+            "repair_regression": "The repair must preserve neighboring behavior.",
+        },
+        hard_rejections=(),
+        risk_signals=(),
+        duplicate_fingerprint="sha256:" + "a" * 64,
+        duplicate_decision="distinct",
+        blind_pilot=None,
+        second_review=False,
+        reviewer="complexity-reviewer",
+        reviewed_at="2026-07-29T00:00:00Z",
     )
 
 
@@ -208,6 +231,26 @@ class FactoryArtifactStoreTests(unittest.TestCase):
             path = root / reference.relative_path
             payload = selected.to_dict()
             payload["prompt_hash"] = "sha256:" + "c" * 64
+            path.write_bytes(canonical_json(payload).encode("utf-8"))
+            path.chmod(0o600)
+
+            with self.assertRaisesRegex(ContractError, "content_hash"):
+                load_factory_contract(path)
+
+    def test_complexity_contract_is_registered_and_hash_tampering_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw) / "factory"
+            store = FactoryArtifactStore(root)
+            selected = complexity_evidence()
+            reference = store.write_contract("quality/complexity.json", selected)
+
+            self.assertEqual(reference.artifact_type, "complexity_evidence")
+            self.assertEqual(reference.artifact_id, selected.task_id)
+            self.assertEqual(store.read_contract(reference), selected)
+
+            path = root / reference.relative_path
+            payload = selected.to_dict()
+            payload["reviewer"] = "tampered-reviewer"
             path.write_bytes(canonical_json(payload).encode("utf-8"))
             path.chmod(0o600)
 
