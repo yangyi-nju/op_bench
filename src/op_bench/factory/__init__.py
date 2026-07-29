@@ -4,6 +4,10 @@ from op_bench.factory.artifacts import (
     FactoryArtifactStore,
     load_factory_contract,
 )
+from op_bench.factory.archive import (
+    PreQualityArchive,
+    load_pre_quality_archive,
+)
 from op_bench.factory.contracts import (
     CandidateRecord,
     ChangedFile,
@@ -66,6 +70,7 @@ __all__ = [
     "FactoryArtifactReference",
     "FactoryEvidence",
     "FactoryTransitionRequest",
+    "PreQualityArchive",
     "ScreeningFinding",
     "ScreeningRuleSet",
     "V07_BOUNDARY_SCREENING_V1",
@@ -79,6 +84,7 @@ __all__ = [
     "freeze_dataset_bytes",
     "keyword_pack",
     "load_factory_contract",
+    "load_pre_quality_archive",
     "match_keyword_packs",
     "required_evidence",
     "rebuild_dataset_manifest",
