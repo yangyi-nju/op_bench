@@ -18,6 +18,7 @@ from op_bench.factory.contracts import (
     FactoryAdmissionRecord,
     FactoryArtifactReference,
 )
+from op_bench.factory.prompt_quality import PromptQualityEvidence
 from op_bench.runtime.canonical import canonical_json, canonical_sha256
 from op_bench.runtime.validation import ContractError
 
@@ -27,6 +28,7 @@ FactoryContract = Union[
     DecisionRecord,
     FactoryAdmissionRecord,
     DatasetFreezeManifest,
+    PromptQualityEvidence,
 ]
 
 _CONTRACT_TYPES = {
@@ -34,6 +36,7 @@ _CONTRACT_TYPES = {
     DecisionRecord.contract_type: DecisionRecord,
     FactoryAdmissionRecord.contract_type: FactoryAdmissionRecord,
     DatasetFreezeManifest.contract_type: DatasetFreezeManifest,
+    PromptQualityEvidence.contract_type: PromptQualityEvidence,
 }
 _DIRECTORY_FLAGS = (
     os.O_RDONLY
@@ -89,6 +92,8 @@ def _contract_identity(contract: FactoryContract) -> str:
         return contract.admission_id
     if isinstance(contract, DatasetFreezeManifest):
         return contract.freeze_id
+    if isinstance(contract, PromptQualityEvidence):
+        return contract.task_id
     raise ContractError("contract: unsupported Factory contract")
 
 
@@ -208,6 +213,7 @@ class FactoryArtifactStore:
                 DecisionRecord,
                 FactoryAdmissionRecord,
                 DatasetFreezeManifest,
+                PromptQualityEvidence,
             ),
         ):
             raise ContractError("contract: unsupported Factory contract")

@@ -1,0 +1,155 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OpBench Prompt Quality Evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_type",
+    "schema_version",
+    "task_id",
+    "public_task_id",
+    "prompt_hash",
+    "agent_task_view_hash",
+    "scanner_version",
+    "findings",
+    "blind_review",
+    "semantic_review",
+    "decision",
+    "created_at",
+    "content_hash"
+  ],
+  "properties": {
+    "contract_type": {
+      "const": "prompt_quality"
+    },
+    "schema_version": {
+      "const": "v1"
+    },
+    "task_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "public_task_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "prompt_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "agent_task_view_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "scanner_version": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
+    "findings": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/finding"
+      }
+    },
+    "blind_review": {
+      "$ref": "#/$defs/blind_review"
+    },
+    "semantic_review": {
+      "$ref": "#/$defs/semantic_review"
+    },
+    "decision": {
+      "type": "string",
+      "enum": [
+        "accepted",
+        "deferred",
+        "rejected"
+      ]
+    },
+    "created_at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "content_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  },
+  "$defs": {
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "severity",
+        "public_field",
+        "matched_value_hash"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "pattern": "^(answer|provenance|solution)\\.[a-z0-9][a-z0-9._-]*$"
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "defer",
+            "reject"
+          ]
+        },
+        "public_field": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "matched_value_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      }
+    },
+    "blind_review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "decision",
+        "reviewer",
+        "reviewed_at"
+      ],
+      "properties": {
+        "decision": {
+          "const": "accepted"
+        },
+        "reviewer": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reviewed_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        }
+      }
+    },
+    "semantic_review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "decision",
+        "reviewer",
+        "reviewed_at"
+      ],
+      "properties": {
+        "decision": {
+          "const": "equivalent"
+        },
+        "reviewer": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reviewed_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        }
+      }
+    }
+  }
+}

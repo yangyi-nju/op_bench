@@ -14,6 +14,7 @@ from op_bench.factory.artifacts import (
     FactoryArtifactStore,
     load_factory_contract,
 )
+from op_bench.factory.prompt_quality import PromptQualityEvidence
 from op_bench.runtime.canonical import canonical_json
 from op_bench.runtime.validation import ContractError
 from tests.test_factory_contracts import candidate
@@ -21,6 +22,29 @@ from tests.test_factory_contracts import candidate
 
 ROOT = Path(__file__).resolve().parents[1]
 VALIDATOR = ROOT / "scripts" / "validate_factory_artifact.py"
+
+
+def prompt_quality() -> PromptQualityEvidence:
+    return PromptQualityEvidence(
+        task_id="pytorch__empty_addmv",
+        public_task_id="task-v07-empty-addmv",
+        prompt_hash="sha256:" + "a" * 64,
+        agent_task_view_hash="sha256:" + "b" * 64,
+        scanner_version="prompt-overlap-v1",
+        findings=(),
+        blind_review={
+            "decision": "accepted",
+            "reviewer": "reviewer-id",
+            "reviewed_at": "2026-07-29T00:00:00Z",
+        },
+        semantic_review={
+            "decision": "equivalent",
+            "reviewer": "curator-id",
+            "reviewed_at": "2026-07-29T00:00:00Z",
+        },
+        decision="accepted",
+        created_at="2026-07-29T00:00:00Z",
+    )
 
 
 class FactoryArtifactStoreTests(unittest.TestCase):
@@ -165,6 +189,26 @@ class FactoryArtifactStoreTests(unittest.TestCase):
             self.assertEqual(load_factory_contract(target), candidate())
             with self.assertRaisesRegex(ContractError, "symlink"):
                 load_factory_contract(link)
+
+    def test_prompt_quality_contract_is_registered_and_hash_tampering_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw) / "factory"
+            store = FactoryArtifactStore(root)
+            selected = prompt_quality()
+            reference = store.write_contract("quality/prompt.json", selected)
+
+            self.assertEqual(reference.artifact_type, "prompt_quality")
+            self.assertEqual(reference.artifact_id, selected.task_id)
+            self.assertEqual(store.read_contract(reference), selected)
+
+            path = root / reference.relative_path
+            payload = selected.to_dict()
+            payload["prompt_hash"] = "sha256:" + "c" * 64
+            path.write_bytes(canonical_json(payload).encode("utf-8"))
+            path.chmod(0o600)
+
+            with self.assertRaisesRegex(ContractError, "content_hash"):
+                load_factory_contract(path)
 
 
 class FactoryArtifactValidatorCliTests(unittest.TestCase):

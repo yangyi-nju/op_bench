@@ -32,6 +32,14 @@ from op_bench.factory.lifecycle import (
     validate_admission_chain,
 )
 from op_bench.factory.promotion import build_verified_admission_chain
+from op_bench.factory.prompt_quality import (
+    PrivateAnswerIndex,
+    PromptFinding,
+    PromptQualityEvidence,
+    build_private_answer_index,
+    empty_private_index,
+    scan_rendered_prompt,
+)
 from op_bench.factory.release import (
     DatasetReleaseInput,
     DatasetReleaseManifest,
@@ -76,6 +84,9 @@ __all__ = [
     "FactoryEvidence",
     "FactoryTransitionRequest",
     "PreQualityArchive",
+    "PrivateAnswerIndex",
+    "PromptFinding",
+    "PromptQualityEvidence",
     "ScreeningFinding",
     "ScreeningRuleSet",
     "TaskTaxonomyV2",
@@ -86,8 +97,10 @@ __all__ = [
     "advance_admission",
     "build_verified_admission_chain",
     "build_freeze_manifest",
+    "build_private_answer_index",
     "build_dataset_release",
     "factory_content_hash",
+    "empty_private_index",
     "freeze_dataset_bytes",
     "keyword_pack",
     "load_factory_contract",
@@ -98,6 +111,7 @@ __all__ = [
     "rebuild_dataset_manifest",
     "rebuild_release_datasets",
     "screen_candidate",
+    "scan_rendered_prompt",
     "validate_admission_chain",
     "validate_problem_taxonomy",
 ]
