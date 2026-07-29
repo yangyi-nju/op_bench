@@ -212,8 +212,8 @@ _ACQUISITION_RECEIPT_FIELDS = (
     "resolved_marker",
     "selected_commit_message",
     "selected_commit_message_hash",
-    "main_history_membership",
-    "main_history_reverted",
+    "main_history_exact_marker_hits",
+    "main_history_reversal_findings",
     "files_total_count",
     "files_captured_node_count",
     "files_has_next_page",
@@ -229,9 +229,60 @@ _ACQUISITION_RECEIPT_SET_FIELDS = (
     "repository",
     "captured_at",
     "capture_method",
+    "main_history_scan",
     "receipts",
     "content_hash",
 )
+_MAIN_HISTORY_MARKER_HIT_FIELDS = (
+    "oid",
+    "first_parent_oid",
+    "committed_at",
+    "message_hash",
+)
+_MAIN_HISTORY_REVERSAL_FINDING_FIELDS = (
+    "event_oid",
+    "committed_at",
+    "message_hash",
+    "kind",
+    "target_pr_number",
+    "target_commit_oid",
+)
+_MAIN_HISTORY_SCAN_FIELDS = (
+    "ref_name",
+    "head_oid",
+    "since",
+    "page_count",
+    "commit_count",
+    "final_has_next_page",
+    "scanned_commit_facts_hash",
+    "finding_rule_version",
+)
+_MAIN_HISTORY_COMMIT_FACT_FIELDS = (
+    "oid",
+    "first_parent_oid",
+    "committed_at",
+    "message",
+)
+_QUALITY_MAIN_HISTORY_SINCE = "2026-03-01T00:00:00Z"
+_QUALITY_EXACT_RESOLVED_PULL = re.compile(
+    r"^Pull Request resolved: "
+    r"https://github\.com/pytorch/pytorch/pull/([1-9][0-9]*)$",
+    re.MULTILINE,
+)
+_QUALITY_PULL_URL = re.compile(
+    r"https://github\.com/pytorch/pytorch/pull/([1-9][0-9]*)"
+)
+_QUALITY_PULL_TOKEN = re.compile(r"\(#([1-9][0-9]*)\)")
+_QUALITY_REVERTED_PULL = re.compile(
+    r"Reverted https://github\.com/pytorch/pytorch/pull/"
+    r"([1-9][0-9]*)",
+    re.IGNORECASE,
+)
+_QUALITY_REVERTED_COMMIT = re.compile(
+    r"\b(?:this )?reverts commit ([0-9a-f]{40})\b",
+    re.IGNORECASE,
+)
+_QUALITY_RELAND_HEADLINE = re.compile(r"\breland\b", re.IGNORECASE)
 _BACKPORT_REF = re.compile(
     r"(?:^|[-_/])(?:cherry(?:-pick)?|backport|cp)(?:[-_/]|$)|release",
     re.IGNORECASE,
@@ -244,7 +295,6 @@ _REVERSAL_TITLE = re.compile(
     r"\b(?:revert(?:ed|ing)?|back\s+out|rollback)\b",
     re.IGNORECASE,
 )
-_KNOWN_REVERTED_PRIMARY_PRS = frozenset({186379})
 _DISTRIBUTED_ONLY_EVIDENCE = re.compile(
     r"\bddp\b|DistributedDataParallel|\bTorchElastic\b|"
     r"torch(?:/|\.)distributed(?:/|\.)elastic",
@@ -296,7 +346,7 @@ _FBCODE_TITLE_EVIDENCE = re.compile(r"\bFBCODE\b", re.IGNORECASE)
 # validator always compares the root-fixed composite against this code-pinned
 # value, independent of the candidate index's physical location.
 _OFFICIAL_QUALITY_ACQUISITION_ROOT = (
-    "sha256:71211ab3f980b5796280abca3769ea02cf323b1a3b169317ab6ce2d7e4cf799c"
+    "sha256:d32e1369018627297320a90e224e2fcdd39e451a602a9733ddfda23226fde234"
 )
 
 
@@ -491,6 +541,426 @@ class QualityLinkedIssue:
 
 
 @dataclass(frozen=True)
+class QualityMainHistoryMarkerHit:
+    oid: str
+    first_parent_oid: str
+    committed_at: str
+    message_hash: str
+
+    def __post_init__(self) -> None:
+        _required_commit(self.oid, "main_history_marker_hit.oid")
+        _required_commit(
+            self.first_parent_oid,
+            "main_history_marker_hit.first_parent_oid",
+        )
+        _timestamp(
+            self.committed_at,
+            "main_history_marker_hit.committed_at",
+        )
+        _require_hash(
+            self.message_hash,
+            "main_history_marker_hit.message_hash",
+        )
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "oid": self.oid,
+            "first_parent_oid": self.first_parent_oid,
+            "committed_at": self.committed_at,
+            "message_hash": self.message_hash,
+        }
+
+    @classmethod
+    def from_dict(
+        cls,
+        value: object,
+        *,
+        path: str,
+    ) -> "QualityMainHistoryMarkerHit":
+        data = _exact_mapping(
+            value,
+            path,
+            _MAIN_HISTORY_MARKER_HIT_FIELDS,
+        )
+        return cls(
+            oid=_required_commit(data["oid"], f"{path}.oid"),
+            first_parent_oid=_required_commit(
+                data["first_parent_oid"],
+                f"{path}.first_parent_oid",
+            ),
+            committed_at=_timestamp(
+                data["committed_at"], f"{path}.committed_at"
+            ),
+            message_hash=_require_hash(
+                data["message_hash"], f"{path}.message_hash"
+            ),
+        )
+
+
+@dataclass(frozen=True)
+class QualityMainHistoryReversalFinding:
+    event_oid: str
+    committed_at: str
+    message_hash: str
+    kind: str
+    target_pr_number: int | None
+    target_commit_oid: str | None
+
+    def __post_init__(self) -> None:
+        _required_commit(
+            self.event_oid, "main_history_reversal_finding.event_oid"
+        )
+        _timestamp(
+            self.committed_at,
+            "main_history_reversal_finding.committed_at",
+        )
+        _require_hash(
+            self.message_hash,
+            "main_history_reversal_finding.message_hash",
+        )
+        _enum(
+            self.kind,
+            "main_history_reversal_finding.kind",
+            ("revert_pr", "revert_commit", "reland_headline"),
+        )
+        if self.target_pr_number is not None:
+            _positive_int(
+                self.target_pr_number,
+                "main_history_reversal_finding.target_pr_number",
+            )
+        _optional_commit(
+            self.target_commit_oid,
+            "main_history_reversal_finding.target_commit_oid",
+        )
+        if self.kind in ("revert_pr", "reland_headline"):
+            if self.target_pr_number is None:
+                raise ContractError(
+                    "main_history_reversal_finding.target_pr_number: "
+                    "required for PR finding"
+                )
+            if self.target_commit_oid is not None:
+                raise ContractError(
+                    "main_history_reversal_finding.target_commit_oid: "
+                    "forbidden for PR finding"
+                )
+        else:
+            if self.target_commit_oid is None:
+                raise ContractError(
+                    "main_history_reversal_finding.target_commit_oid: "
+                    "required for commit finding"
+                )
+            if self.target_pr_number is not None:
+                raise ContractError(
+                    "main_history_reversal_finding.target_pr_number: "
+                    "forbidden for commit finding"
+                )
+
+    def sort_key(self) -> tuple[str, str, int, str]:
+        return (
+            self.event_oid,
+            self.kind,
+            self.target_pr_number or 0,
+            self.target_commit_oid or "",
+        )
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "event_oid": self.event_oid,
+            "committed_at": self.committed_at,
+            "message_hash": self.message_hash,
+            "kind": self.kind,
+            "target_pr_number": self.target_pr_number,
+            "target_commit_oid": self.target_commit_oid,
+        }
+
+    @classmethod
+    def from_dict(
+        cls,
+        value: object,
+        *,
+        path: str,
+    ) -> "QualityMainHistoryReversalFinding":
+        data = _exact_mapping(
+            value,
+            path,
+            _MAIN_HISTORY_REVERSAL_FINDING_FIELDS,
+        )
+        target_pr_number = data["target_pr_number"]
+        if target_pr_number is not None:
+            target_pr_number = _positive_int(
+                target_pr_number, f"{path}.target_pr_number"
+            )
+        return cls(
+            event_oid=_required_commit(
+                data["event_oid"], f"{path}.event_oid"
+            ),
+            committed_at=_timestamp(
+                data["committed_at"], f"{path}.committed_at"
+            ),
+            message_hash=_require_hash(
+                data["message_hash"], f"{path}.message_hash"
+            ),
+            kind=_enum(
+                data["kind"],
+                f"{path}.kind",
+                ("revert_pr", "revert_commit", "reland_headline"),
+            ),
+            target_pr_number=target_pr_number,
+            target_commit_oid=_optional_commit(
+                data["target_commit_oid"],
+                f"{path}.target_commit_oid",
+            ),
+        )
+
+
+def derive_quality_main_history_findings(
+    pr_number: int,
+    commits: Sequence[Mapping[str, object]],
+) -> tuple[
+    tuple[QualityMainHistoryMarkerHit, ...],
+    tuple[QualityMainHistoryReversalFinding, ...],
+]:
+    """Derive exact-marker and reversal findings from main commit facts."""
+
+    number = _positive_int(pr_number, "main_history_findings.pr_number")
+    normalized: list[tuple[str, str, str, str]] = []
+    marker_hits_by_oid: dict[str, QualityMainHistoryMarkerHit] = {}
+    for index, value in enumerate(commits):
+        path = f"main_history_findings.commits[{index}]"
+        data = _exact_mapping(
+            value,
+            path,
+            _MAIN_HISTORY_COMMIT_FACT_FIELDS,
+        )
+        oid = _required_commit(data["oid"], f"{path}.oid")
+        first_parent_oid = _required_commit(
+            data["first_parent_oid"],
+            f"{path}.first_parent_oid",
+        )
+        committed_at = _timestamp(
+            data["committed_at"],
+            f"{path}.committed_at",
+        )
+        message = _string(data["message"], f"{path}.message")
+        normalized.append((oid, first_parent_oid, committed_at, message))
+        exact_prs = {
+            int(match.group(1))
+            for match in _QUALITY_EXACT_RESOLVED_PULL.finditer(message)
+        }
+        if number not in exact_prs:
+            continue
+        hit = QualityMainHistoryMarkerHit(
+            oid=oid,
+            first_parent_oid=first_parent_oid,
+            committed_at=committed_at,
+            message_hash=canonical_sha256(message),
+        )
+        previous = marker_hits_by_oid.get(oid)
+        if previous is not None and previous != hit:
+            raise ContractError(
+                f"{path}.oid: conflicting duplicate commit fact"
+            )
+        marker_hits_by_oid[oid] = hit
+
+    marker_oids = frozenset(marker_hits_by_oid)
+    findings: dict[
+        tuple[str, str, int, str],
+        QualityMainHistoryReversalFinding,
+    ] = {}
+
+    def add_finding(
+        *,
+        event_oid: str,
+        committed_at: str,
+        message: str,
+        kind: str,
+        target_pr_number: int | None,
+        target_commit_oid: str | None,
+    ) -> None:
+        finding = QualityMainHistoryReversalFinding(
+            event_oid=event_oid,
+            committed_at=committed_at,
+            message_hash=canonical_sha256(message),
+            kind=kind,
+            target_pr_number=target_pr_number,
+            target_commit_oid=target_commit_oid,
+        )
+        findings[finding.sort_key()] = finding
+
+    for event_oid, _, committed_at, message in normalized:
+        headline = message.splitlines()[0] if message.splitlines() else ""
+        if _REVERSAL_TITLE.search(headline):
+            target_prs = {
+                int(match.group(1))
+                for match in _QUALITY_PULL_URL.finditer(message)
+            }
+            target_prs.update(
+                int(match.group(1))
+                for match in _QUALITY_PULL_TOKEN.finditer(headline)
+            )
+            if number in target_prs:
+                add_finding(
+                    event_oid=event_oid,
+                    committed_at=committed_at,
+                    message=message,
+                    kind="revert_pr",
+                    target_pr_number=number,
+                    target_commit_oid=None,
+                )
+        if any(
+            int(match.group(1)) == number
+            for match in _QUALITY_REVERTED_PULL.finditer(message)
+        ):
+            add_finding(
+                event_oid=event_oid,
+                committed_at=committed_at,
+                message=message,
+                kind="revert_pr",
+                target_pr_number=number,
+                target_commit_oid=None,
+            )
+        for match in _QUALITY_REVERTED_COMMIT.finditer(message):
+            target_oid = match.group(1).casefold()
+            if target_oid in marker_oids:
+                add_finding(
+                    event_oid=event_oid,
+                    committed_at=committed_at,
+                    message=message,
+                    kind="revert_commit",
+                    target_pr_number=None,
+                    target_commit_oid=target_oid,
+                )
+        if _QUALITY_RELAND_HEADLINE.search(headline):
+            target_prs = {
+                int(match.group(1))
+                for match in _QUALITY_EXACT_RESOLVED_PULL.finditer(message)
+            }
+            target_prs.update(
+                int(match.group(1))
+                for match in _QUALITY_PULL_TOKEN.finditer(headline)
+            )
+            if number in target_prs:
+                add_finding(
+                    event_oid=event_oid,
+                    committed_at=committed_at,
+                    message=message,
+                    kind="reland_headline",
+                    target_pr_number=number,
+                    target_commit_oid=None,
+                )
+
+    return (
+        tuple(
+            sorted(
+                marker_hits_by_oid.values(),
+                key=lambda item: item.oid,
+            )
+        ),
+        tuple(sorted(findings.values(), key=lambda item: item.sort_key())),
+    )
+
+
+@dataclass(frozen=True)
+class QualityMainHistoryScan:
+    ref_name: str
+    head_oid: str
+    since: str
+    page_count: int
+    commit_count: int
+    final_has_next_page: bool
+    scanned_commit_facts_hash: str
+    finding_rule_version: str
+
+    def __post_init__(self) -> None:
+        if self.ref_name != "main":
+            raise ContractError("main_history_scan.ref_name: mismatch")
+        _required_commit(self.head_oid, "main_history_scan.head_oid")
+        if self.since != _QUALITY_MAIN_HISTORY_SINCE:
+            raise ContractError("main_history_scan.since: mismatch")
+        page_count = _positive_int(
+            self.page_count, "main_history_scan.page_count"
+        )
+        commit_count = _positive_int(
+            self.commit_count, "main_history_scan.commit_count"
+        )
+        if not (
+            (page_count - 1) * 100 < commit_count
+            <= page_count * 100
+        ):
+            raise ContractError(
+                "main_history_scan.commit_count: page count mismatch"
+            )
+        if _boolean(
+            self.final_has_next_page,
+            "main_history_scan.final_has_next_page",
+        ):
+            raise ContractError(
+                "main_history_scan.final_has_next_page: "
+                "incomplete history traversal"
+            )
+        _require_hash(
+            self.scanned_commit_facts_hash,
+            "main_history_scan.scanned_commit_facts_hash",
+        )
+        if self.finding_rule_version != "v1":
+            raise ContractError(
+                "main_history_scan.finding_rule_version: mismatch"
+            )
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "ref_name": self.ref_name,
+            "head_oid": self.head_oid,
+            "since": self.since,
+            "page_count": self.page_count,
+            "commit_count": self.commit_count,
+            "final_has_next_page": self.final_has_next_page,
+            "scanned_commit_facts_hash": (
+                self.scanned_commit_facts_hash
+            ),
+            "finding_rule_version": self.finding_rule_version,
+        }
+
+    @classmethod
+    def from_dict(
+        cls,
+        value: object,
+        *,
+        path: str = "main_history_scan",
+    ) -> "QualityMainHistoryScan":
+        data = _exact_mapping(
+            value,
+            path,
+            _MAIN_HISTORY_SCAN_FIELDS,
+        )
+        return cls(
+            ref_name=_string(data["ref_name"], f"{path}.ref_name"),
+            head_oid=_required_commit(
+                data["head_oid"], f"{path}.head_oid"
+            ),
+            since=_timestamp(data["since"], f"{path}.since"),
+            page_count=_positive_int(
+                data["page_count"], f"{path}.page_count"
+            ),
+            commit_count=_positive_int(
+                data["commit_count"], f"{path}.commit_count"
+            ),
+            final_has_next_page=_boolean(
+                data["final_has_next_page"],
+                f"{path}.final_has_next_page",
+            ),
+            scanned_commit_facts_hash=_require_hash(
+                data["scanned_commit_facts_hash"],
+                f"{path}.scanned_commit_facts_hash",
+            ),
+            finding_rule_version=_string(
+                data["finding_rule_version"],
+                f"{path}.finding_rule_version",
+            ),
+        )
+
+
+@dataclass(frozen=True)
 class QualityCandidateAcquisitionReceipt:
     contract_type: ClassVar[str] = "quality_candidate_acquisition_receipt"
     schema_version: ClassVar[str] = "v1"
@@ -511,8 +981,12 @@ class QualityCandidateAcquisitionReceipt:
     resolved_marker: str
     selected_commit_message: str
     selected_commit_message_hash: str
-    main_history_membership: bool
-    main_history_reverted: bool
+    main_history_exact_marker_hits: tuple[
+        QualityMainHistoryMarkerHit, ...
+    ]
+    main_history_reversal_findings: tuple[
+        QualityMainHistoryReversalFinding, ...
+    ]
     files_total_count: int
     files_captured_node_count: int
     files_has_next_page: bool
@@ -623,23 +1097,28 @@ class QualityCandidateAcquisitionReceipt:
                 "quality_candidate_acquisition_receipt."
                 "selected_commit_message: reversal denied"
             )
-        if not _boolean(
-            self.main_history_membership,
-            "quality_candidate_acquisition_receipt."
-            "main_history_membership",
-        ):
+        if len(self.main_history_exact_marker_hits) != 1:
             raise ContractError(
                 "quality_candidate_acquisition_receipt."
-                "main_history_membership: selected commit is not on main"
+                "main_history_exact_marker_hits: "
+                "expected exactly one marker hit"
             )
-        if _boolean(
-            self.main_history_reverted,
-            "quality_candidate_acquisition_receipt."
-            "main_history_reverted",
+        marker_hit = self.main_history_exact_marker_hits[0]
+        if marker_hit != QualityMainHistoryMarkerHit(
+            oid=self.main_history_commit,
+            first_parent_oid=self.main_history_first_parent,
+            committed_at=self.main_history_committed_at,
+            message_hash=self.selected_commit_message_hash,
         ):
             raise ContractError(
                 "quality_candidate_acquisition_receipt."
-                "main_history_reverted: reverted primary denied"
+                "main_history_exact_marker_hits: selected node mismatch"
+            )
+        if self.main_history_reversal_findings:
+            raise ContractError(
+                "quality_candidate_acquisition_receipt."
+                "main_history_reversal_findings: "
+                "reversal/reland denied"
             )
         if (
             self.main_history_commit == self.main_history_first_parent
@@ -721,8 +1200,14 @@ class QualityCandidateAcquisitionReceipt:
             "selected_commit_message_hash": (
                 self.selected_commit_message_hash
             ),
-            "main_history_membership": self.main_history_membership,
-            "main_history_reverted": self.main_history_reverted,
+            "main_history_exact_marker_hits": [
+                item.to_dict()
+                for item in self.main_history_exact_marker_hits
+            ],
+            "main_history_reversal_findings": [
+                item.to_dict()
+                for item in self.main_history_reversal_findings
+            ],
             "files_total_count": self.files_total_count,
             "files_captured_node_count": self.files_captured_node_count,
             "files_has_next_page": self.files_has_next_page,
@@ -800,13 +1285,35 @@ class QualityCandidateAcquisitionReceipt:
                 data["selected_commit_message_hash"],
                 f"{path}.selected_commit_message_hash",
             ),
-            main_history_membership=_boolean(
-                data["main_history_membership"],
-                f"{path}.main_history_membership",
+            main_history_exact_marker_hits=tuple(
+                QualityMainHistoryMarkerHit.from_dict(
+                    item,
+                    path=(
+                        f"{path}.main_history_exact_marker_hits"
+                        f"[{index}]"
+                    ),
+                )
+                for index, item in enumerate(
+                    _list(
+                        data["main_history_exact_marker_hits"],
+                        f"{path}.main_history_exact_marker_hits",
+                    )
+                )
             ),
-            main_history_reverted=_boolean(
-                data["main_history_reverted"],
-                f"{path}.main_history_reverted",
+            main_history_reversal_findings=tuple(
+                QualityMainHistoryReversalFinding.from_dict(
+                    item,
+                    path=(
+                        f"{path}.main_history_reversal_findings"
+                        f"[{index}]"
+                    ),
+                )
+                for index, item in enumerate(
+                    _list(
+                        data["main_history_reversal_findings"],
+                        f"{path}.main_history_reversal_findings",
+                    )
+                )
             ),
             files_total_count=_positive_int(
                 data["files_total_count"],
@@ -2574,6 +3081,10 @@ def _load_quality_acquisition_receipt_set(
         != "authenticated_read_only_gh_api_graphql"
     ):
         raise ContractError("receipt_set.capture_method: mismatch")
+    main_history_scan = QualityMainHistoryScan.from_dict(
+        data["main_history_scan"],
+        path="receipt_set.main_history_scan",
+    )
     if data["content_hash"] != canonical_sha256(
         {
             key: item
@@ -2602,6 +3113,15 @@ def _load_quality_acquisition_receipt_set(
         raise ContractError(
             "receipt_set.receipts: captured_at mismatch"
         )
+    for receipt in receipts:
+        if receipt.main_history_head_oid != main_history_scan.head_oid:
+            raise ContractError(
+                "receipt_set.receipts: main history head mismatch"
+            )
+        if receipt.main_history_committed_at < main_history_scan.since:
+            raise ContractError(
+                "receipt_set.receipts: selected commit predates scan"
+            )
     return data, receipts
 
 
@@ -2655,10 +3175,6 @@ def _parse_quality_capture(
     if repository != "pytorch/pytorch":
         raise ContractError(f"{path}.repository: mismatch")
     pr_number = _positive_int(data["pr_number"], f"{path}.pr_number")
-    if pr_number in _KNOWN_REVERTED_PRIMARY_PRS:
-        raise ContractError(
-            f"{path}.pr_number: known reverted primary denied"
-        )
     pr_url = _string(data["pr_url"], f"{path}.pr_url")
     if pr_url != f"https://github.com/{repository}/pull/{pr_number}":
         raise ContractError(f"{path}.pr_url: mismatch")

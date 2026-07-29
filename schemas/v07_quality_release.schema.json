@@ -315,8 +315,8 @@
         "resolved_marker",
         "selected_commit_message",
         "selected_commit_message_hash",
-        "main_history_membership",
-        "main_history_reverted",
+        "main_history_exact_marker_hits",
+        "main_history_reversal_findings",
         "files_total_count",
         "files_captured_node_count",
         "files_has_next_page",
@@ -377,8 +377,87 @@
         "resolved_marker": {"type": "string", "minLength": 1},
         "selected_commit_message": {"type": "string", "minLength": 1},
         "selected_commit_message_hash": {"$ref": "#/$defs/hash"},
-        "main_history_membership": {"const": true},
-        "main_history_reverted": {"const": false},
+        "main_history_exact_marker_hits": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "oid",
+              "first_parent_oid",
+              "committed_at",
+              "message_hash"
+            ],
+            "properties": {
+              "oid": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{40}$"
+              },
+              "first_parent_oid": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{40}$"
+              },
+              "committed_at": {
+                "type": "string",
+                "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+              },
+              "message_hash": {"$ref": "#/$defs/hash"}
+            }
+          }
+        },
+        "main_history_reversal_findings": {
+          "type": "array",
+          "maxItems": 0,
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "event_oid",
+              "committed_at",
+              "message_hash",
+              "kind",
+              "target_pr_number",
+              "target_commit_oid"
+            ],
+            "properties": {
+              "event_oid": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{40}$"
+              },
+              "committed_at": {
+                "type": "string",
+                "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+              },
+              "message_hash": {"$ref": "#/$defs/hash"},
+              "kind": {
+                "enum": [
+                  "revert_pr",
+                  "revert_commit",
+                  "reland_headline"
+                ]
+              },
+              "target_pr_number": {
+                "oneOf": [
+                  {"type": "null"},
+                  {"type": "integer", "minimum": 1}
+                ]
+              },
+              "target_commit_oid": {
+                "oneOf": [
+                  {"type": "null"},
+                  {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{40}$"
+                  }
+                ]
+              }
+            }
+          }
+        },
         "files_total_count": {"type": "integer", "minimum": 1},
         "files_captured_node_count": {"type": "integer", "minimum": 1},
         "files_has_next_page": {"const": false},
@@ -403,6 +482,7 @@
         "repository",
         "captured_at",
         "capture_method",
+        "main_history_scan",
         "receipts",
         "content_hash"
       ],
@@ -418,6 +498,33 @@
         },
         "capture_method": {
           "const": "authenticated_read_only_gh_api_graphql"
+        },
+        "main_history_scan": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "ref_name",
+            "head_oid",
+            "since",
+            "page_count",
+            "commit_count",
+            "final_has_next_page",
+            "scanned_commit_facts_hash",
+            "finding_rule_version"
+          ],
+          "properties": {
+            "ref_name": {"const": "main"},
+            "head_oid": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{40}$"
+            },
+            "since": {"const": "2026-03-01T00:00:00Z"},
+            "page_count": {"type": "integer", "minimum": 1},
+            "commit_count": {"type": "integer", "minimum": 1},
+            "final_has_next_page": {"const": false},
+            "scanned_commit_facts_hash": {"$ref": "#/$defs/hash"},
+            "finding_rule_version": {"const": "v1"}
+          }
         },
         "receipts": {
           "type": "array",

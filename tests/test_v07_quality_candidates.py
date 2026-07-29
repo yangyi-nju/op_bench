@@ -16,6 +16,8 @@ from op_bench.factory.quality_release import (
     HARD_CANDIDATE_REJECTION_REASONS,
     QualityCandidateDecision,
     QualityCandidateRecord,
+    QualityMainHistoryReversalFinding,
+    derive_quality_main_history_findings,
     validate_candidate_index,
 )
 from op_bench.runtime.canonical import canonical_json, canonical_sha256
@@ -166,8 +168,17 @@ def _receipt(candidate: dict[str, object]) -> dict[str, object]:
         "selected_commit_message_hash": canonical_sha256(
             selected_commit_message
         ),
-        "main_history_membership": True,
-        "main_history_reverted": False,
+        "main_history_exact_marker_hits": [
+            {
+                "oid": candidate["merge_commit"],
+                "first_parent_oid": candidate["base_commit"],
+                "committed_at": candidate["merged_at"],
+                "message_hash": canonical_sha256(
+                    selected_commit_message
+                ),
+            }
+        ],
+        "main_history_reversal_findings": [],
         "files_total_count": candidate["changed_file_count"],
         "files_captured_node_count": candidate["changed_file_count"],
         "files_has_next_page": False,
@@ -187,6 +198,18 @@ def _receipt_set(candidates: list[dict[str, object]]) -> dict[str, object]:
         "repository": "pytorch/pytorch",
         "captured_at": CREATED_AT,
         "capture_method": "authenticated_read_only_gh_api_graphql",
+        "main_history_scan": {
+            "ref_name": "main",
+            "head_oid": "f" * 40,
+            "since": "2026-03-01T00:00:00Z",
+            "page_count": 1,
+            "commit_count": 1,
+            "final_has_next_page": False,
+            "scanned_commit_facts_hash": canonical_sha256(
+                [{"oid": "f" * 40}]
+            ),
+            "finding_rule_version": "v1",
+        },
         "receipts": [_receipt(candidate) for candidate in candidates],
     }
     payload["content_hash"] = canonical_sha256(payload)
@@ -313,6 +336,22 @@ def _assert_no_forbidden_keys(
 
 
 class QualityCandidateContractTests(unittest.TestCase):
+    def test_reversal_finding_targets_are_kind_exclusive(self) -> None:
+        finding = {
+            "event_oid": "d" * 40,
+            "committed_at": "2026-07-20T01:02:04Z",
+            "message_hash": "sha256:" + "d" * 64,
+            "kind": "revert_commit",
+            "target_pr_number": 190777,
+            "target_commit_oid": "c" * 40,
+        }
+
+        with self.assertRaisesRegex(ContractError, "target_pr_number"):
+            QualityMainHistoryReversalFinding.from_dict(
+                finding,
+                path="finding",
+            )
+
     def test_schema_tracks_candidate_decision_and_index_wire_contracts(self) -> None:
         schema = json.loads(
             (ROOT / "schemas/v07_quality_release.schema.json").read_text(
@@ -363,8 +402,8 @@ class QualityCandidateContractTests(unittest.TestCase):
                 "resolved_marker",
                 "selected_commit_message",
                 "selected_commit_message_hash",
-                "main_history_membership",
-                "main_history_reverted",
+                "main_history_exact_marker_hits",
+                "main_history_reversal_findings",
                 "files_total_count",
                 "files_captured_node_count",
                 "files_has_next_page",
@@ -649,11 +688,45 @@ class QualityCandidateContractTests(unittest.TestCase):
                     canonical_sha256("Fix without resolved marker"),
                 ),
             ),
-            "membership": lambda receipt: receipt.__setitem__(
-                "main_history_membership", False
+            "marker uniqueness": lambda receipt: (
+                receipt.__setitem__(
+                    "main_history_exact_marker_hits",
+                    [
+                        *receipt["main_history_exact_marker_hits"],
+                        {
+                            "oid": "f" * 40,
+                            "first_parent_oid": "a" * 40,
+                            "committed_at": (
+                                "2026-07-20T01:02:02Z"
+                            ),
+                            "message_hash": "sha256:" + "f" * 64,
+                        },
+                    ],
+                ),
             ),
-            "reverted": lambda receipt: receipt.__setitem__(
-                "main_history_reverted", True
+            "selected marker member": lambda receipt: (
+                receipt["main_history_exact_marker_hits"][0].__setitem__(
+                    "oid", "f" * 40
+                )
+            ),
+            "reversal findings": lambda receipt: (
+                receipt.__setitem__(
+                    "main_history_reversal_findings",
+                    [
+                        {
+                            "event_oid": "d" * 40,
+                            "committed_at": (
+                                "2026-07-20T01:02:04Z"
+                            ),
+                            "message_hash": "sha256:" + "d" * 64,
+                            "kind": "revert_commit",
+                            "target_pr_number": None,
+                            "target_commit_oid": (
+                                receipt["main_history_commit"]
+                            ),
+                        }
+                    ],
+                )
             ),
             "history commit": lambda receipt: receipt.__setitem__(
                 "main_history_commit", "d" * 40
@@ -705,6 +778,74 @@ class QualityCandidateContractTests(unittest.TestCase):
                 self.assertRegex(
                     completed.stderr.casefold(),
                     r"main_history|resolver|marker|message|receipt",
+                )
+
+    def test_receipt_set_requires_complete_fixed_main_history_scan(
+        self,
+    ) -> None:
+        cases = {
+            "incomplete pagination": lambda scan: scan.__setitem__(
+                "final_has_next_page", True
+            ),
+            "late epoch": lambda scan: scan.__setitem__(
+                "since", "2026-04-01T00:00:00Z"
+            ),
+            "head mismatch": lambda scan: scan.__setitem__(
+                "head_oid", "c" * 40
+            ),
+            "page count mismatch": lambda scan: scan.__setitem__(
+                "commit_count", 101
+            ),
+        }
+        for name, mutate in cases.items():
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:
+                temporary = Path(directory)
+                captures_path = temporary / "captures.json"
+                receipts_path = temporary / "receipts.json"
+                _write_acquisition_inputs(
+                    captures_path, receipts_path, [_capture()]
+                )
+                receipts = json.loads(
+                    receipts_path.read_text(encoding="utf-8")
+                )
+                mutate(receipts["main_history_scan"])
+                receipts["content_hash"] = canonical_sha256(
+                    {
+                        key: value
+                        for key, value in receipts.items()
+                        if key != "content_hash"
+                    }
+                )
+                receipts_path.write_bytes(
+                    canonical_json(receipts).encode("utf-8")
+                )
+                captures = json.loads(
+                    captures_path.read_text(encoding="utf-8")
+                )
+                captures[
+                    "acquisition_receipt_set_hash"
+                ] = receipts["content_hash"]
+                captures["content_hash"] = canonical_sha256(
+                    {
+                        key: value
+                        for key, value in captures.items()
+                        if key != "content_hash"
+                    }
+                )
+                captures_path.write_bytes(
+                    canonical_json(captures).encode("utf-8")
+                )
+
+                completed = _run_screen(
+                    captures_path,
+                    temporary / "screening",
+                    receipt_path=receipts_path,
+                )
+
+                self.assertNotEqual(completed.returncode, 0)
+                self.assertRegex(
+                    completed.stderr.casefold(),
+                    r"main[_ ]history",
                 )
 
     def test_historical_k_must_equal_retained_dispositions(self) -> None:
@@ -1015,7 +1156,7 @@ class QualityCandidateContractTests(unittest.TestCase):
                 r"primary|reversal",
             )
 
-    def test_known_reverted_primary_pr_cannot_be_screened(self) -> None:
+    def test_reversal_history_finding_cannot_be_screened(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             temporary = Path(directory)
             captures = temporary / "captures.json"
@@ -1023,7 +1164,59 @@ class QualityCandidateContractTests(unittest.TestCase):
             _write_acquisition_inputs(
                 captures,
                 receipts,
-                [_capture(number=186379)],
+                [_capture(number=190778)],
+            )
+            receipt_set = json.loads(
+                receipts.read_text(encoding="utf-8")
+            )
+            receipt = receipt_set["receipts"][0]
+            receipt["main_history_reversal_findings"] = [
+                {
+                    "event_oid": "d" * 40,
+                    "committed_at": "2026-07-20T01:02:04Z",
+                    "message_hash": "sha256:" + "d" * 64,
+                    "kind": "revert_commit",
+                    "target_pr_number": None,
+                    "target_commit_oid": receipt[
+                        "main_history_commit"
+                    ],
+                }
+            ]
+            receipt["content_hash"] = canonical_sha256(
+                {
+                    key: value
+                    for key, value in receipt.items()
+                    if key != "content_hash"
+                }
+            )
+            receipt_set["content_hash"] = canonical_sha256(
+                {
+                    key: value
+                    for key, value in receipt_set.items()
+                    if key != "content_hash"
+                }
+            )
+            receipts.write_bytes(
+                canonical_json(receipt_set).encode("utf-8")
+            )
+            capture_set = json.loads(
+                captures.read_text(encoding="utf-8")
+            )
+            capture_set["candidates"][0][
+                "acquisition_receipt_hash"
+            ] = receipt["content_hash"]
+            capture_set[
+                "acquisition_receipt_set_hash"
+            ] = receipt_set["content_hash"]
+            capture_set["content_hash"] = canonical_sha256(
+                {
+                    key: value
+                    for key, value in capture_set.items()
+                    if key != "content_hash"
+                }
+            )
+            captures.write_bytes(
+                canonical_json(capture_set).encode("utf-8")
             )
 
             completed = _run_screen(
@@ -1035,7 +1228,129 @@ class QualityCandidateContractTests(unittest.TestCase):
             self.assertNotEqual(completed.returncode, 0)
             self.assertRegex(
                 completed.stderr.casefold(),
-                r"revert|primary",
+                r"revers|primary",
+            )
+
+    def test_second_exact_marker_after_revert_is_rejected_generically(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            temporary = Path(directory)
+            captures = temporary / "captures.json"
+            receipts = temporary / "receipts.json"
+            candidate = _capture(
+                number=190777,
+                merge="e" * 40,
+                title="Preserve CUDA errors across the ABI boundary",
+            )
+            _write_acquisition_inputs(captures, receipts, [candidate])
+            receipt_set = json.loads(
+                receipts.read_text(encoding="utf-8")
+            )
+            receipt = receipt_set["receipts"][0]
+            exact_marker = (
+                "Pull Request resolved: "
+                "https://github.com/pytorch/pytorch/pull/190777"
+            )
+            marker_hits, reversal_findings = (
+                derive_quality_main_history_findings(
+                    190777,
+                    (
+                        {
+                            "oid": "c" * 40,
+                            "first_parent_oid": "a" * 40,
+                            "committed_at": "2026-07-19T01:02:03Z",
+                            "message": (
+                                "Preserve CUDA errors across the ABI "
+                                f"boundary\n\n{exact_marker}"
+                            ),
+                        },
+                        {
+                            "oid": "d" * 40,
+                            "first_parent_oid": "c" * 40,
+                            "committed_at": "2026-07-20T00:02:03Z",
+                            "message": (
+                                'Revert "Preserve CUDA errors across the '
+                                'ABI boundary (#190777)"'
+                            ),
+                        },
+                        {
+                            "oid": "e" * 40,
+                            "first_parent_oid": receipt[
+                                "main_history_first_parent"
+                            ],
+                            "committed_at": receipt[
+                                "main_history_committed_at"
+                            ],
+                            "message": receipt[
+                                "selected_commit_message"
+                            ],
+                        },
+                    ),
+                )
+            )
+            self.assertEqual(len(marker_hits), 2)
+            self.assertEqual(len(reversal_findings), 1)
+            self.assertEqual(reversal_findings[0].kind, "revert_pr")
+            self.assertEqual(
+                reversal_findings[0].target_pr_number,
+                190777,
+            )
+            receipt["main_history_exact_marker_hits"] = [
+                item.to_dict() for item in marker_hits
+            ]
+            receipt["main_history_reversal_findings"] = [
+                item.to_dict() for item in reversal_findings
+            ]
+            receipt["content_hash"] = canonical_sha256(
+                {
+                    key: value
+                    for key, value in receipt.items()
+                    if key != "content_hash"
+                }
+            )
+            receipt_set["content_hash"] = canonical_sha256(
+                {
+                    key: value
+                    for key, value in receipt_set.items()
+                    if key != "content_hash"
+                }
+            )
+            receipts.write_bytes(
+                canonical_json(receipt_set).encode("utf-8")
+            )
+            capture_set = json.loads(
+                captures.read_text(encoding="utf-8")
+            )
+            capture_set["candidates"][0][
+                "acquisition_receipt_hash"
+            ] = receipt["content_hash"]
+            capture_set[
+                "acquisition_receipt_set_hash"
+            ] = receipt_set["content_hash"]
+            capture_set["content_hash"] = canonical_sha256(
+                {
+                    key: value
+                    for key, value in capture_set.items()
+                    if key != "content_hash"
+                }
+            )
+            captures.write_bytes(
+                canonical_json(capture_set).encode("utf-8")
+            )
+
+            # The selected second marker's own headline is deliberately not
+            # a reversal; only the complete history finding exposes it.
+            completed = _run_screen(
+                captures,
+                temporary / "screening",
+                receipt_path=receipts,
+            )
+
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertRegex(
+                completed.stderr.casefold(),
+                r"marker|revers|history",
             )
 
     def test_backward_compatibility_is_not_gradient_evidence(self) -> None:
@@ -1207,6 +1522,85 @@ class QualityCandidateContractTests(unittest.TestCase):
                 errors,
             )
 
+    def test_pin_rejects_coherent_main_history_scan_fact_omission(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            temporary_root = Path(directory)
+            p8 = temporary_root / "factory/v0.7/p8"
+            p8.mkdir(parents=True)
+            p7 = temporary_root / "factory/v0.7/p7"
+            p7.mkdir(parents=True)
+            captures_path = p8 / "captures.json"
+            receipts_path = p8 / "acquisition_receipts.json"
+            historical_path = p7 / "historical_readmission.json"
+            shutil.copy2(CAPTURES, captures_path)
+            shutil.copy2(RECEIPTS, receipts_path)
+            shutil.copy2(HISTORICAL, historical_path)
+            captures = json.loads(
+                captures_path.read_text(encoding="utf-8")
+            )
+            receipts = json.loads(
+                receipts_path.read_text(encoding="utf-8")
+            )
+
+            # Simulate omitting a commit fact from the complete main scan,
+            # then coherently recompute every ordinary acquisition hash.
+            receipts["main_history_scan"][
+                "scanned_commit_facts_hash"
+            ] = "sha256:" + "c" * 64
+            receipts["content_hash"] = canonical_sha256(
+                {
+                    key: value
+                    for key, value in receipts.items()
+                    if key != "content_hash"
+                }
+            )
+            captures[
+                "acquisition_receipt_set_hash"
+            ] = receipts["content_hash"]
+            captures["content_hash"] = canonical_sha256(
+                {
+                    key: value
+                    for key, value in captures.items()
+                    if key != "content_hash"
+                }
+            )
+            receipts_path.write_bytes(
+                canonical_json(receipts).encode("utf-8")
+            )
+            captures_path.write_bytes(
+                canonical_json(captures).encode("utf-8")
+            )
+            screening = p8 / "screening"
+            rebuilt = _run_screen(
+                captures_path,
+                screening,
+                receipt_path=receipts_path,
+                historical_path=historical_path,
+            )
+            self.assertEqual(rebuilt.returncode, 0, rebuilt.stderr)
+            relocated = temporary_root / "relocated"
+            shutil.copytree(screening, relocated)
+
+            official_errors = validate_candidate_index(
+                temporary_root,
+                screening / "screening_index.json",
+            )
+            relocated_errors = validate_candidate_index(
+                temporary_root,
+                relocated / "screening_index.json",
+            )
+
+            self.assertTrue(
+                any("pinned" in error for error in official_errors),
+                official_errors,
+            )
+            self.assertTrue(
+                any("pinned" in error for error in relocated_errors),
+                relocated_errors,
+            )
+
     def test_pin_rejects_coherent_pr_branch_substitution_everywhere(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             temporary_root = Path(directory)
@@ -1251,6 +1645,14 @@ class QualityCandidateContractTests(unittest.TestCase):
             receipt["main_history_commit"] = branch_commit
             receipt["main_history_first_parent"] = branch_parent
             receipt["main_history_committed_at"] = branch_time
+            receipt["main_history_exact_marker_hits"] = [
+                {
+                    "oid": branch_commit,
+                    "first_parent_oid": branch_parent,
+                    "committed_at": branch_time,
+                    "message_hash": canonical_sha256(message),
+                }
+            ]
             receipt["resolved_marker"] = marker
             receipt["selected_commit_message"] = message
             receipt["selected_commit_message_hash"] = canonical_sha256(
@@ -1347,9 +1749,9 @@ class FrozenQualityCandidateFunnelTests(unittest.TestCase):
 
     def test_real_provenance_is_unique_nonhistorical_and_complete(self) -> None:
         candidates = self.capture_set["candidates"]
-        self.assertNotIn(
-            186379,
-            {item["pr_number"] for item in candidates},
+        self.assertFalse(
+            {182045, 186379}
+            & {item["pr_number"] for item in candidates},
         )
         dispositions = {
             item["pr_number"]: item["disposition"]
@@ -1379,6 +1781,16 @@ class FrozenQualityCandidateFunnelTests(unittest.TestCase):
             item["pr_number"]: item
             for item in self.receipt_set["receipts"]
         }
+        scan = self.receipt_set["main_history_scan"]
+        self.assertEqual(scan["ref_name"], "main")
+        self.assertEqual(scan["since"], "2026-03-01T00:00:00Z")
+        self.assertFalse(scan["final_has_next_page"])
+        self.assertGreater(scan["page_count"], 0)
+        self.assertGreater(scan["commit_count"], 0)
+        self.assertRegex(
+            scan["scanned_commit_facts_hash"],
+            r"^sha256:[0-9a-f]{64}$",
+        )
         self.assertEqual(
             set(receipts),
             {item["pr_number"] for item in candidates},
@@ -1411,6 +1823,14 @@ class FrozenQualityCandidateFunnelTests(unittest.TestCase):
             )
             self.assertTrue(candidate["changed_files"])
             receipt = receipts[candidate["pr_number"]]
+            self.assertEqual(
+                receipt["main_history_head_oid"],
+                scan["head_oid"],
+            )
+            self.assertGreaterEqual(
+                receipt["main_history_committed_at"],
+                scan["since"],
+            )
             self.assertEqual(
                 candidate["acquisition_receipt_hash"],
                 receipt["content_hash"],
@@ -1470,8 +1890,23 @@ class FrozenQualityCandidateFunnelTests(unittest.TestCase):
                 receipt["main_history_committed_at"],
                 candidate["merged_at"],
             )
-            self.assertTrue(receipt["main_history_membership"])
-            self.assertFalse(receipt["main_history_reverted"])
+            self.assertEqual(
+                receipt["main_history_exact_marker_hits"],
+                [
+                    {
+                        "oid": candidate["merge_commit"],
+                        "first_parent_oid": candidate["base_commit"],
+                        "committed_at": candidate["merged_at"],
+                        "message_hash": receipt[
+                            "selected_commit_message_hash"
+                        ],
+                    }
+                ],
+            )
+            self.assertEqual(
+                receipt["main_history_reversal_findings"],
+                [],
+            )
             if dispositions[candidate["pr_number"]] != "hard_rejected":
                 self.assertTrue(candidate["behavioral_test_evidence"])
                 self.assertTrue(
