@@ -101,28 +101,24 @@ class PatchFreezeTests(unittest.TestCase):
         with self.assertRaisesRegex(WorkspaceStateError, "does not accept mutations"):
             workspace.delete("src/operator.py")
 
-    def test_out_of_patch_scope_contamination_does_not_change_patch_or_hash(self) -> None:
-        clean_copy = Path(self.temporary.name) / "clean-copy"
-        shutil.copytree(self.root, clean_copy, symlinks=True)
-        clean_workspace = AuthoritativeWorkspace.open(
-            clean_copy,
-            source=identity("source", "fixture@base", SHA_A),
-            policy=policy(),
-        )
+    def test_out_of_patch_scope_contamination_is_visible_and_rejected(self) -> None:
         contaminated = self.workspace()
 
-        clean_workspace.write("src/operator.py", b"VALUE = 2\n")
         contaminated.write("src/operator.py", b"VALUE = 2\n")
         (self.root / "tests" / "test_operator.py").write_text("raise RuntimeError\n", encoding="utf-8")
         (self.root / ".agent-cache").mkdir()
-        (self.root / ".agent-cache" / "state.bin").write_bytes(b"private\x00cache")
+        (self.root / ".agent-cache" / "state.txt").write_text(
+            "private cache\n",
+            encoding="utf-8",
+        )
 
-        expected = clean_workspace.freeze()
-        observed = contaminated.freeze()
+        patch_bytes = contaminated.diff().patch_bytes
 
-        self.assertEqual(observed.patch_bytes, expected.patch_bytes)
-        self.assertEqual(observed.patch, expected.patch)
-        self.assertEqual(observed.changed_paths, ("src/operator.py",))
+        self.assertIn(b"src/operator.py", patch_bytes)
+        self.assertIn(b"tests/test_operator.py", patch_bytes)
+        self.assertIn(b".agent-cache/state.txt", patch_bytes)
+        with self.assertRaisesRegex(WorkspacePolicyError, "outside patch scope"):
+            contaminated.freeze()
 
     def test_repository_local_diff_driver_cannot_change_canonical_patch_bytes(self) -> None:
         configured_root = Path(self.temporary.name) / "configured"

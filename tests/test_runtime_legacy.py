@@ -46,7 +46,135 @@ PROFILE_BY_ENVIRONMENT = {
 }
 
 
+def quality_tasks(
+    *public_task_ids: str | None,
+) -> tuple[TaskManifest, ...]:
+    originals = DatasetManifest.load(DATASET_PATH).load_tasks(verified_only=True)
+    selected: list[TaskManifest] = []
+    for original, public_task_id in zip(originals, public_task_ids):
+        data = copy.deepcopy(original.data)
+        agent_visible = data.setdefault("agent_visible", {})
+        if public_task_id is None:
+            agent_visible.pop("public_task_id", None)
+        else:
+            agent_visible["public_task_id"] = public_task_id
+        selected.append(TaskManifest(task_dir=original.task_dir, data=data))
+    return tuple(selected)
+
+
+def quality_dataset(tasks: tuple[TaskManifest, ...]) -> DatasetManifest:
+    return DatasetManifest(
+        dataset_dir=REPO_ROOT,
+        data={
+            "dataset_id": "quality-fixture",
+            "version": "v0.7",
+            "status": "verified",
+            "tasks": [
+                {
+                    "task_id": task.task_id,
+                    "task_path": str(task.task_dir),
+                    "admission_status": "verified",
+                    "environment_status": "ready",
+                    "source_status": "ready",
+                    "replay_status": "verified",
+                    "admission_evidence": str(task.task_dir / "admission/evidence.json"),
+                }
+                for task in tasks
+            ],
+        },
+    )
+
+
 class LegacyV05ProjectionTests(unittest.TestCase):
+    def test_quality_task_uses_opaque_public_identity_only_at_public_boundary(
+        self,
+    ) -> None:
+        task = quality_tasks("opbench-v07-t0001")[0]
+
+        spec = full_task_spec_from_v05(task)
+
+        self.assertEqual(task.public_task_id, "opbench-v07-t0001")
+        self.assertEqual(spec.task.identifier, "opbench-v07-t0001")
+        self.assertNotIn(str(task.data["source"]["pr_number"]), spec.task.identifier)
+        self.assertEqual(spec.gold_patch.identifier, f"{task.task_id}:gold-patch")
+        self.assertEqual(
+            spec.hidden_test_asset.identifier,
+            f"{task.task_id}:hidden-test",
+        )
+        self.assertEqual(spec.admission.identifier, f"{task.task_id}:admission")
+
+    def test_quality_manifest_uses_uniform_repository_root_capability(self) -> None:
+        tasks = quality_tasks("opbench-v07-t0001", "opbench-v07-t0002")
+        dataset = quality_dataset(tasks)
+        with patch.object(DatasetManifest, "load", return_value=dataset), patch.object(
+            DatasetManifest,
+            "load_tasks",
+            return_value=list(tasks),
+        ):
+            manifest = run_manifest_from_v05_dataset(
+                REPO_ROOT / "unused-quality-dataset.json",
+                agents=(agent_spec_for_v1_adapter("scripted_canonical"),),
+                repeat=1,
+                created_at="2026-07-29T00:00:00Z",
+            )
+
+        self.assertEqual(
+            manifest.capability_policy.policy_id,
+            "opbench-v0.7-repository-root-v1",
+        )
+        self.assertEqual(manifest.capability_policy.writable_paths, (".",))
+        self.assertTrue(
+            all(
+                view.capability_policy.writable_paths == (".",)
+                for view in manifest.task_views
+            )
+        )
+        public_bytes = repr(tuple(view.to_dict() for view in manifest.task_views))
+        for task in tasks:
+            self.assertNotIn(task.task_id, public_bytes)
+            self.assertNotIn(str(task.data["source"]["pr_number"]), public_bytes)
+            self.assertNotIn(task.patch_scope_paths[0], public_bytes)
+
+    def test_manifest_rejects_mixed_opaque_and_canonical_task_identities(self) -> None:
+        tasks = quality_tasks("opbench-v07-t0001", None)
+        dataset = quality_dataset(tasks)
+        with patch.object(DatasetManifest, "load", return_value=dataset), patch.object(
+            DatasetManifest,
+            "load_tasks",
+            return_value=list(tasks),
+        ):
+            with self.assertRaisesRegex(ContractError, "public_task_id"):
+                run_manifest_from_v05_dataset(
+                    REPO_ROOT / "unused-mixed-dataset.json",
+                    agents=(agent_spec_for_v1_adapter("scripted_canonical"),),
+                    repeat=1,
+                    created_at="2026-07-29T00:00:00Z",
+                )
+
+    def test_quality_runtime_bundle_resolves_private_assets_by_public_identity(
+        self,
+    ) -> None:
+        tasks = quality_tasks("opbench-v07-t0001")
+        dataset = quality_dataset(tasks)
+        with patch.object(DatasetManifest, "load", return_value=dataset), patch.object(
+            DatasetManifest,
+            "load_tasks",
+            return_value=list(tasks),
+        ):
+            bundle = runtime_bundle_from_v05_dataset(
+                REPO_ROOT / "unused-quality-dataset.json",
+                agents=(agent_spec_for_v1_adapter("scripted_canonical"),),
+                repeat=1,
+                created_at="2026-07-29T00:00:00Z",
+            )
+
+        spec = bundle.manifest.tasks[0]
+        binding = bundle.private_tasks[0]
+        self.assertEqual(spec.task.identifier, "opbench-v07-t0001")
+        self.assertEqual(binding.task_id, "opbench-v07-t0001")
+        self.assertEqual(bundle.source_for(spec), binding.source)
+        self.assertEqual(bundle.hidden_asset_for(spec), binding.hidden_asset)
+
     def test_projects_all_boundary_environments_to_exact_runtime_profiles(
         self,
     ) -> None:
@@ -361,6 +489,22 @@ class LegacyV05ProjectionTests(unittest.TestCase):
         )
         self.assertEqual(first.platform_version, defaults.platform_version)
         self.assertEqual(first.action_protocol, defaults.action_protocol)
+        self.assertEqual(
+            first.capability_policy.writable_paths,
+            tuple(
+                sorted(
+                    {
+                        path
+                        for task in first.tasks
+                        for path in task.patch_scope
+                    }
+                )
+            ),
+        )
+        self.assertEqual(
+            first.capability_policy.policy_id,
+            defaults.capability_policy.policy_id,
+        )
 
     def test_projection_does_not_embed_remote_host_or_absolute_paths(self) -> None:
         task = DatasetManifest.load(DATASET_PATH).load_tasks(verified_only=True)[0]

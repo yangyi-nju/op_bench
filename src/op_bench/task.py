@@ -28,6 +28,16 @@ class TaskManifest:
         return str(self.data["task_id"])
 
     @property
+    def public_task_id(self) -> str | None:
+        agent_visible = self.data.get("agent_visible")
+        value = (
+            agent_visible.get("public_task_id")
+            if isinstance(agent_visible, dict)
+            else None
+        )
+        return str(value) if value else None
+
+    @property
     def task_json_path(self) -> Path:
         return self.task_dir / "task.json"
 

@@ -235,7 +235,7 @@ class CodexMcpCanonicalAdapter:
         public_task = context.launch_input.task_view.to_dict()
         assert_public_artifact_safe(public_task)
         timeout_ms = context.launch_input.task_view.budget_policy.wall_clock_ms
-        prompt = _build_mcp_prompt(public_task)
+        prompt = render_mcp_prompt(public_task)
 
         completed: subprocess.CompletedProcess[str] | None = None
         immediate_status: str | None = None
@@ -424,7 +424,7 @@ class CodexMcpCanonicalAdapter:
         )
 
 
-def _build_mcp_prompt(public_task: Mapping[str, object]) -> str:
+def render_mcp_prompt(public_task: Mapping[str, object]) -> str:
     tools = canonical_mcp_tools()
     tool_lines = "\n".join(f"- {tool.name}: {tool.description}" for tool in tools)
     return (
@@ -441,4 +441,4 @@ def _build_mcp_prompt(public_task: Mapping[str, object]) -> str:
     )
 
 
-__all__ = ["CodexMcpCanonicalAdapter"]
+__all__ = ["CodexMcpCanonicalAdapter", "render_mcp_prompt"]

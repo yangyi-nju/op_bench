@@ -183,7 +183,7 @@ def full_task_spec_from_v05(task: TaskManifest) -> FullTaskSpec:
     return FullTaskSpec(
         task=ContentIdentity(
             identity_type="task",
-            identifier=task.task_id,
+            identifier=task.public_task_id or task.task_id,
             digest=replay_spec_hash(task),
             digest_kind="replay_spec_v1",
         ),
@@ -242,11 +242,26 @@ def run_manifest_from_v05_dataset(
     dataset = DatasetManifest.load(dataset_path)
     _require_verified_dataset(dataset)
     legacy_tasks = _select_v05_tasks(dataset, selected_task_ids)
+    public_task_ids = tuple(task.public_task_id for task in legacy_tasks)
+    if any(public_task_ids) and not all(public_task_ids):
+        raise ContractError(
+            "public_task_id: selected Tasks must either all expose opaque IDs or all omit them"
+        )
     tasks = tuple(full_task_spec_from_v05(task) for task in legacy_tasks)
+    quality_manifest = all(public_task_ids)
     capability = replace(
         selected_defaults.capability_policy,
-        writable_paths=tuple(
-            sorted({path for task in tasks for path in task.patch_scope})
+        policy_id=(
+            "opbench-v0.7-repository-root-v1"
+            if quality_manifest
+            else selected_defaults.capability_policy.policy_id
+        ),
+        writable_paths=(
+            (".",)
+            if quality_manifest
+            else tuple(
+                sorted({path for task in tasks for path in task.patch_scope})
+            )
         ),
         registered_tests=tuple(
             sorted(
@@ -299,8 +314,10 @@ def runtime_bundle_from_v05_dataset(
         defaults=defaults,
         selected_task_ids=tuple(task.task_id for task in legacy_tasks),
     )
-    specs = {task.task.identifier: task for task in manifest.tasks}
-    legacy_by_id = {task.task_id: task for task in legacy_tasks}
+    legacy_by_id = {
+        task.public_task_id or task.task_id: task
+        for task in legacy_tasks
+    }
     bindings: list[LegacyV05PrivateTaskBinding] = []
     for spec in manifest.tasks:
         legacy_task = legacy_by_id[spec.task.identifier]
@@ -318,7 +335,7 @@ def runtime_bundle_from_v05_dataset(
             raise ContractError("hidden_test: cannot read exact file") from exc
         bindings.append(
             LegacyV05PrivateTaskBinding(
-                task_id=legacy_task.task_id,
+                task_id=spec.task.identifier,
                 source=LocalGitSource(
                     identity=spec.source,
                     repository=source_path,

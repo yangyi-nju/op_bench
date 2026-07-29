@@ -191,6 +191,8 @@ class CanonicalActionService:
             sorted(command_prefixes, key=lambda prefix: (-len(prefix), prefix))
         )
         for index, scope in enumerate(capability_policy.writable_paths):
+            if scope == ".":
+                continue
             directory = scope.endswith("/")
             candidate = scope[:-1] if directory else scope
             try:

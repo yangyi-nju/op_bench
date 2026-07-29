@@ -703,6 +703,10 @@
         "allowed_test_commands"
       ],
       "properties": {
+        "public_task_id": {
+          "type": "string",
+          "pattern": "^opbench-v07-t[0-9]{4}$"
+        },
         "repo_setup_commands": {
           "type": "array",
           "items": {

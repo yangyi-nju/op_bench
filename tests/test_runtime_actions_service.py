@@ -598,6 +598,76 @@ class CanonicalActionServiceTests(unittest.TestCase):
             "def helper():\n    return 1\n",
         )
 
+    def test_repository_root_capability_allows_write_and_apply_patch_actions(
+        self,
+    ) -> None:
+        root = Path(self.temporary.name) / "repository-root-actions"
+        initialize_git_repo(root)
+        service = CanonicalActionService(
+            session_id="session-actions",
+            workspace=AuthoritativeWorkspace.open(
+                root,
+                source=identity("source", "fixture@repository-root", SHA_A),
+                policy=workspace_policy(
+                    writable_paths=(".",),
+                    patch_paths=("src/operator.py",),
+                ),
+            ),
+            capability_policy=replace(
+                capability_policy(),
+                allowed_actions=("workspace_write", "workspace_apply_patch"),
+                writable_paths=(".",),
+                max_write_bytes=2_048,
+            ),
+            budget_policy=replace(
+                budget_policy(),
+                wall_clock_ms=100_000,
+                max_actions=10,
+                max_output_bytes=10_000,
+            ),
+            command_backend=self.backend,
+            test_registry={},
+            clock_ms=lambda: 1_000,
+        )
+
+        written = service.execute(
+            self.request(
+                "root-write",
+                "workspace_write",
+                {"path": "tests/new_test.py", "content": "VALUE = 2\n"},
+                1,
+            )
+        )
+        applied = service.execute(
+            self.request(
+                "root-apply",
+                "workspace_apply_patch",
+                {
+                    "patch": (
+                        "diff --git a/src/helper.py b/src/helper.py\n"
+                        "--- a/src/helper.py\n"
+                        "+++ b/src/helper.py\n"
+                        "@@ -1,2 +1,2 @@\n"
+                        " def helper():\n"
+                        "-    return 1\n"
+                        "+    return 2\n"
+                    )
+                },
+                2,
+            )
+        )
+
+        self.assertTrue(written.ok)
+        self.assertTrue(applied.ok)
+        self.assertEqual(
+            (root / "tests" / "new_test.py").read_text(),
+            "VALUE = 2\n",
+        )
+        self.assertEqual(
+            (root / "src" / "helper.py").read_text(),
+            "def helper():\n    return 2\n",
+        )
+
     def test_concurrent_duplicate_action_executes_backend_once(self) -> None:
         request = self.request(
             "concurrent-command",
