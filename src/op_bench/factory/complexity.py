@@ -182,6 +182,7 @@ class ComplexityEvidence:
     duplicate_fingerprint: str
     duplicate_decision: str
     blind_pilot: Mapping[str, object] | None
+    second_review: bool
     reviewer: str
     reviewed_at: str
     total: int
@@ -258,6 +259,7 @@ class ComplexityEvidence:
             ("duplicate_fingerprint", duplicate_fingerprint),
             ("duplicate_decision", duplicate),
             ("blind_pilot", pilot),
+            ("second_review", review_complete),
             ("reviewer", reviewer),
             ("reviewed_at", reviewed_at),
             ("total", total),
@@ -266,7 +268,7 @@ class ComplexityEvidence:
             ("content_hash", ""),
         ):
             object.__setattr__(self, name, value)
-        self._validate_stored(allow_score_four_acceptance=review_complete)
+        self._validate_stored()
 
     @classmethod
     def wire_fields(cls) -> tuple[str, ...]:
@@ -283,6 +285,7 @@ class ComplexityEvidence:
             "duplicate_fingerprint",
             "duplicate_decision",
             "blind_pilot",
+            "second_review",
             "reviewer",
             "reviewed_at",
             "total",
@@ -291,7 +294,7 @@ class ComplexityEvidence:
             "content_hash",
         )
 
-    def _validate_stored(self, *, allow_score_four_acceptance: bool) -> None:
+    def _validate_stored(self) -> None:
         require_str(self.task_id, "complexity_evidence.task_id")
         localization = _score(self.localization, "complexity_evidence.localization")
         diagnosis = _score(self.diagnosis, "complexity_evidence.diagnosis")
@@ -329,6 +332,10 @@ class ComplexityEvidence:
                 "complexity_evidence.hard_rejections: semantic_duplicate requires duplicate"
             )
         pilot = _blind_pilot(self.blind_pilot, path="complexity_evidence.blind_pilot")
+        second_review = require_bool(
+            self.second_review,
+            "complexity_evidence.second_review",
+        )
         require_str(self.reviewer, "complexity_evidence.reviewer")
         reviewed_at = _validate_utc_seconds(
             self.reviewed_at,
@@ -341,7 +348,7 @@ class ComplexityEvidence:
             total=total,
             hard_rejections=hard,
             blind_pilot=pilot,
-            second_review=allow_score_four_acceptance,
+            second_review=second_review,
         )
         if self.decision != decision:
             raise ContractError("complexity_evidence.decision: does not match admission gates")
@@ -351,6 +358,7 @@ class ComplexityEvidence:
         object.__setattr__(self, "hard_rejections", hard)
         object.__setattr__(self, "risk_signals", risks)
         object.__setattr__(self, "blind_pilot", pilot)
+        object.__setattr__(self, "second_review", second_review)
         object.__setattr__(self, "reviewed_at", reviewed_at)
         object.__setattr__(self, "duplicate_fingerprint", fingerprint)
         expected_hash = canonical_sha256(self._payload_without_hash())
@@ -377,6 +385,7 @@ class ComplexityEvidence:
             "duplicate_fingerprint": self.duplicate_fingerprint,
             "duplicate_decision": self.duplicate_decision,
             "blind_pilot": None if self.blind_pilot is None else dict(self.blind_pilot),
+            "second_review": self.second_review,
             "reviewer": self.reviewer,
             "reviewed_at": self.reviewed_at,
             "total": self.total,
@@ -419,6 +428,7 @@ class ComplexityEvidence:
             ),
             ("duplicate_decision", require_str(data["duplicate_decision"], f"{path}.duplicate_decision")),
             ("blind_pilot", _blind_pilot(data["blind_pilot"], path=f"{path}.blind_pilot")),
+            ("second_review", require_bool(data["second_review"], f"{path}.second_review")),
             ("reviewer", require_str(data["reviewer"], f"{path}.reviewer")),
             ("reviewed_at", _validate_utc_seconds(data["reviewed_at"], f"{path}.reviewed_at")),
             ("total", require_int(data["total"], f"{path}.total", minimum=0)),
@@ -427,12 +437,7 @@ class ComplexityEvidence:
             ("content_hash", require_str(data["content_hash"], f"{path}.content_hash")),
         ):
             object.__setattr__(evidence, name, item)
-        score_four_accepted = (
-            evidence.total == 4
-            and evidence.decision == "accepted"
-            and _accepted_pilot(evidence.blind_pilot)
-        )
-        evidence._validate_stored(allow_score_four_acceptance=score_four_accepted)
+        evidence._validate_stored()
         return evidence
 
 

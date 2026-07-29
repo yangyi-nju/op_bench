@@ -88,6 +88,39 @@ class ComplexityEvidenceTests(unittest.TestCase):
         self.assertEqual(missing_review.decision, "deferred")
         self.assertEqual(final_budget_pilot.decision, "deferred")
 
+    def test_score_four_artifact_cannot_claim_second_review_by_changing_decision(self) -> None:
+        deferred = build_evidence(
+            scores=(2, 1, 1),
+            blind_pilot=accepted_pilot(),
+            second_review=False,
+        )
+        payload = deferred.to_dict()
+        payload["decision"] = "accepted"
+        payload["difficulty"] = "medium"
+        payload["content_hash"] = canonical_sha256(
+            {key: value for key, value in payload.items() if key != "content_hash"}
+        )
+
+        with self.assertRaisesRegex(ContractError, "decision"):
+            ComplexityEvidence.from_dict(payload)
+
+    def test_second_review_is_a_required_boolean_wire_field(self) -> None:
+        payload = build_evidence().to_dict()
+
+        self.assertFalse(payload["second_review"])
+        missing = copy.deepcopy(payload)
+        del missing["second_review"]
+        with self.assertRaisesRegex(ContractError, "second_review"):
+            ComplexityEvidence.from_dict(missing)
+
+        wrong_type = copy.deepcopy(payload)
+        wrong_type["second_review"] = "false"
+        wrong_type["content_hash"] = canonical_sha256(
+            {key: value for key, value in wrong_type.items() if key != "content_hash"}
+        )
+        with self.assertRaisesRegex(ContractError, "second_review"):
+            ComplexityEvidence.from_dict(wrong_type)
+
     def test_duplicate_decision_injects_hard_rejection(self) -> None:
         evidence = build_evidence(
             scores=(2, 2, 2),

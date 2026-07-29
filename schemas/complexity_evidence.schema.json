@@ -16,6 +16,7 @@
     "duplicate_fingerprint",
     "duplicate_decision",
     "blind_pilot",
+    "second_review",
     "reviewer",
     "reviewed_at",
     "total",
@@ -84,6 +85,7 @@
         }
       ]
     },
+    "second_review": {"type": "boolean"},
     "reviewer": {"type": "string", "minLength": 1},
     "reviewed_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
     "total": {"type": "integer", "minimum": 0, "maximum": 6},
