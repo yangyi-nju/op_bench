@@ -28,8 +28,8 @@
     "snapshot_path": "../../../.op_bench_cache/sources/pytorch/pytorch/e3c4d1b7d6ea848f6b5558edf67e66dc28243641/source"
   },
   "statement": {
-    "title": "nn.Module.set_submodule fails for non dot-delineated target strings",
-    "body": "nn.Module.set_submodule does not correctly handle target strings without dot separators, causing it to silently create nested modules with wrong names or fail to set the submodule at the expected path.",
+    "title": "The torch.nn child-replacement API mishandles top-level and strict requests",
+    "body": "The torch.nn child-replacement API mishandles a single-name target and provides no way to distinguish create-or-replace from replace-only behavior. A non-strict call must create or replace a child under an existing parent, a strict call must reject a missing child, and both top-level and dotted targets must reject values that are not neural-network components.",
     "labels": [
       "module: nn",
       "bug"
@@ -38,7 +38,7 @@
   "operator": {
     "framework": "pytorch",
     "component": "torch.nn.modules.module",
-    "operator_name": "torch.nn.Module.set_submodule",
+    "operator_name": "torch.nn child replacement",
     "problem_type": "module-state-management",
     "tags": [
       "nn",
@@ -68,12 +68,13 @@
   "agent_visible": {
     "repo_setup_commands": [],
     "known_constraints": [
-      "Full PyTorch source checkout task.",
-      "Do not assume CUDA availability."
+      "CPU-only; CUDA is not required.",
+      "Top-level and dotted targets, strict and non-strict calls, and invalid replacement values are all part of the public contract."
     ],
     "allowed_test_commands": [
       "{python} test/test_nn.py -k {test}"
-    ]
+    ],
+    "public_task_id": "opbench-v07-t0013"
   },
   "evaluation": {
     "setup_commands": [],
@@ -91,11 +92,48 @@
     "hidden_test_patch": "artifacts/hidden_test.patch"
   },
   "metadata": {
-    "difficulty": "medium",
+    "difficulty": "hard",
     "curation_status": "verified",
     "deterministic": true,
     "estimated_runtime_min": 15,
     "layer": "A",
-    "admission_status": "verified"
+    "admission_status": "verified",
+    "source_loading_verified": true
+  },
+  "quality": {
+    "complexity_evidence": "quality/complexity.json",
+    "origin": "retained_historical",
+    "prompt_evidence": "quality/prompt.json",
+    "readmission_evidence": "quality/readmission.json"
+  },
+  "taxonomy": {
+    "component_tags": [],
+    "contract_detail_tags": [
+      "mutation",
+      "state",
+      "schema",
+      "exception"
+    ],
+    "contract_family": "mutation_state",
+    "execution_context": {
+      "devices": [
+        "cpu"
+      ],
+      "distributed": false,
+      "modes": [
+        "eager"
+      ],
+      "phases": [
+        "forward"
+      ]
+    },
+    "failure_type": "unexpected_error",
+    "root_cause_tags": [
+      "incorrect_validation"
+    ],
+    "taxonomy_version": "v2",
+    "trigger_tags": [
+      "mutation_or_alias"
+    ]
   }
 }

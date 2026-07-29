@@ -28,8 +28,8 @@
     "snapshot_path": "../../../.op_bench_cache/sources/pytorch/pytorch/bbf568aac8ec06bcbfc00cac84747256ac021c5d/source"
   },
   "statement": {
-    "title": "NJT SDPA missing manual autocast for nested tensor inputs",
-    "body": "When using `scaled_dot_product_attention` (SDPA) with nested tensors under autocast, the dtype is not correctly propagated, causing precision/dtype mismatches between the autocast cast and the operator inputs. The fix manually casts the nested tensor inputs to the autocast dtype.",
+    "title": "Nested-tensor scaled dot-product attention disagrees with dense attention under CUDA autocast",
+    "body": "With CUDA float16 autocast and mixed float32/float16 inputs, scaled_dot_product_attention on jagged nested tensors does not follow the same dtype and numerical behavior as the equivalent dense call. Nested and dense results and gradients must agree in eager and compiled execution under autocast.",
     "labels": [
       "module: cuda",
       "bug"
@@ -70,12 +70,13 @@
   "agent_visible": {
     "repo_setup_commands": [],
     "known_constraints": [
-      "Full PyTorch source checkout task.",
-      "CUDA GPU is available; tests must run with CUDA tensors."
+      "CUDA with fused-attention support is required.",
+      "Forward results and input gradients must agree for nested and dense inputs in eager and compiled execution."
     ],
     "allowed_test_commands": [
       "{python} test/test_nestedtensor.py {test_name}"
-    ]
+    ],
+    "public_task_id": "opbench-v07-t0008"
   },
   "evaluation": {
     "setup_commands": [],
@@ -93,11 +94,54 @@
     "hidden_test_patch": "artifacts/hidden_test.patch"
   },
   "metadata": {
-    "difficulty": "medium",
+    "difficulty": "hard",
     "curation_status": "verified",
     "deterministic": true,
     "estimated_runtime_min": 10,
     "layer": "A",
-    "admission_status": "verified"
+    "admission_status": "verified",
+    "source_loading_verified": true
+  },
+  "quality": {
+    "complexity_evidence": "quality/complexity.json",
+    "origin": "retained_historical",
+    "prompt_evidence": "quality/prompt.json",
+    "readmission_evidence": "quality/readmission.json"
+  },
+  "taxonomy": {
+    "component_tags": [
+      "aten"
+    ],
+    "contract_detail_tags": [
+      "value",
+      "numerical",
+      "dtype",
+      "gradient"
+    ],
+    "contract_family": "result",
+    "execution_context": {
+      "devices": [
+        "cuda"
+      ],
+      "distributed": false,
+      "modes": [
+        "eager",
+        "compile"
+      ],
+      "phases": [
+        "forward",
+        "backward"
+      ]
+    },
+    "failure_type": "wrong_result",
+    "root_cause_tags": [
+      "incorrect_cast"
+    ],
+    "taxonomy_version": "v2",
+    "trigger_tags": [
+      "noncontiguous_or_special_layout",
+      "mixed_dtype_or_precision_mode",
+      "device_specific"
+    ]
   }
 }

@@ -696,6 +696,8 @@ _PROFILE_BY_ENVIRONMENT = {
     "pytorch-matched-boundary-torch2.3.0-cpu": "remote-cpu-boundary-torch2.3-py311-v1",
     "pytorch-matched-boundary-torch2.4.0-cpu": "remote-cpu-boundary-torch2.4-py311-v1",
     "pytorch-matched-boundary-torch2.6.0-cu124": "remote-cuda-boundary-torch2.6-cu124-v1",
+    "pytorch-matched-ff89ebc-torch2.4.0-py311-cu124": "remote-cuda-matched-torch2.4-cu124-py311-v1",
+    "pytorch-matched-06e9dea-torch2.7.0-py311-cpu": "remote-cpu-matched-torch2.7-py311-v1",
 }
 
 

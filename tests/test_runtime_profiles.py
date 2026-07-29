@@ -23,10 +23,12 @@ EXPECTED_PROFILE_IDS = (
     "remote-cpu-boundary-torch2.3-py311-v1",
     "remote-cpu-boundary-torch2.4-py311-v1",
     "remote-cpu-compile-pytorch-2.6-py311-v1",
+    "remote-cpu-matched-torch2.7-py311-v1",
     "remote-cpu-pytorch-2.6-py311-v1",
     "remote-cpu-source-boundary-py311-v1",
     "remote-cuda-boundary-torch2.6-cu124-v1",
     "remote-cuda-kernel-pytorch-2.6-cu124-v1",
+    "remote-cuda-matched-torch2.4-cu124-py311-v1",
     "remote-cuda-overlay-pytorch-2.6-cu124-v1",
 )
 BOUNDARY_PROFILE_BY_ENVIRONMENT = {
@@ -73,7 +75,7 @@ class RuntimeProfileRegistryTests(unittest.TestCase):
             first.canonical_bytes,
             (canonical_json(first.to_dict()) + "\n").encode("utf-8"),
         )
-        self.assertEqual(len({item.content_hash for item in first.profiles}), 10)
+        self.assertEqual(len({item.content_hash for item in first.profiles}), 12)
         for profile in first.profiles:
             with self.subTest(profile=profile.profile_id):
                 self.assertEqual(profile.hardware.identity_type, "hardware")

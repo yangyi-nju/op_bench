@@ -17,6 +17,7 @@ from op_bench.runtime.experiment_report import (
     McpExperimentContract,
     build_mcp_experiment_report,
     load_mcp_experiment_contract,
+    load_public_task_id_aliases,
     write_mcp_experiment_report,
 )
 from op_bench.runtime.validation import ContractError
@@ -31,6 +32,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--expected-model", required=True)
     parser.add_argument("--expected-cli-version", required=True)
     parser.add_argument("--contract")
+    parser.add_argument("--public-task-id-mapping")
     return parser
 
 
@@ -52,6 +54,11 @@ def main(
             expected_model_id=args.expected_model,
             expected_codex_cli_version=args.expected_cli_version,
             experiment_contract=selected_contract,
+            task_id_aliases=(
+                load_public_task_id_aliases(args.public_task_id_mapping)
+                if args.public_task_id_mapping is not None
+                else None
+            ),
         )
         write_mcp_experiment_report(Path(args.output_dir), index, summary)
     except (ContractError, OSError) as exc:

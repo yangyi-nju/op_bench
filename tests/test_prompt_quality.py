@@ -141,6 +141,41 @@ class PromptQualityScannerTests(unittest.TestCase):
         self.assertIn("empty matrix", index.distinctive_literals)
         self.assertEqual(index.hidden_selectors, ("HiddenProbe.test_empty",))
 
+    def test_private_index_ignores_decorator_calls_and_public_prompt_keys(
+        self,
+    ) -> None:
+        hidden_patch = """diff --git a/test/test_foo.py b/test/test_foo.py
+--- a/test/test_foo.py
++++ b/test/test_foo.py
+@@ -0,0 +1,9 @@
++def assert_result(self):
++    self.assertEqual(
++        actual,
++        expected,
++    )
++
++@config.patch({"freezing": True})
++class Example:
++    Platform = "cuda"
+"""
+
+        index = build_private_answer_index(
+            gold_patch="",
+            hidden_test_patch=hidden_patch,
+            patch_scope=(),
+            hidden_selectors=(),
+        )
+
+        self.assertNotIn("patch", index.added_symbols)
+        self.assertNotIn("Platform", index.internal_names)
+        self.assertEqual(
+            scan_rendered_prompt(
+                "Return the canonical workspace patch without freezing it.",
+                index,
+            ),
+            (),
+        )
+
     def test_private_index_rejects_malformed_or_unsafe_diff_headers(self) -> None:
         for patch in (
             'diff --git "a/torch/foo.py b/torch/foo.py',

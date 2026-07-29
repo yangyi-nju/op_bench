@@ -108,6 +108,70 @@ class V07HistoricalAuditTests(unittest.TestCase):
                         CREATED_AT,
                     )
 
+    def test_frozen_public_ids_are_independent_of_dataset_order(self) -> None:
+        original = json.loads(DATASET.read_text(encoding="utf-8"))
+        with tempfile.TemporaryDirectory(dir=ROOT) as directory:
+            temporary = Path(directory).resolve()
+            payload = dict(original)
+            payload["tasks"] = [
+                {
+                    **entry,
+                    "task_path": str(ROOT / entry["task_path"]),
+                }
+                for entry in reversed(original["tasks"])
+            ]
+            dataset = temporary / "permuted-dataset.json"
+            dataset.write_text(json.dumps(payload), encoding="utf-8")
+
+            records = build_historical_dispositions(
+                ROOT,
+                dataset,
+                temporary / "missing-reviews",
+                CREATED_AT,
+            )
+
+        self.assertEqual(
+            tuple((record.task_id, record.public_task_id) for record in records),
+            tuple(
+                (
+                    task_id,
+                    f"opbench-v07-t{index:04d}",
+                )
+                for index, task_id in enumerate(
+                    sorted(entry["task_id"] for entry in original["tasks"]),
+                    start=1,
+                )
+            ),
+        )
+
+    def test_tampered_or_permuted_public_id_mapping_fails_closed(self) -> None:
+        original = json.loads(
+            (ROOT / "factory/v0.7/p6/public_task_ids.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        mutations = {
+            "permuted": lambda payload: payload["tasks"].reverse(),
+            "wrong-pair": lambda payload: payload["tasks"][0].__setitem__(
+                "public_task_id",
+                "opbench-v07-t0025",
+            ),
+        }
+        for name, mutate in mutations.items():
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:
+                payload = json.loads(json.dumps(original))
+                mutate(payload)
+                mapping = Path(directory).resolve() / "public-task-ids.json"
+                mapping.write_text(json.dumps(payload), encoding="utf-8")
+                with self.assertRaisesRegex(ContractError, "public Task ID mapping"):
+                    build_historical_dispositions(
+                        ROOT,
+                        DATASET,
+                        Path(directory).resolve() / "missing-reviews",
+                        CREATED_AT,
+                        public_task_ids_path=mapping,
+                    )
+
     def test_historical_audit_is_complete_and_unique(self) -> None:
         records = build_historical_dispositions(
             ROOT,
@@ -266,11 +330,19 @@ class V07HistoricalAuditTests(unittest.TestCase):
                     output,
                     CREATED_AT,
                 )
+                index = json.loads(output.read_text(encoding="utf-8"))
+                selected_record = next(
+                    record
+                    for record in index["records"]
+                    if record["task_id"] == entry["task_id"]
+                )
+                admission_reference = selected_record["admission_evidence"][
+                    "relative_path"
+                ]
                 readmission = json.loads(
-                    (
-                        output.parent
-                        / "tasks/opbench-v07-t0001/quality/readmission.json"
-                    ).read_text(encoding="utf-8")
+                    (output.parent / admission_reference).read_text(
+                        encoding="utf-8"
+                    )
                 )
                 expected = (
                     "admission.status: verified required"

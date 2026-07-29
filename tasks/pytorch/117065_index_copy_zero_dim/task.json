@@ -10,11 +10,11 @@
       "{python} test/op_bench_boundary/test_index_copy_zero_dim.py {test}"
     ],
     "known_constraints": [
-      "CPU-only task; no CUDA is required.",
-      "Both scalar and one-dimensional index tensors are valid.",
-      "Modify only torch/_decomp/decompositions.py."
+      "CPU-only; CUDA is not required.",
+      "Scalar and one-dimensional index tensors are both valid inputs."
     ],
-    "repo_setup_commands": []
+    "repo_setup_commands": [],
+    "public_task_id": "opbench-v07-t0001"
   },
   "artifacts": {
     "gold_patch": "artifacts/gold.patch",
@@ -96,14 +96,50 @@
   },
   "source_ref": "pytorch-b9293e7-boundary-overlay",
   "statement": {
-    "body": "Native index_copy accepts either a one-dimensional index tensor or a scalar index. The decomposition validates both ranks but forwards a scalar directly to index_put, whose tuple indexing path expects a one-dimensional tensor. Normalize a scalar index to length one before constructing the index tuple.",
+    "body": "For a scalar index accepted by eager torch.index_copy, the supplied alternate execution path raises instead of treating it as a one-element index. The repaired result must match eager behavior for the scalar case and preserve one-dimensional index behavior.",
     "labels": [
       "module: decomposition",
       "boundary: rank-zero",
       "operator: index_copy"
     ],
-    "title": "index_copy decomposition rejects a zero-dimensional index"
+    "title": "torch.index_copy rejects a scalar index in an alternate execution path"
   },
   "task_id": "pytorch__117065__index_copy_zero_dim",
-  "version": "v1"
+  "version": "v1",
+  "quality": {
+    "complexity_evidence": "quality/complexity.json",
+    "origin": "retained_historical",
+    "prompt_evidence": "quality/prompt.json",
+    "readmission_evidence": "quality/readmission.json"
+  },
+  "taxonomy": {
+    "component_tags": [
+      "aten"
+    ],
+    "contract_detail_tags": [
+      "value",
+      "rank"
+    ],
+    "contract_family": "result",
+    "execution_context": {
+      "devices": [
+        "cpu"
+      ],
+      "distributed": false,
+      "modes": [
+        "eager"
+      ],
+      "phases": [
+        "forward"
+      ]
+    },
+    "failure_type": "unexpected_error",
+    "root_cause_tags": [
+      "incorrect_lowering"
+    ],
+    "taxonomy_version": "v2",
+    "trigger_tags": [
+      "scalar_or_low_rank"
+    ]
+  }
 }

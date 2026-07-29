@@ -29,8 +29,8 @@
     "snapshot_path": "../../../.op_bench_cache/sources/pytorch/pytorch/fefc406a3d0d90db0f808419fb88045f90b213cd/source"
   },
   "statement": {
-    "title": "nn module rejects iterable arguments of incorrect length",
-    "body": "torch.nn.modules.conv and pooling modules accept tuple/list arguments for kernel_size, stride, padding etc. but do not validate that the iterable length matches the expected dimension count, leading to silent incorrect behavior or confusing errors downstream.",
+    "title": "torch.nn spatial modules accept iterable arguments with the wrong dimensionality",
+    "body": "Spatial torch.nn APIs can accept kernel, stride, padding, output-size, or related iterables whose length does not match the operation's dimensions, deferring failure or producing confusing results. A one-item iterable must expand across dimensions, an exact-length iterable must be accepted, and every other length must raise immediately.",
     "labels": [
       "module: nn",
       "bug"
@@ -39,7 +39,7 @@
   "operator": {
     "framework": "pytorch",
     "component": "torch.nn.modules.conv",
-    "operator_name": "torch.nn.Conv2d",
+    "operator_name": "torch.nn spatial modules",
     "problem_type": "parameter-validation",
     "tags": [
       "nn",
@@ -72,12 +72,13 @@
   "agent_visible": {
     "repo_setup_commands": [],
     "known_constraints": [
-      "Full PyTorch source checkout task.",
-      "Do not assume CUDA availability."
+      "CPU-only; CUDA is not required.",
+      "Length-one iterables must expand, exact-length iterables must pass through, and other lengths must raise."
     ],
     "allowed_test_commands": [
       "{python} test/nn/test_pooling.py -k {test}"
-    ]
+    ],
+    "public_task_id": "opbench-v07-t0023"
   },
   "evaluation": {
     "setup_commands": [],
@@ -95,11 +96,47 @@
     "hidden_test_patch": "artifacts/hidden_test.patch"
   },
   "metadata": {
-    "difficulty": "medium",
+    "difficulty": "hard",
     "curation_status": "verified",
     "deterministic": true,
     "estimated_runtime_min": 15,
     "layer": "A",
-    "admission_status": "verified"
+    "admission_status": "verified",
+    "source_loading_verified": true
+  },
+  "quality": {
+    "complexity_evidence": "quality/complexity.json",
+    "origin": "retained_historical",
+    "prompt_evidence": "quality/prompt.json",
+    "readmission_evidence": "quality/readmission.json"
+  },
+  "taxonomy": {
+    "component_tags": [],
+    "contract_detail_tags": [
+      "shape",
+      "schema",
+      "exception"
+    ],
+    "contract_family": "api_behavior",
+    "execution_context": {
+      "devices": [
+        "cpu"
+      ],
+      "distributed": false,
+      "modes": [
+        "eager"
+      ],
+      "phases": [
+        "forward"
+      ]
+    },
+    "failure_type": "missing_error",
+    "root_cause_tags": [
+      "incorrect_validation"
+    ],
+    "taxonomy_version": "v2",
+    "trigger_tags": [
+      "invalid_or_endpoint_parameter"
+    ]
   }
 }

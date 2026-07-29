@@ -10,11 +10,11 @@
       "{python} test/op_bench_boundary/test_triton_ygrid_mask.py {test}"
     ],
     "known_constraints": [
-      "The hidden test is a low-memory surrogate and must keep calling TritonKernel._has_constant_mask directly.",
-      "Do not allocate tensors sized from get_max_y_grid().",
-      "Modify only torch/_inductor/codegen/triton.py."
+      "CUDA is required for the large boolean-tensor reproduction.",
+      "Preserve correct compiled addition for smaller broadcasted inputs and for equal-shape inputs."
     ],
-    "repo_setup_commands": []
+    "repo_setup_commands": [],
+    "public_task_id": "opbench-v07-t0010"
   },
   "artifacts": {
     "gold_patch": "artifacts/gold.patch",
@@ -70,7 +70,7 @@
   "operator": {
     "component": "torch._inductor.codegen.triton.TritonKernel",
     "framework": "pytorch",
-    "operator_name": "TritonKernel._has_constant_mask",
+    "operator_name": "torch.compile with Triton",
     "problem_dimension": "boundary",
     "problem_subclass": "B5",
     "problem_type": "wrong-result",
@@ -102,14 +102,53 @@
   },
   "source_ref": "pytorch-cc98a1b-boundary-overlay",
   "statement": {
-    "body": "TritonKernel._has_constant_mask treats a block-aligned dimension as mask-free. For a Y dimension whose logical size exceeds the hardware y-grid limit, grid wrapping can still create out-of-range lanes unless a Z dimension already handles the overflow. Keep the existing optimization for X, bounded Y, and explicit Z, but conservatively retain the Y mask when the logical Y size can overflow the grid.",
+    "body": "On CUDA, torch.compile(torch.add) can return values that disagree with eager torch.add for boolean tensors with shapes (66,560, 4,096) and (66,560, 1). The compiled result must match eager addition at every element, while smaller broadcasted shapes and equal-shape addition remain unchanged.",
     "labels": [
       "module: inductor",
       "module: triton",
       "boundary: launch grid"
     ],
-    "title": "Triton can elide the y-mask when y-grid wrapping still needs it"
+    "title": "Compiled torch.add can disagree with eager output for a large broadcasted CUDA shape"
   },
   "task_id": "pytorch__139751__triton_ygrid_mask",
-  "version": "v1"
+  "version": "v1",
+  "quality": {
+    "complexity_evidence": "quality/complexity.json",
+    "origin": "retained_historical",
+    "prompt_evidence": "quality/prompt.json",
+    "readmission_evidence": "quality/readmission.json"
+  },
+  "taxonomy": {
+    "component_tags": [
+      "inductor",
+      "triton"
+    ],
+    "contract_detail_tags": [
+      "value",
+      "shape"
+    ],
+    "contract_family": "result",
+    "execution_context": {
+      "devices": [
+        "cuda"
+      ],
+      "distributed": false,
+      "modes": [
+        "compile"
+      ],
+      "phases": [
+        "forward"
+      ]
+    },
+    "failure_type": "wrong_result",
+    "root_cause_tags": [
+      "incorrect_lowering"
+    ],
+    "taxonomy_version": "v2",
+    "trigger_tags": [
+      "extreme_value_or_size",
+      "dynamic_shape",
+      "device_specific"
+    ]
+  }
 }

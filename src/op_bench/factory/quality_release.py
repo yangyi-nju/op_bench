@@ -82,6 +82,33 @@ _HISTORICAL_TASK_IDS = (
     "pytorch__143792__addmv_empty_matrix",
     "pytorch__147352__storage_offset_overflow",
 )
+_EXPECTED_HISTORICAL_DISPOSITIONS = {
+    "pytorch__117065__index_copy_zero_dim": "retired",
+    "pytorch__118762__weight_norm_default_dim": "retired",
+    "pytorch__124385__load_state_dict_prefix": "retained",
+    "pytorch__126461__cummin_rank_zero": "retired",
+    "pytorch__129138__linear_add_bias_autocast": "retained",
+    "pytorch__129154__exp_decomp_numerics": "retained",
+    "pytorch__132616__cuda_mem_get_info": "retired",
+    "pytorch__132835__njt_sdpa_autocast": "retained",
+    "pytorch__139372__histc_int8_cuda_bounds": "retained",
+    "pytorch__139751__triton_ygrid_mask": "retired",
+    "pytorch__139999__masked_mean_bool_upcast": "retired",
+    "pytorch__140557__layer_norm_decomp_precision": "retained",
+    "pytorch__143455__set_submodule": "retained",
+    "pytorch__143792__addmv_empty_matrix": "retired",
+    "pytorch__144009__softmax_ilpreduce_size": "retained",
+    "pytorch__144073__vector_norm_scalar_overflow": "retained",
+    "pytorch__147352__storage_offset_overflow": "retained",
+    "pytorch__147599__lazylinear_state_forward": "retired",
+    "pytorch__149693__lazylinear_init": "deferred",
+    "pytorch__150975__autograd_backward_inputs": "retired",
+    "pytorch__160952__bilinear_lazy_check": "retained",
+    "pytorch__161488__lbfgs_wolfe": "retained",
+    "pytorch__162340__nn_arg_length": "retained",
+    "pytorch__163961__dataloader_subset": "retained",
+    "pytorch__168295__autograd_create_graph": "retired",
+}
 
 
 @dataclass(frozen=True)
@@ -385,11 +412,184 @@ def validate_quality_task(
     return tuple(_ordered_unique(errors))
 
 
+def validate_historical_index(
+    root: Path,
+    index_path: Path,
+) -> tuple[str, ...]:
+    """Revalidate the formal historical index and every referenced Task gate."""
+
+    errors: list[str] = []
+    try:
+        encoded = load_regular_file_bytes(index_path)
+        value = json.loads(encoded.decode("utf-8"))
+    except (ContractError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        return (f"historical_index: {exc}",)
+    if not isinstance(value, Mapping):
+        return ("historical_index: expected object",)
+    required = {
+        "contract_type",
+        "schema_version",
+        "dataset_id",
+        "dataset_hash",
+        "created_at",
+        "task_count",
+        "k",
+        "required_candidate_count",
+        "records",
+        "content_hash",
+    }
+    if set(value) != required:
+        return ("historical_index: unexpected contract fields",)
+    try:
+        if encoded != canonical_json(value).encode("utf-8"):
+            errors.append("historical_index: expected canonical JSON bytes")
+    except ContractError as exc:
+        errors.append(f"historical_index: {exc}")
+    if value["contract_type"] != "historical_readmission_index":
+        errors.append("historical_index.contract_type: mismatch")
+    if value["schema_version"] != "v1":
+        errors.append("historical_index.schema_version: mismatch")
+    if (
+        not isinstance(value["created_at"], str)
+        or _UTC_SECONDS.fullmatch(value["created_at"]) is None
+    ):
+        errors.append("historical_index.created_at: invalid")
+    if value["content_hash"] != canonical_sha256(
+        {key: item for key, item in value.items() if key != "content_hash"}
+    ):
+        errors.append("historical_index.content_hash: payload hash mismatch")
+
+    dataset_path = root / "datasets/pytorch_v0.7/dataset.json"
+    try:
+        dataset_payload = json.loads(
+            load_regular_file_bytes(dataset_path).decode("utf-8")
+        )
+    except (ContractError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        return (*errors, f"historical_index.dataset: {exc}")
+    if not isinstance(dataset_payload, Mapping):
+        return (*errors, "historical_index.dataset: expected object")
+    if value["dataset_id"] != dataset_payload.get("dataset_id"):
+        errors.append("historical_index.dataset_id: mismatch")
+    if value["dataset_hash"] != canonical_sha256(dataset_payload):
+        errors.append("historical_index.dataset_hash: mismatch")
+
+    records_value = value["records"]
+    records: list[QualityTaskRecord] = []
+    if not isinstance(records_value, list):
+        errors.append("historical_index.records: expected array")
+        return tuple(_ordered_unique(errors))
+    for index, record_value in enumerate(records_value):
+        try:
+            records.append(
+                QualityTaskRecord.from_dict(
+                    record_value,
+                    path=f"historical_index.records[{index}]",
+                )
+            )
+        except ContractError as exc:
+            errors.append(str(exc))
+    if len(records) != 25 or value["task_count"] != 25:
+        errors.append("historical_index: expected exactly 25 records")
+    if len(records) == 25:
+        try:
+            _validate_historical_records(tuple(records))
+        except ContractError as exc:
+            errors.append(str(exc))
+
+    retained = sum(record.disposition == "retained" for record in records)
+    deferred = sum(record.disposition == "deferred" for record in records)
+    retired = sum(record.disposition == "retired" for record in records)
+    if (retained, deferred, retired) != (14, 1, 10):
+        errors.append(
+            "historical_index.disposition: expected retained=14, "
+            "deferred=1, retired=10"
+        )
+    if value["k"] != retained:
+        errors.append("historical_index.k: retained count mismatch")
+    if value["required_candidate_count"] != 3 * (50 - retained):
+        errors.append("historical_index.required_candidate_count: mismatch")
+    actual_dispositions = {
+        record.task_id: record.disposition for record in records
+    }
+    if actual_dispositions != _EXPECTED_HISTORICAL_DISPOSITIONS:
+        errors.append("historical_index.disposition: approved mapping mismatch")
+
+    for record in records:
+        task_path = root / PurePosixPath(record.task_path) / "task.json"
+        try:
+            task = TaskManifest.load(task_path)
+        except (ContractError, OSError, ValueError) as exc:
+            errors.append(f"{record.task_id}: Task load failed: {exc}")
+            continue
+        if task.task_id != record.task_id:
+            errors.append(f"{record.task_id}: task_id mismatch")
+        try:
+            if task.public_task_id != record.public_task_id:
+                errors.append(f"{record.task_id}: public_task_id mismatch")
+        except InvalidPublicTaskId as exc:
+            errors.append(f"{record.task_id}: {exc}")
+        taxonomy = task.data.get("taxonomy")
+        try:
+            if canonical_sha256(taxonomy) != record.taxonomy_hash:
+                errors.append(f"{record.task_id}: taxonomy_hash mismatch")
+        except ContractError as exc:
+            errors.append(f"{record.task_id}: taxonomy invalid: {exc}")
+
+        expected_paths = {
+            "prompt_evidence": f"{record.task_path}/quality/prompt.json",
+            "complexity_evidence": (
+                f"{record.task_path}/quality/complexity.json"
+            ),
+            "admission_evidence": (
+                f"{record.task_path}/quality/readmission.json"
+            ),
+        }
+        for field, expected_path in expected_paths.items():
+            reference = getattr(record, field)
+            if reference.relative_path != expected_path:
+                errors.append(
+                    f"{record.task_id}.{field}.relative_path: mismatch"
+                )
+                continue
+            try:
+                artifact = load_canonical_json_artifact(
+                    root / PurePosixPath(reference.relative_path)
+                )
+            except ContractError as exc:
+                errors.append(f"{record.task_id}.{field}: {exc}")
+                continue
+            if artifact.get("content_hash") != reference.content_hash:
+                errors.append(
+                    f"{record.task_id}.{field}.content_hash: mismatch"
+                )
+            if artifact.get("task_id") != record.task_id:
+                errors.append(f"{record.task_id}.{field}.task_id: mismatch")
+            if (
+                field == "admission_evidence"
+                and artifact.get("disposition") != record.disposition
+            ):
+                errors.append(
+                    f"{record.task_id}.disposition: readmission mismatch"
+                )
+        if record.disposition == "retained":
+            errors.extend(
+                f"{record.task_id}: {error}"
+                for error in validate_quality_task(
+                    root,
+                    task,
+                    require_verified=True,
+                )
+            )
+    return tuple(_ordered_unique(errors))
+
+
 def build_historical_dispositions(
     root: Path,
     dataset_path: Path,
     review_root: Path,
     created_at: str,
+    *,
+    public_task_ids_path: Path | None = None,
 ) -> tuple[QualityTaskRecord, ...]:
     """Build one deterministic disposition for every historical Dataset Task."""
 
@@ -398,6 +598,7 @@ def build_historical_dispositions(
         dataset_path,
         review_root,
         created_at,
+        public_task_ids_path=public_task_ids_path,
     ).records
 
 
@@ -407,6 +608,8 @@ def write_historical_dispositions(
     review_root: Path,
     output_path: Path,
     created_at: str,
+    *,
+    public_task_ids_path: Path | None = None,
 ) -> tuple[QualityTaskRecord, ...]:
     """Build and write the canonical task evidence tree and global index."""
 
@@ -416,11 +619,17 @@ def write_historical_dispositions(
         dataset_path,
         review_root,
         created_at,
+        public_task_ids_path=public_task_ids_path,
     )
     output_root = output_path.parent
+    official_output = (
+        output_path.resolve()
+        == (root / "factory/v0.7/p7/historical_readmission.json").resolve()
+    )
+    artifact_root = root if official_output else output_root
     for artifact in audit.artifacts:
         _write_canonical(
-            output_root / PurePosixPath(artifact.relative_path),
+            artifact_root / PurePosixPath(artifact.relative_path),
             artifact.payload,
         )
     retained = sum(
@@ -447,6 +656,8 @@ def _build_historical_audit(
     dataset_path: Path,
     review_root: Path,
     created_at: str,
+    *,
+    public_task_ids_path: Path | None,
 ) -> _HistoricalAudit:
     if not isinstance(root, Path) or not root.is_dir():
         raise ContractError("root: expected repository directory")
@@ -474,9 +685,21 @@ def _build_historical_audit(
     ]
     if any(not isinstance(task_id, str) or not task_id for task_id in task_ids):
         raise ContractError("dataset.tasks: every entry requires task_id")
-    if tuple(task_ids) != _HISTORICAL_TASK_IDS:
+    if (
+        len(task_ids) != len(_HISTORICAL_TASK_IDS)
+        or len(set(task_ids)) != len(task_ids)
+        or set(task_ids) != set(_HISTORICAL_TASK_IDS)
+    ):
         raise ContractError(
             "dataset.tasks: expected exact historical 25 frozen identities"
+        )
+    public_id_mapping = _load_public_task_id_mapping(
+        public_task_ids_path
+        or root / "factory/v0.7/p6/public_task_ids.json"
+    )
+    if set(public_id_mapping) != set(task_ids):
+        raise ContractError(
+            "public Task ID mapping: identities do not match historical Dataset"
         )
 
     loaded_tasks = DatasetManifest.load(dataset_path).load_tasks()
@@ -487,10 +710,8 @@ def _build_historical_audit(
     records: list[QualityTaskRecord] = []
     artifacts: list[_AuditArtifact] = []
     accepted_fingerprints: set[str] = set()
-    for index, entry_value in enumerate(entries, start=1):
-        assert isinstance(entry_value, Mapping)
-        task_id = str(entry_value["task_id"])
-        public_task_id = f"opbench-v07-t{index:04d}"
+    official_review_dispositions: dict[str, str] = {}
+    for task_id, public_task_id in public_id_mapping.items():
         original = by_id[task_id]
         data = dict(original.data)
         agent_visible = dict(
@@ -501,8 +722,22 @@ def _build_historical_audit(
         agent_visible["public_task_id"] = public_task_id
         data["agent_visible"] = agent_visible
         task = TaskManifest(task_dir=original.task_dir, data=data)
+        admission_task = task
+        registry_error: str | None = None
+        try:
+            admission_task = resolve_task_assets(
+                task,
+                environment_registry=EnvironmentRegistry.load(
+                    root / "environments/registry.json"
+                ),
+                source_registry=SourceRegistry.load(
+                    root / "sources/registry.json"
+                ),
+            )
+        except RegistryError as exc:
+            registry_error = str(exc)
         task_path = _repo_relative(root, task.task_dir, "task_path")
-        artifact_prefix = f"tasks/{public_task_id}/quality"
+        artifact_prefix = f"{task_path}/quality"
 
         errors: list[str] = []
         retirement = False
@@ -536,6 +771,18 @@ def _build_historical_audit(
             prompt_review_path,
             "prompt review",
         )
+        prompt_review, requested_disposition, combined_prompt_error = (
+            _review_section(
+                prompt_review,
+                kind="prompt",
+                task_id=task_id,
+                public_task_id=public_task_id,
+            )
+        )
+        if combined_prompt_error is not None:
+            prompt_review_error = combined_prompt_error
+        if requested_disposition is not None:
+            official_review_dispositions[task_id] = requested_disposition
         prompt_evidence: PromptQualityEvidence | None = None
         prompt_errors: list[str] = []
         if prompt_review_error is not None:
@@ -591,6 +838,25 @@ def _build_historical_audit(
             complexity_review_hash,
             complexity_review_error,
         ) = _review_json(complexity_review_path, "complexity review")
+        (
+            complexity_review,
+            complexity_disposition,
+            combined_complexity_error,
+        ) = _review_section(
+            complexity_review,
+            kind="complexity",
+            task_id=task_id,
+            public_task_id=public_task_id,
+        )
+        if combined_complexity_error is not None:
+            complexity_review_error = combined_complexity_error
+        if (
+            requested_disposition is not None
+            and complexity_disposition != requested_disposition
+        ):
+            complexity_review_error = (
+                "combined review disposition differs between sections"
+            )
         complexity: ComplexityEvidence | None = None
         complexity_errors: list[str] = []
         if complexity_review_error is not None:
@@ -613,7 +879,10 @@ def _build_historical_audit(
                     if isinstance(task.data.get("metadata"), Mapping)
                     else None
                 )
-                if complexity.difficulty != difficulty:
+                if (
+                    complexity.decision == "accepted"
+                    and complexity.difficulty != difficulty
+                ):
                     complexity_errors.append(
                         "difficulty does not match Task metadata"
                     )
@@ -646,6 +915,10 @@ def _build_historical_audit(
 
         if task.admission_status != "verified":
             errors.append("admission.status: verified required")
+        if registry_error is not None:
+            errors.append(
+                f"admission: registry truth unavailable: {registry_error}"
+            )
         patch_scope = task.data.get("patch_scope")
         if (
             not isinstance(patch_scope, Mapping)
@@ -653,11 +926,11 @@ def _build_historical_audit(
             or not task.patch_scope_paths
         ):
             errors.append("patch_scope: enforced required")
-        admission_hash, admission_errors = _admission_truth(task)
+        admission_hash, admission_errors = _admission_truth(admission_task)
         errors.extend(admission_errors)
         if (
-            task.metadata_source_loading_verified is not True
-            and task.runtime_tier != "cpu_source_snapshot_fuller"
+            admission_task.metadata_source_loading_verified is not True
+            and admission_task.runtime_tier != "cpu_source_snapshot_fuller"
         ):
             errors.append("runtime: source loading truth is missing")
         if (
@@ -676,6 +949,26 @@ def _build_historical_audit(
                     complexity.duplicate_fingerprint
                 )
 
+        if requested_disposition == "deferred" and retirement:
+            if (
+                complexity is not None
+                and complexity.hard_rejections
+                == ("standard_admission_failure",)
+            ):
+                retirement = False
+                errors.append(
+                    "complexity: standard admission failure requires repaired "
+                    "private evidence and fresh Admission"
+                )
+            else:
+                errors.append(
+                    "review: deferred cannot override a non-repairable rejection"
+                )
+        if requested_disposition == "retired" and not retirement:
+            errors.append("review: retired disposition lacks a formal rejection")
+        if requested_disposition == "deferred" and not errors:
+            errors.append("review: deferred disposition lacks an unresolved gate")
+
         disposition = (
             "retired"
             if retirement
@@ -691,8 +984,18 @@ def _build_historical_audit(
             "origin": "retained_historical",
             "disposition": disposition,
             "taxonomy_hash": taxonomy_hash,
-            "prompt_evidence": prompt_ref.to_dict(),
-            "complexity_evidence": complexity_ref.to_dict(),
+            "prompt_evidence": FactoryArtifactReference(
+                artifact_type=prompt_ref.artifact_type,
+                artifact_id=prompt_ref.artifact_id,
+                content_hash=prompt_ref.content_hash,
+                relative_path="quality/prompt.json",
+            ).to_dict(),
+            "complexity_evidence": FactoryArtifactReference(
+                artifact_type=complexity_ref.artifact_type,
+                artifact_id=complexity_ref.artifact_id,
+                content_hash=complexity_ref.content_hash,
+                relative_path="quality/complexity.json",
+            ).to_dict(),
             "admission_evidence_hash": admission_hash,
             "review_input_hashes": {
                 "prompt": prompt_review_hash,
@@ -741,6 +1044,19 @@ def _build_historical_audit(
         artifacts=tuple(artifacts),
     )
     _validate_historical_records(result.records)
+    if len(official_review_dispositions) == len(_HISTORICAL_TASK_IDS):
+        actual = {
+            record.task_id: record.disposition for record in result.records
+        }
+        if official_review_dispositions != _EXPECTED_HISTORICAL_DISPOSITIONS:
+            raise ContractError(
+                "combined reviews: expected exact approved historical dispositions"
+            )
+        if actual != _EXPECTED_HISTORICAL_DISPOSITIONS:
+            raise ContractError(
+                "review-derived dispositions: expected retained=14, "
+                "deferred=1, retired=10"
+            )
     return result
 
 
@@ -1210,6 +1526,7 @@ def _validate_admission_execution(
 
 def _review_path(root: Path, task_id: str, kind: str) -> Path:
     candidates = (
+        root / f"{task_id}.json",
         root / task_id / f"{kind}.json",
         root / kind / f"{task_id}.json",
         root / f"{task_id}.{kind}.json",
@@ -1220,6 +1537,101 @@ def _review_path(root: Path, task_id: str, kind: str) -> Path:
     )
     _assert_no_symlink_ancestors(selected, f"{kind} review path")
     return selected
+
+
+def _review_section(
+    value: object | None,
+    *,
+    kind: str,
+    task_id: str,
+    public_task_id: str,
+) -> tuple[object | None, str | None, str | None]:
+    if not isinstance(value, Mapping) or value.get(
+        "contract_type"
+    ) != "historical_task_quality_review":
+        return value, None, None
+    required = {
+        "contract_type",
+        "schema_version",
+        "task_id",
+        "public_task_id",
+        "prompt",
+        "complexity",
+        "disposition",
+        "source_evidence",
+        "readmission_note",
+        "content_hash",
+    }
+    if set(value) != required:
+        return None, None, "combined review: unexpected contract fields"
+    if value.get("schema_version") != "v1":
+        return None, None, "combined review: unsupported schema_version"
+    if value.get("task_id") != task_id:
+        return None, None, "combined review: task_id mismatch"
+    if value.get("public_task_id") != public_task_id:
+        return None, None, "combined review: public_task_id mismatch"
+    disposition = value.get("disposition")
+    if disposition not in _DISPOSITIONS:
+        return None, None, "combined review: unsupported disposition"
+    stored_hash = value.get("content_hash")
+    if not isinstance(stored_hash, str) or stored_hash != canonical_sha256(
+        {key: item for key, item in value.items() if key != "content_hash"}
+    ):
+        return None, None, "combined review: content_hash mismatch"
+    section = value.get(kind)
+    if not isinstance(section, Mapping):
+        return None, None, f"combined review: {kind} must be an object"
+    return section, str(disposition), None
+
+
+def _load_public_task_id_mapping(path: Path) -> dict[str, str]:
+    try:
+        encoded = load_regular_file_bytes(path)
+        value = json.loads(encoded.decode("utf-8"))
+    except (ContractError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ContractError(f"public Task ID mapping: invalid JSON: {exc}") from exc
+    if not isinstance(value, Mapping):
+        raise ContractError("public Task ID mapping: expected object")
+    if set(value) != {"contract_type", "schema_version", "tasks"}:
+        raise ContractError("public Task ID mapping: unexpected contract fields")
+    if (
+        value["contract_type"] != "public_task_id_mapping"
+        or value["schema_version"] != "v1"
+    ):
+        raise ContractError("public Task ID mapping: unsupported contract")
+    entries = value["tasks"]
+    if not isinstance(entries, list) or len(entries) != 25:
+        raise ContractError("public Task ID mapping: expected exactly 25 entries")
+
+    expected_task_ids = tuple(sorted(_HISTORICAL_TASK_IDS))
+    expected_public_ids = tuple(
+        f"opbench-v07-t{index:04d}" for index in range(1, 26)
+    )
+    pairs: list[tuple[str, str]] = []
+    for index, entry in enumerate(entries):
+        if not isinstance(entry, Mapping) or set(entry) != {
+            "task_id",
+            "public_task_id",
+        }:
+            raise ContractError(
+                f"public Task ID mapping: tasks[{index}] has invalid fields"
+            )
+        task_id = entry["task_id"]
+        public_task_id = entry["public_task_id"]
+        if not isinstance(task_id, str) or not isinstance(public_task_id, str):
+            raise ContractError(
+                f"public Task ID mapping: tasks[{index}] requires string IDs"
+            )
+        pairs.append((task_id, public_task_id))
+    if tuple(task_id for task_id, _ in pairs) != expected_task_ids:
+        raise ContractError(
+            "public Task ID mapping: canonical IDs must be in frozen lexical order"
+        )
+    if tuple(public_task_id for _, public_task_id in pairs) != expected_public_ids:
+        raise ContractError(
+            "public Task ID mapping: opaque IDs must match frozen lexical positions"
+        )
+    return dict(pairs)
 
 
 def _review_json(
@@ -1397,7 +1809,7 @@ def _validate_historical_records(
         f"opbench-v07-t{index:04d}"
         for index in range(1, len(_HISTORICAL_TASK_IDS) + 1)
     )
-    if task_ids != _HISTORICAL_TASK_IDS:
+    if task_ids != tuple(sorted(_HISTORICAL_TASK_IDS)):
         raise ContractError(
             "records: expected exact historical 25 frozen identities"
         )

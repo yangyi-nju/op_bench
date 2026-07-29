@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+import json
 import sys
 
 
@@ -74,12 +75,25 @@ def build_validation_contract(
         created_at="1970-01-01T00:00:00Z",
         selected_task_ids=selected_task_ids,
     )
+    mapping_payload = json.loads(
+        (root / "factory/v0.7/p6/public_task_ids.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    public_by_canonical = {
+        item["task_id"]: item["public_task_id"]
+        for item in mapping_payload["tasks"]
+    }
+    if set(selected_task_ids) - set(public_by_canonical):
+        raise ContractError(
+            "Validation partition is missing frozen public Task identities"
+        )
     actual_profiles = {
         task.task.identifier: task.runtime.profile_id
         for task in manifest.tasks
     }
     expected_profiles = {
-        task_id: profile_id
+        public_by_canonical[task_id]: profile_id
         for profile_id, task_ids in COHORT_TASKS
         for task_id in task_ids
     }
@@ -95,7 +109,8 @@ def build_validation_contract(
             McpExperimentCohortContract(
                 profile_id=profile_id,
                 task_repeats=tuple(
-                    (task_id, REPEATS) for task_id in task_ids
+                    (public_by_canonical[task_id], REPEATS)
+                    for task_id in task_ids
                 ),
             )
             for profile_id, task_ids in COHORT_TASKS

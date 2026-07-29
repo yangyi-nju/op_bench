@@ -28,8 +28,8 @@
     "snapshot_path": "../../../.op_bench_cache/sources/pytorch/pytorch/6f9ffaa9916c02fa2aaae453db579a942b354708/source"
   },
   "statement": {
-    "title": "torch.autograd.backward inputs validation is incorrect",
-    "body": "torch.autograd.backward does not properly validate the inputs argument, allowing invalid tensor types or non-leaf tensors to pass through without appropriate errors, leading to confusing downstream failures.",
+    "title": "Reverse-mode differentiation rejects a scalar Tensor passed directly as inputs",
+    "body": "Requesting reverse-mode differentiation on a scalar result with inputs set directly to a zero-dimensional leaf Tensor raises instead of computing that Tensor's gradient. A single Tensor or gradient-edge object must be treated as one requested input, while an empty iterable must still raise and existing iterable and non-leaf handling must remain unchanged.",
     "labels": [
       "module: nn",
       "bug"
@@ -38,7 +38,7 @@
   "operator": {
     "framework": "pytorch",
     "component": "torch.autograd",
-    "operator_name": "torch.autograd.backward",
+    "operator_name": "torch reverse-mode differentiation",
     "problem_type": "parameter-validation",
     "tags": [
       "autograd",
@@ -66,12 +66,13 @@
   "agent_visible": {
     "repo_setup_commands": [],
     "known_constraints": [
-      "Full PyTorch source checkout task.",
-      "Do not assume CUDA availability."
+      "CPU-only; CUDA is not required.",
+      "A direct scalar Tensor input must work, while an empty inputs iterable must remain invalid."
     ],
     "allowed_test_commands": [
       "{python} test/test_autograd.py -k {test}"
-    ]
+    ],
+    "public_task_id": "opbench-v07-t0020"
   },
   "evaluation": {
     "setup_commands": [],
@@ -95,5 +96,42 @@
     "estimated_runtime_min": 15,
     "layer": "A",
     "admission_status": "verified"
+  },
+  "quality": {
+    "complexity_evidence": "quality/complexity.json",
+    "origin": "retained_historical",
+    "prompt_evidence": "quality/prompt.json",
+    "readmission_evidence": "quality/readmission.json"
+  },
+  "taxonomy": {
+    "component_tags": [
+      "autograd"
+    ],
+    "contract_detail_tags": [
+      "gradient",
+      "schema",
+      "exception"
+    ],
+    "contract_family": "api_behavior",
+    "execution_context": {
+      "devices": [
+        "cpu"
+      ],
+      "distributed": false,
+      "modes": [
+        "eager"
+      ],
+      "phases": [
+        "backward"
+      ]
+    },
+    "failure_type": "unexpected_error",
+    "root_cause_tags": [
+      "incorrect_validation"
+    ],
+    "taxonomy_version": "v2",
+    "trigger_tags": [
+      "scalar_or_low_rank"
+    ]
   }
 }

@@ -247,6 +247,59 @@ class McpExperimentReportTests(unittest.TestCase):
         self.assertEqual(summary["totals"]["cohorts"], 1)
         self.assertEqual(summary["totals"]["attempts"], 36)
 
+    def test_builder_projects_frozen_public_task_aliases(self) -> None:
+        aliases = {
+            task_id: f"opbench-public-{index:04d}"
+            for index, task_id in enumerate(
+                (
+                    task_id
+                    for cohort in self.contract.cohorts
+                    for task_id in cohort.task_ids
+                ),
+                start=1,
+            )
+        }
+        public_contract = replace(
+            self.contract,
+            cohorts=tuple(
+                replace(
+                    cohort,
+                    task_repeats=tuple(
+                        (aliases[task_id], repeats)
+                        for task_id, repeats in cohort.task_repeats
+                    ),
+                )
+                for cohort in self.contract.cohorts
+            ),
+        )
+
+        index, summary = build_mcp_experiment_report(
+            self.roots,
+            expected_adapter_id="codex_mcp_canonical",
+            expected_model_id=MODEL_ID,
+            expected_codex_cli_version=CLI_VERSION,
+            experiment_contract=public_contract,
+            task_id_aliases=aliases,
+        )
+
+        observed = {row["task_id"] for row in index["attempts"]}
+        self.assertEqual(observed, set(aliases.values()))
+        self.assertTrue(set(aliases).isdisjoint(observed))
+        self.assertEqual(summary["totals"]["attempts"], 51)
+        with self.assertRaisesRegex(ContractError, "missing canonical identity"):
+            build_mcp_experiment_report(
+                self.roots,
+                expected_adapter_id="codex_mcp_canonical",
+                expected_model_id=MODEL_ID,
+                expected_codex_cli_version=CLI_VERSION,
+                experiment_contract=public_contract,
+                task_id_aliases={
+                    key: value
+                    for index, (key, value) in enumerate(aliases.items())
+                    if index
+                },
+            )
+
     def test_contract_loader_and_cli_accept_explicit_canonical_contract(self) -> None:
         contract = replace(
             self.contract,

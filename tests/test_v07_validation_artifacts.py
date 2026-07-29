@@ -22,12 +22,12 @@ EXPECTED_PROFILES = {
     "remote-cuda-boundary-torch2.6-cu124-v1",
 }
 EXPECTED_TASKS = {
-    "pytorch__117065__index_copy_zero_dim",
-    "pytorch__118762__weight_norm_default_dim",
-    "pytorch__126461__cummin_rank_zero",
-    "pytorch__139751__triton_ygrid_mask",
-    "pytorch__143792__addmv_empty_matrix",
-    "pytorch__147352__storage_offset_overflow",
+    "opbench-v07-t0001",
+    "opbench-v07-t0002",
+    "opbench-v07-t0004",
+    "opbench-v07-t0010",
+    "opbench-v07-t0014",
+    "opbench-v07-t0017",
 }
 
 

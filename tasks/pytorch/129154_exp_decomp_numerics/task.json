@@ -10,11 +10,11 @@
       "{python} test/test_decomp.py {test}"
     ],
     "known_constraints": [
-      "CUDA GPU is required; the test is @onlyCUDA.",
-      "The bug is in torch/_refs/__init__.py in the exponential() decomposition.",
-      "Modify only torch/_refs/__init__.py."
+      "CUDA is required.",
+      "Sampling under preserved RNG state must match native CUDA exponential behavior and must not produce infinities."
     ],
-    "repo_setup_commands": []
+    "repo_setup_commands": [],
+    "public_task_id": "opbench-v07-t0006"
   },
   "artifacts": {
     "gold_patch": "artifacts/gold.patch",
@@ -86,7 +86,7 @@
     "admission_status": "verified",
     "curation_status": "verified",
     "deterministic": false,
-    "difficulty": "easy",
+    "difficulty": "hard",
     "estimated_runtime_min": 15,
     "layer": "A",
     "notes": "Restored by v0.7 matched-runtime compatibility and verified Admission; compatibility evidence sha256:8b444b60b6c61c9f1261dc8d8306ece8db13915208efef5ea9fbf5fd4abf018f.",
@@ -95,7 +95,7 @@
   "operator": {
     "component": "torch._refs.exponential",
     "framework": "pytorch",
-    "operator_name": "torch.Tensor.exponential_",
+    "operator_name": "torch.Tensor exponential sampling",
     "problem_dimension": "precision",
     "problem_subclass": "P4",
     "problem_type": "log-inf-underflow",
@@ -128,13 +128,50 @@
   },
   "source_ref": "pytorch-ff89ebc-cuda-overlay",
   "statement": {
-    "body": "The Python decomp of `exponential_` uses `-1/rate * log1p(-rand_like(self))`. When the uniform sample is exactly 1.0 (valid for `curand_uniform` which samples `(0, 1]`), `log1p(-1.0) = log(0) = -inf`, giving `+inf` as the exponential value. Fix: add an epsilon guard \u2014 when `uniform >= 1 - eps/2`, substitute `-eps/2` instead of computing log, matching CUDA's numerical behavior.",
+    "body": "For a valid CUDA random-number endpoint, an alternate tensor implementation of in-place exponential sampling can return positive infinity while native sampling remains finite. Under the same preserved RNG state, the repaired values must match native CUDA behavior and contain no infinities.",
     "labels": [
       "module: decomposition",
       "topic: numerical"
     ],
-    "title": "torch._refs.exponential can produce Inf for inputs near 1.0 due to log(0) underflow"
+    "title": "CUDA exponential sampling can return infinity for a valid random endpoint"
   },
   "task_id": "pytorch__129154__exp_decomp_numerics",
-  "version": "v1"
+  "version": "v1",
+  "quality": {
+    "complexity_evidence": "quality/complexity.json",
+    "origin": "retained_historical",
+    "prompt_evidence": "quality/prompt.json",
+    "readmission_evidence": "quality/readmission.json"
+  },
+  "taxonomy": {
+    "component_tags": [
+      "aten"
+    ],
+    "contract_detail_tags": [
+      "value",
+      "numerical"
+    ],
+    "contract_family": "result",
+    "execution_context": {
+      "devices": [
+        "cuda"
+      ],
+      "distributed": false,
+      "modes": [
+        "eager"
+      ],
+      "phases": [
+        "forward"
+      ]
+    },
+    "failure_type": "wrong_result",
+    "root_cause_tags": [
+      "overflow"
+    ],
+    "taxonomy_version": "v2",
+    "trigger_tags": [
+      "extreme_value_or_size",
+      "device_specific"
+    ]
+  }
 }

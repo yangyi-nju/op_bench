@@ -10,11 +10,11 @@
       "{python} test/op_bench_boundary/test_weight_norm_default_dim.py {test}"
     ],
     "known_constraints": [
-      "CPU-only task; no CUDA is required.",
-      "The native schema defaults dim to zero.",
-      "Modify only torch/_decomp/decompositions.py."
+      "CPU-only; CUDA is not required.",
+      "Omitting dim selects dimension zero, and explicit dimensions remain supported."
     ],
-    "repo_setup_commands": []
+    "repo_setup_commands": [],
+    "public_task_id": "opbench-v07-t0002"
   },
   "artifacts": {
     "gold_patch": "artifacts/gold.patch",
@@ -64,7 +64,7 @@
   "operator": {
     "component": "torch._decomp.decompositions._weight_norm_interface",
     "framework": "pytorch",
-    "operator_name": "torch.ops.aten._weight_norm_interface",
+    "operator_name": "ATen weight normalization",
     "problem_dimension": "boundary",
     "problem_subclass": "B4",
     "problem_type": "default-argument-parity",
@@ -96,14 +96,48 @@
   },
   "source_ref": "pytorch-e426924-boundary-overlay",
   "statement": {
-    "body": "The native _weight_norm_interface schema defaults dim to zero, but the registered Python decomposition requires a third positional argument. Calls through the default endpoint therefore fail only on the decomposition path. Mirror the native default while preserving explicit dimensions.",
+    "body": "The native weight-normalization operation accepts a weight and scale without an axis, but an alternate execution path raises for that valid form. Omitting the axis must select axis zero, while calls that specify an axis must remain unchanged.",
     "labels": [
       "module: decomposition",
       "module: nn",
       "boundary: omitted argument"
     ],
-    "title": "Weight norm decomposition omits the native default dim"
+    "title": "ATen weight normalization fails when its optional axis is omitted"
   },
   "task_id": "pytorch__118762__weight_norm_default_dim",
-  "version": "v1"
+  "version": "v1",
+  "quality": {
+    "complexity_evidence": "quality/complexity.json",
+    "origin": "retained_historical",
+    "prompt_evidence": "quality/prompt.json",
+    "readmission_evidence": "quality/readmission.json"
+  },
+  "taxonomy": {
+    "component_tags": [
+      "aten"
+    ],
+    "contract_detail_tags": [
+      "schema",
+      "compatibility"
+    ],
+    "contract_family": "api_behavior",
+    "execution_context": {
+      "devices": [
+        "cpu"
+      ],
+      "distributed": false,
+      "modes": [
+        "eager"
+      ],
+      "phases": [
+        "forward"
+      ]
+    },
+    "failure_type": "unexpected_error",
+    "root_cause_tags": [],
+    "taxonomy_version": "v2",
+    "trigger_tags": [
+      "invalid_or_endpoint_parameter"
+    ]
+  }
 }

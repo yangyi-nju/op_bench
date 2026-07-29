@@ -155,6 +155,8 @@ _SOURCE_KEYWORDS = frozenset(
         "yield",
     }
 )
+_PUBLIC_PROMPT_IDENTIFIERS = frozenset({"freezing", "platform"})
+_PUBLIC_PROMPT_LITERALS = frozenset({"freezing"})
 
 
 def _sorted_unique(values: tuple[str, ...], *, path: str) -> tuple[str, ...]:
@@ -383,13 +385,18 @@ def _source_symbols(lines: tuple[str, ...]) -> set[str]:
             match = pattern.match(line)
             if match is not None:
                 symbols.add(match.group(1))
+        if line.lstrip().startswith("@"):
+            continue
         if "(" not in line or _CPP_CONTROL.match(line) is not None:
             continue
         signature = line.strip()
         for next_line in lines[index + 1 : index + 9]:
             if "{" in signature or ";" in signature:
                 break
-            signature = f"{signature} {next_line.strip()}"
+            continuation = next_line.strip()
+            if continuation.startswith(("@", "def ", "async def ", "class ")):
+                break
+            signature = f"{signature} {continuation}"
         if "{" not in signature or ";" in signature:
             continue
         declaration = re.split(
@@ -408,7 +415,10 @@ def _distinctive_literals(lines: tuple[str, ...]) -> set[str]:
     for line in lines:
         for match in _QUOTED_LITERAL.finditer(line):
             value = match.group("value")
-            if len(value) >= 6:
+            if (
+                len(value) >= 6
+                and value.casefold() not in _PUBLIC_PROMPT_LITERALS
+            ):
                 literals.add(value)
         for match in _COMPARISON_LITERAL.finditer(line):
             value = _normalize_comparison(match.group(0))
@@ -454,7 +464,9 @@ def build_private_answer_index(
     internal_names = {
         identifier
         for identifier, count in identifier_counts.items()
-        if count <= 2 and identifier not in symbols
+        if count <= 2
+        and identifier not in symbols
+        and identifier.casefold() not in _PUBLIC_PROMPT_IDENTIFIERS
     }
     return PrivateAnswerIndex(
         changed_paths=tuple(paths),

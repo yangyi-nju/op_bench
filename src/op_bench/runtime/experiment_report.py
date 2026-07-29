@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 import json
 import os
@@ -393,6 +393,94 @@ def load_mcp_experiment_contract(path: Path | str) -> McpExperimentContract:
     )
 
 
+def load_public_task_id_aliases(path: Path | str) -> dict[str, str]:
+    """Load the frozen canonical-to-public Task identity projection."""
+
+    mapping_path = Path(path)
+    if mapping_path.is_symlink():
+        raise ContractError("public_task_id_mapping: symlink is denied")
+    try:
+        descriptor = os.open(
+            mapping_path,
+            os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0),
+        )
+    except OSError as exc:
+        raise ContractError(
+            "public_task_id_mapping: cannot open regular file"
+        ) from exc
+    try:
+        metadata = os.fstat(descriptor)
+        if not stat.S_ISREG(metadata.st_mode):
+            raise ContractError("public_task_id_mapping: expected regular file")
+        if metadata.st_size > _MAX_ARTIFACT_BYTES:
+            raise ContractError("public_task_id_mapping: file exceeds size limit")
+        chunks: list[bytes] = []
+        remaining = _MAX_ARTIFACT_BYTES + 1
+        while remaining:
+            chunk = os.read(descriptor, min(65_536, remaining))
+            if not chunk:
+                break
+            chunks.append(chunk)
+            remaining -= len(chunk)
+        raw = b"".join(chunks)
+        if len(raw) > _MAX_ARTIFACT_BYTES:
+            raise ContractError("public_task_id_mapping: file exceeds size limit")
+    finally:
+        os.close(descriptor)
+    try:
+        value = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, ValueError):
+        raise ContractError("public_task_id_mapping: invalid JSON") from None
+    if not isinstance(value, dict):
+        raise ContractError("public_task_id_mapping: expected object")
+    if raw != (canonical_json(value) + "\n").encode("utf-8"):
+        raise ContractError("public_task_id_mapping: expected canonical JSON")
+    data = require_exact_fields(
+        value,
+        "public_task_id_mapping",
+        ("contract_type", "schema_version", "tasks"),
+    )
+    if (
+        data["contract_type"] != "public_task_id_mapping"
+        or data["schema_version"] != "v1"
+    ):
+        raise ContractError("public_task_id_mapping: unsupported contract")
+    pairs: list[tuple[str, str]] = []
+    for index, item in enumerate(
+        require_list(data["tasks"], "public_task_id_mapping.tasks")
+    ):
+        entry = require_exact_fields(
+            item,
+            f"public_task_id_mapping.tasks[{index}]",
+            ("public_task_id", "task_id"),
+        )
+        pairs.append(
+            (
+                require_str(
+                    entry["task_id"],
+                    f"public_task_id_mapping.tasks[{index}].task_id",
+                ),
+                require_str(
+                    entry["public_task_id"],
+                    f"public_task_id_mapping.tasks[{index}].public_task_id",
+                ),
+            )
+        )
+    if not pairs:
+        raise ContractError("public_task_id_mapping.tasks: expected non-empty array")
+    canonical_ids = tuple(task_id for task_id, _ in pairs)
+    public_ids = tuple(public_task_id for _, public_task_id in pairs)
+    if canonical_ids != tuple(sorted(set(canonical_ids))):
+        raise ContractError(
+            "public_task_id_mapping.tasks: canonical IDs must be sorted and unique"
+        )
+    if len(public_ids) != len(set(public_ids)):
+        raise ContractError(
+            "public_task_id_mapping.tasks: public IDs must be unique"
+        )
+    return dict(pairs)
+
+
 def _canonical_lines(raw: bytes, label: str) -> list[dict[str, object]]:
     if raw and not raw.endswith(b"\n"):
         raise ContractError(f"{label}: missing final newline")
@@ -443,6 +531,7 @@ def build_mcp_experiment_report(
     expected_model_id: str,
     expected_codex_cli_version: str,
     experiment_contract: McpExperimentContract,
+    task_id_aliases: Mapping[str, str] | None = None,
 ) -> tuple[dict[str, object], dict[str, object]]:
     if isinstance(run_roots, (str, bytes)) or not isinstance(run_roots, Sequence):
         raise ContractError("run_roots: expected a sequence of Paths")
@@ -459,6 +548,30 @@ def build_mcp_experiment_report(
         raise ContractError("experiment_contract: expected McpExperimentContract")
     if len(roots) != len(experiment_contract.cohorts):
         raise ContractError("run_roots: count does not match cohort contract")
+    if task_id_aliases is None:
+        aliases: dict[str, str] | None = None
+    else:
+        if not isinstance(task_id_aliases, Mapping):
+            raise ContractError("task_id_aliases: expected mapping")
+        aliases = {}
+        for canonical_id, public_id in task_id_aliases.items():
+            canonical = require_str(canonical_id, "task_id_aliases key")
+            public = require_str(public_id, f"task_id_aliases[{canonical!r}]")
+            aliases[canonical] = public
+        if len(aliases) != len(task_id_aliases):
+            raise ContractError("task_id_aliases: duplicate canonical identity")
+        if len(set(aliases.values())) != len(aliases):
+            raise ContractError("task_id_aliases: duplicate public identity")
+
+    def report_task_id(canonical_id: str) -> str:
+        if aliases is None:
+            return canonical_id
+        try:
+            return aliases[canonical_id]
+        except KeyError as exc:
+            raise ContractError(
+                f"task_id_aliases: missing canonical identity {canonical_id!r}"
+            ) from exc
 
     cohort_rows: list[dict[str, object]] = []
     attempt_rows: list[dict[str, object]] = []
@@ -500,7 +613,9 @@ def build_mcp_experiment_report(
         profile_ids = tuple(profile.profile_id for profile in manifest.runtime_profiles)
         if len(profile_ids) != 1:
             raise ContractError("each experiment root must use exactly one Runtime Profile")
-        task_ids = frozenset(task.task.identifier for task in manifest.tasks)
+        task_ids = frozenset(
+            report_task_id(task.task.identifier) for task in manifest.tasks
+        )
         candidates = [
             (index, cohort)
             for index, cohort in enumerate(experiment_contract.cohorts)
@@ -514,7 +629,7 @@ def build_mcp_experiment_report(
             raise ContractError("duplicate experiment cohort contract")
         matched_contracts.add(contract_index)
         observed_attempts = frozenset(
-            (item.task.identifier, item.repeat)
+            (report_task_id(item.task.identifier), item.repeat)
             for item in manifest.expected_attempts
         )
         if observed_attempts != cohort_contract.expected_attempts:
@@ -737,7 +852,7 @@ def build_mcp_experiment_report(
                         "cohort_id": manifest.cohort_id,
                         "comparability_key": manifest.comparability_key,
                         "runtime_profile_id": task.runtime.profile_id,
-                        "task_id": expected.task.identifier,
+                        "task_id": report_task_id(expected.task.identifier),
                         "repeat": expected.repeat,
                         "attempt_id": attempt_id,
                         "retry_index": selected.retry_index,
@@ -930,6 +1045,7 @@ __all__ = [
     "McpExperimentContract",
     "build_mcp_experiment_report",
     "load_mcp_experiment_contract",
+    "load_public_task_id_aliases",
     "render_mcp_experiment_markdown",
     "write_mcp_experiment_report",
 ]

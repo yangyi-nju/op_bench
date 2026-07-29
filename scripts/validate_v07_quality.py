@@ -14,15 +14,42 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from op_bench.dataset import DatasetManifest
-from op_bench.factory.quality_release import validate_quality_task
+from op_bench.factory.quality_release import (
+    validate_historical_index,
+    validate_quality_task,
+)
 from op_bench.runtime.validation import ContractError
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("dataset", type=Path)
+    parser.add_argument("dataset", type=Path, nargs="?")
+    parser.add_argument("--historical-index", type=Path)
     parser.add_argument("--require-verified", action="store_true")
     args = parser.parse_args(argv)
+    if (args.dataset is None) == (args.historical_index is None):
+        parser.error("provide exactly one Dataset or --historical-index")
+    if args.historical_index is not None:
+        index_path = (
+            args.historical_index
+            if args.historical_index.is_absolute()
+            else ROOT / args.historical_index
+        )
+        errors = validate_historical_index(ROOT, index_path)
+        for error in errors:
+            print(error, file=sys.stderr)
+        if errors:
+            print(
+                f"{index_path}: historical quality validation failed",
+                file=sys.stderr,
+            )
+            return 1
+        print(
+            f"{index_path}: 25 Tasks passed historical quality validation "
+            "(retained=14, deferred=1, retired=10)"
+        )
+        return 0
+    assert args.dataset is not None
     dataset_path = (
         args.dataset if args.dataset.is_absolute() else ROOT / args.dataset
     )

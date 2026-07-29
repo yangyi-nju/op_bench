@@ -28,8 +28,8 @@
     "snapshot_path": "../../../.op_bench_cache/sources/pytorch/pytorch/7100c36c8a170db3b73e0c293d5366cfe6318c4d/source"
   },
   "statement": {
-    "title": "torch.cuda.memory.mem_get_info rejects device str without explicit index",
-    "body": "`torch.cuda.memory.mem_get_info` raises an error when called with a device string like `\"cuda\"` (no explicit index), but should default to the current device, similar to other torch.cuda APIs.",
+    "title": "CUDA memory information rejects a device without an explicit index",
+    "body": "The torch.cuda memory-information API raises when its device argument is \"cuda\" or torch.device(\"cuda\") even though both designate the current device. Unindexed forms must report that device's free and total memory, while indexed strings, device objects, and integer indices must continue to select the requested device.",
     "labels": [
       "module: cuda",
       "bug"
@@ -38,7 +38,7 @@
   "operator": {
     "framework": "pytorch",
     "component": "torch.cuda.memory",
-    "operator_name": "torch.cuda.memory.mem_get_info",
+    "operator_name": "torch.cuda memory information",
     "problem_type": "parameter-validation",
     "tags": [
       "cuda-memory",
@@ -65,12 +65,13 @@
   "agent_visible": {
     "repo_setup_commands": [],
     "known_constraints": [
-      "Full PyTorch source checkout task.",
-      "CUDA GPU is available; tests must run with CUDA tensors."
+      "CUDA is required.",
+      "Current-device and explicitly indexed device representations must both be supported."
     ],
     "allowed_test_commands": [
       "{python} test/test_cuda_multigpu.py {test_name}"
-    ]
+    ],
+    "public_task_id": "opbench-v07-t0007"
   },
   "evaluation": {
     "setup_commands": [],
@@ -94,5 +95,41 @@
     "estimated_runtime_min": 10,
     "layer": "A",
     "admission_status": "verified"
+  },
+  "quality": {
+    "complexity_evidence": "quality/complexity.json",
+    "origin": "retained_historical",
+    "prompt_evidence": "quality/prompt.json",
+    "readmission_evidence": "quality/readmission.json"
+  },
+  "taxonomy": {
+    "component_tags": [],
+    "contract_detail_tags": [
+      "device",
+      "schema",
+      "compatibility"
+    ],
+    "contract_family": "api_behavior",
+    "execution_context": {
+      "devices": [
+        "cuda"
+      ],
+      "distributed": false,
+      "modes": [
+        "eager"
+      ],
+      "phases": [
+        "forward"
+      ]
+    },
+    "failure_type": "unexpected_error",
+    "root_cause_tags": [
+      "incorrect_validation"
+    ],
+    "taxonomy_version": "v2",
+    "trigger_tags": [
+      "invalid_or_endpoint_parameter",
+      "device_specific"
+    ]
   }
 }

@@ -3,8 +3,10 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import os
 from dataclasses import replace
 from pathlib import Path
+import subprocess
 import tempfile
 import unittest
 
@@ -14,7 +16,10 @@ from op_bench.factory.prompt_quality import (
     build_private_answer_index,
     build_prompt_quality_evidence,
 )
-from op_bench.factory.quality_release import validate_quality_task
+from op_bench.factory.quality_release import (
+    validate_historical_index,
+    validate_quality_task,
+)
 from op_bench.integrity import REPLAY_SPEC_HASH_KIND, replay_spec_hash
 from op_bench.registry import (
     EnvironmentRegistry,
@@ -30,12 +35,19 @@ from op_bench.task import TaskManifest
 
 ROOT = Path(__file__).resolve().parents[1]
 DATASET = ROOT / "datasets" / "pytorch_v0.7" / "dataset.json"
+HISTORICAL_INDEX = ROOT / "factory/v0.7/p7/historical_readmission.json"
+VALIDATOR = ROOT / "scripts/validate_v07_quality.py"
 
 
 def historical_task() -> TaskManifest:
     dataset = json.loads(DATASET.read_text(encoding="utf-8"))
     entry = dataset["tasks"][0]
-    return TaskManifest.load(ROOT / entry["task_path"] / "task.json")
+    original = TaskManifest.load(ROOT / entry["task_path"] / "task.json")
+    data = copy.deepcopy(original.data)
+    data.pop("taxonomy", None)
+    data.pop("quality", None)
+    data["agent_visible"].pop("public_task_id", None)
+    return TaskManifest(task_dir=original.task_dir, data=data)
 
 
 def _quality_view(task: TaskManifest) -> dict[str, object]:
@@ -320,6 +332,68 @@ def _rewrite_admission(
 
 
 class V07QualityValidatorTests(unittest.TestCase):
+    def test_historical_index_revalidates_exact_dispositions_and_retained_gates(
+        self,
+    ) -> None:
+        self.assertEqual(
+            validate_historical_index(ROOT, HISTORICAL_INDEX),
+            (),
+        )
+        env = dict(os.environ)
+        env["PYTHONPATH"] = str(ROOT / "src")
+        completed = subprocess.run(
+            (
+                str(ROOT / ".venv/bin/python"),
+                str(VALIDATOR),
+                "--historical-index",
+                str(HISTORICAL_INDEX),
+            ),
+            cwd=ROOT,
+            env=env,
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("retained=14, deferred=1, retired=10", completed.stdout)
+
+    def test_historical_index_rejects_disposition_and_reference_tampering(
+        self,
+    ) -> None:
+        original = json.loads(HISTORICAL_INDEX.read_text(encoding="utf-8"))
+        mutations = {
+            "disposition": lambda payload: payload["records"][0].__setitem__(
+                "disposition",
+                "retained",
+            ),
+            "reference": lambda payload: payload["records"][2][
+                "prompt_evidence"
+            ].__setitem__("content_hash", "sha256:" + "0" * 64),
+        }
+        for name, mutate in mutations.items():
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:
+                payload = copy.deepcopy(original)
+                mutate(payload)
+                payload["content_hash"] = canonical_sha256(
+                    {
+                        key: value
+                        for key, value in payload.items()
+                        if key != "content_hash"
+                    }
+                )
+                index = Path(directory) / "historical_readmission.json"
+                index.write_text(canonical_json(payload), encoding="utf-8")
+                errors = validate_historical_index(ROOT, index)
+                self.assertTrue(errors)
+                self.assertTrue(
+                    any(
+                        "disposition" in error or "content_hash" in error
+                        for error in errors
+                    ),
+                    errors,
+                )
+
     def test_verified_quality_task_requires_all_quality_evidence(self) -> None:
         errors = validate_quality_task(ROOT, historical_task(), require_verified=True)
         self.assertIn("taxonomy: required for formal v0.7", errors)

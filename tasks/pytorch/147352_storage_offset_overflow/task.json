@@ -10,11 +10,11 @@
       "{python} test/op_bench_boundary/test_storage_offset_overflow.py {test}"
     ],
     "known_constraints": [
-      "This is a CPU-only full-source build; do not enable CUDA or ROCm.",
-      "The zero-size arbitrary-storage-offset behavior must remain valid.",
-      "Modify only aten/src/ATen/native/Resize.h."
+      "A CPU-only source-build environment is required.",
+      "Extreme non-empty storage offsets must raise, while arbitrary offsets for zero-size views must remain valid."
     ],
-    "repo_setup_commands": []
+    "repo_setup_commands": [],
+    "public_task_id": "opbench-v07-t0017"
   },
   "artifacts": {
     "gold_patch": "artifacts/gold.patch",
@@ -148,14 +148,50 @@
   },
   "source_ref": "pytorch-6ccbff1-boundary-kernel-full",
   "statement": {
-    "body": "The storage bounds check multiplies storage_offset by itemsize and then adds the required storage size with unchecked integer arithmetic. Extreme but valid int64 offsets can wrap, allowing an out-of-bounds view instead of raising a controlled exception. Reuse computeStorageNbytes with the offset so the existing checked arithmetic reports overflow, while preserving the zero-size arbitrary-offset rule.",
+    "body": "torch.as_strided can accept an extreme int64 storage_offset for a non-empty view instead of reporting an arithmetic range violation, permitting an invalid out-of-bounds view. Such offsets must raise a controlled exception, while normal views and the documented arbitrary-offset behavior for zero-size views remain valid.",
     "labels": [
       "module: aten",
       "boundary: integer overflow",
       "operator: as_strided"
     ],
-    "title": "as_strided storage-offset bounds check can overflow"
+    "title": "torch.as_strided accepts an out-of-range storage offset for a non-empty view"
   },
   "task_id": "pytorch__147352__storage_offset_overflow",
-  "version": "v1"
+  "version": "v1",
+  "quality": {
+    "complexity_evidence": "quality/complexity.json",
+    "origin": "retained_historical",
+    "prompt_evidence": "quality/prompt.json",
+    "readmission_evidence": "quality/readmission.json"
+  },
+  "taxonomy": {
+    "component_tags": [
+      "aten"
+    ],
+    "contract_detail_tags": [
+      "memory"
+    ],
+    "contract_family": "efficiency_safety",
+    "execution_context": {
+      "devices": [
+        "cpu"
+      ],
+      "distributed": false,
+      "modes": [
+        "eager"
+      ],
+      "phases": [
+        "forward"
+      ]
+    },
+    "failure_type": "missing_error",
+    "root_cause_tags": [
+      "overflow"
+    ],
+    "taxonomy_version": "v2",
+    "trigger_tags": [
+      "empty_or_zero",
+      "extreme_value_or_size"
+    ]
+  }
 }

@@ -43,6 +43,8 @@ PROFILE_BY_ENVIRONMENT = {
     "pytorch-matched-boundary-torch2.3.0-cpu": "remote-cpu-boundary-torch2.3-py311-v1",
     "pytorch-matched-boundary-torch2.4.0-cpu": "remote-cpu-boundary-torch2.4-py311-v1",
     "pytorch-matched-boundary-torch2.6.0-cu124": "remote-cuda-boundary-torch2.6-cu124-v1",
+    "pytorch-matched-ff89ebc-torch2.4.0-py311-cu124": "remote-cuda-matched-torch2.4-cu124-py311-v1",
+    "pytorch-matched-06e9dea-torch2.7.0-py311-cpu": "remote-cpu-matched-torch2.7-py311-v1",
 }
 
 
@@ -272,6 +274,55 @@ class LegacyV05ProjectionTests(unittest.TestCase):
                     task.timeout_sec * 1_000,
                 )
         self.assertEqual(matched, 6)
+
+    def test_projects_restored_matched_environments_to_exact_runtime_profiles(
+        self,
+    ) -> None:
+        registry = load_runtime_profile_registry(PROFILE_REGISTRY_PATH)
+        profiles = {profile.profile_id: profile for profile in registry.profiles}
+        cases = (
+            (
+                "129154_exp_decomp_numerics",
+                "pytorch-matched-ff89ebc-torch2.4.0-py311-cu124",
+                "op-bench/pytorch-matched-ff89ebc:torch2.4.0-cu124-py311",
+                "sha256:f7fdabf3d4d9fc01c8d0f67961986968b06eb49d3724361c7ce64c1564f865c7",
+                True,
+            ),
+            (
+                "144073_vector_norm_scalar_overflow",
+                "pytorch-matched-06e9dea-torch2.7.0-py311-cpu",
+                "op-bench/pytorch-matched-06e9dea:torch2.7.0-cpu-py311",
+                "sha256:ccd5eb7b2703b9b2ac7c7a9e47cd56ffe77135e3a62b29be4d821833e318056f",
+                False,
+            ),
+        )
+
+        for directory, environment_ref, image, digest, requires_gpu in cases:
+            task = TaskManifest.load(
+                REPO_ROOT / "tasks/pytorch" / directory / "task.json"
+            )
+            with self.subTest(task=task.task_id):
+                self.assertEqual(task.environment_ref, environment_ref)
+                self.assertIn(
+                    PROFILE_BY_ENVIRONMENT[environment_ref],
+                    profiles,
+                    "restored matched Runtime Profile is missing",
+                )
+                projected = full_task_spec_from_v05(task)
+                profile = profiles[PROFILE_BY_ENVIRONMENT[environment_ref]]
+                self.assertEqual(projected.runtime, profile)
+                self.assertEqual(projected.runtime.image.identifier, image)
+                self.assertEqual(projected.runtime.image.digest, digest)
+                self.assertEqual(projected.runtime.platform, "linux/amd64")
+                self.assertIs(projected.runtime.requires_gpu, requires_gpu)
+                self.assertEqual(
+                    projected.runtime.source_loading_mode,
+                    task.source_loading_mode,
+                )
+                self.assertEqual(
+                    projected.runtime.timeout_ms,
+                    task.timeout_sec * 1_000,
+                )
 
     def test_real_mcp_agent_identity_binds_model_cli_protocol_and_prompt(self) -> None:
         selected = agent_spec_for_v1_adapter(
