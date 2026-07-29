@@ -182,6 +182,33 @@ class PatchFreezeTests(unittest.TestCase):
             b"EVIL = True\n",
         )
 
+    def test_clean_replacement_cannot_hide_dirty_authoritative_root(self) -> None:
+        replacement = Path(self.temporary.name) / "clean-replacement"
+        held = Path(self.temporary.name) / "held-dirty-authority"
+        initialize_git_repo(replacement)
+        workspace = RootSwapWorkspace.open(
+            self.root,
+            source=identity("source", "fixture@clean-root-swap", SHA_A),
+            policy=policy(),
+        )
+        workspace.swap_root = self.root
+        workspace.replacement_root = replacement
+        workspace.held_root = held
+        workspace.write("src/operator.py", b"VALUE = 2\n")
+
+        with self.assertRaisesRegex(WorkspacePolicyError, "root binding changed"):
+            workspace.freeze()
+
+        self.assertEqual(workspace.state, "freeze_failed")
+        self.assertEqual(
+            (self.root / "src" / "operator.py").read_bytes(),
+            b"VALUE = 2\n",
+        )
+        self.assertEqual(
+            (replacement / "src" / "operator.py").read_bytes(),
+            b"VALUE = 1\n",
+        )
+
     def test_patch_scope_includes_ignored_untracked_file_created_by_workspace(self) -> None:
         root = Path(self.temporary.name) / "ignored-created"
         initialize_git_repo(root)

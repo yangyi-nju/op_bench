@@ -21,8 +21,17 @@ from op_bench.factory.prompt_quality import (
 )
 from op_bench.factory.complexity import ComplexityEvidence, build_complexity_evidence
 from op_bench.runtime.canonical import canonical_json
+from op_bench.runtime.codex_mcp_adapter import render_mcp_prompt
+from op_bench.runtime.task_view import project_agent_task_view
 from op_bench.runtime.validation import ContractError
 from tests.test_factory_contracts import candidate
+from tests.test_runtime_contracts import (
+    SHA_A,
+    budget_policy,
+    capability_policy,
+    full_task_spec,
+    identity,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -30,11 +39,20 @@ VALIDATOR = ROOT / "scripts" / "validate_factory_artifact.py"
 
 
 def prompt_quality() -> PromptQualityEvidence:
+    view = project_agent_task_view(
+        replace(
+            full_task_spec(),
+            task=identity("task", "opbench-v07-t0001", SHA_A),
+            statement_body="The public behavior differs for an empty matrix.",
+        ),
+        capability_policy(),
+        budget_policy(),
+    ).to_dict()
     return build_prompt_quality_evidence(
         task_id="pytorch__empty_addmv",
-        public_task_id="task-v07-empty-addmv",
-        rendered_prompt="The public behavior differs for an empty matrix.",
-        agent_task_view={"statement_body": "The public behavior differs for an empty matrix."},
+        public_task_id="opbench-v07-t0001",
+        rendered_prompt=render_mcp_prompt(view),
+        agent_task_view=view,
         private_index=empty_private_index(),
         scanner_version="prompt-overlap-v1",
         blind_review={

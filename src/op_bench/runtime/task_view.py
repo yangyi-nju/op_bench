@@ -11,6 +11,7 @@ from op_bench.runtime.contracts import (
     ContentIdentity,
     Contract,
     FullTaskSpec,
+    RuntimeProfile,
 )
 from op_bench.runtime.validation import ContractError, require_str
 
@@ -140,18 +141,13 @@ def project_agent_task_view(
     if not isinstance(selected_policy, TaskViewPolicy):
         raise ContractError("policy: expected TaskViewPolicy")
 
-    runtime_hint = (
-        f"tier={full_task.runtime.runtime_tier}; "
-        f"platform={full_task.runtime.platform}; "
-        f"gpu={'yes' if full_task.runtime.requires_gpu else 'no'}"
-    )
     view = AgentTaskView(
         task=full_task.task,
         statement_title=full_task.statement_title,
         statement_body=full_task.statement_body,
         framework=full_task.framework,
         operator_name=full_task.operator_name,
-        runtime_hint=runtime_hint,
+        runtime_hint=public_runtime_hint(full_task.runtime),
         public_tests=full_task.public_tests,
         capability_policy=capability_policy,
         budget_policy=budget_policy,
@@ -160,6 +156,18 @@ def project_agent_task_view(
     )
     assert_public_artifact_safe(view.to_dict())
     return view
+
+
+def public_runtime_hint(runtime: RuntimeProfile) -> str:
+    """Render the exact non-sensitive Runtime fact exposed in AgentTaskView."""
+
+    if not isinstance(runtime, RuntimeProfile):
+        raise ContractError("runtime: expected RuntimeProfile")
+    return (
+        f"tier={runtime.runtime_tier}; "
+        f"platform={runtime.platform}; "
+        f"gpu={'yes' if runtime.requires_gpu else 'no'}"
+    )
 
 
 def agent_task_view_identity(view: AgentTaskView) -> ContentIdentity:
@@ -236,5 +244,6 @@ __all__ = [
     "TaskViewPolicy",
     "agent_task_view_identity",
     "assert_public_artifact_safe",
+    "public_runtime_hint",
     "project_agent_task_view",
 ]

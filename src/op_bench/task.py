@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import shlex
 import sys
 from dataclasses import dataclass
@@ -9,6 +10,13 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from op_bench.factory.taxonomy import TaskTaxonomyV2
+
+
+PUBLIC_TASK_ID_PATTERN = r"^opbench-v07-t[0-9]{4}$"
+
+
+class InvalidPublicTaskId(ValueError):
+    """Raised when an agent-visible Task ID is not an exact opaque v0.7 ID."""
 
 
 @dataclass(frozen=True)
@@ -30,12 +38,14 @@ class TaskManifest:
     @property
     def public_task_id(self) -> str | None:
         agent_visible = self.data.get("agent_visible")
-        value = (
-            agent_visible.get("public_task_id")
-            if isinstance(agent_visible, dict)
-            else None
-        )
-        return str(value) if value else None
+        if not isinstance(agent_visible, dict) or "public_task_id" not in agent_visible:
+            return None
+        value = agent_visible["public_task_id"]
+        if type(value) is not str or re.fullmatch(PUBLIC_TASK_ID_PATTERN, value) is None:
+            raise InvalidPublicTaskId(
+                "agent_visible.public_task_id: expected exact opaque v0.7 Task ID"
+            )
+        return value
 
     @property
     def task_json_path(self) -> Path:

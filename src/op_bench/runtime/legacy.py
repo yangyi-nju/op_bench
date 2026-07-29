@@ -33,8 +33,9 @@ from op_bench.runtime.mcp import (
 )
 from op_bench.runtime.profiles import load_runtime_profile_registry
 from op_bench.runtime.source_materialization import _git_environment
+from op_bench.runtime.task_view import public_runtime_hint
 from op_bench.runtime.validation import ContractError, require_bool, require_int, require_str
-from op_bench.task import TaskManifest
+from op_bench.task import InvalidPublicTaskId, TaskManifest
 
 
 @dataclass(frozen=True)
@@ -138,6 +139,7 @@ class LegacyV05PrivateTaskBinding:
 class LegacyV05RuntimeBundle:
     manifest: RunManifest
     private_tasks: tuple[LegacyV05PrivateTaskBinding, ...]
+    public_task_ids_by_canonical: tuple[tuple[str, str], ...]
 
     def __post_init__(self) -> None:
         if not isinstance(self.manifest, RunManifest):
@@ -146,8 +148,44 @@ class LegacyV05RuntimeBundle:
             raise ContractError("private_tasks: expected non-empty tuple")
         manifest_ids = tuple(task.task.identifier for task in self.manifest.tasks)
         private_ids = tuple(binding.task_id for binding in self.private_tasks)
-        if private_ids != manifest_ids:
-            raise ContractError("private_tasks: must match Manifest Task order")
+        if (
+            not isinstance(self.public_task_ids_by_canonical, tuple)
+            or len(self.public_task_ids_by_canonical) != len(private_ids)
+        ):
+            raise ContractError(
+                "public_task_ids_by_canonical: must match private Task order"
+            )
+        canonical_ids: list[str] = []
+        public_ids: list[str] = []
+        for index, item in enumerate(self.public_task_ids_by_canonical):
+            if not isinstance(item, tuple) or len(item) != 2:
+                raise ContractError(
+                    f"public_task_ids_by_canonical[{index}]: expected pair"
+                )
+            canonical_ids.append(
+                require_str(
+                    item[0],
+                    f"public_task_ids_by_canonical[{index}].canonical_task_id",
+                )
+            )
+            public_ids.append(
+                require_str(
+                    item[1],
+                    f"public_task_ids_by_canonical[{index}].public_task_id",
+                )
+            )
+        if tuple(canonical_ids) != private_ids:
+            raise ContractError(
+                "public_task_ids_by_canonical: canonical IDs must match private Task order"
+            )
+        if tuple(public_ids) != manifest_ids:
+            raise ContractError(
+                "public_task_ids_by_canonical: public IDs must match Manifest Task order"
+            )
+        if len(set(canonical_ids)) != len(canonical_ids) or len(set(public_ids)) != len(
+            public_ids
+        ):
+            raise ContractError("public_task_ids_by_canonical: duplicate Task ID")
 
     def source_for(self, task: FullTaskSpec) -> LocalGitSource:
         return self._binding_for(task).source
@@ -164,14 +202,25 @@ class LegacyV05RuntimeBundle:
     def _binding_for(self, task: FullTaskSpec) -> LegacyV05PrivateTaskBinding:
         if not isinstance(task, FullTaskSpec):
             raise ContractError("task: expected FullTaskSpec")
+        canonical_task_id = next(
+            (
+                canonical
+                for canonical, public in self.public_task_ids_by_canonical
+                if public == task.task.identifier
+            ),
+            None,
+        )
+        if canonical_task_id is None:
+            raise ContractError("task: not present in private runtime bundle")
         for binding in self.private_tasks:
-            if binding.task_id == task.task.identifier:
+            if binding.task_id == canonical_task_id:
                 return binding
         raise ContractError("task: not present in private runtime bundle")
 
 
 def full_task_spec_from_v05(task: TaskManifest) -> FullTaskSpec:
     _require_v05_task_shape(task)
+    public_task_id = _public_task_id(task)
     source = _source_identity(task)
     runtime = _runtime_profile(task)
     image = runtime.image
@@ -179,21 +228,52 @@ def full_task_spec_from_v05(task: TaskManifest) -> FullTaskSpec:
     public_tests, hidden_tests = _test_selectors(task)
     statement = _mapping(task.data.get("statement"))
     operator = _mapping(task.data.get("operator"))
-
-    return FullTaskSpec(
-        task=ContentIdentity(
+    statement_title = str(statement.get("title", task.task_id))
+    statement_body = str(
+        statement.get("body", "Legacy v0.5 operator repair task.")
+    )
+    framework = str(operator.get("framework", "unknown"))
+    operator_name = str(
+        operator.get("operator_name", operator.get("component", "unknown"))
+    )
+    task_identity = (
+        ContentIdentity(
             identity_type="task",
-            identifier=task.public_task_id or task.task_id,
+            identifier=public_task_id,
+            digest=canonical_sha256(
+                {
+                    "identity_version": "public-task-v1",
+                    "identifier": public_task_id,
+                    "statement_title": statement_title,
+                    "statement_body": statement_body,
+                    "framework": framework,
+                    "operator_name": operator_name,
+                    "runtime_hint": public_runtime_hint(runtime),
+                    "public_tests": [
+                        selector.to_dict() for selector in public_tests
+                    ],
+                }
+            ),
+            digest_kind="canonical_config",
+        )
+        if public_task_id is not None
+        else ContentIdentity(
+            identity_type="task",
+            identifier=task.task_id,
             digest=replay_spec_hash(task),
             digest_kind="replay_spec_v1",
-        ),
+        )
+    )
+
+    return FullTaskSpec(
+        task=task_identity,
         source=source,
         environment=environment,
         runtime=runtime,
-        statement_title=str(statement.get("title", task.task_id)),
-        statement_body=str(statement.get("body", "Legacy v0.5 operator repair task.")),
-        framework=str(operator.get("framework", "unknown")),
-        operator_name=str(operator.get("operator_name", operator.get("component", "unknown"))),
+        statement_title=statement_title,
+        statement_body=statement_body,
+        framework=framework,
+        operator_name=operator_name,
         public_tests=public_tests,
         hidden_tests=hidden_tests,
         fail_to_pass=tuple(str(value) for value in task.fail_to_pass_tests),
@@ -242,13 +322,15 @@ def run_manifest_from_v05_dataset(
     dataset = DatasetManifest.load(dataset_path)
     _require_verified_dataset(dataset)
     legacy_tasks = _select_v05_tasks(dataset, selected_task_ids)
-    public_task_ids = tuple(task.public_task_id for task in legacy_tasks)
-    if any(public_task_ids) and not all(public_task_ids):
+    public_task_ids = tuple(_public_task_id(task) for task in legacy_tasks)
+    if any(public_task_id is not None for public_task_id in public_task_ids) and not all(
+        public_task_id is not None for public_task_id in public_task_ids
+    ):
         raise ContractError(
             "public_task_id: selected Tasks must either all expose opaque IDs or all omit them"
         )
     tasks = tuple(full_task_spec_from_v05(task) for task in legacy_tasks)
-    quality_manifest = all(public_task_ids)
+    quality_manifest = all(public_task_id is not None for public_task_id in public_task_ids)
     capability = replace(
         selected_defaults.capability_policy,
         policy_id=(
@@ -314,13 +396,16 @@ def runtime_bundle_from_v05_dataset(
         defaults=defaults,
         selected_task_ids=tuple(task.task_id for task in legacy_tasks),
     )
-    legacy_by_id = {
-        task.public_task_id or task.task_id: task
+    task_ids_by_public = {
+        _public_task_id(task) or task.task_id: task.task_id
         for task in legacy_tasks
     }
+    legacy_by_id = {task.task_id: task for task in legacy_tasks}
     bindings: list[LegacyV05PrivateTaskBinding] = []
+    task_id_mapping: list[tuple[str, str]] = []
     for spec in manifest.tasks:
-        legacy_task = legacy_by_id[spec.task.identifier]
+        canonical_task_id = task_ids_by_public[spec.task.identifier]
+        legacy_task = legacy_by_id[canonical_task_id]
         source_path = legacy_task.source_snapshot_path
         if source_path is None:
             raise ContractError("source snapshot is required for v1 runtime")
@@ -335,7 +420,7 @@ def runtime_bundle_from_v05_dataset(
             raise ContractError("hidden_test: cannot read exact file") from exc
         bindings.append(
             LegacyV05PrivateTaskBinding(
-                task_id=spec.task.identifier,
+                task_id=canonical_task_id,
                 source=LocalGitSource(
                     identity=spec.source,
                     repository=source_path,
@@ -355,10 +440,19 @@ def runtime_bundle_from_v05_dataset(
                 source_loading_timeout_ms=legacy_task.build_timeout_sec * 1_000,
             )
         )
+        task_id_mapping.append((canonical_task_id, spec.task.identifier))
     return LegacyV05RuntimeBundle(
         manifest=manifest,
         private_tasks=tuple(bindings),
+        public_task_ids_by_canonical=tuple(task_id_mapping),
     )
+
+
+def _public_task_id(task: TaskManifest) -> str | None:
+    try:
+        return task.public_task_id
+    except InvalidPublicTaskId as exc:
+        raise ContractError(str(exc)) from exc
 
 
 def _executable_source_revision(repository: Path, logical_revision: str) -> str:

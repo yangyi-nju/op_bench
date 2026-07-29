@@ -13,6 +13,9 @@ from types import MappingProxyType
 from typing import ClassVar
 
 from op_bench.runtime.canonical import JsonValue, canonical_sha256
+from op_bench.runtime.codex_mcp_adapter import render_mcp_prompt
+from op_bench.runtime.contracts import AgentTaskView
+from op_bench.runtime.task_view import assert_public_artifact_safe
 from op_bench.runtime.validation import (
     ContractError,
     require_enum,
@@ -58,7 +61,14 @@ _COMMIT_URL = re.compile(
     r"https?://(?:www\.)?github\.com/[^\s/]+/[^\s/]+/commit/[0-9a-f]+(?:[^\s]*)?",
     re.IGNORECASE,
 )
-_PRIVATE_PROVENANCE = re.compile(r"\b(?:patch|gold|hidden|admission)\b", re.IGNORECASE)
+_PRIVATE_PROVENANCE = re.compile(
+    r"\b(?:"
+    r"gold(?:[ _.-]+patch)?"
+    r"|hidden(?:[ _.-]+tests?)?"
+    r"|admission(?:[ _.-]+evidence)?"
+    r")\b",
+    re.IGNORECASE,
+)
 _SOLUTION_INSTRUCTION = re.compile(
     r"\b(?:"
     r"(?:modify|change|edit|update)\s+(?:the\s+)?(?:file\s+)?[A-Za-z0-9_.\-/]+"
@@ -575,7 +585,7 @@ class PromptQualityEvidence:
         task_id: str,
         public_task_id: str,
         rendered_prompt: str,
-        agent_task_view: Mapping[str, object],
+        agent_task_view: AgentTaskView | Mapping[str, object],
         private_index: PrivateAnswerIndex,
         scanner_version: str,
         blind_review: Mapping[str, object],
@@ -587,12 +597,27 @@ class PromptQualityEvidence:
 
         require_str(rendered_prompt, "rendered_prompt", min_length=0)
         payload = _agent_task_view_payload(agent_task_view)
+        canonical_prompt = render_mcp_prompt(payload)
+        if rendered_prompt != canonical_prompt:
+            raise ContractError(
+                "rendered_prompt: does not match canonical render of agent_task_view"
+            )
+        task_identity = payload["task"]
+        assert isinstance(task_identity, dict)
+        if public_task_id != task_identity["identifier"]:
+            raise ContractError(
+                "prompt_quality.public_task_id: does not match agent_task_view"
+            )
         object.__setattr__(self, "task_id", task_id)
         object.__setattr__(self, "public_task_id", public_task_id)
-        object.__setattr__(self, "prompt_hash", canonical_sha256(rendered_prompt))
+        object.__setattr__(self, "prompt_hash", canonical_sha256(canonical_prompt))
         object.__setattr__(self, "agent_task_view_hash", canonical_sha256(payload))
         object.__setattr__(self, "scanner_version", scanner_version)
-        object.__setattr__(self, "findings", scan_rendered_prompt(rendered_prompt, private_index))
+        object.__setattr__(
+            self,
+            "findings",
+            scan_rendered_prompt(canonical_prompt, private_index),
+        )
         object.__setattr__(self, "blind_review", blind_review)
         object.__setattr__(self, "semantic_review", semantic_review)
         object.__setattr__(self, "decision", decision)
@@ -723,9 +748,14 @@ class PromptQualityEvidence:
 
 
 def _agent_task_view_payload(value: object) -> dict[str, JsonValue]:
-    if not isinstance(value, Mapping):
-        raise ContractError("agent_task_view: expected canonical object")
-    payload = dict(value)
+    if isinstance(value, AgentTaskView):
+        selected = value
+    elif isinstance(value, Mapping):
+        selected = AgentTaskView.from_dict(value, path="agent_task_view")
+    else:
+        raise ContractError("agent_task_view: expected AgentTaskView")
+    payload = selected.to_dict()
+    assert_public_artifact_safe(payload)
     canonical_sha256(payload)
     return payload
 
@@ -735,7 +765,7 @@ def build_prompt_quality_evidence(
     task_id: str,
     public_task_id: str,
     rendered_prompt: str,
-    agent_task_view: Mapping[str, object],
+    agent_task_view: AgentTaskView | Mapping[str, object],
     private_index: PrivateAnswerIndex,
     scanner_version: str,
     blind_review: Mapping[str, object],
@@ -763,7 +793,7 @@ def validate_prompt_quality_evidence(
     evidence: PromptQualityEvidence,
     *,
     rendered_prompt: str,
-    agent_task_view: Mapping[str, object],
+    agent_task_view: AgentTaskView | Mapping[str, object],
     private_index: PrivateAnswerIndex,
 ) -> None:
     """Fail closed unless stored evidence exactly matches the source inputs."""
@@ -771,14 +801,20 @@ def validate_prompt_quality_evidence(
     if not isinstance(evidence, PromptQualityEvidence):
         raise ContractError("prompt_quality: expected PromptQualityEvidence")
     require_str(rendered_prompt, "rendered_prompt", min_length=0)
-    expected_prompt_hash = canonical_sha256(rendered_prompt)
+    payload = _agent_task_view_payload(agent_task_view)
+    canonical_prompt = render_mcp_prompt(payload)
+    if rendered_prompt != canonical_prompt:
+        raise ContractError(
+            "rendered_prompt: does not match canonical render of agent_task_view"
+        )
+    expected_prompt_hash = canonical_sha256(canonical_prompt)
     if evidence.prompt_hash != expected_prompt_hash:
         raise ContractError("prompt_quality.prompt_hash: does not match rendered_prompt")
-    expected_view_hash = canonical_sha256(_agent_task_view_payload(agent_task_view))
+    expected_view_hash = canonical_sha256(payload)
     if evidence.agent_task_view_hash != expected_view_hash:
         raise ContractError(
             "prompt_quality.agent_task_view_hash: does not match agent_task_view"
         )
-    expected_findings = scan_rendered_prompt(rendered_prompt, private_index)
+    expected_findings = scan_rendered_prompt(canonical_prompt, private_index)
     if evidence.findings != expected_findings:
         raise ContractError("prompt_quality.findings: do not match rendered_prompt scan")

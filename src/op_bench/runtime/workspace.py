@@ -10,6 +10,7 @@ import re
 import secrets
 import stat
 import subprocess
+import sys
 import tempfile
 import threading
 from typing import Iterator, Mapping
@@ -751,13 +752,16 @@ class AuthoritativeWorkspace:
             snapshots[path] = _FileSnapshot(content=content, mode=mode)
 
     def _capture_authoritative_patch(self) -> tuple[tuple[str, ...], bytes]:
-        reported_paths = _changed_workspace_paths(self._root)
+        self._assert_root_binding()
+        reported_paths = _changed_workspace_paths(self._root_fd)
+        self._assert_root_binding()
         base = _commit_path_snapshots(
-            self._root,
+            self._root_fd,
             self.base_commit,
             self.policy,
             reported_paths,
         )
+        self._assert_root_binding()
         current = {
             path: snapshot
             for path in reported_paths
@@ -1378,7 +1382,7 @@ def _commit_scope_snapshots(
 
 
 def _commit_path_snapshots(
-    root: Path,
+    root: Path | int,
     base_commit: str,
     policy: WorkspacePolicy,
     paths: tuple[str, ...],
@@ -1395,14 +1399,14 @@ def _commit_path_snapshots(
 
 
 def _commit_snapshots(
-    root: Path,
+    root: Path | int,
     base_commit: str,
     policy: WorkspacePolicy,
     *,
     pathspecs: tuple[str, ...],
     allowed_paths: tuple[str, ...],
 ) -> dict[str, _FileSnapshot]:
-    result = _git(
+    result = _git_for_root(
         root,
         "ls-tree",
         "-r",
@@ -1447,7 +1451,7 @@ def _commit_snapshots(
             raise WorkspacePolicyError(
                 f"path {normalized!r}: invalid base blob object id"
             )
-        size_output = _git(root, "cat-file", "-s", object_id).stdout.strip()
+        size_output = _git_for_root(root, "cat-file", "-s", object_id).stdout.strip()
         try:
             size = int(size_output.decode("ascii", errors="strict"))
         except (UnicodeDecodeError, ValueError) as exc:
@@ -1456,7 +1460,7 @@ def _commit_snapshots(
             ) from exc
         if size < 0 or size > policy.max_file_bytes:
             raise WorkspacePolicyError(f"path {normalized!r}: exceeds max_file_bytes")
-        content = _git(root, "cat-file", "blob", object_id).stdout
+        content = _git_for_root(root, "cat-file", "blob", object_id).stdout
         if len(content) != size or _git_blob_object_id(content, len(object_id)) != object_id:
             raise WorkspacePolicyError(
                 f"path {normalized!r}: base blob content identity mismatch"
@@ -1469,8 +1473,8 @@ def _commit_snapshots(
     return snapshots
 
 
-def _changed_workspace_paths(root: Path) -> tuple[str, ...]:
-    status = _git(
+def _changed_workspace_paths(root: Path | int) -> tuple[str, ...]:
+    status = _git_for_root(
         root,
         "status",
         "--porcelain=v1",
@@ -1530,10 +1534,53 @@ def _git(root: Path, *arguments: str, check: bool = True) -> subprocess.Complete
     )
 
 
+def _git_for_root(
+    root: Path | int,
+    *arguments: str,
+    check: bool = True,
+) -> subprocess.CompletedProcess[bytes]:
+    if isinstance(root, int):
+        return _git_at_directory_fd(root, *arguments, check=check)
+    return _git(root, *arguments, check=check)
+
+
+def _git_at_directory_fd(
+    root_fd: int,
+    *arguments: str,
+    check: bool = True,
+) -> subprocess.CompletedProcess[bytes]:
+    if root_fd < 0:
+        raise WorkspaceStateError("workspace authority is closed")
+    launcher = (
+        "import os,sys;"
+        "os.fchdir(int(sys.argv[1]));"
+        "os.execvp('git', ('git', *sys.argv[2:]))"
+    )
+    return _run_git(
+        (
+            sys.executable,
+            "-I",
+            "-c",
+            launcher,
+            str(root_fd),
+            "-c",
+            "core.autocrlf=false",
+            "-c",
+            "core.filemode=true",
+            "-c",
+            "core.quotePath=true",
+            *arguments,
+        ),
+        check=check,
+        pass_fds=(root_fd,),
+    )
+
+
 def _run_git(
     command: tuple[str, ...],
     *,
     check: bool = False,
+    pass_fds: tuple[int, ...] = (),
 ) -> subprocess.CompletedProcess[bytes]:
     try:
         result = subprocess.run(
@@ -1542,6 +1589,7 @@ def _run_git(
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             env=_git_environment(),
+            pass_fds=pass_fds,
         )
     except OSError as exc:
         raise WorkspaceError(f"cannot execute local Git: {exc}") from exc

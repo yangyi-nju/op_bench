@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+from dataclasses import replace
 import json
 from pathlib import Path
 import unittest
@@ -15,12 +16,36 @@ from op_bench.factory.prompt_quality import (
     validate_prompt_quality_evidence,
 )
 from op_bench.runtime.canonical import canonical_sha256
+from op_bench.runtime.codex_mcp_adapter import render_mcp_prompt
+from op_bench.runtime.task_view import project_agent_task_view
 from op_bench.runtime.validation import ContractError
+from tests.test_runtime_contracts import (
+    budget_policy,
+    capability_policy,
+    full_task_spec,
+    identity,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
 SHA_A = "sha256:" + "a" * 64
 SHA_B = "sha256:" + "b" * 64
+
+
+def public_task_view(
+    *,
+    statement_body: str = "The public behavior differs for an empty matrix.",
+) -> dict[str, object]:
+    task = replace(
+        full_task_spec(),
+        task=identity("task", "opbench-v07-t0001", SHA_A),
+        statement_body=statement_body,
+    )
+    return project_agent_task_view(
+        task,
+        capability_policy(),
+        budget_policy(),
+    ).to_dict()
 
 
 class PromptQualityScannerTests(unittest.TestCase):
@@ -200,11 +225,12 @@ abcdef
 
 
 def evidence_payload() -> dict[str, object]:
+    view = public_task_view()
     return build_prompt_quality_evidence(
         task_id="pytorch__empty_addmv",
-        public_task_id="task-v07-empty-addmv",
-        rendered_prompt="The public behavior differs for an empty matrix.",
-        agent_task_view={"statement_body": "The public behavior differs for an empty matrix."},
+        public_task_id="opbench-v07-t0001",
+        rendered_prompt=render_mcp_prompt(view),
+        agent_task_view=view,
         private_index=empty_private_index(),
         scanner_version="prompt-overlap-v1",
         blind_review={
@@ -247,12 +273,12 @@ class PromptQualityEvidenceTests(unittest.TestCase):
             )
 
     def test_evidence_recomputes_exact_prompt_view_and_scan_claims(self) -> None:
-        prompt = "The public behavior differs for an empty matrix."
-        view = {"statement_body": prompt, "runtime_hint": "cpu"}
+        view = public_task_view()
+        prompt = render_mcp_prompt(view)
         index = empty_private_index()
         evidence = build_prompt_quality_evidence(
             task_id="pytorch__empty_addmv",
-            public_task_id="task-v07-empty-addmv",
+            public_task_id="opbench-v07-t0001",
             rendered_prompt=prompt,
             agent_task_view=view,
             private_index=index,
@@ -280,7 +306,7 @@ class PromptQualityEvidenceTests(unittest.TestCase):
             agent_task_view=view,
             private_index=index,
         )
-        with self.assertRaisesRegex(ContractError, "findings|prompt_hash"):
+        with self.assertRaisesRegex(ContractError, "canonical render"):
             validate_prompt_quality_evidence(
                 evidence,
                 rendered_prompt="Reuse computeStorageNbytes for the empty matrix.",
@@ -293,13 +319,68 @@ class PromptQualityEvidenceTests(unittest.TestCase):
                 ),
             )
 
+    def test_evidence_rejects_prompt_bytes_not_produced_by_canonical_renderer(
+        self,
+    ) -> None:
+        view = public_task_view()
+
+        with self.assertRaisesRegex(ContractError, "canonical render"):
+            build_prompt_quality_evidence(
+                task_id="pytorch__empty_addmv",
+                public_task_id="opbench-v07-t0001",
+                rendered_prompt="An unrelated caller-supplied prompt.",
+                agent_task_view=view,
+                private_index=empty_private_index(),
+                scanner_version="prompt-overlap-v1",
+                blind_review={
+                    "decision": "accepted",
+                    "reviewer": "reviewer-id",
+                    "reviewed_at": "2026-07-29T00:00:00Z",
+                },
+                semantic_review={
+                    "decision": "equivalent",
+                    "reviewer": "curator-id",
+                    "reviewed_at": "2026-07-29T00:00:00Z",
+                },
+                decision="accepted",
+                created_at="2026-07-29T00:00:00Z",
+            )
+
+    def test_evidence_public_id_must_match_agent_task_view(self) -> None:
+        view = public_task_view()
+
+        with self.assertRaisesRegex(ContractError, "public_task_id"):
+            build_prompt_quality_evidence(
+                task_id="pytorch__empty_addmv",
+                public_task_id="opbench-v07-t9999",
+                rendered_prompt=render_mcp_prompt(view),
+                agent_task_view=view,
+                private_index=empty_private_index(),
+                scanner_version="prompt-overlap-v1",
+                blind_review={
+                    "decision": "accepted",
+                    "reviewer": "reviewer-id",
+                    "reviewed_at": "2026-07-29T00:00:00Z",
+                },
+                semantic_review={
+                    "decision": "equivalent",
+                    "reviewer": "curator-id",
+                    "reviewed_at": "2026-07-29T00:00:00Z",
+                },
+                decision="accepted",
+                created_at="2026-07-29T00:00:00Z",
+            )
+
     def test_evidence_builder_rejects_accepted_private_answer_overlap(self) -> None:
+        view = public_task_view(
+            statement_body="Reuse computeStorageNbytes for the empty matrix.",
+        )
         with self.assertRaisesRegex(ContractError, "acceptance"):
             build_prompt_quality_evidence(
                 task_id="pytorch__empty_addmv",
-                public_task_id="task-v07-empty-addmv",
-                rendered_prompt="Reuse computeStorageNbytes for the empty matrix.",
-                agent_task_view={"statement_body": "public"},
+                public_task_id="opbench-v07-t0001",
+                rendered_prompt=render_mcp_prompt(view),
+                agent_task_view=view,
                 private_index=PrivateAnswerIndex(
                     changed_paths=(),
                     added_symbols=("computeStorageNbytes",),

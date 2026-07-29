@@ -151,6 +151,38 @@ class LegacyV05ProjectionTests(unittest.TestCase):
                     created_at="2026-07-29T00:00:00Z",
                 )
 
+    def test_projection_rejects_non_string_and_non_opaque_public_task_ids(
+        self,
+    ) -> None:
+        for invalid in (
+            True,
+            7,
+            "",
+            "task-v07-empty-addmv",
+            "opbench-v07-t001",
+            "opbench-v07-t0001-extra",
+        ):
+            with self.subTest(public_task_id=invalid):
+                task = quality_tasks(invalid)[0]  # type: ignore[arg-type]
+                with self.assertRaisesRegex(ContractError, "public_task_id"):
+                    full_task_spec_from_v05(task)
+
+    def test_invalid_public_task_id_cannot_activate_root_capability(self) -> None:
+        tasks = quality_tasks("opbench-v07-t0001", "pytorch__private")
+        dataset = quality_dataset(tasks)
+        with patch.object(DatasetManifest, "load", return_value=dataset), patch.object(
+            DatasetManifest,
+            "load_tasks",
+            return_value=list(tasks),
+        ):
+            with self.assertRaisesRegex(ContractError, "public_task_id"):
+                run_manifest_from_v05_dataset(
+                    REPO_ROOT / "unused-invalid-dataset.json",
+                    agents=(agent_spec_for_v1_adapter("scripted_canonical"),),
+                    repeat=1,
+                    created_at="2026-07-29T00:00:00Z",
+                )
+
     def test_quality_runtime_bundle_resolves_private_assets_by_public_identity(
         self,
     ) -> None:
@@ -171,9 +203,41 @@ class LegacyV05ProjectionTests(unittest.TestCase):
         spec = bundle.manifest.tasks[0]
         binding = bundle.private_tasks[0]
         self.assertEqual(spec.task.identifier, "opbench-v07-t0001")
-        self.assertEqual(binding.task_id, "opbench-v07-t0001")
+        self.assertEqual(binding.task_id, tasks[0].task_id)
+        self.assertEqual(
+            bundle.public_task_ids_by_canonical,
+            ((tasks[0].task_id, "opbench-v07-t0001"),),
+        )
         self.assertEqual(bundle.source_for(spec), binding.source)
         self.assertEqual(bundle.hidden_asset_for(spec), binding.hidden_asset)
+
+    def test_quality_task_identity_digest_uses_only_public_projection_facts(
+        self,
+    ) -> None:
+        original = quality_tasks("opbench-v07-t0001")[0]
+        private_changed_data = copy.deepcopy(original.data)
+        private_changed_data["patch_scope"]["allowed_paths"] = (
+            list(original.patch_scope_paths) + ["private/extra.py"]
+        )
+        private_changed = TaskManifest(
+            task_dir=original.task_dir,
+            data=private_changed_data,
+        )
+        public_changed_data = copy.deepcopy(original.data)
+        public_changed_data["statement"]["body"] += " Publicly visible clarification."
+        public_changed = TaskManifest(
+            task_dir=original.task_dir,
+            data=public_changed_data,
+        )
+
+        selected = full_task_spec_from_v05(original)
+        private_variant = full_task_spec_from_v05(private_changed)
+        public_variant = full_task_spec_from_v05(public_changed)
+
+        self.assertEqual(selected.task.digest_kind, "canonical_config")
+        self.assertNotEqual(selected.task.digest, replay_spec_hash(original))
+        self.assertEqual(selected.task.digest, private_variant.task.digest)
+        self.assertNotEqual(selected.task.digest, public_variant.task.digest)
 
     def test_projects_all_boundary_environments_to_exact_runtime_profiles(
         self,
