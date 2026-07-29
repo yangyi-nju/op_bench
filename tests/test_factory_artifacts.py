@@ -14,7 +14,11 @@ from op_bench.factory.artifacts import (
     FactoryArtifactStore,
     load_factory_contract,
 )
-from op_bench.factory.prompt_quality import PromptQualityEvidence
+from op_bench.factory.prompt_quality import (
+    PromptQualityEvidence,
+    build_prompt_quality_evidence,
+    empty_private_index,
+)
 from op_bench.runtime.canonical import canonical_json
 from op_bench.runtime.validation import ContractError
 from tests.test_factory_contracts import candidate
@@ -25,13 +29,13 @@ VALIDATOR = ROOT / "scripts" / "validate_factory_artifact.py"
 
 
 def prompt_quality() -> PromptQualityEvidence:
-    return PromptQualityEvidence(
+    return build_prompt_quality_evidence(
         task_id="pytorch__empty_addmv",
         public_task_id="task-v07-empty-addmv",
-        prompt_hash="sha256:" + "a" * 64,
-        agent_task_view_hash="sha256:" + "b" * 64,
+        rendered_prompt="The public behavior differs for an empty matrix.",
+        agent_task_view={"statement_body": "The public behavior differs for an empty matrix."},
+        private_index=empty_private_index(),
         scanner_version="prompt-overlap-v1",
-        findings=(),
         blind_review={
             "decision": "accepted",
             "reviewer": "reviewer-id",

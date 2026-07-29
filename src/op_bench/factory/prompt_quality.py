@@ -32,15 +32,23 @@ _PYTHON_SYMBOL = re.compile(
     r"^\s*(?:async\s+)?(?:def|class)\s+([A-Za-z_][A-Za-z0-9_]*)\b"
 )
 _CPP_CLASS_SYMBOL = re.compile(r"^\s*(?:class|struct)\s+([A-Za-z_][A-Za-z0-9_]*)\b")
-_CPP_FUNCTION_SYMBOL = re.compile(
-    r"^\s*(?:[A-Za-z_][A-Za-z0-9_:<>~*&]*\s+)+"
-    r"([A-Za-z_][A-Za-z0-9_]*)\s*\([^;]*\)\s*(?:const\s*)?\{"
-)
 _QUOTED_LITERAL = re.compile(r"(?P<quote>['\"])(?P<value>(?:\\.|(?!\1).)*)\1")
 _COMPARISON_LITERAL = re.compile(
     r"\b[A-Za-z_][A-Za-z0-9_]*\s*(?:==|!=|<=|>=|<|>)\s*"
     r"(?:[A-Za-z_][A-Za-z0-9_]*|-?[0-9]+|\"(?:\\.|[^\"])*\"|'(?:\\.|[^'])*')"
 )
+_COMPARISON_FULL = re.compile(
+    r"[A-Za-z_][A-Za-z0-9_]*\s*(?:==|!=|<=|>=|<|>)\s*"
+    r"(?:[A-Za-z_][A-Za-z0-9_]*|-?[0-9]+|\"(?:\\.|[^\"])*\"|'(?:\\.|[^'])*')"
+)
+_HUNK_HEADER = re.compile(
+    r"@@ -[0-9]+(?:,[0-9]+)? \+[0-9]+(?:,[0-9]+)? @@(?: .*)?"
+)
+_HUNK_COUNTS = re.compile(
+    r"@@ -[0-9]+(?:,([0-9]+))? \+[0-9]+(?:,([0-9]+))? @@"
+)
+_CPP_SIGNATURE_NAME = re.compile(r"([~A-Za-z_][A-Za-z0-9_:~]*)\s*\(")
+_CPP_CONTROL = re.compile(r"^\s*(?:if|for|while|switch|catch)\b")
 _PULL_REQUEST = re.compile(r"\bpr\s*#\s*[0-9]+\b", re.IGNORECASE)
 _PULL_URL = re.compile(
     r"https?://(?:www\.)?github\.com/[^\s/]+/[^\s/]+/pulls?/[0-9]+(?:[^\s]*)?",
@@ -245,41 +253,136 @@ def empty_private_index() -> PrivateAnswerIndex:
     return PrivateAnswerIndex((), (), (), ())
 
 
-def _diff_paths(patch: str) -> set[str]:
+def _header_path(value: str, *, prefix: str, path: str, allow_null: bool) -> str | None:
+    text = value.strip().split("\t", 1)[0].strip()
+    if text == "/dev/null":
+        if allow_null:
+            return None
+        raise ContractError(f"{path}: invalid diff header path")
+    if not text.startswith(prefix):
+        raise ContractError(f"{path}: invalid diff header path")
+    normalized = _normalize_path(text)
+    if normalized is None:
+        raise ContractError(f"{path}: invalid diff header path")
+    return normalized
+
+
+def _parse_hunk_header(line: str, *, path: str) -> tuple[int, int]:
+    if _HUNK_HEADER.fullmatch(line) is None:
+        raise ContractError(f"{path}: malformed hunk header")
+    counts = _HUNK_COUNTS.match(line)
+    assert counts is not None
+    return (
+        1 if counts.group(1) is None else int(counts.group(1)),
+        1 if counts.group(2) is None else int(counts.group(2)),
+    )
+
+
+def _parse_unified_diff(patch: str, *, path: str) -> tuple[set[str], tuple[str, ...]]:
+    """Parse paths and added source lines from a complete unified diff."""
+
     paths: set[str] = set()
-    for line in patch.splitlines():
+    added: list[str] = []
+    saw_diff = False
+    header_paths: tuple[str | None, str | None] | None = None
+    old_remaining = 0
+    new_remaining = 0
+    in_hunk = False
+
+    def finish_hunk() -> None:
+        if in_hunk and (old_remaining != 0 or new_remaining != 0):
+            raise ContractError(f"{path}: incomplete hunk")
+
+    for line_number, line in enumerate(patch.splitlines(), start=1):
+        line_path = f"{path}:{line_number}"
+        if in_hunk and old_remaining == 0 and new_remaining == 0:
+            in_hunk = False
+        if in_hunk:
+            if line.startswith("\\ No newline at end of file"):
+                continue
+            if line.startswith("+"):
+                new_remaining -= 1
+                added.append(line[1:])
+            elif line.startswith("-"):
+                old_remaining -= 1
+            elif line.startswith(" "):
+                old_remaining -= 1
+                new_remaining -= 1
+            else:
+                raise ContractError(f"{line_path}: invalid hunk line")
+            if old_remaining < 0 or new_remaining < 0:
+                raise ContractError(f"{line_path}: hunk line count overflow")
+            continue
+
         if line.startswith("diff --git "):
+            finish_hunk()
             try:
                 parts = shlex.split(line)
-            except ValueError:
-                parts = []
-            if len(parts) >= 4:
-                for item in parts[-2:]:
-                    normalized = _normalize_path(item)
-                    if normalized is not None:
-                        paths.add(normalized)
-        elif line.startswith(("--- ", "+++ ")):
-            normalized = _normalize_path(line[4:])
+            except ValueError as exc:
+                raise ContractError(f"{line_path}: malformed diff header") from exc
+            if len(parts) != 4 or parts[:2] != ["diff", "--git"]:
+                raise ContractError(f"{line_path}: malformed diff header")
+            left = _header_path(
+                parts[2], prefix="a/", path=line_path, allow_null=False
+            )
+            right = _header_path(
+                parts[3], prefix="b/", path=line_path, allow_null=False
+            )
+            assert left is not None and right is not None
+            paths.update((left, right))
+            header_paths = (left, right)
+            saw_diff = True
+            continue
+        if line.startswith(("--- ", "+++ ")):
+            if header_paths is None:
+                raise ContractError(f"{line_path}: diff header is required")
+            prefix = "a/" if line.startswith("--- ") else "b/"
+            normalized = _header_path(
+                line[4:],
+                prefix=prefix,
+                path=line_path,
+                allow_null=True,
+            )
             if normalized is not None:
                 paths.add(normalized)
-    return paths
+            continue
+        if line.startswith("@@"):
+            if header_paths is None:
+                raise ContractError(f"{line_path}: diff header is required")
+            finish_hunk()
+            old_remaining, new_remaining = _parse_hunk_header(line, path=line_path)
+            in_hunk = True
+            continue
+        if line.startswith(("GIT binary patch", "Binary files ")):
+            raise ContractError(f"{line_path}: unsupported diff payload")
+        if line.startswith(("+", "-", " ")):
+            raise ContractError(f"{line_path}: source line outside hunk")
 
-
-def _added_lines(patch: str) -> tuple[str, ...]:
-    return tuple(
-        line[1:]
-        for line in patch.splitlines()
-        if line.startswith("+") and not line.startswith("+++")
-    )
+    finish_hunk()
+    if patch and not saw_diff:
+        raise ContractError(f"{path}: diff header is required")
+    return paths, tuple(added)
 
 
 def _source_symbols(lines: tuple[str, ...]) -> set[str]:
     symbols: set[str] = set()
-    for line in lines:
-        for pattern in (_PYTHON_SYMBOL, _CPP_CLASS_SYMBOL, _CPP_FUNCTION_SYMBOL):
+    for index, line in enumerate(lines):
+        for pattern in (_PYTHON_SYMBOL, _CPP_CLASS_SYMBOL):
             match = pattern.match(line)
             if match is not None:
                 symbols.add(match.group(1))
+        if "(" not in line or _CPP_CONTROL.match(line) is not None:
+            continue
+        signature = line.strip()
+        for next_line in lines[index + 1 : index + 9]:
+            if "{" in signature or ";" in signature:
+                break
+            signature = f"{signature} {next_line.strip()}"
+        if "{" not in signature or ";" in signature:
+            continue
+        names = _CPP_SIGNATURE_NAME.findall(signature.split("{", 1)[0])
+        if names:
+            symbols.add(names[-1].split("::")[-1].removeprefix("~"))
     return symbols
 
 
@@ -291,7 +394,7 @@ def _distinctive_literals(lines: tuple[str, ...]) -> set[str]:
             if len(value) >= 6:
                 literals.add(value)
         for match in _COMPARISON_LITERAL.finditer(line):
-            value = re.sub(r"\s+", " ", match.group(0)).strip()
+            value = _normalize_comparison(match.group(0))
             if len(value) >= 6:
                 literals.add(value)
     return literals
@@ -311,14 +414,19 @@ def build_private_answer_index(
     if not isinstance(patch_scope, tuple) or not isinstance(hidden_selectors, tuple):
         raise ContractError("private_answer_index: patch_scope and hidden_selectors must be tuples")
 
-    paths = _diff_paths(gold_patch) | _diff_paths(hidden_test_patch)
+    gold_paths, gold_lines = _parse_unified_diff(gold_patch, path="gold_patch")
+    hidden_paths, hidden_lines = _parse_unified_diff(
+        hidden_test_patch,
+        path="hidden_test_patch",
+    )
+    paths = gold_paths | hidden_paths
     for index, path in enumerate(patch_scope):
         normalized = _normalize_path(require_str(path, f"patch_scope[{index}]"))
         if normalized is None:
             raise ContractError(f"patch_scope[{index}]: expected normalized relative path")
         paths.add(normalized)
 
-    lines = _added_lines(gold_patch) + _added_lines(hidden_test_patch)
+    lines = gold_lines + hidden_lines
     symbols = _source_symbols(lines)
     identifier_counts = Counter(
         identifier
@@ -342,6 +450,20 @@ def build_private_answer_index(
 
 def _text_contains(text: str, matched: str) -> bool:
     return matched.casefold() in text.casefold()
+
+
+def _normalize_comparison(value: str) -> str:
+    return re.sub(r"\s*(==|!=|<=|>=|<|>)\s*", r" \1 ", value).strip()
+
+
+def _literal_overlaps(text: str, literal: str) -> bool:
+    if _COMPARISON_FULL.fullmatch(literal) is None:
+        return _text_contains(text, literal)
+    normalized = _normalize_comparison(literal).casefold()
+    return any(
+        _normalize_comparison(match.group(0)).casefold() == normalized
+        for match in _COMPARISON_LITERAL.finditer(text)
+    )
 
 
 def _text_contains_symbol(text: str, matched: str) -> bool:
@@ -380,7 +502,7 @@ def scan_rendered_prompt(
         if _text_contains_symbol(rendered_prompt, symbol):
             findings.add(_finding("answer.symbol", public_field, symbol))
     for literal in private_index.distinctive_literals:
-        if _text_contains(rendered_prompt, literal):
+        if _literal_overlaps(rendered_prompt, literal):
             findings.add(_finding("answer.distinctive_literal", public_field, literal))
     for selector in private_index.hidden_selectors:
         if _text_contains(rendered_prompt, selector):
@@ -425,7 +547,7 @@ def _review(value: object, *, path: str, decision: str) -> Mapping[str, str]:
     )
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, init=False)
 class PromptQualityEvidence:
     contract_type: ClassVar[str] = "prompt_quality"
     schema_version: ClassVar[str] = "v1"
@@ -441,6 +563,37 @@ class PromptQualityEvidence:
     decision: str
     created_at: str
     content_hash: str = ""
+
+    def __init__(
+        self,
+        *,
+        task_id: str,
+        public_task_id: str,
+        rendered_prompt: str,
+        agent_task_view: Mapping[str, object],
+        private_index: PrivateAnswerIndex,
+        scanner_version: str,
+        blind_review: Mapping[str, object],
+        semantic_review: Mapping[str, object],
+        decision: str,
+        created_at: str,
+    ) -> None:
+        """Construct source-bound evidence; hashes and findings are never inputs."""
+
+        require_str(rendered_prompt, "rendered_prompt", min_length=0)
+        payload = _agent_task_view_payload(agent_task_view)
+        object.__setattr__(self, "task_id", task_id)
+        object.__setattr__(self, "public_task_id", public_task_id)
+        object.__setattr__(self, "prompt_hash", canonical_sha256(rendered_prompt))
+        object.__setattr__(self, "agent_task_view_hash", canonical_sha256(payload))
+        object.__setattr__(self, "scanner_version", scanner_version)
+        object.__setattr__(self, "findings", scan_rendered_prompt(rendered_prompt, private_index))
+        object.__setattr__(self, "blind_review", blind_review)
+        object.__setattr__(self, "semantic_review", semantic_review)
+        object.__setattr__(self, "decision", decision)
+        object.__setattr__(self, "created_at", created_at)
+        object.__setattr__(self, "content_hash", "")
+        self._validate_stored()
 
     @classmethod
     def wire_fields(cls) -> tuple[str, ...]:
@@ -460,7 +613,7 @@ class PromptQualityEvidence:
             "content_hash",
         )
 
-    def __post_init__(self) -> None:
+    def _validate_stored(self) -> None:
         require_str(self.task_id, "prompt_quality.task_id")
         require_str(self.public_task_id, "prompt_quality.public_task_id")
         require_str(self.prompt_hash, "prompt_quality.prompt_hash", pattern=_SHA256_PATTERN)
@@ -542,18 +695,85 @@ class PromptQualityEvidence:
             PromptFinding.from_dict(item, path=f"{path}.findings[{index}]")
             for index, item in enumerate(require_list(data["findings"], f"{path}.findings"))
         )
-        return cls(
-            task_id=require_str(data["task_id"], f"{path}.task_id"),
-            public_task_id=require_str(data["public_task_id"], f"{path}.public_task_id"),
-            prompt_hash=require_str(data["prompt_hash"], f"{path}.prompt_hash"),
-            agent_task_view_hash=require_str(
-                data["agent_task_view_hash"], f"{path}.agent_task_view_hash"
+        evidence = object.__new__(cls)
+        for name, item in (
+            ("task_id", require_str(data["task_id"], f"{path}.task_id")),
+            ("public_task_id", require_str(data["public_task_id"], f"{path}.public_task_id")),
+            ("prompt_hash", require_str(data["prompt_hash"], f"{path}.prompt_hash")),
+            (
+                "agent_task_view_hash",
+                require_str(data["agent_task_view_hash"], f"{path}.agent_task_view_hash"),
             ),
-            scanner_version=require_str(data["scanner_version"], f"{path}.scanner_version"),
-            findings=findings,
-            blind_review=require_mapping(data["blind_review"], f"{path}.blind_review"),
-            semantic_review=require_mapping(data["semantic_review"], f"{path}.semantic_review"),
-            decision=require_str(data["decision"], f"{path}.decision"),
-            created_at=_validate_utc_seconds(data["created_at"], f"{path}.created_at"),
-            content_hash=require_str(data["content_hash"], f"{path}.content_hash"),
+            ("scanner_version", require_str(data["scanner_version"], f"{path}.scanner_version")),
+            ("findings", findings),
+            ("blind_review", require_mapping(data["blind_review"], f"{path}.blind_review")),
+            ("semantic_review", require_mapping(data["semantic_review"], f"{path}.semantic_review")),
+            ("decision", require_str(data["decision"], f"{path}.decision")),
+            ("created_at", _validate_utc_seconds(data["created_at"], f"{path}.created_at")),
+            ("content_hash", require_str(data["content_hash"], f"{path}.content_hash")),
+        ):
+            object.__setattr__(evidence, name, item)
+        evidence._validate_stored()
+        return evidence
+
+
+def _agent_task_view_payload(value: object) -> dict[str, JsonValue]:
+    if not isinstance(value, Mapping):
+        raise ContractError("agent_task_view: expected canonical object")
+    payload = dict(value)
+    canonical_sha256(payload)
+    return payload
+
+
+def build_prompt_quality_evidence(
+    *,
+    task_id: str,
+    public_task_id: str,
+    rendered_prompt: str,
+    agent_task_view: Mapping[str, object],
+    private_index: PrivateAnswerIndex,
+    scanner_version: str,
+    blind_review: Mapping[str, object],
+    semantic_review: Mapping[str, object],
+    decision: str,
+    created_at: str,
+) -> PromptQualityEvidence:
+    """Build evidence by recomputing every Prompt-facing acceptance claim."""
+
+    return PromptQualityEvidence(
+        task_id=task_id,
+        public_task_id=public_task_id,
+        rendered_prompt=rendered_prompt,
+        agent_task_view=agent_task_view,
+        private_index=private_index,
+        scanner_version=scanner_version,
+        blind_review=blind_review,
+        semantic_review=semantic_review,
+        decision=decision,
+        created_at=created_at,
+    )
+
+
+def validate_prompt_quality_evidence(
+    evidence: PromptQualityEvidence,
+    *,
+    rendered_prompt: str,
+    agent_task_view: Mapping[str, object],
+    private_index: PrivateAnswerIndex,
+) -> None:
+    """Fail closed unless stored evidence exactly matches the source inputs."""
+
+    if not isinstance(evidence, PromptQualityEvidence):
+        raise ContractError("prompt_quality: expected PromptQualityEvidence")
+    require_str(rendered_prompt, "rendered_prompt", min_length=0)
+    expected_prompt_hash = canonical_sha256(rendered_prompt)
+    if evidence.prompt_hash != expected_prompt_hash:
+        raise ContractError("prompt_quality.prompt_hash: does not match rendered_prompt")
+    expected_view_hash = canonical_sha256(_agent_task_view_payload(agent_task_view))
+    if evidence.agent_task_view_hash != expected_view_hash:
+        raise ContractError(
+            "prompt_quality.agent_task_view_hash: does not match agent_task_view"
         )
+    expected_findings = scan_rendered_prompt(rendered_prompt, private_index)
+    if evidence.findings != expected_findings:
+        raise ContractError("prompt_quality.findings: do not match rendered_prompt scan")

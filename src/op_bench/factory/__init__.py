@@ -37,8 +37,10 @@ from op_bench.factory.prompt_quality import (
     PromptFinding,
     PromptQualityEvidence,
     build_private_answer_index,
+    build_prompt_quality_evidence,
     empty_private_index,
     scan_rendered_prompt,
+    validate_prompt_quality_evidence,
 )
 from op_bench.factory.release import (
     DatasetReleaseInput,
@@ -98,6 +100,7 @@ __all__ = [
     "build_verified_admission_chain",
     "build_freeze_manifest",
     "build_private_answer_index",
+    "build_prompt_quality_evidence",
     "build_dataset_release",
     "factory_content_hash",
     "empty_private_index",
@@ -113,5 +116,6 @@ __all__ = [
     "screen_candidate",
     "scan_rendered_prompt",
     "validate_admission_chain",
+    "validate_prompt_quality_evidence",
     "validate_problem_taxonomy",
 ]
