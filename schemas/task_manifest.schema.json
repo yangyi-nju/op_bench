@@ -296,12 +296,55 @@
         "base_commit",
         "merge_commit"
       ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "issue_url": {
+                "type": "null"
+              }
+            },
+            "required": [
+              "issue_url"
+            ]
+          },
+          "then": {
+            "properties": {
+              "issue_number": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "issue_number": {
+                "type": "null"
+              }
+            },
+            "required": [
+              "issue_number"
+            ]
+          },
+          "then": {
+            "properties": {
+              "issue_url": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ],
       "properties": {
         "pr_url": {
           "type": "string"
         },
         "issue_url": {
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "repo": {
           "type": "string",
@@ -311,7 +354,10 @@
           "type": "string"
         },
         "issue_number": {
-          "type": "integer",
+          "type": [
+            "integer",
+            "null"
+          ],
           "minimum": 1
         },
         "pr_number": {

@@ -112,6 +112,14 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
             errors.append(f"empty required field: {'.'.join(path)}")
 
     source = data.get("source", {})
+    if isinstance(source, dict):
+        issue_url = source.get("issue_url")
+        issue_number = source.get("issue_number")
+        if (issue_url is None) != (issue_number is None):
+            errors.append(
+                "source.issue_url and source.issue_number must both be null "
+                "or both be present"
+            )
     operator = data.get("operator", {})
     if isinstance(operator, dict):
         errors.extend(validate_problem_taxonomy(operator))

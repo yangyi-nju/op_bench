@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
 import unittest
 
 from scripts.validate_task import validate_manifest, validate_source_loading
@@ -23,6 +25,41 @@ class ValidateTaskTests(unittest.TestCase):
 
     def test_historical_task_may_omit_taxonomy(self) -> None:
         self.assertEqual(validate_manifest(self._manifest()), [])
+
+    def test_source_can_explicitly_record_no_linked_issue(self) -> None:
+        manifest = self._manifest()
+        manifest["source"]["issue_url"] = None
+        manifest["source"]["issue_number"] = None
+        schema = json.loads(
+            (
+                Path(__file__).resolve().parents[1]
+                / "schemas/task_manifest.schema.json"
+            ).read_text(encoding="utf-8")
+        )
+
+        self.assertEqual(validate_manifest(manifest), [])
+        source = schema["properties"]["source"]["properties"]
+        self.assertEqual(
+            source["issue_url"]["type"], ["string", "null"]
+        )
+        self.assertEqual(
+            source["issue_number"]["type"], ["integer", "null"]
+        )
+
+    def test_source_linked_issue_fields_must_be_jointly_absent(self) -> None:
+        manifest = self._manifest()
+        manifest["source"]["issue_url"] = None
+        self.assertIn(
+            "source.issue_url and source.issue_number must both be null or both be present",
+            validate_manifest(manifest),
+        )
+
+        manifest = self._manifest()
+        manifest["source"]["issue_number"] = None
+        self.assertIn(
+            "source.issue_url and source.issue_number must both be null or both be present",
+            validate_manifest(manifest),
+        )
 
     def test_invalid_taxonomy_v2_returns_contract_error(self) -> None:
         manifest = self._manifest()
