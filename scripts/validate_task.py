@@ -10,7 +10,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from op_bench.factory.taxonomy import validate_problem_taxonomy
+from op_bench.factory.taxonomy import parse_taxonomy_v2, validate_problem_taxonomy
+from op_bench.runtime.validation import ContractError
 
 
 REQUIRED_PATHS = [
@@ -116,6 +117,11 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
         errors.extend(validate_problem_taxonomy(operator))
     else:
         errors.append("operator must be an object")
+    if "taxonomy" in data:
+        try:
+            parse_taxonomy_v2(data["taxonomy"])
+        except ContractError as exc:
+            errors.append(str(exc))
 
     for reference in ("environment_ref", "source_ref"):
         value = data.get(reference)

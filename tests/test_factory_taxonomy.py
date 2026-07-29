@@ -4,10 +4,33 @@ import unittest
 
 from op_bench.factory.taxonomy import (
     BOUNDARY_KEYWORD_PACKS,
+    derived_slices,
     keyword_pack,
     match_keyword_packs,
+    parse_taxonomy_v2,
     validate_problem_taxonomy,
 )
+from op_bench.runtime.validation import ContractError
+
+
+def valid_taxonomy_payload(**overrides: object) -> dict[str, object]:
+    payload: dict[str, object] = {
+        "taxonomy_version": "v2",
+        "contract_family": "result",
+        "contract_detail_tags": ["numerical"],
+        "trigger_tags": [],
+        "execution_context": {
+            "devices": ["cpu"],
+            "modes": ["eager"],
+            "phases": ["forward"],
+            "distributed": False,
+        },
+        "failure_type": "wrong_result",
+        "root_cause_tags": [],
+        "component_tags": [],
+    }
+    payload.update(overrides)
+    return payload
 
 
 class BoundaryTaxonomyTests(unittest.TestCase):
@@ -189,6 +212,77 @@ class ProblemTaxonomyTests(unittest.TestCase):
             "operator.failure_contract: unsupported value 'slow'",
             errors,
         )
+
+
+class TaxonomyV2Tests(unittest.TestCase):
+    def test_taxonomy_v2_requires_controlled_primary_axes(self) -> None:
+        taxonomy = parse_taxonomy_v2(
+            {
+                "taxonomy_version": "v2",
+                "contract_family": "result",
+                "contract_detail_tags": ["numerical"],
+                "trigger_tags": ["extreme_value_or_size", "device_specific"],
+                "execution_context": {
+                    "devices": ["cuda"],
+                    "modes": ["eager"],
+                    "phases": ["forward"],
+                    "distributed": False,
+                },
+                "failure_type": "wrong_result",
+                "root_cause_tags": ["overflow"],
+                "component_tags": ["aten", "cuda_kernel"],
+            }
+        )
+
+        self.assertEqual(derived_slices(taxonomy), ("boundary", "device", "precision"))
+
+    def test_required_unknown_and_other_are_rejected(self) -> None:
+        for field, value in (
+            ("contract_family", "other"),
+            ("failure_type", "unknown"),
+        ):
+            payload = valid_taxonomy_payload()
+            payload[field] = value
+            with self.subTest(field=field):
+                with self.assertRaises(ContractError):
+                    parse_taxonomy_v2(payload)
+
+    def test_boundary_trigger_tags_map_to_boundary_slice(self) -> None:
+        for trigger in (
+            "empty_or_zero",
+            "scalar_or_low_rank",
+            "extreme_value_or_size",
+            "invalid_or_endpoint_parameter",
+            "noncontiguous_or_special_layout",
+            "dynamic_shape",
+        ):
+            with self.subTest(trigger=trigger):
+                payload = valid_taxonomy_payload(trigger_tags=[trigger])
+                self.assertIn(
+                    "boundary", derived_slices(parse_taxonomy_v2(payload))
+                )
+
+    def test_tuple_fields_require_registry_order_without_duplicates(self) -> None:
+        contexts = (
+            {
+                "devices": ["cuda", "cpu"],
+                "modes": ["compile", "eager"],
+                "phases": ["backward", "forward"],
+                "distributed": False,
+            },
+            {
+                "devices": ["cpu", "cpu"],
+                "modes": ["eager"],
+                "phases": ["forward"],
+                "distributed": False,
+            },
+        )
+
+        for context in contexts:
+            with self.subTest(context=context):
+                payload = valid_taxonomy_payload(execution_context=context)
+                with self.assertRaises(ContractError):
+                    parse_taxonomy_v2(payload)
 
 
 if __name__ == "__main__":

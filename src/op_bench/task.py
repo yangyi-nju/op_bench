@@ -5,7 +5,10 @@ import shlex
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from op_bench.factory.taxonomy import TaskTaxonomyV2
 
 
 @dataclass(frozen=True)
@@ -291,6 +294,13 @@ class TaskManifest:
     def operator_metadata(self) -> dict[str, Any]:
         value = self.data.get("operator")
         return dict(value) if isinstance(value, dict) else {}
+
+    @property
+    def taxonomy_v2(self) -> TaskTaxonomyV2 | None:
+        from op_bench.factory.taxonomy import parse_taxonomy_v2
+
+        value = self.data.get("taxonomy")
+        return None if value is None else parse_taxonomy_v2(value)
 
     @property
     def problem_dimension(self) -> str | None:

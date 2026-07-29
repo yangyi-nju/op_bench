@@ -37,6 +37,7 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from op_bench.registry import load_resolved_task  # noqa: E402
+from op_bench.factory.taxonomy import derived_slices  # noqa: E402
 
 
 def _apply_patch(workspace: Path, patch_path: Path) -> tuple[bool, str]:
@@ -151,6 +152,20 @@ def preflight_task(task_dir: Path) -> tuple[bool, list[str]]:
     messages.append(f"task_id: {task.task_id}")
     messages.append(f"backend: {task.environment_backend}")
     messages.append(f"runtime_tier: {task.runtime_tier}")
+
+    taxonomy = task.taxonomy_v2
+    if taxonomy:
+        messages.append(f"taxonomy.contract_family: {taxonomy.contract_family}")
+        messages.append(
+            "taxonomy.execution_context: "
+            f"devices={','.join(taxonomy.execution_context.devices)} "
+            f"modes={','.join(taxonomy.execution_context.modes)} "
+            f"phases={','.join(taxonomy.execution_context.phases)} "
+            f"distributed={taxonomy.execution_context.distributed}"
+        )
+        messages.append(
+            "taxonomy.derived_slices: " + ", ".join(derived_slices(taxonomy))
+        )
 
     # v0.5+: verified tasks must declare problem_dimension. Historical tasks
     # (v0.3/v0.4 CPU) may skip this and appear in aggregate reports under the

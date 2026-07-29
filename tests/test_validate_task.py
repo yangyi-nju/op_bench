@@ -24,6 +24,29 @@ class ValidateTaskTests(unittest.TestCase):
     def test_historical_task_may_omit_taxonomy(self) -> None:
         self.assertEqual(validate_manifest(self._manifest()), [])
 
+    def test_invalid_taxonomy_v2_returns_contract_error(self) -> None:
+        manifest = self._manifest()
+        manifest["taxonomy"] = {
+            "taxonomy_version": "v2",
+            "contract_family": "other",
+            "contract_detail_tags": [],
+            "trigger_tags": [],
+            "execution_context": {
+                "devices": ["cpu"],
+                "modes": ["eager"],
+                "phases": ["forward"],
+                "distributed": False,
+            },
+            "failure_type": "wrong_result",
+            "root_cause_tags": [],
+            "component_tags": [],
+        }
+
+        self.assertIn(
+            "taxonomy.contract_family: unsupported value 'other'",
+            validate_manifest(manifest),
+        )
+
     def test_historical_precision_pair_may_omit_failure_contract(self) -> None:
         manifest = self._manifest()
         manifest["operator"].update(

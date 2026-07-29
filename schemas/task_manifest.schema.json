@@ -141,6 +141,149 @@
       "type": "string",
       "pattern": "^v[0-9]+$"
     },
+    "taxonomy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "taxonomy_version",
+        "contract_family",
+        "execution_context",
+        "failure_type"
+      ],
+      "properties": {
+        "taxonomy_version": {
+          "const": "v2"
+        },
+        "contract_family": {
+          "type": "string",
+          "enum": [
+            "result",
+            "tensor_metadata",
+            "mutation_state",
+            "gradient",
+            "api_behavior",
+            "efficiency_safety"
+          ]
+        },
+        "contract_detail_tags": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "value",
+              "numerical",
+              "shape",
+              "rank",
+              "dtype",
+              "device",
+              "layout",
+              "stride",
+              "alias",
+              "mutation",
+              "state",
+              "serialization",
+              "gradient",
+              "schema",
+              "exception",
+              "compatibility",
+              "performance",
+              "memory",
+              "liveness"
+            ]
+          }
+        },
+        "trigger_tags": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "empty_or_zero",
+              "scalar_or_low_rank",
+              "extreme_value_or_size",
+              "invalid_or_endpoint_parameter",
+              "noncontiguous_or_special_layout",
+              "mixed_dtype_or_precision_mode",
+              "dynamic_shape",
+              "mutation_or_alias",
+              "device_specific"
+            ]
+          }
+        },
+        "execution_context": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["devices", "modes", "phases", "distributed"],
+          "properties": {
+            "devices": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {"type": "string", "enum": ["cpu", "cuda"]}
+            },
+            "modes": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {"type": "string", "enum": ["eager", "compile"]}
+            },
+            "phases": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {"type": "string", "enum": ["forward", "backward"]}
+            },
+            "distributed": {
+              "type": "boolean"
+            }
+          }
+        },
+        "failure_type": {
+          "type": "string",
+          "enum": [
+            "wrong_result",
+            "unexpected_error",
+            "missing_error",
+            "crash_or_hang",
+            "nondeterministic",
+            "performance_regression"
+          ]
+        },
+        "root_cause_tags": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "overflow",
+              "incorrect_validation",
+              "wrong_dispatch",
+              "incorrect_cast",
+              "bad_gradient_formula",
+              "incorrect_lowering"
+            ]
+          }
+        },
+        "component_tags": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "aten",
+              "autograd",
+              "dispatcher",
+              "dynamo",
+              "inductor",
+              "triton",
+              "cuda_kernel",
+              "distributed"
+            ]
+          }
+        }
+      }
+    },
     "source": {
       "type": "object",
       "additionalProperties": false,

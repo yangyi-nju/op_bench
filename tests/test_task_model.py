@@ -1,15 +1,57 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 
+from op_bench.factory.taxonomy import TaskTaxonomyV2
 from op_bench.task import TaskManifest
 
 
 class TaskManifestTests(unittest.TestCase):
+    def test_task_manifest_imports_without_factory_cycle(self) -> None:
+        result = subprocess.run(
+            [sys.executable, "-c", "from op_bench.task import TaskManifest"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_taxonomy_v2_returns_parsed_taxonomy_when_present(self) -> None:
+        task = TaskManifest(
+            task_dir=Path("/tmp/task"),
+            data={
+                "task_id": "taxonomy",
+                "taxonomy": {
+                    "taxonomy_version": "v2",
+                    "contract_family": "result",
+                    "contract_detail_tags": ["numerical"],
+                    "trigger_tags": [],
+                    "execution_context": {
+                        "devices": ["cpu"],
+                        "modes": ["eager"],
+                        "phases": ["forward"],
+                        "distributed": False,
+                    },
+                    "failure_type": "wrong_result",
+                    "root_cause_tags": [],
+                    "component_tags": [],
+                },
+            },
+        )
+
+        self.assertIsInstance(task.taxonomy_v2, TaskTaxonomyV2)
+
+    def test_taxonomy_v2_is_none_for_historical_task(self) -> None:
+        task = TaskManifest(task_dir=Path("/tmp/task"), data={"task_id": "legacy"})
+
+        self.assertIsNone(task.taxonomy_v2)
+
     def test_remote_docker_uses_container_python(self) -> None:
         task = TaskManifest(
             task_dir=Path("/tmp/task"),

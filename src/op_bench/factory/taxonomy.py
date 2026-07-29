@@ -3,6 +3,173 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
+from op_bench.runtime.validation import (
+    ContractError,
+    require_bool,
+    require_enum,
+    require_exact_fields,
+    require_mapping,
+    require_str_tuple,
+)
+
+
+CONTRACT_FAMILIES = (
+    "result",
+    "tensor_metadata",
+    "mutation_state",
+    "gradient",
+    "api_behavior",
+    "efficiency_safety",
+)
+FAILURE_TYPES = (
+    "wrong_result",
+    "unexpected_error",
+    "missing_error",
+    "crash_or_hang",
+    "nondeterministic",
+    "performance_regression",
+)
+DEVICES = ("cpu", "cuda")
+MODES = ("eager", "compile")
+PHASES = ("forward", "backward")
+CONTRACT_DETAIL_TAGS = (
+    "value", "numerical", "shape", "rank", "dtype", "device", "layout",
+    "stride", "alias", "mutation", "state", "serialization", "gradient",
+    "schema", "exception", "compatibility", "performance", "memory", "liveness",
+)
+TRIGGER_TAGS = (
+    "empty_or_zero", "scalar_or_low_rank", "extreme_value_or_size",
+    "invalid_or_endpoint_parameter", "noncontiguous_or_special_layout",
+    "mixed_dtype_or_precision_mode", "dynamic_shape", "mutation_or_alias",
+    "device_specific",
+)
+ROOT_CAUSE_TAGS = (
+    "overflow", "incorrect_validation", "wrong_dispatch", "incorrect_cast",
+    "bad_gradient_formula", "incorrect_lowering",
+)
+COMPONENT_TAGS = (
+    "aten", "autograd", "dispatcher", "dynamo", "inductor", "triton",
+    "cuda_kernel", "distributed",
+)
+BOUNDARY_TRIGGER_TAGS = frozenset(
+    (
+        "empty_or_zero", "scalar_or_low_rank", "extreme_value_or_size",
+        "invalid_or_endpoint_parameter", "noncontiguous_or_special_layout",
+        "dynamic_shape",
+    )
+)
+
+
+@dataclass(frozen=True)
+class ExecutionContext:
+    devices: tuple[str, ...]
+    modes: tuple[str, ...]
+    phases: tuple[str, ...]
+    distributed: bool
+
+
+@dataclass(frozen=True)
+class TaskTaxonomyV2:
+    taxonomy_version: str
+    contract_family: str
+    contract_detail_tags: tuple[str, ...]
+    trigger_tags: tuple[str, ...]
+    execution_context: ExecutionContext
+    failure_type: str
+    root_cause_tags: tuple[str, ...]
+    component_tags: tuple[str, ...]
+
+
+def _require_canonical_tuple(
+    value: object,
+    path: str,
+    registry: tuple[str, ...],
+    *,
+    allow_empty: bool = True,
+) -> tuple[str, ...]:
+    values = require_str_tuple(value, path, allowed=registry, allow_empty=allow_empty)
+    if values != tuple(item for item in registry if item in values):
+        raise ContractError(f"{path}: expected registry order")
+    return values
+
+
+def parse_taxonomy_v2(
+    value: object, *, path: str = "taxonomy"
+) -> TaskTaxonomyV2:
+    """Parse the canonical, optional taxonomy-v2 manifest section."""
+
+    data = require_mapping(value, path)
+    fields = (
+        "taxonomy_version", "contract_family", "contract_detail_tags",
+        "trigger_tags", "execution_context", "failure_type", "root_cause_tags",
+        "component_tags",
+    )
+    required = ("taxonomy_version", "contract_family", "execution_context", "failure_type")
+    missing = sorted(set(required) - set(data))
+    unknown = sorted(set(data) - set(fields))
+    if missing:
+        raise ContractError(f"{path}: missing fields {missing}")
+    if unknown:
+        raise ContractError(f"{path}: unknown fields {unknown}")
+
+    context = require_exact_fields(
+        data["execution_context"],
+        f"{path}.execution_context",
+        ("devices", "modes", "phases", "distributed"),
+    )
+    return TaskTaxonomyV2(
+        taxonomy_version=require_enum(
+            data["taxonomy_version"], f"{path}.taxonomy_version", ("v2",)
+        ),
+        contract_family=require_enum(
+            data["contract_family"], f"{path}.contract_family", CONTRACT_FAMILIES
+        ),
+        contract_detail_tags=_require_canonical_tuple(
+            data.get("contract_detail_tags", []),
+            f"{path}.contract_detail_tags", CONTRACT_DETAIL_TAGS,
+        ),
+        trigger_tags=_require_canonical_tuple(
+            data.get("trigger_tags", []), f"{path}.trigger_tags", TRIGGER_TAGS
+        ),
+        execution_context=ExecutionContext(
+            devices=_require_canonical_tuple(
+                context["devices"], f"{path}.execution_context.devices", DEVICES,
+                allow_empty=False,
+            ),
+            modes=_require_canonical_tuple(
+                context["modes"], f"{path}.execution_context.modes", MODES,
+                allow_empty=False,
+            ),
+            phases=_require_canonical_tuple(
+                context["phases"], f"{path}.execution_context.phases", PHASES,
+                allow_empty=False,
+            ),
+            distributed=require_bool(
+                context["distributed"], f"{path}.execution_context.distributed"
+            ),
+        ),
+        failure_type=require_enum(
+            data["failure_type"], f"{path}.failure_type", FAILURE_TYPES
+        ),
+        root_cause_tags=_require_canonical_tuple(
+            data.get("root_cause_tags", []), f"{path}.root_cause_tags", ROOT_CAUSE_TAGS
+        ),
+        component_tags=_require_canonical_tuple(
+            data.get("component_tags", []), f"{path}.component_tags", COMPONENT_TAGS
+        ),
+    )
+
+
+def derived_slices(taxonomy: TaskTaxonomyV2) -> tuple[str, ...]:
+    selected = set()
+    if taxonomy.contract_family == "result" and "numerical" in taxonomy.contract_detail_tags:
+        selected.add("precision")
+    if set(taxonomy.trigger_tags) & BOUNDARY_TRIGGER_TAGS:
+        selected.add("boundary")
+    if "cuda" in taxonomy.execution_context.devices or "device" in taxonomy.contract_detail_tags:
+        selected.add("device")
+    return tuple(sorted(selected))
+
 
 BOUNDARY_SUBCLASSES = ("B1", "B2", "B3", "B4", "B5")
 PRECISION_SUBCLASSES = ("P1", "P2", "P3", "P4", "P5")
