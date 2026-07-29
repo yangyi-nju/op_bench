@@ -2,7 +2,9 @@
 
 from op_bench.factory.artifacts import (
     FactoryArtifactStore,
+    load_canonical_json_artifact,
     load_factory_contract,
+    load_regular_file_bytes,
 )
 from op_bench.factory.archive import (
     PreQualityArchive,
@@ -48,6 +50,12 @@ from op_bench.factory.prompt_quality import (
     empty_private_index,
     scan_rendered_prompt,
     validate_prompt_quality_evidence,
+)
+from op_bench.factory.quality_release import (
+    QualityTaskRecord,
+    build_historical_dispositions,
+    validate_quality_task,
+    write_historical_dispositions,
 )
 from op_bench.factory.release import (
     DatasetReleaseInput,
@@ -98,6 +106,7 @@ __all__ = [
     "PrivateAnswerIndex",
     "PromptFinding",
     "PromptQualityEvidence",
+    "QualityTaskRecord",
     "RISK_SIGNALS",
     "ScreeningFinding",
     "ScreeningRuleSet",
@@ -112,12 +121,15 @@ __all__ = [
     "build_complexity_evidence",
     "build_private_answer_index",
     "build_prompt_quality_evidence",
+    "build_historical_dispositions",
     "build_dataset_release",
     "factory_content_hash",
     "empty_private_index",
     "freeze_dataset_bytes",
     "keyword_pack",
     "load_factory_contract",
+    "load_canonical_json_artifact",
+    "load_regular_file_bytes",
     "load_pre_quality_archive",
     "match_keyword_packs",
     "parse_taxonomy_v2",
@@ -129,5 +141,7 @@ __all__ = [
     "semantic_duplicate_fingerprint",
     "validate_admission_chain",
     "validate_prompt_quality_evidence",
+    "validate_quality_task",
     "validate_problem_taxonomy",
+    "write_historical_dispositions",
 ]

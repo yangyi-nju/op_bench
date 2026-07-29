@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opbench.dev/schemas/v07_quality_release.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_type",
+    "schema_version",
+    "dataset_id",
+    "dataset_hash",
+    "created_at",
+    "task_count",
+    "k",
+    "required_candidate_count",
+    "records",
+    "content_hash"
+  ],
+  "properties": {
+    "contract_type": {"const": "historical_readmission_index"},
+    "schema_version": {"const": "v1"},
+    "dataset_id": {"type": "string", "minLength": 1},
+    "dataset_hash": {"$ref": "#/$defs/hash"},
+    "created_at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "task_count": {"const": 25},
+    "k": {"type": "integer", "minimum": 0, "maximum": 25},
+    "required_candidate_count": {
+      "type": "integer",
+      "minimum": 75,
+      "maximum": 150
+    },
+    "records": {
+      "type": "array",
+      "minItems": 25,
+      "maxItems": 25,
+      "items": {"$ref": "#/$defs/record"}
+    },
+    "content_hash": {"$ref": "#/$defs/hash"}
+  },
+  "$defs": {
+    "hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_type",
+        "artifact_id",
+        "content_hash",
+        "relative_path"
+      ],
+      "properties": {
+        "artifact_type": {"type": "string", "minLength": 1},
+        "artifact_id": {"type": "string", "minLength": 1},
+        "content_hash": {"$ref": "#/$defs/hash"},
+        "relative_path": {
+          "type": "string",
+          "pattern": "^[^/][^\\\\]*\\.json$"
+        }
+      }
+    },
+    "record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "task_id",
+        "public_task_id",
+        "origin",
+        "task_path",
+        "taxonomy_hash",
+        "prompt_evidence",
+        "complexity_evidence",
+        "admission_evidence",
+        "disposition"
+      ],
+      "properties": {
+        "task_id": {"type": "string", "minLength": 1},
+        "public_task_id": {
+          "type": "string",
+          "pattern": "^opbench-v07-t[0-9]{4}$"
+        },
+        "origin": {
+          "enum": ["retained_historical", "new", "replacement"]
+        },
+        "task_path": {"type": "string", "minLength": 1},
+        "taxonomy_hash": {"$ref": "#/$defs/hash"},
+        "prompt_evidence": {"$ref": "#/$defs/reference"},
+        "complexity_evidence": {"$ref": "#/$defs/reference"},
+        "admission_evidence": {"$ref": "#/$defs/reference"},
+        "disposition": {"enum": ["retained", "deferred", "retired"]}
+      }
+    }
+  }
+}

@@ -156,6 +156,12 @@ def _parse_contract_bytes(content: bytes) -> FactoryContract:
 
 
 def load_factory_contract(path: Path) -> FactoryContract:
+    return _parse_contract_bytes(load_regular_file_bytes(path))
+
+
+def load_regular_file_bytes(path: Path) -> bytes:
+    """Read a real regular file without following a final symlink."""
+
     if not isinstance(path, Path):
         raise ContractError("artifact path: expected Path")
     if path.is_symlink():
@@ -179,7 +185,23 @@ def load_factory_contract(path: Path) -> FactoryContract:
             chunks.append(chunk)
     finally:
         os.close(descriptor)
-    return _parse_contract_bytes(b"".join(chunks))
+    return b"".join(chunks)
+
+
+def load_canonical_json_artifact(path: Path) -> Mapping[str, object]:
+    """Load an exact canonical JSON object from a no-symlink regular file."""
+
+    content = load_regular_file_bytes(path)
+    try:
+        decoded = content.decode("utf-8")
+        value = json.loads(decoded)
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ContractError("artifact: invalid JSON") from exc
+    if canonical_json(value).encode("utf-8") != content:
+        raise ContractError("artifact: expected canonical JSON")
+    if not isinstance(value, Mapping):
+        raise ContractError("artifact: expected JSON object")
+    return value
 
 
 class FactoryArtifactStore:
