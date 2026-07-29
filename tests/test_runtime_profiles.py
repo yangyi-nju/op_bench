@@ -23,6 +23,7 @@ EXPECTED_PROFILE_IDS = (
     "remote-cpu-boundary-torch2.3-py311-v1",
     "remote-cpu-boundary-torch2.4-py311-v1",
     "remote-cpu-compile-pytorch-2.6-py311-v1",
+    "remote-cpu-expansion-nightly-torch2.12.0dev20260407-py311-v1",
     "remote-cpu-matched-torch2.7-py311-v1",
     "remote-cpu-pytorch-2.6-py311-v1",
     "remote-cpu-source-boundary-py311-v1",
@@ -61,7 +62,7 @@ class RuntimeProfileRegistryTests(unittest.TestCase):
         self.assertTrue(REGISTRY_PATH.is_file())
         self.assertTrue(REGISTRY_SCHEMA_PATH.is_file())
 
-    def test_loads_ten_sorted_complete_profiles_deterministically(self) -> None:
+    def test_loads_sorted_complete_profiles_deterministically(self) -> None:
         profiles_module = importlib.import_module("op_bench.runtime.profiles")
 
         first = profiles_module.load_runtime_profile_registry(REGISTRY_PATH)
@@ -75,7 +76,7 @@ class RuntimeProfileRegistryTests(unittest.TestCase):
             first.canonical_bytes,
             (canonical_json(first.to_dict()) + "\n").encode("utf-8"),
         )
-        self.assertEqual(len({item.content_hash for item in first.profiles}), 12)
+        self.assertEqual(len({item.content_hash for item in first.profiles}), 13)
         for profile in first.profiles:
             with self.subTest(profile=profile.profile_id):
                 self.assertEqual(profile.hardware.identity_type, "hardware")

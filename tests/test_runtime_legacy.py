@@ -10,6 +10,11 @@ from unittest.mock import patch
 
 from op_bench.dataset import DatasetManifest
 from op_bench.integrity import replay_spec_hash
+from op_bench.registry import (
+    EnvironmentRegistry,
+    SourceRegistry,
+    resolve_task_assets,
+)
 from op_bench.runtime.legacy import (
     LegacyV05Defaults,
     _executable_source_revision,
@@ -45,6 +50,7 @@ PROFILE_BY_ENVIRONMENT = {
     "pytorch-matched-boundary-torch2.6.0-cu124": "remote-cuda-boundary-torch2.6-cu124-v1",
     "pytorch-matched-ff89ebc-torch2.4.0-py311-cu124": "remote-cuda-matched-torch2.4-cu124-py311-v1",
     "pytorch-matched-06e9dea-torch2.7.0-py311-cpu": "remote-cpu-matched-torch2.7-py311-v1",
+    "pytorch-nightly-20260407-torch2.12.0dev-cpu-py311": "remote-cpu-expansion-nightly-torch2.12.0dev20260407-py311-v1",
 }
 
 
@@ -323,6 +329,54 @@ class LegacyV05ProjectionTests(unittest.TestCase):
                     projected.runtime.timeout_ms,
                     task.timeout_sec * 1_000,
                 )
+
+    def test_projects_quality_nightly_environment_to_exact_runtime_profile(
+        self,
+    ) -> None:
+        original = TaskManifest.load(
+            REPO_ROOT
+            / "tasks/pytorch/124385_load_state_dict_prefix/task.json"
+        )
+        data = copy.deepcopy(original.data)
+        data["environment_ref"] = (
+            "pytorch-nightly-20260407-torch2.12.0dev-cpu-py311"
+        )
+        data["environment"] = {
+            "backend": "remote_docker",
+            "tier": "cpu_python_overlay",
+            "source_loading": copy.deepcopy(
+                original.data["environment"]["source_loading"]
+            ),
+        }
+        task = resolve_task_assets(
+            TaskManifest(task_dir=original.task_dir, data=data),
+            environment_registry=EnvironmentRegistry.load(
+                REPO_ROOT / "environments/registry.json"
+            ),
+            source_registry=SourceRegistry.load(
+                REPO_ROOT / "sources/registry.json"
+            ),
+        )
+        profiles = {
+            profile.profile_id: profile
+            for profile in load_runtime_profile_registry(
+                PROFILE_REGISTRY_PATH
+            ).profiles
+        }
+
+        projected = full_task_spec_from_v05(task)
+        expected = profiles[PROFILE_BY_ENVIRONMENT[task.environment_ref]]
+        self.assertEqual(projected.runtime, expected)
+        self.assertEqual(
+            projected.runtime.image.identifier,
+            "op-bench/pytorch-nightly-cpu:2.12.0.dev20260407-py311",
+        )
+        self.assertEqual(
+            projected.runtime.image.digest,
+            "sha256:1cc689314e1e00bbd5c2d79ae098ecce6bb00592ea0d51cda7f6610970425d9b",
+        )
+        self.assertEqual(projected.runtime.timeout_ms, 900_000)
+        self.assertFalse(projected.runtime.requires_gpu)
 
     def test_real_mcp_agent_identity_binds_model_cli_protocol_and_prompt(self) -> None:
         selected = agent_spec_for_v1_adapter(

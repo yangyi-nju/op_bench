@@ -289,6 +289,63 @@
     {
       "contract_type": "runtime_profile",
       "schema_version": "v1",
+      "profile_id": "remote-cpu-expansion-nightly-torch2.12.0dev20260407-py311-v1",
+      "backend": "remote_docker",
+      "runtime_tier": "cpu_python_overlay",
+      "source_loading_mode": "python_overlay",
+      "platform": "linux/amd64",
+      "image": {
+        "contract_type": "content_identity",
+        "schema_version": "v1",
+        "identity_type": "image",
+        "identifier": "op-bench/pytorch-nightly-cpu:2.12.0.dev20260407-py311",
+        "digest": "sha256:1cc689314e1e00bbd5c2d79ae098ecce6bb00592ea0d51cda7f6610970425d9b",
+        "digest_kind": "image_id"
+      },
+      "hardware": {
+        "contract_type": "content_identity",
+        "schema_version": "v1",
+        "identity_type": "hardware",
+        "identifier": "linux-amd64-cpu-compile-v1",
+        "digest": "sha256:45013d178c47733bc6238fe2238f68463447a03d044741d0daa8a21973232ea4",
+        "digest_kind": "declared"
+      },
+      "requires_gpu": false,
+      "network_policy": "denied",
+      "timeout_ms": 900000,
+      "mount_policy": {
+        "contract_type": "mount_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-sync-readonly-v1",
+        "workspace_target": "/workspace",
+        "source_access": "remote_sync",
+        "artifact_access": "controller_only",
+        "root_filesystem": "read_only_container"
+      },
+      "resource_policy": {
+        "contract_type": "resource_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-cpu-compile-v1",
+        "cpu_millis": 8000,
+        "memory_bytes": 17179869184,
+        "pids_limit": 1024,
+        "gpu_count": 0
+      },
+      "cleanup_policy": {
+        "contract_type": "cleanup_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-attempt-owned-v1",
+        "scope": "attempt_owned_only",
+        "grace_ms": 5000,
+        "timeout_ms": 60000,
+        "remove_workspace": true,
+        "remove_process": true,
+        "remove_container": true
+      }
+    },
+    {
+      "contract_type": "runtime_profile",
+      "schema_version": "v1",
       "profile_id": "remote-cpu-matched-torch2.7-py311-v1",
       "backend": "remote_docker",
       "runtime_tier": "cpu_python_overlay",
