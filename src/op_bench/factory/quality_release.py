@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
+from datetime import datetime
 import hashlib
 import json
 from pathlib import Path, PurePosixPath
 import re
-from typing import Any
+from typing import Any, ClassVar
 
 from op_bench.dataset import DatasetManifest
 from op_bench.factory.artifacts import (
@@ -31,7 +32,15 @@ from op_bench.factory.score_four_support import (
     load_score_four_support,
     validate_score_four_review_binding,
 )
-from op_bench.factory.taxonomy import parse_taxonomy_v2
+from op_bench.factory.taxonomy import (
+    CONTRACT_FAMILIES,
+    DEVICES,
+    MODES,
+    PHASES,
+    TRIGGER_TAGS,
+    ExecutionContext,
+    parse_taxonomy_v2,
+)
 from op_bench.integrity import REPLAY_SPEC_HASH_KIND, replay_spec_hash
 from op_bench.registry import (
     EnvironmentRegistry,
@@ -113,6 +122,73 @@ _EXPECTED_HISTORICAL_DISPOSITIONS = {
     "pytorch__163961__dataloader_subset": "retained",
     "pytorch__168295__autograd_create_graph": "retired",
 }
+QUALITY_CANDIDATE_STATUSES = (
+    "accepted_for_build",
+    "deferred_for_review",
+    "hard_rejected",
+)
+HARD_CANDIDATE_REJECTION_REASONS = (
+    "change.documentation_cleanup_refactor_only",
+    "duplicate.exact_provenance",
+    "runtime.hardware_outside_v07_scope",
+    "runtime.unsupported_cpu_cuda",
+    "source.missing_immutable_commits",
+    "source.unavailable",
+    "test.no_behavioral_evidence",
+)
+_QUALITY_CHANGE_TYPES = (
+    "ADDED",
+    "COPIED",
+    "DELETED",
+    "MODIFIED",
+    "RENAMED",
+)
+_QUALITY_CHANGE_KINDS = (
+    "bugfix",
+    "cleanup",
+    "documentation",
+    "feature",
+    "refactor",
+)
+_CAPTURE_SET_FIELDS = (
+    "contract_type",
+    "schema_version",
+    "repository",
+    "captured_at",
+    "acquisition",
+    "candidates",
+    "content_hash",
+)
+_CAPTURE_FIELDS = (
+    "repository",
+    "pr_number",
+    "pr_url",
+    "base_commit",
+    "merge_commit",
+    "merged_at",
+    "title",
+    "description",
+    "linked_issues",
+    "changed_files",
+    "changed_file_count",
+    "behavioral_test_evidence",
+    "change_kind",
+    "source_available",
+    "runtime_supported",
+    "required_hardware",
+    "execution_hints",
+    "proposed_contract_families",
+    "proposed_trigger_tags",
+    "preliminary_review_reasons",
+)
+_ACQUISITION_FIELDS = (
+    "connector_first",
+    "connector_queries",
+    "bulk_method",
+    "merge_commit_rule",
+    "base_commit_rule",
+    "changed_files_rule",
+)
 
 
 @dataclass(frozen=True)
@@ -214,6 +290,638 @@ class QualityTaskRecord:
                 data["disposition"], f"{path}.disposition"
             ),
         )
+
+
+@dataclass(frozen=True)
+class QualityChangedFile:
+    path: str
+    additions: int
+    deletions: int
+    change_type: str
+    is_test: bool
+
+    @classmethod
+    def wire_fields(cls) -> tuple[str, ...]:
+        return ("path", "additions", "deletions", "change_type", "is_test")
+
+    def __post_init__(self) -> None:
+        _safe_relative_path(self.path, "changed_file.path")
+        _nonnegative_int(self.additions, "changed_file.additions")
+        _nonnegative_int(self.deletions, "changed_file.deletions")
+        if self.change_type not in _QUALITY_CHANGE_TYPES:
+            raise ContractError("changed_file.change_type: unsupported value")
+        if not isinstance(self.is_test, bool):
+            raise ContractError("changed_file.is_test: expected boolean")
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "path": self.path,
+            "additions": self.additions,
+            "deletions": self.deletions,
+            "change_type": self.change_type,
+            "is_test": self.is_test,
+        }
+
+    @classmethod
+    def from_dict(
+        cls,
+        value: object,
+        *,
+        path: str = "changed_file",
+    ) -> "QualityChangedFile":
+        data = _exact_mapping(value, path, cls.wire_fields())
+        return cls(
+            path=_string(data["path"], f"{path}.path"),
+            additions=_nonnegative_int(
+                data["additions"], f"{path}.additions"
+            ),
+            deletions=_nonnegative_int(
+                data["deletions"], f"{path}.deletions"
+            ),
+            change_type=_enum(
+                data["change_type"],
+                f"{path}.change_type",
+                _QUALITY_CHANGE_TYPES,
+            ),
+            is_test=_boolean(data["is_test"], f"{path}.is_test"),
+        )
+
+
+@dataclass(frozen=True)
+class QualityLinkedIssue:
+    number: int
+    url: str
+
+    @classmethod
+    def wire_fields(cls) -> tuple[str, ...]:
+        return ("number", "url")
+
+    def __post_init__(self) -> None:
+        _positive_int(self.number, "linked_issue.number")
+        expected = f"https://github.com/pytorch/pytorch/issues/{self.number}"
+        if self.url != expected:
+            raise ContractError(
+                f"linked_issue.url: expected {expected!r}"
+            )
+
+    def to_dict(self) -> dict[str, object]:
+        return {"number": self.number, "url": self.url}
+
+    @classmethod
+    def from_dict(
+        cls,
+        value: object,
+        *,
+        path: str = "linked_issue",
+    ) -> "QualityLinkedIssue":
+        data = _exact_mapping(value, path, cls.wire_fields())
+        return cls(
+            number=_positive_int(data["number"], f"{path}.number"),
+            url=_string(data["url"], f"{path}.url"),
+        )
+
+
+@dataclass(frozen=True)
+class QualityCandidateRecord:
+    contract_type: ClassVar[str] = "quality_candidate"
+    schema_version: ClassVar[str] = "v1"
+
+    candidate_id: str
+    repository: str
+    pr_number: int
+    pr_url: str
+    base_commit: str | None
+    merge_commit: str | None
+    merged_at: str
+    title: str
+    description: str
+    linked_issues: tuple[QualityLinkedIssue, ...]
+    changed_files: tuple[QualityChangedFile, ...]
+    changed_file_count: int
+    behavioral_test_evidence: bool
+    source_available: bool
+    runtime_supported: bool
+    required_hardware: tuple[str, ...]
+    execution_hints: ExecutionContext
+    proposed_contract_families: tuple[str, ...]
+    proposed_trigger_tags: tuple[str, ...]
+    candidate_status: str
+    created_at: str
+
+    @classmethod
+    def wire_fields(cls) -> tuple[str, ...]:
+        return (
+            "contract_type",
+            "schema_version",
+            "candidate_id",
+            "repository",
+            "pr_number",
+            "pr_url",
+            "base_commit",
+            "merge_commit",
+            "merged_at",
+            "title",
+            "description",
+            "linked_issues",
+            "changed_files",
+            "changed_file_count",
+            "behavioral_test_evidence",
+            "source_available",
+            "runtime_supported",
+            "required_hardware",
+            "execution_hints",
+            "proposed_contract_families",
+            "proposed_trigger_tags",
+            "candidate_status",
+            "created_at",
+            "content_hash",
+        )
+
+    @classmethod
+    def candidate_id_for(
+        cls,
+        *,
+        repository: str,
+        pr_number: int,
+        base_commit: str | None,
+        merge_commit: str | None,
+    ) -> str:
+        digest = canonical_sha256(
+            {
+                "repository": repository,
+                "pr_number": pr_number,
+                "base_commit": base_commit,
+                "merge_commit": merge_commit,
+            }
+        )
+        return "quality-candidate:v1:" + digest.removeprefix("sha256:")
+
+    def __post_init__(self) -> None:
+        if re.fullmatch(
+            r"quality-candidate:v1:[0-9a-f]{64}", self.candidate_id
+        ) is None:
+            raise ContractError("quality_candidate.candidate_id: invalid")
+        if self.repository != "pytorch/pytorch":
+            raise ContractError(
+                "quality_candidate.repository: expected 'pytorch/pytorch'"
+            )
+        _positive_int(self.pr_number, "quality_candidate.pr_number")
+        expected_url = (
+            f"https://github.com/{self.repository}/pull/{self.pr_number}"
+        )
+        if self.pr_url != expected_url:
+            raise ContractError(
+                f"quality_candidate.pr_url: expected {expected_url!r}"
+            )
+        _optional_commit(
+            self.base_commit, "quality_candidate.base_commit"
+        )
+        _optional_commit(
+            self.merge_commit, "quality_candidate.merge_commit"
+        )
+        if (
+            self.base_commit is not None
+            and self.merge_commit is not None
+            and self.base_commit == self.merge_commit
+        ):
+            raise ContractError(
+                "quality_candidate: base_commit must be the landed "
+                "commit's distinct first parent"
+            )
+        _timestamp(self.merged_at, "quality_candidate.merged_at")
+        _text(self.title, "quality_candidate.title")
+        _text(self.description, "quality_candidate.description")
+        if not isinstance(self.linked_issues, tuple):
+            raise ContractError(
+                "quality_candidate.linked_issues: expected tuple"
+            )
+        issue_numbers: list[int] = []
+        for index, issue in enumerate(self.linked_issues):
+            if not isinstance(issue, QualityLinkedIssue):
+                raise ContractError(
+                    f"quality_candidate.linked_issues[{index}]: "
+                    "expected QualityLinkedIssue"
+                )
+            issue_numbers.append(issue.number)
+        if issue_numbers != sorted(set(issue_numbers)):
+            raise ContractError(
+                "quality_candidate.linked_issues: expected unique number order"
+            )
+        if not isinstance(self.changed_files, tuple) or not self.changed_files:
+            raise ContractError(
+                "quality_candidate.changed_files: expected non-empty tuple"
+            )
+        changed_paths: list[str] = []
+        for index, changed_file in enumerate(self.changed_files):
+            if not isinstance(changed_file, QualityChangedFile):
+                raise ContractError(
+                    f"quality_candidate.changed_files[{index}]: "
+                    "expected QualityChangedFile"
+                )
+            changed_paths.append(changed_file.path)
+        if changed_paths != sorted(set(changed_paths)):
+            raise ContractError(
+                "quality_candidate.changed_files: expected unique path order"
+            )
+        _positive_int(
+            self.changed_file_count,
+            "quality_candidate.changed_file_count",
+        )
+        if self.changed_file_count != len(self.changed_files):
+            raise ContractError(
+                "quality_candidate.changed_file_count: incomplete "
+                "changed-file capture"
+            )
+        if not isinstance(self.behavioral_test_evidence, bool):
+            raise ContractError(
+                "quality_candidate.behavioral_test_evidence: expected boolean"
+            )
+        if self.behavioral_test_evidence != any(
+            item.is_test for item in self.changed_files
+        ):
+            raise ContractError(
+                "quality_candidate.behavioral_test_evidence: must match "
+                "changed test files"
+            )
+        for value, path in (
+            (self.source_available, "quality_candidate.source_available"),
+            (self.runtime_supported, "quality_candidate.runtime_supported"),
+        ):
+            _boolean(value, path)
+        _canonical_strings(
+            self.required_hardware,
+            "quality_candidate.required_hardware",
+            allow_empty=False,
+        )
+        _validate_candidate_execution_context(
+            self.execution_hints,
+            "quality_candidate.execution_hints",
+        )
+        _registry_tuple(
+            self.proposed_contract_families,
+            "quality_candidate.proposed_contract_families",
+            CONTRACT_FAMILIES,
+            allow_empty=False,
+        )
+        _registry_tuple(
+            self.proposed_trigger_tags,
+            "quality_candidate.proposed_trigger_tags",
+            TRIGGER_TAGS,
+            allow_empty=True,
+        )
+        if self.candidate_status not in QUALITY_CANDIDATE_STATUSES:
+            raise ContractError(
+                "quality_candidate.candidate_status: unsupported value"
+            )
+        _timestamp(self.created_at, "quality_candidate.created_at")
+        expected_id = self.candidate_id_for(
+            repository=self.repository,
+            pr_number=self.pr_number,
+            base_commit=self.base_commit,
+            merge_commit=self.merge_commit,
+        )
+        if self.candidate_id != expected_id:
+            raise ContractError(
+                f"quality_candidate.candidate_id: expected {expected_id!r}"
+            )
+
+    @property
+    def content_hash(self) -> str:
+        return canonical_sha256(self.to_dict(include_hash=False))
+
+    def to_dict(self, *, include_hash: bool = True) -> dict[str, object]:
+        payload: dict[str, object] = {
+            "contract_type": self.contract_type,
+            "schema_version": self.schema_version,
+            "candidate_id": self.candidate_id,
+            "repository": self.repository,
+            "pr_number": self.pr_number,
+            "pr_url": self.pr_url,
+            "base_commit": self.base_commit,
+            "merge_commit": self.merge_commit,
+            "merged_at": self.merged_at,
+            "title": self.title,
+            "description": self.description,
+            "linked_issues": [item.to_dict() for item in self.linked_issues],
+            "changed_files": [item.to_dict() for item in self.changed_files],
+            "changed_file_count": self.changed_file_count,
+            "behavioral_test_evidence": self.behavioral_test_evidence,
+            "source_available": self.source_available,
+            "runtime_supported": self.runtime_supported,
+            "required_hardware": list(self.required_hardware),
+            "execution_hints": _execution_context_dict(
+                self.execution_hints
+            ),
+            "proposed_contract_families": list(
+                self.proposed_contract_families
+            ),
+            "proposed_trigger_tags": list(self.proposed_trigger_tags),
+            "candidate_status": self.candidate_status,
+            "created_at": self.created_at,
+        }
+        if include_hash:
+            payload["content_hash"] = canonical_sha256(payload)
+        return payload
+
+    @classmethod
+    def from_dict(
+        cls,
+        value: object,
+        *,
+        path: str = "quality_candidate",
+    ) -> "QualityCandidateRecord":
+        data = _exact_mapping(value, path, cls.wire_fields())
+        if data["contract_type"] != cls.contract_type:
+            raise ContractError(
+                f"{path}.contract_type: expected {cls.contract_type!r}"
+            )
+        if data["schema_version"] != cls.schema_version:
+            raise ContractError(
+                f"{path}.schema_version: expected {cls.schema_version!r}"
+            )
+        record = cls(
+            candidate_id=_string(
+                data["candidate_id"], f"{path}.candidate_id"
+            ),
+            repository=_string(data["repository"], f"{path}.repository"),
+            pr_number=_positive_int(
+                data["pr_number"], f"{path}.pr_number"
+            ),
+            pr_url=_string(data["pr_url"], f"{path}.pr_url"),
+            base_commit=_optional_commit(
+                data["base_commit"], f"{path}.base_commit"
+            ),
+            merge_commit=_optional_commit(
+                data["merge_commit"], f"{path}.merge_commit"
+            ),
+            merged_at=_timestamp(
+                data["merged_at"], f"{path}.merged_at"
+            ),
+            title=_text(data["title"], f"{path}.title"),
+            description=_text(
+                data["description"], f"{path}.description"
+            ),
+            linked_issues=tuple(
+                QualityLinkedIssue.from_dict(
+                    item,
+                    path=f"{path}.linked_issues[{index}]",
+                )
+                for index, item in enumerate(
+                    _list(data["linked_issues"], f"{path}.linked_issues")
+                )
+            ),
+            changed_files=tuple(
+                QualityChangedFile.from_dict(
+                    item,
+                    path=f"{path}.changed_files[{index}]",
+                )
+                for index, item in enumerate(
+                    _list(data["changed_files"], f"{path}.changed_files")
+                )
+            ),
+            changed_file_count=_positive_int(
+                data["changed_file_count"],
+                f"{path}.changed_file_count",
+            ),
+            behavioral_test_evidence=_boolean(
+                data["behavioral_test_evidence"],
+                f"{path}.behavioral_test_evidence",
+            ),
+            source_available=_boolean(
+                data["source_available"], f"{path}.source_available"
+            ),
+            runtime_supported=_boolean(
+                data["runtime_supported"], f"{path}.runtime_supported"
+            ),
+            required_hardware=_canonical_strings(
+                data["required_hardware"],
+                f"{path}.required_hardware",
+                allow_empty=False,
+            ),
+            execution_hints=_parse_candidate_execution_context(
+                data["execution_hints"], f"{path}.execution_hints"
+            ),
+            proposed_contract_families=_registry_tuple(
+                data["proposed_contract_families"],
+                f"{path}.proposed_contract_families",
+                CONTRACT_FAMILIES,
+                allow_empty=False,
+            ),
+            proposed_trigger_tags=_registry_tuple(
+                data["proposed_trigger_tags"],
+                f"{path}.proposed_trigger_tags",
+                TRIGGER_TAGS,
+                allow_empty=True,
+            ),
+            candidate_status=_enum(
+                data["candidate_status"],
+                f"{path}.candidate_status",
+                QUALITY_CANDIDATE_STATUSES,
+            ),
+            created_at=_timestamp(
+                data["created_at"], f"{path}.created_at"
+            ),
+        )
+        stored_hash = _require_hash(
+            data["content_hash"], f"{path}.content_hash"
+        )
+        if stored_hash != record.content_hash:
+            raise ContractError(
+                f"{path}.content_hash: expected {record.content_hash!r}"
+            )
+        return record
+
+
+@dataclass(frozen=True)
+class QualityCandidateDecision:
+    contract_type: ClassVar[str] = "quality_candidate_decision"
+    schema_version: ClassVar[str] = "v1"
+
+    decision_id: str
+    candidate_id: str
+    candidate_hash: str
+    disposition: str
+    hard_rejection_reasons: tuple[str, ...]
+    preliminary_review_reasons: tuple[str, ...]
+    created_at: str
+
+    @classmethod
+    def wire_fields(cls) -> tuple[str, ...]:
+        return (
+            "contract_type",
+            "schema_version",
+            "decision_id",
+            "candidate_id",
+            "candidate_hash",
+            "disposition",
+            "hard_rejection_reasons",
+            "preliminary_review_reasons",
+            "created_at",
+            "content_hash",
+        )
+
+    @classmethod
+    def decision_id_for(
+        cls,
+        *,
+        candidate_id: str,
+        candidate_hash: str,
+        disposition: str,
+        hard_rejection_reasons: tuple[str, ...],
+        preliminary_review_reasons: tuple[str, ...],
+    ) -> str:
+        digest = canonical_sha256(
+            {
+                "candidate_id": candidate_id,
+                "candidate_hash": candidate_hash,
+                "disposition": disposition,
+                "hard_rejection_reasons": list(hard_rejection_reasons),
+                "preliminary_review_reasons": list(
+                    preliminary_review_reasons
+                ),
+            }
+        )
+        return "quality-decision:v1:" + digest.removeprefix("sha256:")
+
+    def __post_init__(self) -> None:
+        if re.fullmatch(
+            r"quality-decision:v1:[0-9a-f]{64}", self.decision_id
+        ) is None:
+            raise ContractError("quality_candidate_decision.decision_id: invalid")
+        if re.fullmatch(
+            r"quality-candidate:v1:[0-9a-f]{64}", self.candidate_id
+        ) is None:
+            raise ContractError(
+                "quality_candidate_decision.candidate_id: invalid"
+            )
+        _require_hash(
+            self.candidate_hash,
+            "quality_candidate_decision.candidate_hash",
+        )
+        if self.disposition not in QUALITY_CANDIDATE_STATUSES:
+            raise ContractError(
+                "quality_candidate_decision.disposition: unsupported value"
+            )
+        _registry_tuple(
+            self.hard_rejection_reasons,
+            "quality_candidate_decision.hard_rejection_reasons",
+            HARD_CANDIDATE_REJECTION_REASONS,
+            allow_empty=True,
+        )
+        _canonical_strings(
+            self.preliminary_review_reasons,
+            "quality_candidate_decision.preliminary_review_reasons",
+            allow_empty=True,
+        )
+        if bool(self.hard_rejection_reasons) != (
+            self.disposition == "hard_rejected"
+        ):
+            raise ContractError(
+                "quality_candidate_decision: hard reasons must exactly "
+                "match hard_rejected disposition"
+            )
+        if (
+            self.disposition == "accepted_for_build"
+            and self.preliminary_review_reasons
+        ):
+            raise ContractError(
+                "quality_candidate_decision: accepted candidate cannot "
+                "carry preliminary review reasons"
+            )
+        _timestamp(
+            self.created_at, "quality_candidate_decision.created_at"
+        )
+        expected_id = self.decision_id_for(
+            candidate_id=self.candidate_id,
+            candidate_hash=self.candidate_hash,
+            disposition=self.disposition,
+            hard_rejection_reasons=self.hard_rejection_reasons,
+            preliminary_review_reasons=self.preliminary_review_reasons,
+        )
+        if self.decision_id != expected_id:
+            raise ContractError(
+                f"quality_candidate_decision.decision_id: "
+                f"expected {expected_id!r}"
+            )
+
+    @property
+    def content_hash(self) -> str:
+        return canonical_sha256(self.to_dict(include_hash=False))
+
+    def to_dict(self, *, include_hash: bool = True) -> dict[str, object]:
+        payload: dict[str, object] = {
+            "contract_type": self.contract_type,
+            "schema_version": self.schema_version,
+            "decision_id": self.decision_id,
+            "candidate_id": self.candidate_id,
+            "candidate_hash": self.candidate_hash,
+            "disposition": self.disposition,
+            "hard_rejection_reasons": list(self.hard_rejection_reasons),
+            "preliminary_review_reasons": list(
+                self.preliminary_review_reasons
+            ),
+            "created_at": self.created_at,
+        }
+        if include_hash:
+            payload["content_hash"] = canonical_sha256(payload)
+        return payload
+
+    @classmethod
+    def from_dict(
+        cls,
+        value: object,
+        *,
+        path: str = "quality_candidate_decision",
+    ) -> "QualityCandidateDecision":
+        data = _exact_mapping(value, path, cls.wire_fields())
+        if data["contract_type"] != cls.contract_type:
+            raise ContractError(
+                f"{path}.contract_type: expected {cls.contract_type!r}"
+            )
+        if data["schema_version"] != cls.schema_version:
+            raise ContractError(
+                f"{path}.schema_version: expected {cls.schema_version!r}"
+            )
+        hard_reasons = _registry_tuple(
+            data["hard_rejection_reasons"],
+            f"{path}.hard_rejection_reasons",
+            HARD_CANDIDATE_REJECTION_REASONS,
+            allow_empty=True,
+        )
+        review_reasons = _canonical_strings(
+            data["preliminary_review_reasons"],
+            f"{path}.preliminary_review_reasons",
+            allow_empty=True,
+        )
+        decision = cls(
+            decision_id=_string(
+                data["decision_id"], f"{path}.decision_id"
+            ),
+            candidate_id=_string(
+                data["candidate_id"], f"{path}.candidate_id"
+            ),
+            candidate_hash=_require_hash(
+                data["candidate_hash"], f"{path}.candidate_hash"
+            ),
+            disposition=_enum(
+                data["disposition"],
+                f"{path}.disposition",
+                QUALITY_CANDIDATE_STATUSES,
+            ),
+            hard_rejection_reasons=hard_reasons,
+            preliminary_review_reasons=review_reasons,
+            created_at=_timestamp(
+                data["created_at"], f"{path}.created_at"
+            ),
+        )
+        stored_hash = _require_hash(
+            data["content_hash"], f"{path}.content_hash"
+        )
+        if stored_hash != decision.content_hash:
+            raise ContractError(
+                f"{path}.content_hash: expected {decision.content_hash!r}"
+            )
+        return decision
 
 
 @dataclass(frozen=True)
@@ -620,6 +1328,896 @@ def validate_historical_index(
                 )
             )
     return tuple(_ordered_unique(errors))
+
+
+@dataclass(frozen=True)
+class _CapturedQualityCandidate:
+    repository: str
+    pr_number: int
+    pr_url: str
+    base_commit: str | None
+    merge_commit: str | None
+    merged_at: str
+    title: str
+    description: str
+    linked_issues: tuple[QualityLinkedIssue, ...]
+    changed_files: tuple[QualityChangedFile, ...]
+    changed_file_count: int
+    behavioral_test_evidence: bool
+    change_kind: str
+    source_available: bool
+    runtime_supported: bool
+    required_hardware: tuple[str, ...]
+    execution_hints: ExecutionContext
+    proposed_contract_families: tuple[str, ...]
+    proposed_trigger_tags: tuple[str, ...]
+    preliminary_review_reasons: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class _QualityCandidateFunnel:
+    capture_set: Mapping[str, object]
+    records: tuple[QualityCandidateRecord, ...]
+    decisions: tuple[QualityCandidateDecision, ...]
+    index: Mapping[str, object]
+
+
+def load_quality_candidate_captures(
+    path: Path,
+) -> tuple[QualityCandidateRecord, ...]:
+    """Load canonical private captures as unscreened typed candidate facts."""
+
+    capture_set, captures = _load_quality_candidate_capture_set(path)
+    created_at = _timestamp(
+        capture_set["captured_at"], "capture_set.captured_at"
+    )
+    records: list[QualityCandidateRecord] = []
+    for capture in captures:
+        record, _ = _screen_quality_capture(capture, created_at)
+        records.append(record)
+    return tuple(records)
+
+
+def write_quality_candidate_funnel(
+    root: Path,
+    captures_path: Path,
+    historical_index_path: Path,
+    output_dir: Path,
+    created_at: str,
+) -> Mapping[str, object]:
+    """Screen private candidate captures into canonical per-candidate facts."""
+
+    if not isinstance(root, Path) or not root.is_dir():
+        raise ContractError("root: expected repository directory")
+    if not isinstance(output_dir, Path):
+        raise ContractError("output_dir: expected Path")
+    _assert_no_symlink_ancestors(output_dir, "output directory")
+    funnel = _build_quality_candidate_funnel(
+        captures_path,
+        historical_index_path,
+        created_at,
+    )
+    expected_candidate_names: set[str] = set()
+    expected_decision_names: set[str] = set()
+    for candidate, decision in zip(funnel.records, funnel.decisions):
+        candidate_name = f"pr-{candidate.pr_number}.json"
+        decision_name = f"pr-{candidate.pr_number}.json"
+        expected_candidate_names.add(candidate_name)
+        expected_decision_names.add(decision_name)
+        _write_canonical(
+            output_dir / "candidates" / candidate_name,
+            candidate.to_dict(),
+        )
+        _write_canonical(
+            output_dir / "decisions" / decision_name,
+            decision.to_dict(),
+        )
+    for directory, expected in (
+        (output_dir / "candidates", expected_candidate_names),
+        (output_dir / "decisions", expected_decision_names),
+    ):
+        if directory.exists():
+            actual = {
+                item.name
+                for item in directory.iterdir()
+                if item.is_file() and item.suffix == ".json"
+            }
+            stale = sorted(actual - expected)
+            if stale:
+                raise ContractError(
+                    f"output directory: stale candidate artifacts {stale}"
+                )
+    _write_canonical(output_dir / "screening_index.json", funnel.index)
+    return funnel.index
+
+
+def validate_candidate_index(
+    root: Path,
+    index_path: Path,
+    *,
+    require_minimum: bool = True,
+) -> tuple[str, ...]:
+    """Validate a canonical preliminary candidate index and its full tree."""
+
+    errors: list[str] = []
+    try:
+        encoded = load_regular_file_bytes(index_path)
+        value = json.loads(encoded.decode("utf-8"))
+    except (ContractError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        return (f"candidate_index: {exc}",)
+    if not isinstance(value, Mapping):
+        return ("candidate_index: expected object",)
+    index_fields = (
+        "contract_type",
+        "schema_version",
+        "repository",
+        "created_at",
+        "historical_k",
+        "required_candidate_count",
+        "capture_set_hash",
+        "capture_count",
+        "candidate_count",
+        "eligible_candidate_count",
+        "disposition_counts",
+        "proposed_contract_families",
+        "proposed_trigger_tags",
+        "execution_context_summary",
+        "provenance",
+        "records",
+        "content_hash",
+    )
+    try:
+        _exact_mapping(value, "candidate_index", index_fields)
+        if encoded != canonical_json(value).encode("utf-8"):
+            errors.append("candidate_index: expected canonical JSON bytes")
+        if value["contract_type"] != "quality_candidate_screening_index":
+            errors.append("candidate_index.contract_type: mismatch")
+        if value["schema_version"] != "v1":
+            errors.append("candidate_index.schema_version: mismatch")
+        if value["repository"] != "pytorch/pytorch":
+            errors.append("candidate_index.repository: mismatch")
+        _timestamp(value["created_at"], "candidate_index.created_at")
+        _require_hash(
+            value["capture_set_hash"], "candidate_index.capture_set_hash"
+        )
+        if value["content_hash"] != canonical_sha256(
+            {
+                key: item
+                for key, item in value.items()
+                if key != "content_hash"
+            }
+        ):
+            errors.append("candidate_index.content_hash: payload hash mismatch")
+    except ContractError as exc:
+        errors.append(str(exc))
+
+    records_value = value.get("records")
+    if not isinstance(records_value, list):
+        return (*_ordered_unique(errors), "candidate_index.records: expected array")
+    candidates: list[QualityCandidateRecord] = []
+    decisions: list[QualityCandidateDecision] = []
+    seen_prs: set[int] = set()
+    seen_ids: set[str] = set()
+    seen_provenance: set[tuple[object, ...]] = set()
+    for index, entry_value in enumerate(records_value):
+        path = f"candidate_index.records[{index}]"
+        try:
+            entry = _exact_mapping(
+                entry_value,
+                path,
+                ("pr_number", "candidate", "decision", "disposition"),
+            )
+            pr_number = _positive_int(
+                entry["pr_number"], f"{path}.pr_number"
+            )
+            candidate_reference = FactoryArtifactReference.from_dict(
+                entry["candidate"], path=f"{path}.candidate"
+            )
+            decision_reference = FactoryArtifactReference.from_dict(
+                entry["decision"], path=f"{path}.decision"
+            )
+            if candidate_reference.relative_path != (
+                f"candidates/pr-{pr_number}.json"
+            ):
+                raise ContractError(
+                    f"{path}.candidate.relative_path: mismatch"
+                )
+            if decision_reference.relative_path != (
+                f"decisions/pr-{pr_number}.json"
+            ):
+                raise ContractError(
+                    f"{path}.decision.relative_path: mismatch"
+                )
+            candidate_value = load_factory_contract(
+                index_path.parent
+                / PurePosixPath(candidate_reference.relative_path)
+            )
+            decision_value = load_factory_contract(
+                index_path.parent
+                / PurePosixPath(decision_reference.relative_path)
+            )
+            if not isinstance(candidate_value, QualityCandidateRecord):
+                raise ContractError(f"{path}.candidate: wrong contract")
+            if not isinstance(decision_value, QualityCandidateDecision):
+                raise ContractError(f"{path}.decision: wrong contract")
+            if candidate_reference.artifact_type != candidate_value.contract_type:
+                raise ContractError(
+                    f"{path}.candidate.artifact_type: mismatch"
+                )
+            if candidate_reference.artifact_id != candidate_value.candidate_id:
+                raise ContractError(f"{path}.candidate.artifact_id: mismatch")
+            if candidate_reference.content_hash != candidate_value.content_hash:
+                raise ContractError(f"{path}.candidate.content_hash: mismatch")
+            if decision_reference.artifact_type != decision_value.contract_type:
+                raise ContractError(
+                    f"{path}.decision.artifact_type: mismatch"
+                )
+            if decision_reference.artifact_id != decision_value.decision_id:
+                raise ContractError(f"{path}.decision.artifact_id: mismatch")
+            if decision_reference.content_hash != decision_value.content_hash:
+                raise ContractError(f"{path}.decision.content_hash: mismatch")
+            if candidate_value.pr_number != pr_number:
+                raise ContractError(f"{path}.pr_number: candidate mismatch")
+            if decision_value.candidate_id != candidate_value.candidate_id:
+                raise ContractError(f"{path}.decision.candidate_id: mismatch")
+            if decision_value.candidate_hash != candidate_value.content_hash:
+                raise ContractError(f"{path}.decision.candidate_hash: mismatch")
+            if (
+                entry["disposition"]
+                != candidate_value.candidate_status
+                or entry["disposition"] != decision_value.disposition
+            ):
+                raise ContractError(f"{path}.disposition: mismatch")
+            provenance = (
+                candidate_value.repository,
+                candidate_value.pr_number,
+                candidate_value.base_commit,
+                candidate_value.merge_commit,
+            )
+            if pr_number in seen_prs:
+                raise ContractError(f"{path}.pr_number: duplicate PR")
+            if candidate_value.candidate_id in seen_ids:
+                raise ContractError(f"{path}.candidate_id: duplicate")
+            if provenance in seen_provenance:
+                raise ContractError(f"{path}: exact provenance duplicate")
+            seen_prs.add(pr_number)
+            seen_ids.add(candidate_value.candidate_id)
+            seen_provenance.add(provenance)
+            candidates.append(candidate_value)
+            decisions.append(decision_value)
+        except (ContractError, OSError) as exc:
+            errors.append(str(exc))
+
+    if len(candidates) == len(records_value):
+        try:
+            _validate_candidate_index_aggregates(
+                value,
+                tuple(candidates),
+                tuple(decisions),
+                require_minimum=require_minimum,
+            )
+        except ContractError as exc:
+            errors.append(str(exc))
+
+    official_index = (
+        index_path.resolve()
+        == (
+            root / "factory/v0.7/p8/screening/screening_index.json"
+        ).resolve()
+    )
+    if official_index:
+        captures_path = root / "factory/v0.7/p8/captures.json"
+        historical_path = (
+            root / "factory/v0.7/p7/historical_readmission.json"
+        )
+        try:
+            rebuilt = _build_quality_candidate_funnel(
+                captures_path,
+                historical_path,
+                _timestamp(value["created_at"], "candidate_index.created_at"),
+            )
+            if encoded != canonical_json(rebuilt.index).encode("utf-8"):
+                errors.append(
+                    "candidate_index: bytes differ from exact capture rebuild"
+                )
+            for candidate, decision in zip(
+                rebuilt.records, rebuilt.decisions
+            ):
+                expected = (
+                    (
+                        index_path.parent
+                        / "candidates"
+                        / f"pr-{candidate.pr_number}.json",
+                        candidate.to_dict(),
+                    ),
+                    (
+                        index_path.parent
+                        / "decisions"
+                        / f"pr-{candidate.pr_number}.json",
+                        decision.to_dict(),
+                    ),
+                )
+                for artifact_path, payload in expected:
+                    if load_regular_file_bytes(artifact_path) != canonical_json(
+                        payload
+                    ).encode("utf-8"):
+                        errors.append(
+                            f"{artifact_path.relative_to(root)}: "
+                            "bytes differ from exact capture rebuild"
+                        )
+        except (ContractError, OSError) as exc:
+            errors.append(f"candidate_index.capture_rebuild: {exc}")
+    return tuple(_ordered_unique(errors))
+
+
+def _build_quality_candidate_funnel(
+    captures_path: Path,
+    historical_index_path: Path,
+    created_at: str,
+) -> _QualityCandidateFunnel:
+    _timestamp(created_at, "created_at")
+    capture_set, captures = _load_quality_candidate_capture_set(captures_path)
+    historical = load_canonical_json_artifact(historical_index_path)
+    if historical.get("contract_type") != "historical_readmission_index":
+        raise ContractError("historical_index.contract_type: mismatch")
+    if historical.get("schema_version") != "v1":
+        raise ContractError("historical_index.schema_version: mismatch")
+    if historical.get("content_hash") != canonical_sha256(
+        {
+            key: item
+            for key, item in historical.items()
+            if key != "content_hash"
+        }
+    ):
+        raise ContractError("historical_index.content_hash: payload mismatch")
+    k = _nonnegative_int(historical.get("k"), "historical_index.k")
+    if k > 25:
+        raise ContractError("historical_index.k: expected at most 25")
+    if historical.get("required_candidate_count") != 3 * (50 - k):
+        raise ContractError(
+            "historical_index.required_candidate_count: mismatch"
+        )
+    historical_prs: set[int] = set()
+    for index, record in enumerate(
+        _list(historical.get("records"), "historical_index.records")
+    ):
+        record_data = _mapping(
+            record, f"historical_index.records[{index}]"
+        )
+        task_id = _string(
+            record_data.get("task_id"),
+            f"historical_index.records[{index}].task_id",
+        )
+        parts = task_id.split("__", 2)
+        if len(parts) < 3 or not parts[1].isdigit():
+            raise ContractError(
+                f"historical_index.records[{index}].task_id: "
+                "missing PR provenance"
+            )
+        historical_prs.add(int(parts[1]))
+
+    records: list[QualityCandidateRecord] = []
+    decisions: list[QualityCandidateDecision] = []
+    for capture in captures:
+        if capture.pr_number in historical_prs:
+            raise ContractError(
+                f"captures: PR {capture.pr_number} is historical"
+            )
+        record, decision = _screen_quality_capture(capture, created_at)
+        records.append(record)
+        decisions.append(decision)
+    pairs = sorted(
+        zip(records, decisions),
+        key=lambda pair: (pair[0].repository, pair[0].pr_number),
+    )
+    records_tuple = tuple(pair[0] for pair in pairs)
+    decisions_tuple = tuple(pair[1] for pair in pairs)
+    index = _quality_candidate_index_payload(
+        capture_set,
+        records_tuple,
+        decisions_tuple,
+        historical_k=k,
+        created_at=created_at,
+    )
+    return _QualityCandidateFunnel(
+        capture_set=capture_set,
+        records=records_tuple,
+        decisions=decisions_tuple,
+        index=index,
+    )
+
+
+def _load_quality_candidate_capture_set(
+    path: Path,
+) -> tuple[Mapping[str, object], tuple[_CapturedQualityCandidate, ...]]:
+    value = load_canonical_json_artifact(path)
+    data = _exact_mapping(
+        value, "capture_set", _CAPTURE_SET_FIELDS
+    )
+    if data["contract_type"] != "quality_candidate_capture_set":
+        raise ContractError("capture_set.contract_type: mismatch")
+    if data["schema_version"] != "v1":
+        raise ContractError("capture_set.schema_version: mismatch")
+    if data["repository"] != "pytorch/pytorch":
+        raise ContractError("capture_set.repository: mismatch")
+    _timestamp(data["captured_at"], "capture_set.captured_at")
+    acquisition = _exact_mapping(
+        data["acquisition"],
+        "capture_set.acquisition",
+        _ACQUISITION_FIELDS,
+    )
+    if acquisition["connector_first"] is not True:
+        raise ContractError(
+            "capture_set.acquisition.connector_first: required"
+        )
+    queries = _canonical_strings(
+        acquisition["connector_queries"],
+        "capture_set.acquisition.connector_queries",
+        allow_empty=False,
+        preserve_order=True,
+    )
+    if len(queries) < 2:
+        raise ContractError(
+            "capture_set.acquisition.connector_queries: "
+            "multiple search cohorts required"
+        )
+    if (
+        acquisition["bulk_method"]
+        != "authenticated_read_only_gh_api_graphql"
+    ):
+        raise ContractError(
+            "capture_set.acquisition.bulk_method: unsupported value"
+        )
+    for field in (
+        "merge_commit_rule",
+        "base_commit_rule",
+        "changed_files_rule",
+    ):
+        _string(acquisition[field], f"capture_set.acquisition.{field}")
+    if data["content_hash"] != canonical_sha256(
+        {
+            key: item
+            for key, item in data.items()
+            if key != "content_hash"
+        }
+    ):
+        raise ContractError("capture_set.content_hash: payload mismatch")
+    candidates_value = _list(data["candidates"], "capture_set.candidates")
+    if not candidates_value:
+        raise ContractError("capture_set.candidates: expected non-empty array")
+    captures = tuple(
+        _parse_quality_capture(
+            item, path=f"capture_set.candidates[{index}]"
+        )
+        for index, item in enumerate(candidates_value)
+    )
+    pr_numbers = [item.pr_number for item in captures]
+    if len(set(pr_numbers)) != len(pr_numbers):
+        raise ContractError("capture_set.candidates: duplicate PR")
+    provenance = [
+        (
+            item.repository,
+            item.pr_number,
+            item.base_commit,
+            item.merge_commit,
+        )
+        for item in captures
+    ]
+    if len(set(provenance)) != len(provenance):
+        raise ContractError(
+            "capture_set.candidates: exact provenance duplicate"
+        )
+    if pr_numbers != sorted(pr_numbers):
+        raise ContractError(
+            "capture_set.candidates: expected ascending PR number order"
+        )
+    return data, captures
+
+
+def _parse_quality_capture(
+    value: object,
+    *,
+    path: str,
+) -> _CapturedQualityCandidate:
+    data = _exact_mapping(value, path, _CAPTURE_FIELDS)
+    repository = _string(data["repository"], f"{path}.repository")
+    if repository != "pytorch/pytorch":
+        raise ContractError(f"{path}.repository: mismatch")
+    pr_number = _positive_int(data["pr_number"], f"{path}.pr_number")
+    pr_url = _string(data["pr_url"], f"{path}.pr_url")
+    if pr_url != f"https://github.com/{repository}/pull/{pr_number}":
+        raise ContractError(f"{path}.pr_url: mismatch")
+    base_commit = _optional_commit(
+        data["base_commit"], f"{path}.base_commit"
+    )
+    merge_commit = _optional_commit(
+        data["merge_commit"], f"{path}.merge_commit"
+    )
+    if (
+        base_commit is not None
+        and merge_commit is not None
+        and base_commit == merge_commit
+    ):
+        raise ContractError(
+            f"{path}.base_commit: expected landed commit first parent"
+        )
+    linked_issues = tuple(
+        QualityLinkedIssue.from_dict(
+            item, path=f"{path}.linked_issues[{index}]"
+        )
+        for index, item in enumerate(
+            _list(data["linked_issues"], f"{path}.linked_issues")
+        )
+    )
+    changed_files = tuple(
+        QualityChangedFile.from_dict(
+            item, path=f"{path}.changed_files[{index}]"
+        )
+        for index, item in enumerate(
+            _list(data["changed_files"], f"{path}.changed_files")
+        )
+    )
+    if not changed_files:
+        raise ContractError(f"{path}.changed_files: expected non-empty array")
+    changed_file_count = _positive_int(
+        data["changed_file_count"], f"{path}.changed_file_count"
+    )
+    if changed_file_count != len(changed_files):
+        raise ContractError(
+            f"{path}.changed_file_count: incomplete changed-file capture"
+        )
+    evidence = _boolean(
+        data["behavioral_test_evidence"],
+        f"{path}.behavioral_test_evidence",
+    )
+    if evidence != any(item.is_test for item in changed_files):
+        raise ContractError(
+            f"{path}.behavioral_test_evidence: "
+            "must match changed test files"
+        )
+    return _CapturedQualityCandidate(
+        repository=repository,
+        pr_number=pr_number,
+        pr_url=pr_url,
+        base_commit=base_commit,
+        merge_commit=merge_commit,
+        merged_at=_timestamp(
+            data["merged_at"], f"{path}.merged_at"
+        ),
+        title=_text(data["title"], f"{path}.title"),
+        description=_text(
+            data["description"], f"{path}.description"
+        ),
+        linked_issues=linked_issues,
+        changed_files=changed_files,
+        changed_file_count=changed_file_count,
+        behavioral_test_evidence=evidence,
+        change_kind=_enum(
+            data["change_kind"], f"{path}.change_kind", _QUALITY_CHANGE_KINDS
+        ),
+        source_available=_boolean(
+            data["source_available"], f"{path}.source_available"
+        ),
+        runtime_supported=_boolean(
+            data["runtime_supported"], f"{path}.runtime_supported"
+        ),
+        required_hardware=_canonical_strings(
+            data["required_hardware"],
+            f"{path}.required_hardware",
+            allow_empty=False,
+        ),
+        execution_hints=_parse_candidate_execution_context(
+            data["execution_hints"], f"{path}.execution_hints"
+        ),
+        proposed_contract_families=_registry_tuple(
+            data["proposed_contract_families"],
+            f"{path}.proposed_contract_families",
+            CONTRACT_FAMILIES,
+            allow_empty=False,
+        ),
+        proposed_trigger_tags=_registry_tuple(
+            data["proposed_trigger_tags"],
+            f"{path}.proposed_trigger_tags",
+            TRIGGER_TAGS,
+            allow_empty=True,
+        ),
+        preliminary_review_reasons=_canonical_strings(
+            data["preliminary_review_reasons"],
+            f"{path}.preliminary_review_reasons",
+            allow_empty=True,
+        ),
+    )
+
+
+def _screen_quality_capture(
+    capture: _CapturedQualityCandidate,
+    created_at: str,
+) -> tuple[QualityCandidateRecord, QualityCandidateDecision]:
+    hard_reason_set: set[str] = set()
+    if capture.base_commit is None or capture.merge_commit is None:
+        hard_reason_set.add("source.missing_immutable_commits")
+    if not capture.source_available:
+        hard_reason_set.add("source.unavailable")
+    if not capture.runtime_supported:
+        hard_reason_set.add("runtime.unsupported_cpu_cuda")
+    if capture.change_kind in ("cleanup", "documentation", "refactor"):
+        hard_reason_set.add("change.documentation_cleanup_refactor_only")
+    if not capture.behavioral_test_evidence:
+        hard_reason_set.add("test.no_behavioral_evidence")
+    if (
+        not set(capture.required_hardware) <= {"cpu", "cuda"}
+        or capture.execution_hints.distributed
+    ):
+        hard_reason_set.add("runtime.hardware_outside_v07_scope")
+    hard_reasons = tuple(
+        reason
+        for reason in HARD_CANDIDATE_REJECTION_REASONS
+        if reason in hard_reason_set
+    )
+    if hard_reasons:
+        status = "hard_rejected"
+    elif capture.preliminary_review_reasons:
+        status = "deferred_for_review"
+    else:
+        status = "accepted_for_build"
+    candidate_id = QualityCandidateRecord.candidate_id_for(
+        repository=capture.repository,
+        pr_number=capture.pr_number,
+        base_commit=capture.base_commit,
+        merge_commit=capture.merge_commit,
+    )
+    record = QualityCandidateRecord(
+        candidate_id=candidate_id,
+        repository=capture.repository,
+        pr_number=capture.pr_number,
+        pr_url=capture.pr_url,
+        base_commit=capture.base_commit,
+        merge_commit=capture.merge_commit,
+        merged_at=capture.merged_at,
+        title=capture.title,
+        description=capture.description,
+        linked_issues=capture.linked_issues,
+        changed_files=capture.changed_files,
+        changed_file_count=capture.changed_file_count,
+        behavioral_test_evidence=capture.behavioral_test_evidence,
+        source_available=capture.source_available,
+        runtime_supported=capture.runtime_supported,
+        required_hardware=capture.required_hardware,
+        execution_hints=capture.execution_hints,
+        proposed_contract_families=capture.proposed_contract_families,
+        proposed_trigger_tags=capture.proposed_trigger_tags,
+        candidate_status=status,
+        created_at=created_at,
+    )
+    decision_id = QualityCandidateDecision.decision_id_for(
+        candidate_id=record.candidate_id,
+        candidate_hash=record.content_hash,
+        disposition=status,
+        hard_rejection_reasons=hard_reasons,
+        preliminary_review_reasons=capture.preliminary_review_reasons,
+    )
+    decision = QualityCandidateDecision(
+        decision_id=decision_id,
+        candidate_id=record.candidate_id,
+        candidate_hash=record.content_hash,
+        disposition=status,
+        hard_rejection_reasons=hard_reasons,
+        preliminary_review_reasons=capture.preliminary_review_reasons,
+        created_at=created_at,
+    )
+    return record, decision
+
+
+def _quality_candidate_index_payload(
+    capture_set: Mapping[str, object],
+    records: tuple[QualityCandidateRecord, ...],
+    decisions: tuple[QualityCandidateDecision, ...],
+    *,
+    historical_k: int,
+    created_at: str,
+) -> Mapping[str, object]:
+    if len(records) != len(decisions):
+        raise ContractError("candidate funnel: record/decision count mismatch")
+    disposition_counts = {
+        status: sum(item.disposition == status for item in decisions)
+        for status in QUALITY_CANDIDATE_STATUSES
+    }
+    proposed_families = tuple(
+        family
+        for family in CONTRACT_FAMILIES
+        if any(family in record.proposed_contract_families for record in records)
+    )
+    proposed_triggers = tuple(
+        trigger
+        for trigger in TRIGGER_TAGS
+        if any(trigger in record.proposed_trigger_tags for record in records)
+    )
+    device_counts = {
+        value: sum(
+            value in record.execution_hints.devices for record in records
+        )
+        for value in DEVICES
+    }
+    mode_counts = {
+        value: sum(
+            value in record.execution_hints.modes for record in records
+        )
+        for value in MODES
+    }
+    phase_counts = {
+        value: sum(
+            value in record.execution_hints.phases for record in records
+        )
+        for value in PHASES
+    }
+    acquisition = _mapping(
+        capture_set["acquisition"], "capture_set.acquisition"
+    )
+    payload: dict[str, object] = {
+        "contract_type": "quality_candidate_screening_index",
+        "schema_version": "v1",
+        "repository": "pytorch/pytorch",
+        "created_at": created_at,
+        "historical_k": historical_k,
+        "required_candidate_count": 3 * (50 - historical_k),
+        "capture_set_hash": capture_set["content_hash"],
+        "capture_count": len(
+            _list(capture_set["candidates"], "capture_set.candidates")
+        ),
+        "candidate_count": len(records),
+        "eligible_candidate_count": sum(
+            decision.disposition != "hard_rejected"
+            for decision in decisions
+        ),
+        "disposition_counts": disposition_counts,
+        "proposed_contract_families": list(proposed_families),
+        "proposed_trigger_tags": list(proposed_triggers),
+        "execution_context_summary": {
+            "devices": [
+                value for value in DEVICES if device_counts[value] > 0
+            ],
+            "modes": [
+                value for value in MODES if mode_counts[value] > 0
+            ],
+            "phases": [
+                value for value in PHASES if phase_counts[value] > 0
+            ],
+            "candidate_counts": {
+                **device_counts,
+                **mode_counts,
+                **phase_counts,
+            },
+        },
+        "provenance": {
+            field: acquisition[field] for field in _ACQUISITION_FIELDS
+        },
+        "records": [
+            {
+                "pr_number": record.pr_number,
+                "candidate": FactoryArtifactReference(
+                    artifact_type=record.contract_type,
+                    artifact_id=record.candidate_id,
+                    content_hash=record.content_hash,
+                    relative_path=f"candidates/pr-{record.pr_number}.json",
+                ).to_dict(),
+                "decision": FactoryArtifactReference(
+                    artifact_type=decision.contract_type,
+                    artifact_id=decision.decision_id,
+                    content_hash=decision.content_hash,
+                    relative_path=f"decisions/pr-{record.pr_number}.json",
+                ).to_dict(),
+                "disposition": decision.disposition,
+            }
+            for record, decision in zip(records, decisions)
+        ],
+    }
+    payload["content_hash"] = canonical_sha256(payload)
+    return payload
+
+
+def _validate_candidate_index_aggregates(
+    value: Mapping[str, object],
+    records: tuple[QualityCandidateRecord, ...],
+    decisions: tuple[QualityCandidateDecision, ...],
+    *,
+    require_minimum: bool,
+) -> None:
+    historical_k = _nonnegative_int(
+        value.get("historical_k"), "candidate_index.historical_k"
+    )
+    if historical_k > 25:
+        raise ContractError(
+            "candidate_index.historical_k: expected at most 25"
+        )
+    required = 3 * (50 - historical_k)
+    if value.get("required_candidate_count") != required:
+        raise ContractError(
+            "candidate_index.required_candidate_count: mismatch"
+        )
+    if value.get("capture_count") != len(records):
+        raise ContractError("candidate_index.capture_count: mismatch")
+    if value.get("candidate_count") != len(records):
+        raise ContractError("candidate_index.candidate_count: mismatch")
+    eligible = sum(
+        decision.disposition != "hard_rejected" for decision in decisions
+    )
+    if value.get("eligible_candidate_count") != eligible:
+        raise ContractError(
+            "candidate_index.eligible_candidate_count: mismatch"
+        )
+    if require_minimum and len(records) < required:
+        raise ContractError(
+            "candidate_index.candidate_count: below required "
+            f"minimum {required}"
+        )
+    counts = {
+        status: sum(item.disposition == status for item in decisions)
+        for status in QUALITY_CANDIDATE_STATUSES
+    }
+    if value.get("disposition_counts") != counts:
+        raise ContractError(
+            "candidate_index.disposition_counts: mismatch"
+        )
+    expected_families = [
+        family
+        for family in CONTRACT_FAMILIES
+        if any(family in item.proposed_contract_families for item in records)
+    ]
+    if value.get("proposed_contract_families") != expected_families:
+        raise ContractError(
+            "candidate_index.proposed_contract_families: mismatch"
+        )
+    expected_triggers = [
+        trigger
+        for trigger in TRIGGER_TAGS
+        if any(trigger in item.proposed_trigger_tags for item in records)
+    ]
+    if value.get("proposed_trigger_tags") != expected_triggers:
+        raise ContractError(
+            "candidate_index.proposed_trigger_tags: mismatch"
+        )
+    context = value.get("execution_context_summary")
+    expected_context = {
+        "devices": [
+            item
+            for item in DEVICES
+            if any(item in record.execution_hints.devices for record in records)
+        ],
+        "modes": [
+            item
+            for item in MODES
+            if any(item in record.execution_hints.modes for record in records)
+        ],
+        "phases": [
+            item
+            for item in PHASES
+            if any(item in record.execution_hints.phases for record in records)
+        ],
+        "candidate_counts": {
+            **{
+                item: sum(
+                    item in record.execution_hints.devices for record in records
+                )
+                for item in DEVICES
+            },
+            **{
+                item: sum(
+                    item in record.execution_hints.modes for record in records
+                )
+                for item in MODES
+            },
+            **{
+                item: sum(
+                    item in record.execution_hints.phases for record in records
+                )
+                for item in PHASES
+            },
+        },
+    }
+    if context != expected_context:
+        raise ContractError(
+            "candidate_index.execution_context_summary: mismatch"
+        )
 
 
 def build_historical_dispositions(
@@ -1813,6 +3411,161 @@ def _safe_relative_path(value: object, label: str) -> str:
     return text
 
 
+def _text(value: object, path: str) -> str:
+    if not isinstance(value, str):
+        raise ContractError(f"{path}: expected string")
+    return value
+
+
+def _boolean(value: object, path: str) -> bool:
+    if not isinstance(value, bool):
+        raise ContractError(f"{path}: expected boolean")
+    return value
+
+
+def _nonnegative_int(value: object, path: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise ContractError(f"{path}: expected non-negative integer")
+    return value
+
+
+def _positive_int(value: object, path: str) -> int:
+    result = _nonnegative_int(value, path)
+    if result < 1:
+        raise ContractError(f"{path}: expected positive integer")
+    return result
+
+
+def _enum(
+    value: object,
+    path: str,
+    allowed: Sequence[str],
+) -> str:
+    text = _string(value, path)
+    if text not in allowed:
+        raise ContractError(f"{path}: unsupported value")
+    return text
+
+
+def _optional_commit(value: object, path: str) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str) or re.fullmatch(r"[0-9a-f]{40}", value) is None:
+        raise ContractError(f"{path}: expected 40-character lowercase Git SHA")
+    return value
+
+
+def _timestamp(value: object, path: str) -> str:
+    if not isinstance(value, str) or _UTC_SECONDS.fullmatch(value) is None:
+        raise ContractError(f"{path}: expected UTC RFC3339 seconds")
+    try:
+        datetime.fromisoformat(value.removesuffix("Z") + "+00:00")
+    except ValueError as exc:
+        raise ContractError(f"{path}: expected UTC RFC3339 seconds") from exc
+    return value
+
+
+def _canonical_strings(
+    value: object,
+    path: str,
+    *,
+    allow_empty: bool,
+    preserve_order: bool = False,
+) -> tuple[str, ...]:
+    if not isinstance(value, (list, tuple)):
+        raise ContractError(f"{path}: expected array")
+    result = tuple(_string(item, f"{path}[{index}]") for index, item in enumerate(value))
+    if not allow_empty and not result:
+        raise ContractError(f"{path}: expected non-empty array")
+    if len(set(result)) != len(result):
+        raise ContractError(f"{path}: duplicate value")
+    if not preserve_order and result != tuple(sorted(result)):
+        raise ContractError(f"{path}: expected lexical order")
+    return result
+
+
+def _registry_tuple(
+    value: object,
+    path: str,
+    registry: Sequence[str],
+    *,
+    allow_empty: bool,
+) -> tuple[str, ...]:
+    result = _canonical_strings(
+        value,
+        path,
+        allow_empty=allow_empty,
+        preserve_order=True,
+    )
+    if not set(result) <= set(registry):
+        raise ContractError(f"{path}: unsupported value")
+    expected = tuple(item for item in registry if item in result)
+    if result != expected:
+        raise ContractError(f"{path}: expected registry order")
+    return result
+
+
+def _parse_candidate_execution_context(
+    value: object,
+    path: str,
+) -> ExecutionContext:
+    data = _exact_mapping(
+        value,
+        path,
+        ("devices", "modes", "phases", "distributed"),
+    )
+    return ExecutionContext(
+        devices=_registry_tuple(
+            data["devices"],
+            f"{path}.devices",
+            DEVICES,
+            allow_empty=False,
+        ),
+        modes=_registry_tuple(
+            data["modes"],
+            f"{path}.modes",
+            MODES,
+            allow_empty=False,
+        ),
+        phases=_registry_tuple(
+            data["phases"],
+            f"{path}.phases",
+            PHASES,
+            allow_empty=False,
+        ),
+        distributed=_boolean(
+            data["distributed"], f"{path}.distributed"
+        ),
+    )
+
+
+def _validate_candidate_execution_context(
+    value: object,
+    path: str,
+) -> None:
+    if not isinstance(value, ExecutionContext):
+        raise ContractError(f"{path}: expected ExecutionContext")
+    _registry_tuple(
+        value.devices, f"{path}.devices", DEVICES, allow_empty=False
+    )
+    _registry_tuple(
+        value.modes, f"{path}.modes", MODES, allow_empty=False
+    )
+    _registry_tuple(
+        value.phases, f"{path}.phases", PHASES, allow_empty=False
+    )
+    _boolean(value.distributed, f"{path}.distributed")
+
+
+def _execution_context_dict(value: ExecutionContext) -> dict[str, object]:
+    return {
+        "devices": list(value.devices),
+        "modes": list(value.modes),
+        "phases": list(value.phases),
+        "distributed": value.distributed,
+    }
+
+
 def _exact_mapping(
     value: object,
     path: str,
@@ -1921,8 +3674,17 @@ def _write_canonical(path: Path, value: object) -> None:
 
 
 __all__ = [
+    "HARD_CANDIDATE_REJECTION_REASONS",
+    "QUALITY_CANDIDATE_STATUSES",
+    "QualityCandidateDecision",
+    "QualityCandidateRecord",
+    "QualityChangedFile",
+    "QualityLinkedIssue",
     "QualityTaskRecord",
     "build_historical_dispositions",
+    "load_quality_candidate_captures",
+    "validate_candidate_index",
     "validate_quality_task",
+    "write_quality_candidate_funnel",
     "write_historical_dispositions",
 ]

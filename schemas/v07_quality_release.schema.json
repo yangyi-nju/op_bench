@@ -97,6 +97,408 @@
         "admission_evidence": {"$ref": "#/$defs/reference"},
         "disposition": {"enum": ["retained", "deferred", "retired"]}
       }
+    },
+    "quality_changed_file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "additions",
+        "deletions",
+        "change_type",
+        "is_test"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\\\)[^/]+(?:/[^/]+)*$"
+        },
+        "additions": {"type": "integer", "minimum": 0},
+        "deletions": {"type": "integer", "minimum": 0},
+        "change_type": {
+          "enum": ["ADDED", "COPIED", "DELETED", "MODIFIED", "RENAMED"]
+        },
+        "is_test": {"type": "boolean"}
+      }
+    },
+    "quality_linked_issue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["number", "url"],
+      "properties": {
+        "number": {"type": "integer", "minimum": 1},
+        "url": {
+          "type": "string",
+          "pattern": "^https://github\\.com/pytorch/pytorch/issues/[1-9][0-9]*$"
+        }
+      }
+    },
+    "quality_execution_hints": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["devices", "modes", "phases", "distributed"],
+      "properties": {
+        "devices": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"enum": ["cpu", "cuda"]}
+        },
+        "modes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"enum": ["eager", "compile"]}
+        },
+        "phases": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"enum": ["forward", "backward"]}
+        },
+        "distributed": {"type": "boolean"}
+      }
+    },
+    "quality_candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_type",
+        "schema_version",
+        "candidate_id",
+        "repository",
+        "pr_number",
+        "pr_url",
+        "base_commit",
+        "merge_commit",
+        "merged_at",
+        "title",
+        "description",
+        "linked_issues",
+        "changed_files",
+        "changed_file_count",
+        "behavioral_test_evidence",
+        "source_available",
+        "runtime_supported",
+        "required_hardware",
+        "execution_hints",
+        "proposed_contract_families",
+        "proposed_trigger_tags",
+        "candidate_status",
+        "created_at",
+        "content_hash"
+      ],
+      "properties": {
+        "contract_type": {"const": "quality_candidate"},
+        "schema_version": {"const": "v1"},
+        "candidate_id": {
+          "type": "string",
+          "pattern": "^quality-candidate:v1:[0-9a-f]{64}$"
+        },
+        "repository": {"const": "pytorch/pytorch"},
+        "pr_number": {"type": "integer", "minimum": 1},
+        "pr_url": {
+          "type": "string",
+          "pattern": "^https://github\\.com/pytorch/pytorch/pull/[1-9][0-9]*$"
+        },
+        "base_commit": {
+          "oneOf": [
+            {"type": "null"},
+            {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+          ]
+        },
+        "merge_commit": {
+          "oneOf": [
+            {"type": "null"},
+            {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+          ]
+        },
+        "merged_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "title": {"type": "string"},
+        "description": {"type": "string"},
+        "linked_issues": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/quality_linked_issue"}
+        },
+        "changed_files": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/quality_changed_file"}
+        },
+        "changed_file_count": {"type": "integer", "minimum": 1},
+        "behavioral_test_evidence": {"type": "boolean"},
+        "source_available": {"type": "boolean"},
+        "runtime_supported": {"type": "boolean"},
+        "required_hardware": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "execution_hints": {"$ref": "#/$defs/quality_execution_hints"},
+        "proposed_contract_families": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "result",
+              "tensor_metadata",
+              "mutation_state",
+              "gradient",
+              "api_behavior",
+              "efficiency_safety"
+            ]
+          }
+        },
+        "proposed_trigger_tags": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "empty_or_zero",
+              "scalar_or_low_rank",
+              "extreme_value_or_size",
+              "invalid_or_endpoint_parameter",
+              "noncontiguous_or_special_layout",
+              "mixed_dtype_or_precision_mode",
+              "dynamic_shape",
+              "mutation_or_alias",
+              "device_specific"
+            ]
+          }
+        },
+        "candidate_status": {
+          "enum": [
+            "accepted_for_build",
+            "deferred_for_review",
+            "hard_rejected"
+          ]
+        },
+        "created_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "content_hash": {"$ref": "#/$defs/hash"}
+      }
+    },
+    "quality_candidate_decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_type",
+        "schema_version",
+        "decision_id",
+        "candidate_id",
+        "candidate_hash",
+        "disposition",
+        "hard_rejection_reasons",
+        "preliminary_review_reasons",
+        "created_at",
+        "content_hash"
+      ],
+      "properties": {
+        "contract_type": {"const": "quality_candidate_decision"},
+        "schema_version": {"const": "v1"},
+        "decision_id": {
+          "type": "string",
+          "pattern": "^quality-decision:v1:[0-9a-f]{64}$"
+        },
+        "candidate_id": {
+          "type": "string",
+          "pattern": "^quality-candidate:v1:[0-9a-f]{64}$"
+        },
+        "candidate_hash": {"$ref": "#/$defs/hash"},
+        "disposition": {
+          "enum": [
+            "accepted_for_build",
+            "deferred_for_review",
+            "hard_rejected"
+          ]
+        },
+        "hard_rejection_reasons": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "change.documentation_cleanup_refactor_only",
+              "duplicate.exact_provenance",
+              "runtime.hardware_outside_v07_scope",
+              "runtime.unsupported_cpu_cuda",
+              "source.missing_immutable_commits",
+              "source.unavailable",
+              "test.no_behavioral_evidence"
+            ]
+          }
+        },
+        "preliminary_review_reasons": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "created_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "content_hash": {"$ref": "#/$defs/hash"}
+      }
+    },
+    "quality_candidate_screening_index": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_type",
+        "schema_version",
+        "repository",
+        "created_at",
+        "historical_k",
+        "required_candidate_count",
+        "capture_set_hash",
+        "capture_count",
+        "candidate_count",
+        "eligible_candidate_count",
+        "disposition_counts",
+        "proposed_contract_families",
+        "proposed_trigger_tags",
+        "execution_context_summary",
+        "provenance",
+        "records",
+        "content_hash"
+      ],
+      "properties": {
+        "contract_type": {"const": "quality_candidate_screening_index"},
+        "schema_version": {"const": "v1"},
+        "repository": {"const": "pytorch/pytorch"},
+        "created_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "historical_k": {"type": "integer", "minimum": 0, "maximum": 25},
+        "required_candidate_count": {
+          "type": "integer",
+          "minimum": 75,
+          "maximum": 150
+        },
+        "capture_set_hash": {"$ref": "#/$defs/hash"},
+        "capture_count": {"type": "integer", "minimum": 1},
+        "candidate_count": {"type": "integer", "minimum": 1},
+        "eligible_candidate_count": {"type": "integer", "minimum": 0},
+        "disposition_counts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "accepted_for_build",
+            "deferred_for_review",
+            "hard_rejected"
+          ],
+          "properties": {
+            "accepted_for_build": {"type": "integer", "minimum": 0},
+            "deferred_for_review": {"type": "integer", "minimum": 0},
+            "hard_rejected": {"type": "integer", "minimum": 0}
+          }
+        },
+        "proposed_contract_families": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string"}
+        },
+        "proposed_trigger_tags": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string"}
+        },
+        "execution_context_summary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["devices", "modes", "phases", "candidate_counts"],
+          "properties": {
+            "devices": {"type": "array", "uniqueItems": true},
+            "modes": {"type": "array", "uniqueItems": true},
+            "phases": {"type": "array", "uniqueItems": true},
+            "candidate_counts": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "cpu",
+                "cuda",
+                "eager",
+                "compile",
+                "forward",
+                "backward"
+              ],
+              "properties": {
+                "cpu": {"type": "integer", "minimum": 0},
+                "cuda": {"type": "integer", "minimum": 0},
+                "eager": {"type": "integer", "minimum": 0},
+                "compile": {"type": "integer", "minimum": 0},
+                "forward": {"type": "integer", "minimum": 0},
+                "backward": {"type": "integer", "minimum": 0}
+              }
+            }
+          }
+        },
+        "provenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "connector_first",
+            "connector_queries",
+            "bulk_method",
+            "merge_commit_rule",
+            "base_commit_rule",
+            "changed_files_rule"
+          ],
+          "properties": {
+            "connector_first": {"const": true},
+            "connector_queries": {
+              "type": "array",
+              "minItems": 2,
+              "uniqueItems": true,
+              "items": {"type": "string", "minLength": 1}
+            },
+            "bulk_method": {
+              "const": "authenticated_read_only_gh_api_graphql"
+            },
+            "merge_commit_rule": {"type": "string", "minLength": 1},
+            "base_commit_rule": {"type": "string", "minLength": 1},
+            "changed_files_rule": {"type": "string", "minLength": 1}
+          }
+        },
+        "records": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "pr_number",
+              "candidate",
+              "decision",
+              "disposition"
+            ],
+            "properties": {
+              "pr_number": {"type": "integer", "minimum": 1},
+              "candidate": {"$ref": "#/$defs/reference"},
+              "decision": {"$ref": "#/$defs/reference"},
+              "disposition": {
+                "enum": [
+                  "accepted_for_build",
+                  "deferred_for_review",
+                  "hard_rejected"
+                ]
+              }
+            }
+          }
+        },
+        "content_hash": {"$ref": "#/$defs/hash"}
+      }
     }
   }
 }

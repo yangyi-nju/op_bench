@@ -15,6 +15,7 @@ if str(SRC) not in sys.path:
 
 from op_bench.dataset import DatasetManifest
 from op_bench.factory.quality_release import (
+    validate_candidate_index,
     validate_historical_index,
     validate_quality_task,
 )
@@ -25,10 +26,39 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("dataset", type=Path, nargs="?")
     parser.add_argument("--historical-index", type=Path)
+    parser.add_argument("--candidate-index", type=Path)
     parser.add_argument("--require-verified", action="store_true")
     args = parser.parse_args(argv)
-    if (args.dataset is None) == (args.historical_index is None):
-        parser.error("provide exactly one Dataset or --historical-index")
+    selected = sum(
+        item is not None
+        for item in (
+            args.dataset,
+            args.historical_index,
+            args.candidate_index,
+        )
+    )
+    if selected != 1:
+        parser.error(
+            "provide exactly one Dataset, --historical-index, "
+            "or --candidate-index"
+        )
+    if args.candidate_index is not None:
+        index_path = (
+            args.candidate_index
+            if args.candidate_index.is_absolute()
+            else ROOT / args.candidate_index
+        )
+        errors = validate_candidate_index(ROOT, index_path)
+        for error in errors:
+            print(error, file=sys.stderr)
+        if errors:
+            print(
+                f"{index_path}: candidate quality validation failed",
+                file=sys.stderr,
+            )
+            return 1
+        print(f"{index_path}: candidate funnel passed quality validation")
+        return 0
     if args.historical_index is not None:
         index_path = (
             args.historical_index

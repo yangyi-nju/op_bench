@@ -99,6 +99,15 @@ def _contract_identity(contract: FactoryContract) -> str:
         return contract.task_id
     if isinstance(contract, ComplexityEvidence):
         return contract.task_id
+    from op_bench.factory.quality_release import (
+        QualityCandidateDecision,
+        QualityCandidateRecord,
+    )
+
+    if isinstance(contract, QualityCandidateRecord):
+        return contract.candidate_id
+    if isinstance(contract, QualityCandidateDecision):
+        return contract.decision_id
     raise ContractError("contract: unsupported Factory contract")
 
 
@@ -106,9 +115,15 @@ def _assert_factory_public_safe(
     value: object,
     *,
     path: str = "$",
+    allow_private_provenance_text: bool = False,
 ) -> None:
     if isinstance(value, str):
-        for pattern in _SENSITIVE_FACTORY_TEXT:
+        patterns = (
+            _SENSITIVE_FACTORY_TEXT[2:]
+            if allow_private_provenance_text
+            else _SENSITIVE_FACTORY_TEXT
+        )
+        for pattern in patterns:
             if pattern.search(value):
                 raise ContractError(
                     f"factory artifact {path}: sensitive text is denied"
@@ -123,11 +138,19 @@ def _assert_factory_public_safe(
                 raise ContractError(
                     f"factory artifact {path}.{key}: sensitive field is denied"
                 )
-            _assert_factory_public_safe(item, path=f"{path}.{key}")
+            _assert_factory_public_safe(
+                item,
+                path=f"{path}.{key}",
+                allow_private_provenance_text=allow_private_provenance_text,
+            )
         return
     if isinstance(value, (list, tuple)):
         for index, item in enumerate(value):
-            _assert_factory_public_safe(item, path=f"{path}[{index}]")
+            _assert_factory_public_safe(
+                item,
+                path=f"{path}[{index}]",
+                allow_private_provenance_text=allow_private_provenance_text,
+            )
         return
     raise ContractError(
         f"factory artifact {path}: unsupported value type {type(value).__name__}"
@@ -146,12 +169,28 @@ def _parse_contract_bytes(content: bytes) -> FactoryContract:
         raise ContractError("artifact: expected JSON object")
     contract_type = value.get("contract_type")
     contract_class = _CONTRACT_TYPES.get(contract_type)
+    if contract_class is None and contract_type in (
+        "quality_candidate",
+        "quality_candidate_decision",
+    ):
+        from op_bench.factory.quality_release import (
+            QualityCandidateDecision,
+            QualityCandidateRecord,
+        )
+
+        contract_class = {
+            QualityCandidateRecord.contract_type: QualityCandidateRecord,
+            QualityCandidateDecision.contract_type: QualityCandidateDecision,
+        }[contract_type]
     if contract_class is None:
         raise ContractError(
             f"artifact: unsupported contract_type {contract_type!r}"
         )
     contract = contract_class.from_dict(value)
-    _assert_factory_public_safe(contract.to_dict())
+    _assert_factory_public_safe(
+        contract.to_dict(),
+        allow_private_provenance_text=contract_type == "quality_candidate",
+    )
     return contract
 
 
@@ -233,6 +272,11 @@ class FactoryArtifactStore:
     ) -> FactoryArtifactReference:
         self._ensure_open()
         path = _validate_relative_json_path(relative_path)
+        from op_bench.factory.quality_release import (
+            QualityCandidateDecision,
+            QualityCandidateRecord,
+        )
+
         if not isinstance(
             contract,
             (
@@ -242,11 +286,18 @@ class FactoryArtifactStore:
                 DatasetFreezeManifest,
                 PromptQualityEvidence,
                 ComplexityEvidence,
+                QualityCandidateRecord,
+                QualityCandidateDecision,
             ),
         ):
             raise ContractError("contract: unsupported Factory contract")
         payload = contract.to_dict()
-        _assert_factory_public_safe(payload)
+        _assert_factory_public_safe(
+            payload,
+            allow_private_provenance_text=isinstance(
+                contract, QualityCandidateRecord
+            ),
+        )
         encoded = canonical_json(payload).encode("utf-8")
         reference = FactoryArtifactReference(
             artifact_type=contract.contract_type,
