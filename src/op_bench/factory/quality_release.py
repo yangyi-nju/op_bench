@@ -27,6 +27,10 @@ from op_bench.factory.prompt_quality import (
     build_prompt_quality_evidence,
     validate_prompt_quality_evidence,
 )
+from op_bench.factory.score_four_support import (
+    load_score_four_support,
+    validate_score_four_review_binding,
+)
 from op_bench.factory.taxonomy import parse_taxonomy_v2
 from op_bench.integrity import REPLAY_SPEC_HASH_KIND, replay_spec_hash
 from op_bench.registry import (
@@ -473,6 +477,41 @@ def validate_historical_index(
     if value["dataset_hash"] != canonical_sha256(dataset_payload):
         errors.append("historical_index.dataset_hash: mismatch")
 
+    if (
+        isinstance(value["created_at"], str)
+        and _UTC_SECONDS.fullmatch(value["created_at"]) is not None
+    ):
+        try:
+            rebuilt = _build_historical_audit(
+                root,
+                dataset_path,
+                root / "factory/v0.7/p7/reviews",
+                value["created_at"],
+                public_task_ids_path=None,
+            )
+            rebuilt_index = _historical_index_payload(rebuilt)
+            if encoded != canonical_json(rebuilt_index).encode("utf-8"):
+                errors.append(
+                    "historical_index: bytes differ from exact review rebuild"
+                )
+            for artifact in rebuilt.artifacts:
+                artifact_path = root / PurePosixPath(artifact.relative_path)
+                expected_bytes = canonical_json(artifact.payload).encode("utf-8")
+                try:
+                    actual_bytes = load_regular_file_bytes(artifact_path)
+                except ContractError as exc:
+                    errors.append(
+                        f"{artifact.relative_path}: rebuild artifact unavailable: {exc}"
+                    )
+                    continue
+                if actual_bytes != expected_bytes:
+                    errors.append(
+                        f"{artifact.relative_path}: bytes differ from exact "
+                        "review rebuild"
+                    )
+        except ContractError as exc:
+            errors.append(f"historical_index.review_rebuild: {exc}")
+
     records_value = value["records"]
     records: list[QualityTaskRecord] = []
     if not isinstance(records_value, list):
@@ -632,9 +671,12 @@ def write_historical_dispositions(
             artifact_root / PurePosixPath(artifact.relative_path),
             artifact.payload,
         )
-    retained = sum(
-        record.disposition == "retained" for record in audit.records
-    )
+    _write_canonical(output_path, _historical_index_payload(audit))
+    return audit.records
+
+
+def _historical_index_payload(audit: _HistoricalAudit) -> dict[str, object]:
+    retained = sum(record.disposition == "retained" for record in audit.records)
     payload: dict[str, object] = {
         "contract_type": "historical_readmission_index",
         "schema_version": "v1",
@@ -647,8 +689,7 @@ def write_historical_dispositions(
         "records": [record.to_dict() for record in audit.records],
     }
     payload["content_hash"] = canonical_sha256(payload)
-    _write_canonical(output_path, payload)
-    return audit.records
+    return payload
 
 
 def _build_historical_audit(
@@ -701,6 +742,10 @@ def _build_historical_audit(
         raise ContractError(
             "public Task ID mapping: identities do not match historical Dataset"
         )
+    score_four_support = load_score_four_support(
+        root / "factory/v0.7/p7/pilot_factual_evidence.json",
+        root / "factory/v0.7/p7/second_complexity_review.json",
+    )
 
     loaded_tasks = DatasetManifest.load(dataset_path).load_tasks()
     by_id = {task.task_id: task for task in loaded_tasks}
@@ -771,7 +816,12 @@ def _build_historical_audit(
             prompt_review_path,
             "prompt review",
         )
-        prompt_review, requested_disposition, combined_prompt_error = (
+        (
+            prompt_review,
+            prompt_source_evidence,
+            requested_disposition,
+            combined_prompt_error,
+        ) = (
             _review_section(
                 prompt_review,
                 kind="prompt",
@@ -840,6 +890,7 @@ def _build_historical_audit(
         ) = _review_json(complexity_review_path, "complexity review")
         (
             complexity_review,
+            complexity_source_evidence,
             complexity_disposition,
             combined_complexity_error,
         ) = _review_section(
@@ -856,6 +907,10 @@ def _build_historical_audit(
         ):
             complexity_review_error = (
                 "combined review disposition differs between sections"
+            )
+        if prompt_source_evidence != complexity_source_evidence:
+            complexity_review_error = (
+                "combined review source_evidence differs between sections"
             )
         complexity: ComplexityEvidence | None = None
         complexity_errors: list[str] = []
@@ -885,6 +940,17 @@ def _build_historical_audit(
                 ):
                     complexity_errors.append(
                         "difficulty does not match Task metadata"
+                    )
+                if (
+                    complexity.total == 4
+                    and requested_disposition == "retained"
+                ):
+                    validate_score_four_review_binding(
+                        score_four_support,
+                        public_task_id=public_task_id,
+                        prompt_review=prompt_review,
+                        complexity_review=complexity_review,
+                        source_evidence=complexity_source_evidence,
                     )
             except ContractError as exc:
                 complexity_errors.append(str(exc))
@@ -1545,11 +1611,11 @@ def _review_section(
     kind: str,
     task_id: str,
     public_task_id: str,
-) -> tuple[object | None, str | None, str | None]:
+) -> tuple[object | None, object | None, str | None, str | None]:
     if not isinstance(value, Mapping) or value.get(
         "contract_type"
     ) != "historical_task_quality_review":
-        return value, None, None
+        return value, None, None, None
     required = {
         "contract_type",
         "schema_version",
@@ -1563,25 +1629,38 @@ def _review_section(
         "content_hash",
     }
     if set(value) != required:
-        return None, None, "combined review: unexpected contract fields"
+        return None, None, None, "combined review: unexpected contract fields"
     if value.get("schema_version") != "v1":
-        return None, None, "combined review: unsupported schema_version"
+        return None, None, None, "combined review: unsupported schema_version"
     if value.get("task_id") != task_id:
-        return None, None, "combined review: task_id mismatch"
+        return None, None, None, "combined review: task_id mismatch"
     if value.get("public_task_id") != public_task_id:
-        return None, None, "combined review: public_task_id mismatch"
+        return None, None, None, "combined review: public_task_id mismatch"
     disposition = value.get("disposition")
     if disposition not in _DISPOSITIONS:
-        return None, None, "combined review: unsupported disposition"
+        return None, None, None, "combined review: unsupported disposition"
     stored_hash = value.get("content_hash")
     if not isinstance(stored_hash, str) or stored_hash != canonical_sha256(
         {key: item for key, item in value.items() if key != "content_hash"}
     ):
-        return None, None, "combined review: content_hash mismatch"
+        return None, None, None, "combined review: content_hash mismatch"
     section = value.get(kind)
     if not isinstance(section, Mapping):
-        return None, None, f"combined review: {kind} must be an object"
-    return section, str(disposition), None
+        return (
+            None,
+            None,
+            None,
+            f"combined review: {kind} must be an object",
+        )
+    source_evidence = value.get("source_evidence")
+    if not isinstance(source_evidence, Mapping):
+        return (
+            None,
+            None,
+            None,
+            "combined review: source_evidence must be an object",
+        )
+    return section, source_evidence, str(disposition), None
 
 
 def _load_public_task_id_mapping(path: Path) -> dict[str, str]:

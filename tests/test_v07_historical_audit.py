@@ -15,7 +15,7 @@ from op_bench.factory.quality_release import (
     build_historical_dispositions,
     write_historical_dispositions,
 )
-from op_bench.runtime.canonical import canonical_sha256
+from op_bench.runtime.canonical import canonical_json, canonical_sha256
 from op_bench.runtime.validation import ContractError
 
 
@@ -65,6 +65,20 @@ def _run_audit(review_root: Path, output_root: Path) -> None:
             f"audit failed ({completed.returncode}):\n"
             f"stdout:\n{completed.stdout}\nstderr:\n{completed.stderr}"
         )
+
+
+def _write_review(path: Path, payload: dict[str, object]) -> None:
+    payload["content_hash"] = canonical_sha256(
+        {
+            key: value
+            for key, value in payload.items()
+            if key != "content_hash"
+        }
+    )
+    path.write_text(
+        json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n",
+        encoding="utf-8",
+    )
 
 
 class V07HistoricalAuditTests(unittest.TestCase):
@@ -285,6 +299,180 @@ class V07HistoricalAuditTests(unittest.TestCase):
                     CREATED_AT,
                 )
                 self.assertEqual(records[0].disposition, "deferred")
+
+    def test_score_four_review_cannot_self_report_support(self) -> None:
+        review_root = ROOT / "factory/v0.7/p7/reviews"
+        selected = review_root / "pytorch__124385__load_state_dict_prefix.json"
+        mutations = {
+            "minimal-pilot-reviewer-reproduction": lambda payload: payload[
+                "complexity"
+            ].__setitem__(
+                "blind_pilot",
+                {
+                    "decision": "accepted",
+                    "counts_toward_final": False,
+                },
+            ),
+            "boolean-second-review-self-report": lambda payload: payload[
+                "source_evidence"
+            ].__setitem__(
+                "second_complexity_review",
+                {
+                    "second_review": True,
+                    "pilot_decision": "accepted",
+                },
+            ),
+        }
+        for name, mutate in mutations.items():
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:
+                reviews = Path(directory).resolve() / "reviews"
+                shutil.copytree(review_root, reviews)
+                path = reviews / selected.name
+                payload = json.loads(path.read_text(encoding="utf-8"))
+                mutate(payload)
+                _write_review(path, payload)
+                with self.assertRaisesRegex(
+                    ContractError,
+                    "review-derived dispositions",
+                ):
+                    build_historical_dispositions(
+                        ROOT,
+                        DATASET,
+                        reviews,
+                        CREATED_AT,
+                    )
+
+    def test_score_four_review_requires_every_support_binding(self) -> None:
+        review_root = ROOT / "factory/v0.7/p7/reviews"
+        selected = review_root / "pytorch__124385__load_state_dict_prefix.json"
+        invalid_values: dict[str, object] = {
+            "public_task_id": "opbench-v07-t0022",
+            "expected_attempt_id": "attempt:v1:" + "0" * 64,
+            "task_view_sha256": "sha256:" + "0" * 64,
+            "validity": "invalid",
+            "evaluation_outcome": "unknown",
+            "terminal_reason": "timed_out",
+            "duration_ms": 0,
+            "counts_toward_final": True,
+            "decision": "rejected",
+            "complexity_evidence_decision": "rejected",
+            "complexity_evidence_severity": "high",
+            "factual_evidence_hash": "sha256:" + "0" * 64,
+            "factual_record_hash": "sha256:" + "0" * 64,
+            "second_review_artifact_hash": "sha256:" + "0" * 64,
+            "second_review_content_hash": "sha256:" + "0" * 64,
+            "second_review_record_hash": "sha256:" + "0" * 64,
+            "second_review_source_hash": "sha256:" + "0" * 64,
+            "reviewer": "semantic-reviewer-v07-independent-01",
+        }
+        for field, invalid in invalid_values.items():
+            with self.subTest(field=field), tempfile.TemporaryDirectory() as directory:
+                reviews = Path(directory).resolve() / "reviews"
+                shutil.copytree(review_root, reviews)
+                path = reviews / selected.name
+                payload = json.loads(path.read_text(encoding="utf-8"))
+                payload["complexity"]["blind_pilot"][field] = invalid
+                _write_review(path, payload)
+                with self.assertRaises(ContractError):
+                    build_historical_dispositions(
+                        ROOT,
+                        DATASET,
+                        reviews,
+                        CREATED_AT,
+                    )
+
+    def test_score_four_source_evidence_is_exact_and_task_bound(self) -> None:
+        review_root = ROOT / "factory/v0.7/p7/reviews"
+        selected = review_root / "pytorch__124385__load_state_dict_prefix.json"
+        other = review_root / "pytorch__161488__lbfgs_wolfe.json"
+        original_other = json.loads(other.read_text(encoding="utf-8"))
+
+        def swap_task(payload: dict[str, object]) -> None:
+            payload["complexity"]["blind_pilot"] = original_other["complexity"][
+                "blind_pilot"
+            ]
+            payload["source_evidence"]["blind_pilot"] = original_other[
+                "source_evidence"
+            ]["blind_pilot"]
+            payload["source_evidence"]["second_complexity_review"] = original_other[
+                "source_evidence"
+            ]["second_complexity_review"]
+
+        mutations = {
+            "cross-task-swap": swap_task,
+            "source-pilot-mismatch": lambda payload: payload["source_evidence"][
+                "blind_pilot"
+            ].__setitem__("duration_ms", 1),
+            "second-artifact-mismatch": lambda payload: payload[
+                "source_evidence"
+            ]["second_complexity_review"].__setitem__(
+                "artifact_hash",
+                "sha256:" + "0" * 64,
+            ),
+            "non-independent-reviewer": lambda payload: (
+                payload["complexity"]["blind_pilot"].__setitem__(
+                    "reviewer",
+                    "semantic-reviewer-v07-independent-01",
+                ),
+                payload["source_evidence"]["blind_pilot"].__setitem__(
+                    "reviewer",
+                    "semantic-reviewer-v07-independent-01",
+                ),
+                payload["source_evidence"][
+                    "second_complexity_review"
+                ].__setitem__(
+                    "reviewer",
+                    "semantic-reviewer-v07-independent-01",
+                ),
+            ),
+        }
+        for name, mutate in mutations.items():
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:
+                reviews = Path(directory).resolve() / "reviews"
+                shutil.copytree(review_root, reviews)
+                path = reviews / selected.name
+                payload = json.loads(path.read_text(encoding="utf-8"))
+                mutate(payload)
+                _write_review(path, payload)
+                with self.assertRaises(ContractError):
+                    build_historical_dispositions(
+                        ROOT,
+                        DATASET,
+                        reviews,
+                        CREATED_AT,
+                    )
+
+    def test_official_historical_tree_is_exact_review_rebuild(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            temporary = Path(directory).resolve()
+            output = temporary / "historical_readmission.json"
+            write_historical_dispositions(
+                ROOT,
+                DATASET,
+                ROOT / "factory/v0.7/p7/reviews",
+                output,
+                CREATED_AT,
+            )
+            rebuilt = json.loads(output.read_text(encoding="utf-8"))
+            official = json.loads(
+                (ROOT / "factory/v0.7/p7/historical_readmission.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(output.read_bytes(), canonical_json(rebuilt).encode())
+            self.assertEqual(output.read_bytes(), canonical_json(official).encode())
+            for record in rebuilt["records"]:
+                for field in (
+                    "prompt_evidence",
+                    "complexity_evidence",
+                    "admission_evidence",
+                ):
+                    relative = record[field]["relative_path"]
+                    self.assertEqual(
+                        (temporary / relative).read_bytes(),
+                        (ROOT / relative).read_bytes(),
+                        relative,
+                    )
 
     def test_draft_admission_and_advisory_scope_are_explicitly_deferred(
         self,

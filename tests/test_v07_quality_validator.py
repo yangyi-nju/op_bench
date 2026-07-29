@@ -9,6 +9,7 @@ from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from op_bench.factory.artifacts import FactoryArtifactStore
 from op_bench.factory.complexity import build_complexity_evidence
@@ -393,6 +394,70 @@ class V07QualityValidatorTests(unittest.TestCase):
                     ),
                     errors,
                 )
+
+    def test_historical_validator_rebuilds_reviews_and_artifact_bytes(
+        self,
+    ) -> None:
+        from op_bench.factory import quality_release
+
+        original_loader = quality_release.load_regular_file_bytes
+        review_path = (
+            ROOT
+            / "factory/v0.7/p7/reviews"
+            / "pytorch__124385__load_state_dict_prefix.json"
+        ).resolve()
+        artifact_path = (
+            ROOT
+            / "tasks/pytorch/124385_load_state_dict_prefix"
+            / "quality/complexity.json"
+        ).resolve()
+
+        def changed_review(path: Path) -> bytes:
+            encoded = original_loader(path)
+            if path.resolve() != review_path:
+                return encoded
+            payload = json.loads(encoded.decode("utf-8"))
+            payload["complexity"]["blind_pilot"] = {
+                "decision": "accepted",
+                "counts_toward_final": False,
+            }
+            payload["content_hash"] = canonical_sha256(
+                {
+                    key: value
+                    for key, value in payload.items()
+                    if key != "content_hash"
+                }
+            )
+            return (canonical_json(payload) + "\n").encode("utf-8")
+
+        with patch.object(
+            quality_release,
+            "load_regular_file_bytes",
+            side_effect=changed_review,
+        ):
+            review_errors = validate_historical_index(ROOT, HISTORICAL_INDEX)
+        self.assertTrue(
+            any("review_rebuild" in error for error in review_errors),
+            review_errors,
+        )
+
+        def changed_artifact(path: Path) -> bytes:
+            encoded = original_loader(path)
+            return encoded + b" " if path.resolve() == artifact_path else encoded
+
+        with patch.object(
+            quality_release,
+            "load_regular_file_bytes",
+            side_effect=changed_artifact,
+        ):
+            artifact_errors = validate_historical_index(ROOT, HISTORICAL_INDEX)
+        self.assertIn(
+            (
+                "tasks/pytorch/124385_load_state_dict_prefix/"
+                "quality/complexity.json: bytes differ from exact review rebuild"
+            ),
+            artifact_errors,
+        )
 
     def test_verified_quality_task_requires_all_quality_evidence(self) -> None:
         errors = validate_quality_task(ROOT, historical_task(), require_verified=True)

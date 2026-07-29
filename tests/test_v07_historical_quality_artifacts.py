@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import copy
 import json
 from pathlib import Path
+import tempfile
 import unittest
 
 from op_bench.factory.quality_release import validate_quality_task
+from op_bench.runtime.canonical import canonical_json, canonical_sha256
+from op_bench.runtime.validation import ContractError
 from op_bench.task import TaskManifest
 
 
@@ -240,6 +244,92 @@ class V07HistoricalQualityArtifactTests(unittest.TestCase):
             reviews["opbench-v07-t0019"]["disposition"],
             "deferred",
         )
+
+    def test_score_four_support_contract_is_typed_and_task_bound(self) -> None:
+        from op_bench.factory.score_four_support import load_score_four_support
+
+        support = load_score_four_support(PILOT_FACTS, SECOND_REVIEW)
+        self.assertEqual(
+            set(support),
+            {
+                "opbench-v07-t0003",
+                "opbench-v07-t0022",
+                "opbench-v07-t0024",
+            },
+        )
+        for public_task_id, item in support.items():
+            with self.subTest(public_task_id=public_task_id):
+                self.assertEqual(item.public_task_id, public_task_id)
+                self.assertFalse(item.counts_toward_final)
+                self.assertEqual(item.pilot_decision, "accepted")
+                self.assertTrue(item.second_review)
+
+    def test_score_four_support_rejects_duplicate_hash_and_byte_mutations(
+        self,
+    ) -> None:
+        from op_bench.factory.score_four_support import load_score_four_support
+
+        pilot = load_json(PILOT_FACTS)
+        second = load_json(SECOND_REVIEW)
+
+        def duplicate_pilot(payload: dict[str, object]) -> None:
+            payload["tasks"].append(copy.deepcopy(payload["tasks"][0]))
+
+        def swap_attempt(payload: dict[str, object]) -> None:
+            payload["tasks"][0]["expected_attempt_id"] = payload["tasks"][1][
+                "expected_attempt_id"
+            ]
+
+        def duplicate_second(payload: dict[str, object]) -> None:
+            payload["records"].append(copy.deepcopy(payload["records"][0]))
+            payload["content_hash"] = canonical_sha256(
+                {
+                    key: value
+                    for key, value in payload.items()
+                    if key != "content_hash"
+                }
+            )
+
+        def forge_second_hash(payload: dict[str, object]) -> None:
+            payload["records"][0]["source_sha256"] = "sha256:" + "0" * 64
+            payload["content_hash"] = canonical_sha256(
+                {
+                    key: value
+                    for key, value in payload.items()
+                    if key != "content_hash"
+                }
+            )
+
+        mutations = {
+            "duplicate": ("pilot", duplicate_pilot, False),
+            "cross-task-attempt": ("pilot", swap_attempt, False),
+            "pilot-bytes": ("pilot", lambda payload: None, True),
+            "second-duplicate": ("second", duplicate_second, False),
+            "second-hash": ("second", forge_second_hash, False),
+            "second-bytes": ("second", lambda payload: None, True),
+        }
+        for name, (target, mutate, noncanonical) in mutations.items():
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:
+                temporary = Path(directory).resolve()
+                pilot_path = temporary / "pilot.json"
+                second_path = temporary / "second.json"
+                pilot_payload = copy.deepcopy(pilot)
+                second_payload = copy.deepcopy(second)
+                selected = pilot_payload if target == "pilot" else second_payload
+                mutate(selected)
+                pilot_path.write_text(
+                    canonical_json(pilot_payload) + "\n",
+                    encoding="utf-8",
+                )
+                second_path.write_text(
+                    canonical_json(second_payload) + "\n",
+                    encoding="utf-8",
+                )
+                if noncanonical:
+                    path = pilot_path if target == "pilot" else second_path
+                    path.write_bytes(path.read_bytes() + b" ")
+                with self.assertRaises(ContractError):
+                    load_score_four_support(pilot_path, second_path)
 
     def test_tracked_quality_inputs_do_not_depend_on_temporary_run_paths(
         self,
