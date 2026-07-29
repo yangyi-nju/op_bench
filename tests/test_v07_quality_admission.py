@@ -6,7 +6,9 @@ from datetime import datetime, timezone
 import hashlib
 import io
 import json
+import os
 from pathlib import Path
+import shlex
 import shutil
 import tempfile
 import unittest
@@ -145,14 +147,74 @@ class _FakeEvaluator:
             if mode == "gold" and status == "resolved"
             else 0
         )
+        safe_task_id = "".join(
+            character
+            if character.isalnum() or character in {"-", "_"}
+            else "-"
+            for character in task.task_id
+        )
+        container_suffix = (
+            "b" if mode == "baseline" else "a"
+        ) * 12
+        container_name = (
+            f"op-bench-{safe_task_id[:48]}-{container_suffix}"
+        )
+        remote_host = task.environment_host or "synthetic-host"
+        environment = {
+            "executor": task.environment_backend,
+            "image": task.environment_image,
+            "workspace_dir": task.environment_workspace_dir,
+            "command_workdir": task.environment_workspace_dir,
+            "container_name": container_name,
+            "gpus": task.environment_gpus,
+            "remote_host": remote_host,
+            "remote_user": "root",
+            "remote_workspace": f"/synthetic/{container_name}",
+            "remote_ccache_dir": None,
+            "host_platform": "synthetic-host-platform",
+            "host_machine": "synthetic-host-machine",
+            "preflight_passed": True,
+            "preflight_command_count": len(
+                task.environment_preflight_commands
+            ),
+            "preflight_workdir": task.environment_preflight_workdir,
+            "environment_id": task.environment_ref,
+            "runtime_tier": task.runtime_tier,
+            "image_digest": task.environment_image_digest,
+            "digest_kind": task.environment_digest_kind,
+            "platform": task.environment_platform,
+        }
+
+        def recorded_command(expected: list[str]) -> list[str]:
+            remote_command = [
+                "docker",
+                "exec",
+                "--workdir",
+                task.environment_workspace_dir,
+                container_name,
+                *expected,
+            ]
+            return [
+                "ssh",
+                "-o",
+                "StrictHostKeyChecking=accept-new",
+                "-o",
+                "ServerAliveInterval=30",
+                "-o",
+                "ServerAliveCountMax=3",
+                f"root@{remote_host}",
+                shlex.join(remote_command),
+            ]
+
         commands = []
         for selector in task.fail_to_pass_tests:
+            expected = task.command_for_test(
+                selector,
+                python_executable=task.environment_python_executable,
+            )
             commands.append(
                 {
-                    "command": task.command_for_test(
-                        selector,
-                        python_executable=task.environment_python_executable,
-                    ),
+                    "command": recorded_command(expected),
                     "cwd": "/synthetic/workspace",
                     "exit_code": 0 if fail_passed else 1,
                     "stdout": "",
@@ -162,12 +224,13 @@ class _FakeEvaluator:
                 }
             )
         for selector in task.pass_to_pass_tests:
+            expected = task.command_for_test(
+                selector,
+                python_executable=task.environment_python_executable,
+            )
             commands.append(
                 {
-                    "command": task.command_for_test(
-                        selector,
-                        python_executable=task.environment_python_executable,
-                    ),
+                    "command": recorded_command(expected),
                     "cwd": "/synthetic/workspace",
                     "exit_code": 0,
                     "stdout": "",
@@ -185,7 +248,7 @@ class _FakeEvaluator:
             pass_to_pass_total=len(task.pass_to_pass_tests),
             pass_to_pass_passed=len(task.pass_to_pass_tests),
             duration_sec=1.0,
-            environment={"runtime": "synthetic"},
+            environment=environment,
             commands=commands,
         )
 
@@ -338,6 +401,42 @@ def _rewrite_result_bundle_hash(
     )
     _rehash(payload)
     _write_canonical(output, payload)
+
+
+def _verified_bundle_fixture(
+    root: Path,
+) -> tuple[Path, Path, TaskManifest, Path, dict[str, object]]:
+    (
+        accepted_path,
+        output,
+        environment_registry,
+        source_registry,
+        accepted,
+    ) = _runner_fixture(root)
+    run_quality_admission(
+        root=root,
+        accepted_index_path=accepted_path,
+        output_path=output,
+        environment_registry_path=environment_registry,
+        source_registry_path=source_registry,
+        created_at="2026-07-30T03:04:05Z",
+        preflight=lambda path: (True, ["passed"]),
+        admission_runner=AdmissionRunner(
+            evaluator=_FakeEvaluator(),
+            now=_now,
+        ),
+    )
+    task = TaskManifest.load(
+        root / accepted["tasks"][0]["task_path"] / "task.json"
+    )
+    result_payload = json.loads(output.read_text(encoding="utf-8"))
+    bundle = (
+        root / result_payload["results"][0]["admission_bundle_path"]
+    )
+    evidence = json.loads(
+        (bundle / "evidence.json").read_text(encoding="utf-8")
+    )
+    return accepted_path, output, task, bundle, evidence
 
 
 class V07QualityAdmissionRunnerTests(unittest.TestCase):
@@ -750,6 +849,114 @@ class V07QualityAdmissionRunnerTests(unittest.TestCase):
                     self.assertEqual(preflight_calls, [])
                     self.assertEqual(evaluator.baseline_calls, [])
 
+    def test_output_ancestor_non_directories_are_rejected_before_work(
+        self,
+    ) -> None:
+        for kind in (
+            "accepted descendant",
+            "environment descendant",
+            "source descendant",
+            "regular file ancestor",
+            "symlink ancestor",
+            "fifo ancestor",
+        ):
+            with self.subTest(kind=kind):
+                with tempfile.TemporaryDirectory() as directory:
+                    root = Path(directory)
+                    (
+                        accepted_path,
+                        _,
+                        environment_registry,
+                        source_registry,
+                        _,
+                    ) = _runner_fixture(root)
+                    scratch = root / "scratch"
+                    scratch.mkdir()
+                    if kind == "accepted descendant":
+                        output = accepted_path / "child.json"
+                    elif kind == "environment descendant":
+                        output = environment_registry / "child.json"
+                    elif kind == "source descendant":
+                        output = source_registry / "child.json"
+                    elif kind == "regular file ancestor":
+                        ancestor = scratch / "regular"
+                        ancestor.write_text("occupied", encoding="utf-8")
+                        output = ancestor / "child.json"
+                    elif kind == "symlink ancestor":
+                        target = scratch / "target"
+                        target.mkdir()
+                        ancestor = scratch / "link"
+                        ancestor.symlink_to(
+                            target,
+                            target_is_directory=True,
+                        )
+                        output = ancestor / "child.json"
+                    else:
+                        ancestor = scratch / "fifo"
+                        os.mkfifo(ancestor)
+                        output = ancestor / "child.json"
+                    protected_bytes = {
+                        path: path.read_bytes()
+                        for path in (
+                            accepted_path,
+                            environment_registry,
+                            source_registry,
+                        )
+                    }
+                    accepted = json.loads(
+                        accepted_path.read_text(encoding="utf-8")
+                    )
+                    task_dir = (
+                        root / accepted["tasks"][0]["task_path"]
+                    )
+                    task = TaskManifest.load(task_dir / "task.json")
+                    stable_path = task_dir / "admission/evidence.json"
+                    readmission_path = (
+                        task_dir
+                        / task.data["quality"]["readmission_evidence"]
+                    )
+                    stable_before = stable_path.read_bytes()
+                    readmission_before = readmission_path.read_bytes()
+                    full_bundle_root = task_dir / "admission/full"
+                    self.assertFalse(full_bundle_root.exists())
+                    evaluator = _FakeEvaluator()
+                    preflight_calls: list[Path] = []
+
+                    with self.assertRaisesRegex(
+                        ContractError, "output.*ancestor"
+                    ):
+                        run_quality_admission(
+                            root=root,
+                            accepted_index_path=accepted_path,
+                            output_path=output,
+                            environment_registry_path=environment_registry,
+                            source_registry_path=source_registry,
+                            created_at="2026-07-30T03:04:05Z",
+                            preflight=lambda path: (
+                                preflight_calls.append(path) or True,
+                                ["passed"],
+                            ),
+                            admission_runner=AdmissionRunner(
+                                evaluator=evaluator,
+                                now=_now,
+                            ),
+                        )
+
+                    self.assertEqual(preflight_calls, [])
+                    self.assertEqual(evaluator.baseline_calls, [])
+                    self.assertEqual(evaluator.gold_calls, [])
+                    for path, expected in protected_bytes.items():
+                        self.assertEqual(path.read_bytes(), expected)
+                    self.assertEqual(
+                        stable_path.read_bytes(),
+                        stable_before,
+                    )
+                    self.assertEqual(
+                        readmission_path.read_bytes(),
+                        readmission_before,
+                    )
+                    self.assertFalse(full_bundle_root.exists())
+
     def test_input_ancestor_symlinks_are_rejected_before_loading(
         self,
     ) -> None:
@@ -1053,6 +1260,144 @@ class V07QualityAdmissionRunnerTests(unittest.TestCase):
                             root, output, accepted_path
                         )
 
+    def test_result_loader_rejects_composed_selector_commands(
+        self,
+    ) -> None:
+        variants = {
+            "shell suffix": lambda expected, exit_code: [
+                "bash",
+                "-lc",
+                f"{shlex.join(expected)} ; exit {exit_code}",
+            ],
+            "shell prefix": lambda expected, exit_code: [
+                "bash",
+                "-lc",
+                f"true && {shlex.join(expected)}",
+            ],
+            "raw suffix": lambda expected, exit_code: [
+                *expected,
+                ";",
+                "exit",
+                str(exit_code),
+            ],
+            "raw prefix": lambda expected, exit_code: [
+                "env",
+                "FORGED=1",
+                *expected,
+            ],
+        }
+        for variant, compose in variants.items():
+            with self.subTest(variant=variant):
+                with tempfile.TemporaryDirectory() as directory:
+                    root = Path(directory)
+                    (
+                        accepted_path,
+                        output,
+                        task,
+                        bundle,
+                        evidence,
+                    ) = _verified_bundle_fixture(root)
+                    selectors = (
+                        *task.fail_to_pass_tests,
+                        *task.pass_to_pass_tests,
+                    )
+                    for phase in ("baseline", "gold"):
+                        for selector, command in zip(
+                            selectors,
+                            evidence[phase]["commands"],
+                            strict=True,
+                        ):
+                            expected = task.command_for_test(
+                                selector,
+                                python_executable=(
+                                    task.environment_python_executable
+                                ),
+                            )
+                            command["command"] = compose(
+                                expected,
+                                command["exit_code"],
+                            )
+                        _write_canonical(
+                            bundle / f"{phase}.log",
+                            evidence[phase],
+                        )
+                    _write_canonical(
+                        bundle / "evidence.json",
+                        evidence,
+                    )
+                    _rewrite_result_bundle_hash(root, output)
+
+                    with self.assertRaisesRegex(
+                        ContractError, "selector"
+                    ):
+                        load_quality_admission_result_index(
+                            root,
+                            output,
+                            accepted_path,
+                        )
+
+    def test_result_loader_rejects_selector_command_aliasing(
+        self,
+    ) -> None:
+        for mutation in ("duplicate", "reordered", "shared"):
+            with self.subTest(mutation=mutation):
+                with tempfile.TemporaryDirectory() as directory:
+                    root = Path(directory)
+                    (
+                        accepted_path,
+                        output,
+                        task,
+                        bundle,
+                        evidence,
+                    ) = _verified_bundle_fixture(root)
+                    commands = evidence["baseline"]["commands"]
+                    if mutation == "duplicate":
+                        commands.append(copy.deepcopy(commands[0]))
+                    elif mutation == "reordered":
+                        commands.reverse()
+                    else:
+                        first = task.command_for_test(
+                            task.fail_to_pass_tests[0],
+                            python_executable=(
+                                task.environment_python_executable
+                            ),
+                        )
+                        second = task.command_for_test(
+                            task.pass_to_pass_tests[0],
+                            python_executable=(
+                                task.environment_python_executable
+                            ),
+                        )
+                        commands[:] = [
+                            {
+                                **commands[0],
+                                "command": [
+                                    "bash",
+                                    "-lc",
+                                    f"{shlex.join(first)} ; "
+                                    f"{shlex.join(second)}",
+                                ],
+                            }
+                        ]
+                    _write_canonical(
+                        bundle / "baseline.log",
+                        evidence["baseline"],
+                    )
+                    _write_canonical(
+                        bundle / "evidence.json",
+                        evidence,
+                    )
+                    _rewrite_result_bundle_hash(root, output)
+
+                    with self.assertRaisesRegex(
+                        ContractError, "selector"
+                    ):
+                        load_quality_admission_result_index(
+                            root,
+                            output,
+                            accepted_path,
+                        )
+
     def test_result_loader_replays_selector_totals_and_counts(self) -> None:
         fields = (
             "fail_to_pass_total",
@@ -1193,6 +1538,92 @@ class V07QualityAdmissionRunnerTests(unittest.TestCase):
                         load_quality_admission_result_index(
                             root, output, accepted_path
                         )
+
+    def test_result_loader_rejects_each_rehashed_environment_identity_drift(
+        self,
+    ) -> None:
+        mutations = {
+            "executor": "forged_executor",
+            "environment_id": "forged-environment",
+            "runtime_tier": "forged-runtime",
+            "image": "forged-image",
+            "image_digest": "sha256:" + "f" * 64,
+            "digest_kind": "forged_digest_kind",
+            "platform": "forged/platform",
+        }
+        for phase in ("baseline", "gold"):
+            for field, replacement in mutations.items():
+                with self.subTest(phase=phase, field=field):
+                    with tempfile.TemporaryDirectory() as directory:
+                        root = Path(directory)
+                        (
+                            accepted_path,
+                            output,
+                            _,
+                            bundle,
+                            evidence,
+                        ) = _verified_bundle_fixture(root)
+                        evidence[phase]["environment"][field] = (
+                            replacement
+                        )
+                        if phase == "baseline":
+                            evidence["environment"]["observed"] = (
+                                copy.deepcopy(
+                                    evidence["baseline"]["environment"]
+                                )
+                            )
+                            _write_canonical(
+                                bundle / "environment.json",
+                                evidence["environment"],
+                            )
+                        _write_canonical(
+                            bundle / f"{phase}.log",
+                            evidence[phase],
+                        )
+                        _write_canonical(
+                            bundle / "evidence.json",
+                            evidence,
+                        )
+                        _rewrite_result_bundle_hash(root, output)
+
+                        with self.assertRaisesRegex(
+                            ContractError,
+                            rf"{phase}\.environment\.{field}",
+                        ):
+                            load_quality_admission_result_index(
+                                root,
+                                output,
+                                accepted_path,
+                            )
+
+    def test_result_loader_rejects_rehashed_cross_phase_environment_drift(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (
+                accepted_path,
+                output,
+                _,
+                bundle,
+                evidence,
+            ) = _verified_bundle_fixture(root)
+            evidence["gold"]["environment"]["host_machine"] = (
+                "forged-host-machine"
+            )
+            _write_canonical(bundle / "gold.log", evidence["gold"])
+            _write_canonical(bundle / "evidence.json", evidence)
+            _rewrite_result_bundle_hash(root, output)
+
+            with self.assertRaisesRegex(
+                ContractError,
+                "phase identity",
+            ):
+                load_quality_admission_result_index(
+                    root,
+                    output,
+                    accepted_path,
+                )
 
     def test_result_schema_fields_are_exact(self) -> None:
         schema = json.loads(

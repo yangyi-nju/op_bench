@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 import json
 from pathlib import Path, PurePosixPath
+import re
 import shlex
 from typing import Callable, ClassVar
 
@@ -1904,10 +1905,19 @@ def _repository_path(root: Path, path: Path, label: str) -> Path:
         if absolute_path.is_relative_to(root.resolve())
         else absolute_root
     )
-    for part in relative.parts:
+    last_position = len(relative.parts) - 1
+    for position, part in enumerate(relative.parts):
         current = current / part
         if current.is_symlink():
             raise ContractError(f"{label}: symlink ancestor is forbidden")
+        if (
+            position < last_position
+            and current.exists()
+            and not current.is_dir()
+        ):
+            raise ContractError(
+                f"{label}: path ancestor is not a directory"
+            )
     return absolute_path
 
 
@@ -1919,6 +1929,19 @@ def _repository_input_file(
     absolute_path = _repository_path(root, path, label)
     if not absolute_path.is_file():
         raise ContractError(f"{label}: expected regular file")
+    return absolute_path
+
+
+def _repository_output_file(
+    root: Path,
+    path: Path,
+    label: str,
+) -> Path:
+    absolute_path = _repository_path(root, path, label)
+    if absolute_path.exists() and not absolute_path.is_file():
+        raise ContractError(
+            f"{label}: output target is not a regular file"
+        )
     return absolute_path
 
 
@@ -2103,10 +2126,91 @@ def quality_admission_bundle_hash(bundle_path: Path) -> str:
     return canonical_sha256(hashes)
 
 
+def _ssh_selector_payload(
+    command_parts: list[str],
+    *,
+    environment: Mapping[str, object],
+) -> list[str] | None:
+    remote_host = environment.get("remote_host")
+    remote_user = environment.get("remote_user")
+    if (
+        not isinstance(remote_host, str)
+        or not remote_host
+        or not isinstance(remote_user, str)
+        or not remote_user
+    ):
+        return None
+    target = f"{remote_user}@{remote_host}"
+    if (
+        len(command_parts) < 3
+        or command_parts[0] != "ssh"
+        or command_parts[-2] != target
+    ):
+        return None
+    option_parts = command_parts[1:-2]
+    position = 0
+    while position < len(option_parts):
+        if (
+            option_parts[position] not in {"-p", "-i", "-o"}
+            or position + 1 >= len(option_parts)
+            or not option_parts[position + 1]
+        ):
+            return None
+        position += 2
+    try:
+        return shlex.split(command_parts[-1])
+    except ValueError:
+        return None
+
+
+def _selector_payload(
+    command_parts: list[str],
+    *,
+    task: TaskManifest,
+    environment: Mapping[str, object],
+) -> list[str] | None:
+    backend = task.environment_backend
+    if backend == "local":
+        return command_parts
+
+    container_name = environment.get("container_name")
+    command_workdir = environment.get("command_workdir")
+    if (
+        not isinstance(container_name, str)
+        or not isinstance(command_workdir, str)
+    ):
+        return None
+    wrapper = [
+        "docker",
+        "exec",
+        "--workdir",
+        command_workdir,
+        container_name,
+    ]
+    if backend == "docker":
+        if command_parts[: len(wrapper)] != wrapper:
+            return None
+        return command_parts[len(wrapper) :]
+    if backend == "remote_docker":
+        remote_payload = _ssh_selector_payload(
+            command_parts,
+            environment=environment,
+        )
+        if (
+            remote_payload is None
+            or remote_payload[: len(wrapper)] != wrapper
+        ):
+            return None
+        return remote_payload[len(wrapper) :]
+    return None
+
+
 def _selector_command(
     commands: list[object],
     selector: str,
     *,
+    task: TaskManifest,
+    environment: Mapping[str, object],
     expected_command: list[str],
     label: str,
 ) -> tuple[int, Mapping[str, object]]:
@@ -2127,21 +2231,13 @@ def _selector_command(
             )
             for item in command_value
         ]
-        token_sequences = [command_parts]
-        for part in command_parts:
-            try:
-                token_sequences.append(shlex.split(part))
-            except ValueError:
-                continue
-        if any(
-            any(
-                tokens[start : start + len(expected_command)]
-                == expected_command
-                for start in range(
-                    len(tokens) - len(expected_command) + 1
-                )
+        if (
+            _selector_payload(
+                command_parts,
+                task=task,
+                environment=environment,
             )
-            for tokens in token_sequences
+            == expected_command
         ):
             matches.append((position, command))
     if len(matches) != 1:
@@ -2149,6 +2245,70 @@ def _selector_command(
             f"{label}.selector {selector!r}: expected exactly one command"
         )
     return matches[0]
+
+
+_IMMUTABLE_EXECUTION_ENVIRONMENT_FIELDS = (
+    "executor",
+    "environment_id",
+    "runtime_tier",
+    "image",
+    "image_digest",
+    "digest_kind",
+    "platform",
+)
+_EPHEMERAL_EXECUTION_ENVIRONMENT_FIELDS = frozenset(
+    {"container_name", "remote_workspace"}
+)
+
+
+def _validate_execution_environment(
+    value: object,
+    *,
+    task: TaskManifest,
+    phase: str,
+) -> Mapping[str, object]:
+    label = f"admission bundle.{phase}.environment"
+    environment = require_mapping(value, label)
+    expected = {
+        "executor": task.environment_backend,
+        "environment_id": task.environment_ref,
+        "runtime_tier": task.runtime_tier,
+        "image": task.environment_image,
+        "image_digest": task.environment_image_digest,
+        "digest_kind": task.environment_digest_kind,
+        "platform": task.environment_platform,
+    }
+    for field in _IMMUTABLE_EXECUTION_ENVIRONMENT_FIELDS:
+        if environment.get(field) != expected[field]:
+            raise ContractError(f"{label}.{field}: mismatch")
+
+    container_name = environment.get("container_name")
+    if container_name is not None:
+        safe_task_id = "".join(
+            character
+            if character.isalnum() or character in {"-", "_"}
+            else "-"
+            for character in task.task_id
+        )
+        expected_pattern = (
+            rf"op-bench-{re.escape(safe_task_id[:48])}-[0-9a-f]{{12}}"
+        )
+        if (
+            not isinstance(container_name, str)
+            or re.fullmatch(expected_pattern, container_name) is None
+        ):
+            raise ContractError(f"{label}.container_name: invalid")
+
+    remote_workspace = environment.get("remote_workspace")
+    if remote_workspace is not None:
+        if (
+            not isinstance(remote_workspace, str)
+            or not remote_workspace.startswith("/")
+            or container_name is None
+            or not remote_workspace.endswith(f"/{container_name}")
+        ):
+            raise ContractError(f"{label}.remote_workspace: invalid")
+    return environment
 
 
 def _validate_bundle_execution(
@@ -2203,7 +2363,11 @@ def _validate_bundle_execution(
         or duration < 0
     ):
         raise ContractError(f"{label}.duration_sec: expected non-negative")
-    require_mapping(execution["environment"], f"{label}.environment")
+    environment = _validate_execution_environment(
+        execution["environment"],
+        task=task,
+        phase=phase,
+    )
     commands = require_list(execution["commands"], f"{label}.commands")
     expected_exit_codes = (
         (
@@ -2219,6 +2383,8 @@ def _validate_bundle_execution(
             command_position, command = _selector_command(
                 commands,
                 selector,
+                task=task,
+                environment=environment,
                 expected_command=task.command_for_test(
                     selector,
                     python_executable=task.environment_python_executable,
@@ -2249,7 +2415,7 @@ def _validate_bundle_execution(
         raise ContractError(
             f"{label}.selectors: expected distinct command order"
         )
-    return execution
+    return {**execution, "environment": environment}
 
 
 def _validate_admission_bundle(
@@ -2345,7 +2511,32 @@ def _validate_admission_bundle(
     )
     if dict(environment) != expected_environment:
         raise ContractError("admission bundle.environment: mismatch")
-    require_mapping(gold["environment"], "admission bundle.gold.environment")
+    baseline_environment = require_mapping(
+        baseline["environment"],
+        "admission bundle.baseline.environment",
+    )
+    gold_environment = require_mapping(
+        gold["environment"],
+        "admission bundle.gold.environment",
+    )
+    if set(baseline_environment) != set(gold_environment):
+        raise ContractError(
+            "admission bundle.environment: phase field mismatch"
+        )
+    baseline_stable = {
+        key: value
+        for key, value in baseline_environment.items()
+        if key not in _EPHEMERAL_EXECUTION_ENVIRONMENT_FIELDS
+    }
+    gold_stable = {
+        key: value
+        for key, value in gold_environment.items()
+        if key not in _EPHEMERAL_EXECUTION_ENVIRONMENT_FIELDS
+    }
+    if baseline_stable != gold_stable:
+        raise ContractError(
+            "admission bundle.environment: phase identity mismatch"
+        )
 
     admission = require_exact_fields(
         payload["admission"],
@@ -2450,7 +2641,7 @@ def run_quality_admission(
         source_registry_path,
         "quality_admission.source_registry_path",
     )
-    output_path = _repository_path(
+    output_path = _repository_output_file(
         root,
         output_path,
         "quality_admission.output_path",
