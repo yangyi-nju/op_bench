@@ -1302,10 +1302,13 @@ class V07QualityAdmissionRunnerTests(unittest.TestCase):
                         *task.pass_to_pass_tests,
                     )
                     for phase in ("baseline", "gold"):
+                        self.assertEqual(
+                            len(selectors),
+                            len(evidence[phase]["commands"]),
+                        )
                         for selector, command in zip(
                             selectors,
                             evidence[phase]["commands"],
-                            strict=True,
                         ):
                             expected = task.command_for_test(
                                 selector,
