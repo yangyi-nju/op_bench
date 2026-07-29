@@ -28,6 +28,13 @@ from op_bench.factory.prompt_quality import (
     validate_prompt_quality_evidence,
 )
 from op_bench.factory.taxonomy import parse_taxonomy_v2
+from op_bench.integrity import REPLAY_SPEC_HASH_KIND, replay_spec_hash
+from op_bench.registry import (
+    EnvironmentRegistry,
+    RegistryError,
+    SourceRegistry,
+    resolve_task_assets,
+)
 from op_bench.runtime.canonical import canonical_json, canonical_sha256
 from op_bench.runtime.codex_mcp_adapter import render_mcp_prompt
 from op_bench.runtime.legacy import LegacyV05Defaults, full_task_spec_from_v05
@@ -47,6 +54,33 @@ _QUALITY_FIELDS = (
     "complexity_evidence",
     "readmission_evidence",
     "origin",
+)
+_HISTORICAL_TASK_IDS = (
+    "pytorch__149693__lazylinear_init",
+    "pytorch__147599__lazylinear_state_forward",
+    "pytorch__160952__bilinear_lazy_check",
+    "pytorch__162340__nn_arg_length",
+    "pytorch__163961__dataloader_subset",
+    "pytorch__168295__autograd_create_graph",
+    "pytorch__161488__lbfgs_wolfe",
+    "pytorch__150975__autograd_backward_inputs",
+    "pytorch__124385__load_state_dict_prefix",
+    "pytorch__143455__set_submodule",
+    "pytorch__132835__njt_sdpa_autocast",
+    "pytorch__132616__cuda_mem_get_info",
+    "pytorch__144009__softmax_ilpreduce_size",
+    "pytorch__140557__layer_norm_decomp_precision",
+    "pytorch__139999__masked_mean_bool_upcast",
+    "pytorch__129138__linear_add_bias_autocast",
+    "pytorch__139372__histc_int8_cuda_bounds",
+    "pytorch__129154__exp_decomp_numerics",
+    "pytorch__144073__vector_norm_scalar_overflow",
+    "pytorch__117065__index_copy_zero_dim",
+    "pytorch__118762__weight_norm_default_dim",
+    "pytorch__126461__cummin_rank_zero",
+    "pytorch__139751__triton_ygrid_mask",
+    "pytorch__143792__addmv_empty_matrix",
+    "pytorch__147352__storage_offset_overflow",
 )
 
 
@@ -211,7 +245,20 @@ def validate_quality_task(
     if require_verified:
         if task.admission_status != "verified":
             errors.append("admission.status: verified required")
-        _, admission_errors = _admission_truth(task)
+        admission_task = task
+        try:
+            admission_task = resolve_task_assets(
+                task,
+                environment_registry=EnvironmentRegistry.load(
+                    root / "environments/registry.json"
+                ),
+                source_registry=SourceRegistry.load(
+                    root / "sources/registry.json"
+                ),
+            )
+        except RegistryError as exc:
+            errors.append(f"admission: registry truth unavailable: {exc}")
+        _, admission_errors = _admission_truth(admission_task)
         errors.extend(admission_errors)
         patch_scope = task.data.get("patch_scope")
         if (
@@ -363,6 +410,7 @@ def write_historical_dispositions(
 ) -> tuple[QualityTaskRecord, ...]:
     """Build and write the canonical task evidence tree and global index."""
 
+    _assert_no_symlink_ancestors(output_path, "output path")
     audit = _build_historical_audit(
         root,
         dataset_path,
@@ -408,6 +456,7 @@ def _build_historical_audit(
         raise ContractError("review_root: expected Path")
     if not isinstance(created_at, str) or _UTC_SECONDS.fullmatch(created_at) is None:
         raise ContractError("created_at: expected UTC RFC3339 seconds")
+    _assert_no_symlink_ancestors(review_root, "review root")
 
     dataset_bytes = load_regular_file_bytes(dataset_path)
     try:
@@ -425,8 +474,10 @@ def _build_historical_audit(
     ]
     if any(not isinstance(task_id, str) or not task_id for task_id in task_ids):
         raise ContractError("dataset.tasks: every entry requires task_id")
-    if len(set(task_ids)) != len(task_ids):
-        raise ContractError("dataset.tasks: duplicate task_id")
+    if tuple(task_ids) != _HISTORICAL_TASK_IDS:
+        raise ContractError(
+            "dataset.tasks: expected exact historical 25 frozen identities"
+        )
 
     loaded_tasks = DatasetManifest.load(dataset_path).load_tasks()
     by_id = {task.task_id: task for task in loaded_tasks}
@@ -509,11 +560,6 @@ def _build_historical_audit(
                     )
             except ContractError as exc:
                 prompt_errors.append(str(exc))
-                if (
-                    isinstance(prompt_review, Mapping)
-                    and prompt_review.get("decision") == "rejected"
-                ):
-                    retirement = True
         errors.extend(f"prompt: {error}" for error in prompt_errors)
         prompt_payload = (
             prompt_evidence.to_dict()
@@ -573,11 +619,6 @@ def _build_historical_audit(
                     )
             except ContractError as exc:
                 complexity_errors.append(str(exc))
-                if (
-                    isinstance(complexity_review, Mapping)
-                    and complexity_review.get("decision") == "rejected"
-                ):
-                    retirement = True
         errors.extend(
             f"complexity: {error}" for error in complexity_errors
         )
@@ -603,6 +644,15 @@ def _build_historical_audit(
             _AuditArtifact(complexity_ref.relative_path, complexity_payload)
         )
 
+        if task.admission_status != "verified":
+            errors.append("admission.status: verified required")
+        patch_scope = task.data.get("patch_scope")
+        if (
+            not isinstance(patch_scope, Mapping)
+            or patch_scope.get("mode", "enforced") != "enforced"
+            or not task.patch_scope_paths
+        ):
+            errors.append("patch_scope: enforced required")
         admission_hash, admission_errors = _admission_truth(task)
         errors.extend(admission_errors)
         if (
@@ -680,7 +730,7 @@ def _build_historical_audit(
             )
         )
 
-    return _HistoricalAudit(
+    result = _HistoricalAudit(
         dataset_id=_string(
             dataset_payload.get("dataset_id"),
             "dataset.dataset_id",
@@ -690,6 +740,8 @@ def _build_historical_audit(
         records=tuple(records),
         artifacts=tuple(artifacts),
     )
+    _validate_historical_records(result.records)
+    return result
 
 
 def _quality_agent_task_view(task: TaskManifest) -> dict[str, object]:
@@ -958,7 +1010,6 @@ def _complexity_from_review(
 
 
 def _admission_truth(task: TaskManifest) -> tuple[str, tuple[str, ...]]:
-    errors: list[str] = []
     admission = task.data.get("admission")
     if not isinstance(admission, Mapping):
         return (
@@ -987,23 +1038,174 @@ def _admission_truth(task: TaskManifest) -> tuple[str, tuple[str, ...]]:
             _bytes_hash(admission_bytes),
             ("admission: evidence must be an object",),
         )
+    errors: list[str] = []
+    _expect_admission_value(errors, payload, "schema_version", "v1")
+    _expect_admission_value(errors, payload, "task_id", task.task_id)
+
+    hash_kind = payload.get("task_manifest_hash_kind")
+    if hash_kind is None:
+        expected_manifest_hash = _bytes_hash(task.task_json_path.read_bytes())
+    elif hash_kind == REPLAY_SPEC_HASH_KIND:
+        expected_manifest_hash = replay_spec_hash(task)
+    else:
+        expected_manifest_hash = ""
+        errors.append("admission: task_manifest_hash_kind is unsupported")
+    if expected_manifest_hash:
+        _expect_admission_value(
+            errors,
+            payload,
+            "task_manifest_hash",
+            expected_manifest_hash,
+        )
+
+    created_at = payload.get("created_at")
+    if (
+        not isinstance(created_at, str)
+        or _UTC_SECONDS.fullmatch(created_at) is None
+    ):
+        errors.append("admission: created_at must be UTC RFC3339 seconds")
+    else:
+        expected_evidence_id = (
+            f"{task.task_id}:"
+            f"{expected_manifest_hash.removeprefix('sha256:')[:12]}:"
+            f"{created_at}"
+        )
+        _expect_admission_value(
+            errors,
+            payload,
+            "evidence_id",
+            expected_evidence_id,
+        )
+
+    _validate_admission_identity(
+        errors,
+        payload.get("source"),
+        "source",
+        {
+            "id": task.source_ref,
+            "repo_url": task.repo_url,
+            "base_commit": task.base_commit,
+            "snapshot_hash": task.source_snapshot_hash,
+            "snapshot_method": task.source_snapshot_method,
+        },
+    )
+    environment = task.data.get("environment")
+    environment_backend = (
+        environment.get("backend", "local")
+        if isinstance(environment, Mapping)
+        else None
+    )
+    _validate_admission_identity(
+        errors,
+        payload.get("environment"),
+        "environment",
+        {
+            "id": task.environment_ref,
+            "runtime_tier": task.runtime_tier,
+            "backend": environment_backend,
+            "image": task.environment_image,
+            "image_digest": task.environment_image_digest,
+            "digest_kind": task.environment_digest_kind,
+            "platform": task.environment_platform,
+        },
+    )
+
     decision = payload.get("admission")
+    if not isinstance(decision, Mapping):
+        errors.append("admission: admission decision must be an object")
+    else:
+        for field, expected in (
+            ("decision", "verified"),
+            ("verified", True),
+            ("failure_classification", None),
+        ):
+            if decision.get(field) != expected:
+                errors.append(f"admission: admission.{field} mismatch")
+
+    _validate_admission_execution(
+        errors,
+        payload.get("baseline"),
+        task=task,
+        phase="baseline",
+    )
+    _validate_admission_execution(
+        errors,
+        payload.get("gold"),
+        task=task,
+        phase="gold",
+    )
+    return _bytes_hash(admission_bytes), tuple(_ordered_unique(errors))
+
+
+def _expect_admission_value(
+    errors: list[str],
+    payload: Mapping[str, object],
+    field: str,
+    expected: object,
+) -> None:
+    if payload.get(field) != expected:
+        errors.append(f"admission: {field} mismatch")
+
+
+def _validate_admission_identity(
+    errors: list[str],
+    value: object,
+    label: str,
+    expected: Mapping[str, object],
+) -> None:
+    if not isinstance(value, Mapping):
+        errors.append(f"admission: {label} must be an object")
+        return
+    for field, expected_value in expected.items():
+        if value.get(field) != expected_value:
+            errors.append(f"admission: {label}.{field} mismatch")
+
+
+def _validate_admission_execution(
+    errors: list[str],
+    value: object,
+    *,
+    task: TaskManifest,
+    phase: str,
+) -> None:
+    if not isinstance(value, Mapping):
+        errors.append(f"admission: {phase} must be an object")
+        return
+    fail_total = len(task.fail_to_pass_tests)
+    pass_total = len(task.pass_to_pass_tests)
+    expected = {
+        "task_id": task.task_id,
+        "mode": phase,
+        "status": (
+            "baseline_reproduced" if phase == "baseline" else "resolved"
+        ),
+        "fail_to_pass_total": fail_total,
+        "pass_to_pass_total": pass_total,
+        "fail_to_pass_passed": 0 if phase == "baseline" else fail_total,
+        "pass_to_pass_passed": pass_total,
+    }
+    if fail_total <= 0 or pass_total <= 0:
+        errors.append(
+            "admission: Task selectors require positive F2P and P2P counts"
+        )
+    for field, expected_value in expected.items():
+        actual = value.get(field)
+        if (
+            field.endswith(("_total", "_passed"))
+            and (isinstance(actual, bool) or not isinstance(actual, int))
+        ):
+            errors.append(f"admission: {phase}.{field} must be an integer")
+        elif actual != expected_value:
+            errors.append(f"admission: {phase}.{field} mismatch")
+    duration = value.get("duration_sec")
     if (
-        not isinstance(decision, Mapping)
-        or decision.get("verified") is not True
-        or decision.get("decision") != "verified"
+        isinstance(duration, bool)
+        or not isinstance(duration, (int, float))
+        or duration < 0
     ):
-        errors.append("admission: verified decision is missing")
-    baseline = payload.get("baseline")
-    if (
-        not isinstance(baseline, Mapping)
-        or baseline.get("status") != "baseline_reproduced"
-    ):
-        errors.append("runtime: baseline truth is missing")
-    gold = payload.get("gold")
-    if not isinstance(gold, Mapping) or gold.get("status") != "resolved":
-        errors.append("runtime: Gold truth is missing")
-    return _bytes_hash(admission_bytes), tuple(errors)
+        errors.append(
+            f"admission: {phase}.duration_sec must be non-negative"
+        )
 
 
 def _review_path(root: Path, task_id: str, kind: str) -> Path:
@@ -1012,7 +1214,12 @@ def _review_path(root: Path, task_id: str, kind: str) -> Path:
         root / kind / f"{task_id}.json",
         root / f"{task_id}.{kind}.json",
     )
-    return next((path for path in candidates if path.exists()), candidates[0])
+    selected = next(
+        (path for path in candidates if path.exists()),
+        candidates[0],
+    )
+    _assert_no_symlink_ancestors(selected, f"{kind} review path")
+    return selected
 
 
 def _review_json(
@@ -1181,7 +1388,37 @@ def _ordered_unique(values: list[str]) -> list[str]:
     return list(dict.fromkeys(values))
 
 
+def _validate_historical_records(
+    records: tuple[QualityTaskRecord, ...],
+) -> None:
+    task_ids = tuple(record.task_id for record in records)
+    public_task_ids = tuple(record.public_task_id for record in records)
+    expected_public_ids = tuple(
+        f"opbench-v07-t{index:04d}"
+        for index in range(1, len(_HISTORICAL_TASK_IDS) + 1)
+    )
+    if task_ids != _HISTORICAL_TASK_IDS:
+        raise ContractError(
+            "records: expected exact historical 25 frozen identities"
+        )
+    if (
+        public_task_ids != expected_public_ids
+        or len(set(public_task_ids)) != len(public_task_ids)
+    ):
+        raise ContractError(
+            "records: expected unique deterministic public Task identities"
+        )
+
+
+def _assert_no_symlink_ancestors(path: Path, label: str) -> None:
+    absolute = path.absolute()
+    for candidate in (absolute, *absolute.parents):
+        if candidate.is_symlink():
+            raise ContractError(f"{label}: symlink ancestor is forbidden")
+
+
 def _write_canonical(path: Path, value: object) -> None:
+    _assert_no_symlink_ancestors(path, "output path")
     path.parent.mkdir(parents=True, exist_ok=True)
     content = canonical_json(value).encode("utf-8")
     if path.exists():

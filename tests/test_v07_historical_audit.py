@@ -4,6 +4,8 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -11,8 +13,10 @@ import unittest
 from op_bench.factory.quality_release import (
     QualityTaskRecord,
     build_historical_dispositions,
+    write_historical_dispositions,
 )
 from op_bench.runtime.canonical import canonical_sha256
+from op_bench.runtime.validation import ContractError
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -32,6 +36,8 @@ def _tree_hash(root: Path) -> str:
 
 
 def _run_audit(review_root: Path, output_root: Path) -> None:
+    review_root = review_root.resolve()
+    output_root = output_root.resolve()
     env = dict(os.environ)
     env["PYTHONPATH"] = str(ROOT / "src")
     completed = subprocess.run(
@@ -62,6 +68,46 @@ def _run_audit(review_root: Path, output_root: Path) -> None:
 
 
 class V07HistoricalAuditTests(unittest.TestCase):
+    def test_historical_dataset_requires_exact_25_frozen_identities(self) -> None:
+        original = json.loads(DATASET.read_text(encoding="utf-8"))
+        cases = {
+            "24": original["tasks"][:-1],
+            "26": [
+                *original["tasks"],
+                {
+                    **original["tasks"][-1],
+                    "task_id": "pytorch__extra",
+                },
+            ],
+            "missing": [
+                *original["tasks"][:-1],
+                {
+                    **original["tasks"][-1],
+                    "task_id": "pytorch__replacement",
+                },
+            ],
+            "duplicate": [
+                *original["tasks"][:-1],
+                dict(original["tasks"][0]),
+            ],
+        }
+        for name, entries in cases.items():
+            with self.subTest(case=name), tempfile.TemporaryDirectory() as directory:
+                dataset = Path(directory).resolve() / "dataset.json"
+                payload = dict(original)
+                payload["tasks"] = entries
+                dataset.write_text(json.dumps(payload), encoding="utf-8")
+                with self.assertRaisesRegex(
+                    ContractError,
+                    "exact historical 25",
+                ):
+                    build_historical_dispositions(
+                        ROOT,
+                        dataset,
+                        ROOT / "factory/v0.7/p7/reviews",
+                        CREATED_AT,
+                    )
+
     def test_historical_audit_is_complete_and_unique(self) -> None:
         records = build_historical_dispositions(
             ROOT,
@@ -82,14 +128,14 @@ class V07HistoricalAuditTests(unittest.TestCase):
             records = build_historical_dispositions(
                 ROOT,
                 DATASET,
-                Path(directory) / "missing-reviews",
+                Path(directory).resolve() / "missing-reviews",
                 CREATED_AT,
             )
         self.assertEqual({item.disposition for item in records}, {"deferred"})
 
     def test_cli_tree_is_deterministic_and_sensitive_to_review_decision(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
-            temporary = Path(directory)
+            temporary = Path(directory).resolve()
             reviews = temporary / "reviews"
             first = temporary / "first"
             second = temporary / "second"
@@ -117,6 +163,7 @@ class V07HistoricalAuditTests(unittest.TestCase):
                 )
             )
             self.assertEqual(index["k"], 0)
+            self.assertEqual(index["records"][0]["disposition"], "deferred")
             self.assertEqual(index["required_candidate_count"], 150)
             self.assertEqual(len(index["records"]), 25)
             self.assertEqual(
@@ -146,6 +193,122 @@ class V07HistoricalAuditTests(unittest.TestCase):
                         artifact["content_hash"],
                     )
 
+    def test_malformed_claimed_rejections_always_defer(self) -> None:
+        dataset = json.loads(DATASET.read_text(encoding="utf-8"))
+        task_id = dataset["tasks"][0]["task_id"]
+        for kind in ("prompt", "complexity"):
+            with self.subTest(kind=kind), tempfile.TemporaryDirectory() as directory:
+                reviews = Path(directory).resolve() / "reviews"
+                review_dir = reviews / task_id
+                review_dir.mkdir(parents=True)
+                (review_dir / f"{kind}.json").write_text(
+                    json.dumps(
+                        {
+                            "contract_type": (
+                                "prompt_quality"
+                                if kind == "prompt"
+                                else "complexity_evidence"
+                            ),
+                            "decision": "rejected",
+                        }
+                    ),
+                    encoding="utf-8",
+                )
+                records = build_historical_dispositions(
+                    ROOT,
+                    DATASET,
+                    reviews,
+                    CREATED_AT,
+                )
+                self.assertEqual(records[0].disposition, "deferred")
+
+    def test_draft_admission_and_advisory_scope_are_explicitly_deferred(
+        self,
+    ) -> None:
+        original_dataset = json.loads(DATASET.read_text(encoding="utf-8"))
+        for gate in ("admission", "patch_scope"):
+            with self.subTest(gate=gate), tempfile.TemporaryDirectory(
+                dir=ROOT
+            ) as directory:
+                temporary = Path(directory).resolve()
+                entry = dict(original_dataset["tasks"][0])
+                source_task = ROOT / entry["task_path"]
+                task_dir = temporary / "task"
+                shutil.copytree(source_task, task_dir)
+                manifest_path = task_dir / "task.json"
+                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+                if gate == "admission":
+                    manifest["admission"]["status"] = "draft"
+                    manifest["metadata"]["admission_status"] = "draft"
+                else:
+                    manifest["patch_scope"]["mode"] = "advisory"
+                manifest_path.write_text(
+                    json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+                    encoding="utf-8",
+                )
+                dataset_payload = json.loads(
+                    DATASET.read_text(encoding="utf-8")
+                )
+                dataset_payload["tasks"][0] = {
+                    **entry,
+                    "task_path": str(task_dir),
+                }
+                dataset_path = temporary / "dataset.json"
+                dataset_path.write_text(
+                    json.dumps(dataset_payload),
+                    encoding="utf-8",
+                )
+                output = temporary / "audit/historical_readmission.json"
+                write_historical_dispositions(
+                    ROOT,
+                    dataset_path,
+                    temporary / "missing-reviews",
+                    output,
+                    CREATED_AT,
+                )
+                readmission = json.loads(
+                    (
+                        output.parent
+                        / "tasks/opbench-v07-t0001/quality/readmission.json"
+                    ).read_text(encoding="utf-8")
+                )
+                expected = (
+                    "admission.status: verified required"
+                    if gate == "admission"
+                    else "patch_scope: enforced required"
+                )
+                self.assertIn(expected, readmission["errors"])
+                self.assertEqual(readmission["disposition"], "deferred")
+
+    def test_symlinked_review_and_output_ancestors_fail_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            temporary = Path(directory).resolve()
+            external_reviews = temporary / "external-reviews"
+            external_reviews.mkdir()
+            review_link = temporary / "review-link"
+            review_link.symlink_to(external_reviews, target_is_directory=True)
+            with self.assertRaisesRegex(ContractError, "symlink"):
+                build_historical_dispositions(
+                    ROOT,
+                    DATASET,
+                    review_link / "nested",
+                    CREATED_AT,
+                )
+
+            external_output = temporary / "external-output"
+            external_output.mkdir()
+            output_link = temporary / "output-link"
+            output_link.symlink_to(external_output, target_is_directory=True)
+            with self.assertRaisesRegex(ContractError, "symlink"):
+                write_historical_dispositions(
+                    ROOT,
+                    DATASET,
+                    temporary / "missing-reviews",
+                    output_link / "nested/historical_readmission.json",
+                    CREATED_AT,
+                )
+            self.assertEqual(list(external_output.iterdir()), [])
+
     def test_schema_tracks_index_and_record_wire_fields(self) -> None:
         schema = json.loads(
             (ROOT / "schemas/v07_quality_release.schema.json").read_text(
@@ -165,6 +328,30 @@ class V07HistoricalAuditTests(unittest.TestCase):
             set(schema["$defs"]["record"]["properties"]),
             set(QualityTaskRecord.wire_fields()),
         )
+        self.assertEqual(schema["properties"]["records"]["minItems"], 25)
+        self.assertEqual(schema["properties"]["records"]["maxItems"], 25)
+        self.assertIs(schema["properties"]["records"]["uniqueItems"], True)
+        reference_pattern = schema["$defs"]["reference"]["properties"][
+            "relative_path"
+        ]["pattern"]
+        task_pattern = schema["$defs"]["record"]["properties"]["task_path"][
+            "pattern"
+        ]
+        for pattern, valid, invalid in (
+            (
+                reference_pattern,
+                "tasks/opbench-v07-t0001/quality/prompt.json",
+                ("/absolute.json", "../escape.json", "a/../escape.json", r"a\b.json"),
+            ),
+            (
+                task_pattern,
+                "tasks/pytorch/example",
+                ("/absolute", "../escape", "a/../escape", r"a\b"),
+            ),
+        ):
+            self.assertIsNotNone(re.fullmatch(pattern, valid))
+            for value in invalid:
+                self.assertIsNone(re.fullmatch(pattern, value), value)
 
 
 if __name__ == "__main__":

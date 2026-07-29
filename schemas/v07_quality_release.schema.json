@@ -35,6 +35,7 @@
       "type": "array",
       "minItems": 25,
       "maxItems": 25,
+      "uniqueItems": true,
       "items": {"$ref": "#/$defs/record"}
     },
     "content_hash": {"$ref": "#/$defs/hash"}
@@ -59,7 +60,7 @@
         "content_hash": {"$ref": "#/$defs/hash"},
         "relative_path": {
           "type": "string",
-          "pattern": "^[^/][^\\\\]*\\.json$"
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\\\)[^/]+(?:/[^/]+)*\\.json$"
         }
       }
     },
@@ -86,7 +87,10 @@
         "origin": {
           "enum": ["retained_historical", "new", "replacement"]
         },
-        "task_path": {"type": "string", "minLength": 1},
+        "task_path": {
+          "type": "string",
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\\\)[^/]+(?:/[^/]+)*$"
+        },
         "taxonomy_hash": {"$ref": "#/$defs/hash"},
         "prompt_evidence": {"$ref": "#/$defs/reference"},
         "complexity_evidence": {"$ref": "#/$defs/reference"},

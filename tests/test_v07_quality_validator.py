@@ -15,6 +15,12 @@ from op_bench.factory.prompt_quality import (
     build_prompt_quality_evidence,
 )
 from op_bench.factory.quality_release import validate_quality_task
+from op_bench.integrity import REPLAY_SPEC_HASH_KIND, replay_spec_hash
+from op_bench.registry import (
+    EnvironmentRegistry,
+    SourceRegistry,
+    resolve_task_assets,
+)
 from op_bench.runtime.canonical import canonical_json, canonical_sha256
 from op_bench.runtime.codex_mcp_adapter import render_mcp_prompt
 from op_bench.runtime.legacy import LegacyV05Defaults, full_task_spec_from_v05
@@ -48,6 +54,18 @@ def _quality_view(task: TaskManifest) -> dict[str, object]:
         capability,
         defaults.budget_policy,
     ).to_dict()
+
+
+def _resolved_task(task: TaskManifest) -> TaskManifest:
+    return resolve_task_assets(
+        task,
+        environment_registry=EnvironmentRegistry.load(
+            ROOT / "environments/registry.json"
+        ),
+        source_registry=SourceRegistry.load(
+            ROOT / "sources/registry.json"
+        ),
+    )
 
 
 def complete_quality_task(
@@ -120,18 +138,70 @@ def complete_quality_task(
         encoding="utf-8",
     )
     (task_dir / "admission").mkdir()
+    (task_dir / "task.json").write_text(
+        json.dumps(data, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    task = _resolved_task(TaskManifest(task_dir=task_dir, data=data))
+    replay_hash = replay_spec_hash(task)
+    created_at = "2026-07-29T00:00:00Z"
     admission = {
-        "admission": {"decision": "verified", "verified": True},
-        "baseline": {"status": "baseline_reproduced"},
-        "gold": {"status": "resolved"},
-        "task_id": data["task_id"],
+        "schema_version": "v1",
+        "evidence_id": (
+            f"{task.task_id}:{replay_hash.removeprefix('sha256:')[:12]}:"
+            f"{created_at}"
+        ),
+        "task_id": task.task_id,
+        "task_manifest_hash": replay_hash,
+        "task_manifest_hash_kind": REPLAY_SPEC_HASH_KIND,
+        "created_at": created_at,
+        "source": {
+            "id": task.source_ref,
+            "repo_url": task.repo_url,
+            "base_commit": task.base_commit,
+            "snapshot_hash": task.source_snapshot_hash,
+            "snapshot_method": task.source_snapshot_method,
+        },
+        "environment": {
+            "id": task.environment_ref,
+            "runtime_tier": task.runtime_tier,
+            "backend": task.environment_backend,
+            "image": task.environment_image,
+            "image_digest": task.environment_image_digest,
+            "digest_kind": task.environment_digest_kind,
+            "platform": task.environment_platform,
+        },
+        "baseline": {
+            "task_id": task.task_id,
+            "mode": "baseline",
+            "status": "baseline_reproduced",
+            "fail_to_pass_total": len(task.fail_to_pass_tests),
+            "fail_to_pass_passed": 0,
+            "pass_to_pass_total": len(task.pass_to_pass_tests),
+            "pass_to_pass_passed": len(task.pass_to_pass_tests),
+            "duration_sec": 1,
+        },
+        "gold": {
+            "task_id": task.task_id,
+            "mode": "gold",
+            "status": "resolved",
+            "fail_to_pass_total": len(task.fail_to_pass_tests),
+            "fail_to_pass_passed": len(task.fail_to_pass_tests),
+            "pass_to_pass_total": len(task.pass_to_pass_tests),
+            "pass_to_pass_passed": len(task.pass_to_pass_tests),
+            "duration_sec": 1,
+        },
+        "admission": {
+            "decision": "verified",
+            "failure_classification": None,
+            "verified": True,
+        },
     }
     (task_dir / "admission/evidence.json").write_text(
         json.dumps(admission),
         encoding="utf-8",
     )
 
-    task = TaskManifest(task_dir=task_dir, data=data)
     private_index = build_private_answer_index(
         gold_patch=gold_patch,
         hidden_test_patch=hidden_patch,
@@ -216,7 +286,37 @@ def complete_quality_task(
         "readmission_evidence": readmission_ref.relative_path,
         "origin": "retained_historical",
     }
-    return TaskManifest(task_dir=task_dir, data=data)
+    return _resolved_task(TaskManifest(task_dir=task_dir, data=data))
+
+
+def _rewrite_admission(
+    task: TaskManifest,
+    mutation,
+) -> tuple[str, ...]:
+    admission_path = task.task_dir / "admission/evidence.json"
+    admission = json.loads(admission_path.read_text(encoding="utf-8"))
+    mutation(admission)
+    admission_path.write_text(
+        json.dumps(admission, sort_keys=True),
+        encoding="utf-8",
+    )
+    readmission_path = task.task_dir / "quality/readmission.json"
+    readmission = json.loads(readmission_path.read_text(encoding="utf-8"))
+    readmission["admission_evidence_hash"] = (
+        "sha256:" + hashlib.sha256(admission_path.read_bytes()).hexdigest()
+    )
+    readmission["content_hash"] = canonical_sha256(
+        {
+            key: value
+            for key, value in readmission.items()
+            if key != "content_hash"
+        }
+    )
+    readmission_path.write_text(
+        canonical_json(readmission),
+        encoding="utf-8",
+    )
+    return validate_quality_task(ROOT, task, require_verified=True)
 
 
 class V07QualityValidatorTests(unittest.TestCase):
@@ -278,6 +378,64 @@ class V07QualityValidatorTests(unittest.TestCase):
             "quality.readmission_evidence: disposition: retained required",
             errors,
         )
+
+    def test_status_only_admission_forgery_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            task = complete_quality_task(Path(directory))
+            errors = _rewrite_admission(
+                task,
+                lambda payload: (
+                    payload.clear(),
+                    payload.update(
+                        {
+                            "task_id": task.task_id,
+                            "baseline": {"status": "baseline_reproduced"},
+                            "gold": {"status": "resolved"},
+                            "admission": {
+                                "decision": "verified",
+                                "verified": True,
+                            },
+                        }
+                    ),
+                ),
+            )
+        self.assertTrue(
+            any(error.startswith("admission:") for error in errors),
+            errors,
+        )
+
+    def test_admission_rebinding_axes_are_rejected_after_byte_hash_update(
+        self,
+    ) -> None:
+        mutations = {
+            "task_id": lambda payload: payload.__setitem__(
+                "task_id", "pytorch__other"
+            ),
+            "replay_hash": lambda payload: payload.__setitem__(
+                "task_manifest_hash", "sha256:" + "f" * 64
+            ),
+            "source": lambda payload: payload["source"].__setitem__(
+                "id", "other-source"
+            ),
+            "environment": lambda payload: payload["environment"].__setitem__(
+                "id", "other-environment"
+            ),
+            "selector_counts": lambda payload: payload["gold"].__setitem__(
+                "fail_to_pass_total",
+                payload["gold"]["fail_to_pass_total"] + 1,
+            ),
+            "execution_identity": lambda payload: payload[
+                "baseline"
+            ].__setitem__("task_id", "pytorch__other"),
+        }
+        for name, mutation in mutations.items():
+            with self.subTest(axis=name), tempfile.TemporaryDirectory() as directory:
+                task = complete_quality_task(Path(directory))
+                errors = _rewrite_admission(task, mutation)
+                self.assertTrue(
+                    any(error.startswith("admission:") for error in errors),
+                    errors,
+                )
 
 
 if __name__ == "__main__":
