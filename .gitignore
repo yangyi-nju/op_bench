@@ -1,4 +1,5 @@
 .venv/
+.worktrees/
 .claude/
 .op_bench_cache/
 runs/*/workspaces/
