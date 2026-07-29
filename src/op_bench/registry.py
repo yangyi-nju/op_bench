@@ -304,6 +304,21 @@ def resolve_task_assets(
             raise RegistryError(f"task {task.task_id}: environment_ref requires an environment registry")
         environment_asset = environment_registry.get(task.environment_ref)
         task_environment = data.get("environment", {})
+        environment_defaults = environment_asset.task_environment_defaults()
+        asset_backend = str(environment_defaults["backend"])
+        configured_backend = (
+            task_environment.get("backend")
+            if isinstance(task_environment, dict)
+            else None
+        )
+        if (
+            configured_backend is not None
+            and configured_backend != asset_backend
+        ):
+            raise RegistryError(
+                f"task {task.task_id}: cannot override registry backend "
+                f"{asset_backend} with {configured_backend}"
+            )
         configured_remote_hash = (
             task_environment.get("remote_execution_config_hash")
             if isinstance(task_environment, dict)
@@ -320,7 +335,10 @@ def resolve_task_assets(
                 f"task {task.task_id}: cannot override "
                 "remote_execution_config_hash"
             )
-        data["environment"] = _deep_merge(environment_asset.task_environment_defaults(), data.get("environment", {}))
+        data["environment"] = _deep_merge(
+            environment_defaults,
+            data.get("environment", {}),
+        )
         data.setdefault("runtime_tier", environment_asset.runtime_tier)
     if task.source_ref:
         if source_registry is None:
