@@ -307,6 +307,16 @@
         "base_commit",
         "base_ref_name",
         "head_ref_name",
+        "resolver_mode",
+        "main_history_head_oid",
+        "main_history_commit",
+        "main_history_first_parent",
+        "main_history_committed_at",
+        "resolved_marker",
+        "selected_commit_message",
+        "selected_commit_message_hash",
+        "main_history_membership",
+        "main_history_reverted",
         "files_total_count",
         "files_captured_node_count",
         "files_has_next_page",
@@ -345,6 +355,30 @@
         },
         "base_ref_name": {"const": "main"},
         "head_ref_name": {"type": "string", "minLength": 1},
+        "resolver_mode": {
+          "const": "main_history_exact_resolved_marker"
+        },
+        "main_history_head_oid": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "main_history_commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "main_history_first_parent": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "main_history_committed_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "resolved_marker": {"type": "string", "minLength": 1},
+        "selected_commit_message": {"type": "string", "minLength": 1},
+        "selected_commit_message_hash": {"$ref": "#/$defs/hash"},
+        "main_history_membership": {"const": true},
+        "main_history_reverted": {"const": false},
         "files_total_count": {"type": "integer", "minimum": 1},
         "files_captured_node_count": {"type": "integer", "minimum": 1},
         "files_has_next_page": {"const": false},

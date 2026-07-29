@@ -138,6 +138,13 @@ def _changed_files_hash(candidate: dict[str, object]) -> str:
 
 
 def _receipt(candidate: dict[str, object]) -> dict[str, object]:
+    resolved_marker = (
+        "Pull Request resolved: "
+        f"https://github.com/pytorch/pytorch/pull/{candidate['pr_number']}"
+    )
+    selected_commit_message = (
+        f"{candidate['title']}\n\n{resolved_marker}"
+    )
     payload: dict[str, object] = {
         "contract_type": "quality_candidate_acquisition_receipt",
         "schema_version": "v1",
@@ -149,6 +156,18 @@ def _receipt(candidate: dict[str, object]) -> dict[str, object]:
         "base_commit": candidate["base_commit"],
         "base_ref_name": candidate["base_ref_name"],
         "head_ref_name": candidate["head_ref_name"],
+        "resolver_mode": "main_history_exact_resolved_marker",
+        "main_history_head_oid": "f" * 40,
+        "main_history_commit": candidate["merge_commit"],
+        "main_history_first_parent": candidate["base_commit"],
+        "main_history_committed_at": candidate["merged_at"],
+        "resolved_marker": resolved_marker,
+        "selected_commit_message": selected_commit_message,
+        "selected_commit_message_hash": canonical_sha256(
+            selected_commit_message
+        ),
+        "main_history_membership": True,
+        "main_history_reverted": False,
         "files_total_count": candidate["changed_file_count"],
         "files_captured_node_count": candidate["changed_file_count"],
         "files_has_next_page": False,
@@ -336,6 +355,16 @@ class QualityCandidateContractTests(unittest.TestCase):
                 "base_commit",
                 "base_ref_name",
                 "head_ref_name",
+                "resolver_mode",
+                "main_history_head_oid",
+                "main_history_commit",
+                "main_history_first_parent",
+                "main_history_committed_at",
+                "resolved_marker",
+                "selected_commit_message",
+                "selected_commit_message_hash",
+                "main_history_membership",
+                "main_history_reverted",
                 "files_total_count",
                 "files_captured_node_count",
                 "files_has_next_page",
@@ -409,10 +438,6 @@ class QualityCandidateContractTests(unittest.TestCase):
 
     def test_hard_rejection_reasons_are_exact_and_preliminary(self) -> None:
         mutations = {
-            "missing immutable commits": {
-                "base_commit": None,
-                "reason": "source.missing_immutable_commits",
-            },
             "source unavailable": {
                 "source_available": False,
                 "reason": "source.unavailable",
@@ -488,6 +513,10 @@ class QualityCandidateContractTests(unittest.TestCase):
 
     def test_malformed_sha_duplicate_pr_and_incomplete_files_fail_closed(self) -> None:
         cases = {
+            "missing immutable main provenance": (
+                [_capture(base=None)],
+                "main_history_first_parent",
+            ),
             "malformed sha": (
                 [_capture(base="abc")],
                 "base_commit",
@@ -595,6 +624,88 @@ class QualityCandidateContractTests(unittest.TestCase):
 
                 self.assertNotEqual(completed.returncode, 0)
                 self.assertIn("receipt", completed.stderr.casefold())
+
+    def test_receipts_reject_mutated_main_history_resolver_evidence(self) -> None:
+        cases = {
+            "resolver": lambda receipt: receipt.__setitem__(
+                "resolver_mode", "pull_request_commits"
+            ),
+            "marker identity": lambda receipt: receipt.__setitem__(
+                "resolved_marker",
+                "Pull Request resolved: "
+                "https://github.com/pytorch/pytorch/pull/190002",
+            ),
+            "message digest": lambda receipt: receipt.__setitem__(
+                "selected_commit_message_hash",
+                "sha256:" + "c" * 64,
+            ),
+            "message marker removed": lambda receipt: (
+                receipt.__setitem__(
+                    "selected_commit_message",
+                    "Fix without resolved marker",
+                ),
+                receipt.__setitem__(
+                    "selected_commit_message_hash",
+                    canonical_sha256("Fix without resolved marker"),
+                ),
+            ),
+            "membership": lambda receipt: receipt.__setitem__(
+                "main_history_membership", False
+            ),
+            "reverted": lambda receipt: receipt.__setitem__(
+                "main_history_reverted", True
+            ),
+            "history commit": lambda receipt: receipt.__setitem__(
+                "main_history_commit", "d" * 40
+            ),
+            "history parent": lambda receipt: receipt.__setitem__(
+                "main_history_first_parent", "e" * 40
+            ),
+            "history timestamp": lambda receipt: receipt.__setitem__(
+                "main_history_committed_at", "2026-07-20T01:02:04Z"
+            ),
+        }
+        for name, mutate in cases.items():
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:
+                temporary = Path(directory)
+                captures_path = temporary / "captures.json"
+                receipts_path = temporary / "receipts.json"
+                _write_acquisition_inputs(
+                    captures_path, receipts_path, [_capture()]
+                )
+                receipts = json.loads(
+                    receipts_path.read_text(encoding="utf-8")
+                )
+                mutate(receipts["receipts"][0])
+                receipts["receipts"][0]["content_hash"] = canonical_sha256(
+                    {
+                        key: value
+                        for key, value in receipts["receipts"][0].items()
+                        if key != "content_hash"
+                    }
+                )
+                receipts["content_hash"] = canonical_sha256(
+                    {
+                        key: value
+                        for key, value in receipts.items()
+                        if key != "content_hash"
+                    }
+                )
+                receipts_path.write_bytes(
+                    canonical_json(receipts).encode("utf-8")
+                )
+
+                completed = _run_screen(
+                    captures_path,
+                    temporary / "screening",
+                    receipt_path=receipts_path,
+                )
+
+                self.assertNotEqual(completed.returncode, 0)
+                self.assertRegex(
+                    completed.stderr.casefold(),
+                    r"main_history|resolver|marker|message|receipt",
+                )
 
     def test_historical_k_must_equal_retained_dispositions(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -824,6 +935,24 @@ class QualityCandidateContractTests(unittest.TestCase):
         fbcode["proposed_contract_families"] = ["api_behavior"]
         candidates.append(fbcode)
         expected[191202] = ("deferred_for_review", None)
+        distributed_production = _capture(
+            number=191203,
+            merge="9" * 40,
+            title="Fix flight recorder builder ordering",
+            description="Repair the builder state transition.",
+        )
+        distributed_production["execution_hints"]["phases"] = ["forward"]
+        distributed_production["proposed_contract_families"] = [
+            "api_behavior"
+        ]
+        distributed_production["changed_files"][1]["path"] = (
+            "torch/distributed/flight_recorder/components/builder.py"
+        )
+        candidates.append(distributed_production)
+        expected[191203] = (
+            "hard_rejected",
+            "runtime.hardware_outside_v07_scope",
+        )
 
         with tempfile.TemporaryDirectory() as directory:
             temporary = Path(directory)
@@ -851,7 +980,12 @@ class QualityCandidateContractTests(unittest.TestCase):
                     self.assertIn(reason, decision.hard_rejection_reasons)
                 else:
                     self.assertTrue(decision.preliminary_review_reasons)
-                if item["pr_number"] in {191000, 191001, 191200}:
+                if item["pr_number"] in {
+                    191000,
+                    191001,
+                    191200,
+                    191203,
+                }:
                     self.assertTrue(
                         candidate_record.execution_hints.distributed
                     )
@@ -876,7 +1010,33 @@ class QualityCandidateContractTests(unittest.TestCase):
                 receipt_path=receipts,
             )
             self.assertNotEqual(completed.returncode, 0)
-            self.assertIn("primary", completed.stderr.casefold())
+            self.assertRegex(
+                completed.stderr.casefold(),
+                r"primary|reversal",
+            )
+
+    def test_known_reverted_primary_pr_cannot_be_screened(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            temporary = Path(directory)
+            captures = temporary / "captures.json"
+            receipts = temporary / "receipts.json"
+            _write_acquisition_inputs(
+                captures,
+                receipts,
+                [_capture(number=186379)],
+            )
+
+            completed = _run_screen(
+                captures,
+                temporary / "screening",
+                receipt_path=receipts,
+            )
+
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertRegex(
+                completed.stderr.casefold(),
+                r"revert|primary",
+            )
 
     def test_backward_compatibility_is_not_gradient_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -1047,6 +1207,115 @@ class QualityCandidateContractTests(unittest.TestCase):
                 errors,
             )
 
+    def test_pin_rejects_coherent_pr_branch_substitution_everywhere(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            temporary_root = Path(directory)
+            p8 = temporary_root / "factory/v0.7/p8"
+            p8.mkdir(parents=True)
+            p7 = temporary_root / "factory/v0.7/p7"
+            p7.mkdir(parents=True)
+            captures_path = p8 / "captures.json"
+            receipts_path = p8 / "acquisition_receipts.json"
+            historical_path = p7 / "historical_readmission.json"
+            shutil.copy2(CAPTURES, captures_path)
+            shutil.copy2(RECEIPTS, receipts_path)
+            shutil.copy2(HISTORICAL, historical_path)
+            captures = json.loads(
+                captures_path.read_text(encoding="utf-8")
+            )
+            receipts = json.loads(
+                receipts_path.read_text(encoding="utf-8")
+            )
+            capture = next(
+                item
+                for item in captures["candidates"]
+                if item["pr_number"] == 177673
+            )
+            receipt = next(
+                item
+                for item in receipts["receipts"]
+                if item["pr_number"] == 177673
+            )
+            branch_commit = "028b47f6900c5cc332134112d5ea83a9b2c22f1b"
+            branch_parent = "b459a7c37fa76721b8d302dafd41fefb1842140f"
+            branch_time = "2026-03-25T08:08:27Z"
+            marker = (
+                "Pull Request resolved: "
+                "https://github.com/pytorch/pytorch/pull/177673"
+            )
+            message = f"{capture['title']}\n\n{marker}"
+            for payload in (capture, receipt):
+                payload["merge_commit"] = branch_commit
+                payload["base_commit"] = branch_parent
+                payload["merged_at"] = branch_time
+            receipt["main_history_commit"] = branch_commit
+            receipt["main_history_first_parent"] = branch_parent
+            receipt["main_history_committed_at"] = branch_time
+            receipt["resolved_marker"] = marker
+            receipt["selected_commit_message"] = message
+            receipt["selected_commit_message_hash"] = canonical_sha256(
+                message
+            )
+            receipt["content_hash"] = canonical_sha256(
+                {
+                    key: value
+                    for key, value in receipt.items()
+                    if key != "content_hash"
+                }
+            )
+            receipts["content_hash"] = canonical_sha256(
+                {
+                    key: value
+                    for key, value in receipts.items()
+                    if key != "content_hash"
+                }
+            )
+            capture["acquisition_receipt_hash"] = receipt["content_hash"]
+            captures[
+                "acquisition_receipt_set_hash"
+            ] = receipts["content_hash"]
+            captures["content_hash"] = canonical_sha256(
+                {
+                    key: value
+                    for key, value in captures.items()
+                    if key != "content_hash"
+                }
+            )
+            receipts_path.write_bytes(
+                canonical_json(receipts).encode("utf-8")
+            )
+            captures_path.write_bytes(
+                canonical_json(captures).encode("utf-8")
+            )
+            screening = p8 / "screening"
+            rebuilt = _run_screen(
+                captures_path,
+                screening,
+                receipt_path=receipts_path,
+                historical_path=historical_path,
+            )
+            self.assertEqual(rebuilt.returncode, 0, rebuilt.stderr)
+            relocated = temporary_root / "relocated"
+            shutil.copytree(screening, relocated)
+
+            official_errors = validate_candidate_index(
+                temporary_root,
+                screening / "screening_index.json",
+            )
+            relocated_errors = validate_candidate_index(
+                temporary_root,
+                relocated / "screening_index.json",
+            )
+
+            self.assertTrue(
+                any("pinned" in error for error in official_errors),
+                official_errors,
+            )
+            self.assertTrue(
+                any("pinned" in error for error in relocated_errors),
+                relocated_errors,
+            )
+
 
 class FrozenQualityCandidateFunnelTests(unittest.TestCase):
     @classmethod
@@ -1078,6 +1347,10 @@ class FrozenQualityCandidateFunnelTests(unittest.TestCase):
 
     def test_real_provenance_is_unique_nonhistorical_and_complete(self) -> None:
         candidates = self.capture_set["candidates"]
+        self.assertNotIn(
+            186379,
+            {item["pr_number"] for item in candidates},
+        )
         dispositions = {
             item["pr_number"]: item["disposition"]
             for item in self.index["records"]
@@ -1167,6 +1440,38 @@ class FrozenQualityCandidateFunnelTests(unittest.TestCase):
                 receipt["changed_files_hash"],
                 _changed_files_hash(candidate),
             )
+            marker = (
+                "Pull Request resolved: "
+                f"https://github.com/pytorch/pytorch/pull/"
+                f"{candidate['pr_number']}"
+            )
+            self.assertEqual(
+                receipt["resolver_mode"],
+                "main_history_exact_resolved_marker",
+            )
+            self.assertEqual(receipt["resolved_marker"], marker)
+            self.assertIn(
+                marker,
+                receipt["selected_commit_message"].splitlines(),
+            )
+            self.assertEqual(
+                receipt["selected_commit_message_hash"],
+                canonical_sha256(receipt["selected_commit_message"]),
+            )
+            self.assertEqual(
+                receipt["main_history_commit"],
+                candidate["merge_commit"],
+            )
+            self.assertEqual(
+                receipt["main_history_first_parent"],
+                candidate["base_commit"],
+            )
+            self.assertEqual(
+                receipt["main_history_committed_at"],
+                candidate["merged_at"],
+            )
+            self.assertTrue(receipt["main_history_membership"])
+            self.assertFalse(receipt["main_history_reverted"])
             if dispositions[candidate["pr_number"]] != "hard_rejected":
                 self.assertTrue(candidate["behavioral_test_evidence"])
                 self.assertTrue(
@@ -1213,6 +1518,36 @@ class FrozenQualityCandidateFunnelTests(unittest.TestCase):
                 r"(?i)\b(?:ddp|DistributedDataParallel|TorchElastic)\b|"
                 r"torch(?:/|\.)distributed(?:/|\.)elastic",
             )
+
+    def test_production_distributed_path_is_uniformly_scope_rejected(self) -> None:
+        candidate = next(
+            item
+            for item in self.capture_set["candidates"]
+            if item["pr_number"] == 177076
+        )
+        record = next(
+            item
+            for item in self.index["records"]
+            if item["pr_number"] == 177076
+        )
+        candidate_record = load_factory_contract(
+            INDEX.parent / record["candidate"]["relative_path"]
+        )
+        decision = load_factory_contract(
+            INDEX.parent / record["decision"]["relative_path"]
+        )
+        self.assertTrue(
+            any(
+                item["path"].startswith("torch/distributed/")
+                for item in candidate["changed_files"]
+            )
+        )
+        self.assertTrue(candidate_record.execution_hints.distributed)
+        self.assertEqual(decision.disposition, "hard_rejected")
+        self.assertIn(
+            "runtime.hardware_outside_v07_scope",
+            decision.hard_rejection_reasons,
+        )
 
     def test_candidate_capture_covers_contracts_contexts_and_triggers(self) -> None:
         families = set(self.index["proposed_contract_families"])

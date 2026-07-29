@@ -204,6 +204,16 @@ _ACQUISITION_RECEIPT_FIELDS = (
     "base_commit",
     "base_ref_name",
     "head_ref_name",
+    "resolver_mode",
+    "main_history_head_oid",
+    "main_history_commit",
+    "main_history_first_parent",
+    "main_history_committed_at",
+    "resolved_marker",
+    "selected_commit_message",
+    "selected_commit_message_hash",
+    "main_history_membership",
+    "main_history_reverted",
     "files_total_count",
     "files_captured_node_count",
     "files_has_next_page",
@@ -234,6 +244,7 @@ _REVERSAL_TITLE = re.compile(
     r"\b(?:revert(?:ed|ing)?|back\s+out|rollback)\b",
     re.IGNORECASE,
 )
+_KNOWN_REVERTED_PRIMARY_PRS = frozenset({186379})
 _DISTRIBUTED_ONLY_EVIDENCE = re.compile(
     r"\bddp\b|DistributedDataParallel|\bTorchElastic\b|"
     r"torch(?:/|\.)distributed(?:/|\.)elastic",
@@ -241,6 +252,10 @@ _DISTRIBUTED_ONLY_EVIDENCE = re.compile(
 )
 _DISTRIBUTED_TEST_PATH = re.compile(
     r"(?:^|/)test/distributed/",
+    re.IGNORECASE,
+)
+_DISTRIBUTED_PRODUCTION_PATH = re.compile(
+    r"(?:^|[\n/])torch/distributed/",
     re.IGNORECASE,
 )
 _DISTRIBUTED_COLLECTIVE_EVIDENCE = re.compile(
@@ -281,7 +296,7 @@ _FBCODE_TITLE_EVIDENCE = re.compile(r"\bFBCODE\b", re.IGNORECASE)
 # validator always compares the root-fixed composite against this code-pinned
 # value, independent of the candidate index's physical location.
 _OFFICIAL_QUALITY_ACQUISITION_ROOT = (
-    "sha256:24fee4b07edc634f130681555335246eca7fb0d13e068088ab359cb79bd606e3"
+    "sha256:71211ab3f980b5796280abca3769ea02cf323b1a3b169317ab6ce2d7e4cf799c"
 )
 
 
@@ -488,6 +503,16 @@ class QualityCandidateAcquisitionReceipt:
     base_commit: str | None
     base_ref_name: str
     head_ref_name: str
+    resolver_mode: str
+    main_history_head_oid: str
+    main_history_commit: str
+    main_history_first_parent: str
+    main_history_committed_at: str
+    resolved_marker: str
+    selected_commit_message: str
+    selected_commit_message_hash: str
+    main_history_membership: bool
+    main_history_reverted: bool
     files_total_count: int
     files_captured_node_count: int
     files_has_next_page: bool
@@ -536,6 +561,96 @@ class QualityCandidateAcquisitionReceipt:
             self.head_ref_name,
             "quality_candidate_acquisition_receipt.head_ref_name",
         )
+        if self.resolver_mode != "main_history_exact_resolved_marker":
+            raise ContractError(
+                "quality_candidate_acquisition_receipt.resolver_mode: "
+                "unsupported value"
+            )
+        _required_commit(
+            self.main_history_head_oid,
+            "quality_candidate_acquisition_receipt."
+            "main_history_head_oid",
+        )
+        _required_commit(
+            self.main_history_commit,
+            "quality_candidate_acquisition_receipt."
+            "main_history_commit",
+        )
+        _required_commit(
+            self.main_history_first_parent,
+            "quality_candidate_acquisition_receipt."
+            "main_history_first_parent",
+        )
+        _timestamp(
+            self.main_history_committed_at,
+            "quality_candidate_acquisition_receipt."
+            "main_history_committed_at",
+        )
+        expected_marker = (
+            "Pull Request resolved: "
+            f"https://github.com/{self.repository}/pull/{self.pr_number}"
+        )
+        if self.resolved_marker != expected_marker:
+            raise ContractError(
+                "quality_candidate_acquisition_receipt.resolved_marker: "
+                "PR identity mismatch"
+            )
+        _text(
+            self.selected_commit_message,
+            "quality_candidate_acquisition_receipt."
+            "selected_commit_message",
+        )
+        if expected_marker not in self.selected_commit_message.splitlines():
+            raise ContractError(
+                "quality_candidate_acquisition_receipt."
+                "selected_commit_message: exact resolved marker missing"
+            )
+        _require_hash(
+            self.selected_commit_message_hash,
+            "quality_candidate_acquisition_receipt."
+            "selected_commit_message_hash",
+        )
+        if self.selected_commit_message_hash != canonical_sha256(
+            self.selected_commit_message
+        ):
+            raise ContractError(
+                "quality_candidate_acquisition_receipt."
+                "selected_commit_message_hash: payload mismatch"
+            )
+        selected_headline = self.selected_commit_message.splitlines()[0]
+        if _REVERSAL_TITLE.search(selected_headline):
+            raise ContractError(
+                "quality_candidate_acquisition_receipt."
+                "selected_commit_message: reversal denied"
+            )
+        if not _boolean(
+            self.main_history_membership,
+            "quality_candidate_acquisition_receipt."
+            "main_history_membership",
+        ):
+            raise ContractError(
+                "quality_candidate_acquisition_receipt."
+                "main_history_membership: selected commit is not on main"
+            )
+        if _boolean(
+            self.main_history_reverted,
+            "quality_candidate_acquisition_receipt."
+            "main_history_reverted",
+        ):
+            raise ContractError(
+                "quality_candidate_acquisition_receipt."
+                "main_history_reverted: reverted primary denied"
+            )
+        if (
+            self.main_history_commit == self.main_history_first_parent
+            or self.merge_commit != self.main_history_commit
+            or self.base_commit != self.main_history_first_parent
+            or self.merged_at != self.main_history_committed_at
+        ):
+            raise ContractError(
+                "quality_candidate_acquisition_receipt.main_history: "
+                "capture provenance mismatch"
+            )
         _positive_int(
             self.files_total_count,
             "quality_candidate_acquisition_receipt.files_total_count",
@@ -596,6 +711,18 @@ class QualityCandidateAcquisitionReceipt:
             "base_commit": self.base_commit,
             "base_ref_name": self.base_ref_name,
             "head_ref_name": self.head_ref_name,
+            "resolver_mode": self.resolver_mode,
+            "main_history_head_oid": self.main_history_head_oid,
+            "main_history_commit": self.main_history_commit,
+            "main_history_first_parent": self.main_history_first_parent,
+            "main_history_committed_at": self.main_history_committed_at,
+            "resolved_marker": self.resolved_marker,
+            "selected_commit_message": self.selected_commit_message,
+            "selected_commit_message_hash": (
+                self.selected_commit_message_hash
+            ),
+            "main_history_membership": self.main_history_membership,
+            "main_history_reverted": self.main_history_reverted,
             "files_total_count": self.files_total_count,
             "files_captured_node_count": self.files_captured_node_count,
             "files_has_next_page": self.files_has_next_page,
@@ -642,6 +769,44 @@ class QualityCandidateAcquisitionReceipt:
             ),
             head_ref_name=_string(
                 data["head_ref_name"], f"{path}.head_ref_name"
+            ),
+            resolver_mode=_string(
+                data["resolver_mode"], f"{path}.resolver_mode"
+            ),
+            main_history_head_oid=_required_commit(
+                data["main_history_head_oid"],
+                f"{path}.main_history_head_oid",
+            ),
+            main_history_commit=_required_commit(
+                data["main_history_commit"],
+                f"{path}.main_history_commit",
+            ),
+            main_history_first_parent=_required_commit(
+                data["main_history_first_parent"],
+                f"{path}.main_history_first_parent",
+            ),
+            main_history_committed_at=_timestamp(
+                data["main_history_committed_at"],
+                f"{path}.main_history_committed_at",
+            ),
+            resolved_marker=_string(
+                data["resolved_marker"], f"{path}.resolved_marker"
+            ),
+            selected_commit_message=_text(
+                data["selected_commit_message"],
+                f"{path}.selected_commit_message",
+            ),
+            selected_commit_message_hash=_require_hash(
+                data["selected_commit_message_hash"],
+                f"{path}.selected_commit_message_hash",
+            ),
+            main_history_membership=_boolean(
+                data["main_history_membership"],
+                f"{path}.main_history_membership",
+            ),
+            main_history_reverted=_boolean(
+                data["main_history_reverted"],
+                f"{path}.main_history_reverted",
             ),
             files_total_count=_positive_int(
                 data["files_total_count"],
@@ -2490,6 +2655,10 @@ def _parse_quality_capture(
     if repository != "pytorch/pytorch":
         raise ContractError(f"{path}.repository: mismatch")
     pr_number = _positive_int(data["pr_number"], f"{path}.pr_number")
+    if pr_number in _KNOWN_REVERTED_PRIMARY_PRS:
+        raise ContractError(
+            f"{path}.pr_number: known reverted primary denied"
+        )
     pr_url = _string(data["pr_url"], f"{path}.pr_url")
     if pr_url != f"https://github.com/{repository}/pull/{pr_number}":
         raise ContractError(f"{path}.pr_url: mismatch")
@@ -2687,6 +2856,8 @@ def _screen_quality_capture(
     )
     distributed_scope = (
         _DISTRIBUTED_ONLY_EVIDENCE.search(hardware_evidence) is not None
+        or _DISTRIBUTED_PRODUCTION_PATH.search(hardware_evidence)
+        is not None
         or (
             _DISTRIBUTED_TEST_PATH.search(behavioral_paths) is not None
             and _DISTRIBUTED_COLLECTIVE_EVIDENCE.search(
@@ -4272,6 +4443,13 @@ def _optional_commit(value: object, path: str) -> str | None:
     if not isinstance(value, str) or re.fullmatch(r"[0-9a-f]{40}", value) is None:
         raise ContractError(f"{path}: expected 40-character lowercase Git SHA")
     return value
+
+
+def _required_commit(value: object, path: str) -> str:
+    result = _optional_commit(value, path)
+    if result is None:
+        raise ContractError(f"{path}: expected 40-character lowercase Git SHA")
+    return result
 
 
 def _timestamp(value: object, path: str) -> str:
