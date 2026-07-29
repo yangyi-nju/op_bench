@@ -84,6 +84,29 @@ class PromptQualityScannerTests(unittest.TestCase):
 
         self.assertEqual(scan_rendered_prompt(prompt, empty_private_index()), ())
 
+    def test_scanner_rejects_exact_private_patch_compounds(self) -> None:
+        for prompt in (
+            "The patch_scope is restricted.",
+            "The patch scope is evaluator-only.",
+            "The private patch is unavailable.",
+        ):
+            with self.subTest(prompt=prompt):
+                findings = scan_rendered_prompt(prompt, empty_private_index())
+
+                self.assertEqual(
+                    [(finding.code, finding.severity) for finding in findings],
+                    [("provenance.private_term", "reject")],
+                )
+
+    def test_scanner_allows_legitimate_generic_patch_instruction(self) -> None:
+        self.assertEqual(
+            scan_rendered_prompt(
+                "Run the public tests and finish the patch.",
+                empty_private_index(),
+            ),
+            (),
+        )
+
     def test_private_index_extracts_sorted_diff_facts_without_source_imports(self) -> None:
         gold_patch = """diff --git a/torch/foo.py b/torch/foo.py
 --- a/torch/foo.py
@@ -370,6 +393,36 @@ class PromptQualityEvidenceTests(unittest.TestCase):
                 decision="accepted",
                 created_at="2026-07-29T00:00:00Z",
             )
+
+    def test_accepted_evidence_rejects_private_patch_compounds(self) -> None:
+        for statement_body in (
+            "The patch_scope is restricted.",
+            "The patch scope is evaluator-only.",
+            "The private patch is unavailable.",
+        ):
+            with self.subTest(statement_body=statement_body):
+                view = public_task_view(statement_body=statement_body)
+                with self.assertRaisesRegex(ContractError, "acceptance"):
+                    build_prompt_quality_evidence(
+                        task_id="pytorch__empty_addmv",
+                        public_task_id="opbench-v07-t0001",
+                        rendered_prompt=render_mcp_prompt(view),
+                        agent_task_view=view,
+                        private_index=empty_private_index(),
+                        scanner_version="prompt-overlap-v1",
+                        blind_review={
+                            "decision": "accepted",
+                            "reviewer": "reviewer-id",
+                            "reviewed_at": "2026-07-29T00:00:00Z",
+                        },
+                        semantic_review={
+                            "decision": "equivalent",
+                            "reviewer": "curator-id",
+                            "reviewed_at": "2026-07-29T00:00:00Z",
+                        },
+                        decision="accepted",
+                        created_at="2026-07-29T00:00:00Z",
+                    )
 
     def test_evidence_builder_rejects_accepted_private_answer_overlap(self) -> None:
         view = public_task_view(

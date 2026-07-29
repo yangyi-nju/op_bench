@@ -66,6 +66,8 @@ _PRIVATE_PROVENANCE = re.compile(
     r"gold(?:[ _.-]+patch)?"
     r"|hidden(?:[ _.-]+tests?)?"
     r"|admission(?:[ _.-]+evidence)?"
+    r"|patch[ _.-]+scope"
+    r"|private[ _.-]+patch(?:[ _.-]+scope)?"
     r")\b",
     re.IGNORECASE,
 )
