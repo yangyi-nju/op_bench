@@ -795,6 +795,336 @@
         },
         "content_hash": {"$ref": "#/$defs/hash"}
       }
+    },
+    "quality_candidate_reason_resolution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reason", "resolution", "evidence"],
+      "properties": {
+        "reason": {"type": "string", "minLength": 1},
+        "resolution": {
+          "enum": ["resolved", "confirmed_blocker"]
+        },
+        "evidence": {"type": "string", "minLength": 1}
+      }
+    },
+    "quality_candidate_reassessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_type",
+        "schema_version",
+        "pr_number",
+        "candidate_id",
+        "candidate_hash",
+        "decision_id",
+        "decision_hash",
+        "deferred_reasons",
+        "reason_resolutions",
+        "reviewer",
+        "reviewed_at",
+        "decision",
+        "rationale",
+        "content_hash"
+      ],
+      "properties": {
+        "contract_type": {
+          "const": "quality_candidate_reassessment"
+        },
+        "schema_version": {"const": "v1"},
+        "pr_number": {"type": "integer", "minimum": 1},
+        "candidate_id": {
+          "type": "string",
+          "pattern": "^quality-candidate:v1:[0-9a-f]{64}$"
+        },
+        "candidate_hash": {"$ref": "#/$defs/hash"},
+        "decision_id": {
+          "type": "string",
+          "pattern": "^quality-decision:v1:[0-9a-f]{64}$"
+        },
+        "decision_hash": {"$ref": "#/$defs/hash"},
+        "deferred_reasons": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "reason_resolutions": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/quality_candidate_reason_resolution"
+          }
+        },
+        "reviewer": {"type": "string", "minLength": 1},
+        "reviewed_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "decision": {
+          "enum": ["accepted_for_build", "rejected"]
+        },
+        "rationale": {"type": "string", "minLength": 1},
+        "content_hash": {"$ref": "#/$defs/hash"}
+      }
+    },
+    "quality_accepted_task_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "screening_record_index",
+        "pr_number",
+        "candidate_id",
+        "candidate_hash",
+        "decision_id",
+        "decision_hash",
+        "screening_disposition",
+        "reassessment",
+        "task_id",
+        "public_task_id",
+        "origin",
+        "task_path",
+        "task_manifest_hash",
+        "replay_spec_hash"
+      ],
+      "properties": {
+        "screening_record_index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pr_number": {"type": "integer", "minimum": 1},
+        "candidate_id": {
+          "type": "string",
+          "pattern": "^quality-candidate:v1:[0-9a-f]{64}$"
+        },
+        "candidate_hash": {"$ref": "#/$defs/hash"},
+        "decision_id": {
+          "type": "string",
+          "pattern": "^quality-decision:v1:[0-9a-f]{64}$"
+        },
+        "decision_hash": {"$ref": "#/$defs/hash"},
+        "screening_disposition": {
+          "enum": [
+            "accepted_for_build",
+            "deferred_for_review",
+            "hard_rejected"
+          ]
+        },
+        "reassessment": {
+          "oneOf": [
+            {"type": "null"},
+            {"$ref": "#/$defs/reference"}
+          ]
+        },
+        "task_id": {"type": "string", "minLength": 1},
+        "public_task_id": {
+          "type": "string",
+          "pattern": "^opbench-v07-t[0-9]{4}$"
+        },
+        "origin": {"enum": ["new", "replacement"]},
+        "task_path": {
+          "type": "string",
+          "pattern": "^tasks/pytorch/[^/\\\\.][^/\\\\]*$"
+        },
+        "task_manifest_hash": {"$ref": "#/$defs/hash"},
+        "replay_spec_hash": {"$ref": "#/$defs/hash"}
+      }
+    },
+    "quality_accepted_task_index": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_type",
+        "schema_version",
+        "created_at",
+        "historical_index_path",
+        "historical_index_hash",
+        "retained_count",
+        "required_task_count",
+        "candidate_index_path",
+        "candidate_index_hash",
+        "status",
+        "task_count",
+        "tasks",
+        "content_hash"
+      ],
+      "properties": {
+        "contract_type": {"const": "quality_accepted_task_index"},
+        "schema_version": {"const": "v1"},
+        "created_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "historical_index_path": {
+          "type": "string",
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\\\)[^/]+(?:/[^/]+)*\\.json$"
+        },
+        "historical_index_hash": {"$ref": "#/$defs/hash"},
+        "retained_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 25
+        },
+        "required_task_count": {
+          "type": "integer",
+          "minimum": 25,
+          "maximum": 50
+        },
+        "candidate_index_path": {
+          "type": "string",
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\\\)[^/]+(?:/[^/]+)*\\.json$"
+        },
+        "candidate_index_hash": {"$ref": "#/$defs/hash"},
+        "status": {"enum": ["building", "complete"]},
+        "task_count": {"type": "integer", "minimum": 1},
+        "tasks": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/quality_accepted_task_record"}
+        },
+        "content_hash": {"$ref": "#/$defs/hash"}
+      }
+    },
+    "quality_admission_result_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "screening_record_index",
+        "pr_number",
+        "task_id",
+        "public_task_id",
+        "origin",
+        "task_path",
+        "task_manifest_hash",
+        "replay_spec_hash",
+        "prompt_evidence_hash",
+        "prompt_errors",
+        "preflight_status",
+        "preflight_messages_hash",
+        "admission_decision",
+        "admission_verified",
+        "baseline_status",
+        "gold_status",
+        "admission_evidence_hash",
+        "final_quality_errors",
+        "verified"
+      ],
+      "properties": {
+        "screening_record_index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pr_number": {"type": "integer", "minimum": 1},
+        "task_id": {"type": "string", "minLength": 1},
+        "public_task_id": {
+          "type": "string",
+          "pattern": "^opbench-v07-t[0-9]{4}$"
+        },
+        "origin": {"enum": ["new", "replacement"]},
+        "task_path": {
+          "type": "string",
+          "pattern": "^tasks/pytorch/[^/\\\\.][^/\\\\]*$"
+        },
+        "task_manifest_hash": {"$ref": "#/$defs/hash"},
+        "replay_spec_hash": {"$ref": "#/$defs/hash"},
+        "prompt_evidence_hash": {
+          "oneOf": [
+            {"type": "null"},
+            {"$ref": "#/$defs/hash"}
+          ]
+        },
+        "prompt_errors": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "preflight_status": {
+          "enum": ["not_run", "passed", "failed"]
+        },
+        "preflight_messages_hash": {"$ref": "#/$defs/hash"},
+        "admission_decision": {
+          "type": ["string", "null"],
+          "minLength": 1
+        },
+        "admission_verified": {"type": "boolean"},
+        "baseline_status": {
+          "type": ["string", "null"],
+          "minLength": 1
+        },
+        "gold_status": {
+          "type": ["string", "null"],
+          "minLength": 1
+        },
+        "admission_evidence_hash": {
+          "oneOf": [
+            {"type": "null"},
+            {"$ref": "#/$defs/hash"}
+          ]
+        },
+        "final_quality_errors": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "verified": {"type": "boolean"}
+      }
+    },
+    "quality_admission_result_index": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_type",
+        "schema_version",
+        "created_at",
+        "accepted_index_path",
+        "accepted_index_hash",
+        "environment_registry_path",
+        "environment_registry_hash",
+        "source_registry_path",
+        "source_registry_hash",
+        "task_count",
+        "verified_count",
+        "results",
+        "content_hash"
+      ],
+      "properties": {
+        "contract_type": {
+          "const": "quality_admission_result_index"
+        },
+        "schema_version": {"const": "v1"},
+        "created_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "accepted_index_path": {
+          "type": "string",
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\\\)[^/]+(?:/[^/]+)*\\.json$"
+        },
+        "accepted_index_hash": {"$ref": "#/$defs/hash"},
+        "environment_registry_path": {
+          "type": "string",
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\\\)[^/]+(?:/[^/]+)*\\.json$"
+        },
+        "environment_registry_hash": {"$ref": "#/$defs/hash"},
+        "source_registry_path": {
+          "type": "string",
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\\\)[^/]+(?:/[^/]+)*\\.json$"
+        },
+        "source_registry_hash": {"$ref": "#/$defs/hash"},
+        "task_count": {"type": "integer", "minimum": 1},
+        "verified_count": {"type": "integer", "minimum": 0},
+        "results": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/quality_admission_result_record"
+          }
+        },
+        "content_hash": {"$ref": "#/$defs/hash"}
+      }
     }
   }
 }

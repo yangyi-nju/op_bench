@@ -23,6 +23,7 @@ from op_bench.factory.complexity import (
 )
 from op_bench.factory.contracts import FactoryArtifactReference
 from op_bench.factory.prompt_quality import (
+    PrivateAnswerIndex,
     PromptQualityEvidence,
     build_private_answer_index,
     build_prompt_quality_evidence,
@@ -4277,6 +4278,16 @@ def _private_answer_index(task: TaskManifest):
     )
 
 
+def quality_prompt_source_inputs(
+    task: TaskManifest,
+) -> tuple[Mapping[str, object], PrivateAnswerIndex]:
+    """Rebuild the exact public and private Prompt-review source inputs."""
+
+    if not isinstance(task, TaskManifest):
+        raise ContractError("task: expected TaskManifest")
+    return _quality_agent_task_view(task), _private_answer_index(task)
+
+
 def _validate_readmission(
     value: Mapping[str, object],
     *,
@@ -5198,6 +5209,7 @@ __all__ = [
     "QualityTaskRecord",
     "build_historical_dispositions",
     "load_quality_candidate_captures",
+    "quality_prompt_source_inputs",
     "validate_candidate_index",
     "validate_quality_task",
     "write_quality_candidate_funnel",
