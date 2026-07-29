@@ -380,7 +380,12 @@ def _source_symbols(lines: tuple[str, ...]) -> set[str]:
             signature = f"{signature} {next_line.strip()}"
         if "{" not in signature or ";" in signature:
             continue
-        names = _CPP_SIGNATURE_NAME.findall(signature.split("{", 1)[0])
+        declaration = re.split(
+            r"(?<!:):(?!:)",
+            signature.split("{", 1)[0],
+            maxsplit=1,
+        )[0]
+        names = _CPP_SIGNATURE_NAME.findall(declaration)
         if names:
             symbols.add(names[-1].split("::")[-1].removeprefix("~"))
     return symbols

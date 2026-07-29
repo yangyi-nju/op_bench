@@ -165,6 +165,27 @@ abcdef
         self.assertIn("computeStorageNbytes", index.added_symbols)
         self.assertIn("Widget", index.added_symbols)
 
+    def test_private_index_uses_constructor_name_before_initializer_list(self) -> None:
+        patch = """diff --git a/aten/src/foo.cpp b/aten/src/foo.cpp
+--- a/aten/src/foo.cpp
++++ b/aten/src/foo.cpp
+@@ -0,0 +1,4 @@
++Widget::Widget(int value)
++    : value_(value)
++{
++}
+"""
+
+        index = build_private_answer_index(
+            gold_patch=patch,
+            hidden_test_patch="",
+            patch_scope=(),
+            hidden_selectors=(),
+        )
+
+        self.assertIn("Widget", index.added_symbols)
+        self.assertNotIn("value_", index.added_symbols)
+
     def test_scanner_normalizes_comparison_literal_spacing(self) -> None:
         index = PrivateAnswerIndex(
             changed_paths=(),
