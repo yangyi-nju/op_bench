@@ -196,6 +196,6 @@ def load_pre_quality_archive(path: Path) -> PreQualityArchive:
     except (TypeError, ValueError) as exc:
         raise ContractError(f"{path}: invalid JSON") from exc
     encoded = canonical_json(value).encode("utf-8")
-    if raw not in (encoded, encoded + b"\n"):
+    if raw != encoded:
         raise ContractError(f"{path}: JSON is not canonical")
     return PreQualityArchive.from_dict(value)

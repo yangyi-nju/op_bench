@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from pathlib import Path
+import tempfile
 import unittest
 
 from op_bench.factory.archive import load_pre_quality_archive
+from op_bench.runtime.validation import ContractError
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -27,6 +29,17 @@ class V07PreQualityArchiveTests(unittest.TestCase):
         self.assertEqual(archive.task_count, 25)
         self.assertEqual(archive.validation_attempts, 18)
         self.assertEqual(len(archive.cohort_ids), 5)
+
+    def test_archive_rejects_a_trailing_newline(self) -> None:
+        archive_path = ROOT / "archives" / "v0.7-pre-quality.json"
+        with tempfile.TemporaryDirectory() as directory:
+            noncanonical_path = Path(directory) / archive_path.name
+            noncanonical_path.write_bytes(
+                archive_path.read_bytes().rstrip(b"\n") + b"\n"
+            )
+
+            with self.assertRaises(ContractError):
+                load_pre_quality_archive(noncanonical_path)
 
 
 if __name__ == "__main__":
