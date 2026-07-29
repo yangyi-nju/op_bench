@@ -24,6 +24,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 from op_bench.executor import CommandResult, ensure_text
+from op_bench.runtime.canonical import canonical_sha256
 
 
 # 23 is a partial transfer. In mutable agent workspaces Git may replace a pack
@@ -31,6 +32,22 @@ from op_bench.executor import CommandResult, ensure_text
 # file list and is safe because syncs are idempotent.
 _TRANSIENT_RSYNC_EXIT_CODES = {10, 11, 12, 20, 23, 30, 35, 255}
 _RSYNC_MAX_ATTEMPTS = 3
+REMOTE_EXECUTION_CONFIG_HASH_KIND = "remote_execution_config_v1"
+
+
+def remote_execution_config_hash(
+    ssh_command_prefix: list[str],
+    remote_workspace_root: str,
+) -> str:
+    """Return a privacy-safe identity for the exact remote execution config."""
+
+    return canonical_sha256(
+        {
+            "kind": REMOTE_EXECUTION_CONFIG_HASH_KIND,
+            "remote_workspace_root": remote_workspace_root,
+            "ssh_command_prefix": ssh_command_prefix,
+        }
+    )
 
 
 @dataclass(frozen=True)
@@ -71,6 +88,12 @@ class RemoteHost:
             cmd.extend(["-o", opt])
         cmd.append(self.ssh_target())
         return cmd
+
+    def execution_config_hash(self) -> str:
+        return remote_execution_config_hash(
+            self.ssh_command_prefix(),
+            self.remote_workspace_root,
+        )
 
     def rsync_remote_path(self, remote_path: str) -> str:
         return f"{self.ssh_target()}:{remote_path}"
@@ -328,6 +351,9 @@ class RemoteDockerExecutor:
             "remote_user": self.host.user,
             "remote_workspace": self.remote_workspace,
             "remote_ccache_dir": self.remote_ccache_dir,
+            "remote_execution_config_hash": (
+                self.host.execution_config_hash()
+            ),
             "host_platform": platform.platform(),
             "host_machine": platform.machine(),
         }

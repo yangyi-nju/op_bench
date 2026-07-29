@@ -32,7 +32,8 @@
         "python_overlay"
       ],
       "cache_policy": "remote_build",
-      "host": "gpu-a10"
+      "host": "gpu-a10",
+      "remote_execution_config_hash": "sha256:27100293e953ca8c184acb9899101a58b9fae1ea947791a239c74358bdc3f34a"
     },
     {
       "id": "pytorch-cpu-compile-torch2.6.0-py311",
@@ -67,7 +68,8 @@
         "python_overlay"
       ],
       "cache_policy": "remote_build",
-      "host": "gpu-a10"
+      "host": "gpu-a10",
+      "remote_execution_config_hash": "sha256:27100293e953ca8c184acb9899101a58b9fae1ea947791a239c74358bdc3f34a"
     },
     {
       "id": "pytorch-cuda-torch2.6.0-py311-cu124",
@@ -103,7 +105,8 @@
         "python_overlay"
       ],
       "cache_policy": "remote_build",
-      "host": "gpu-a10"
+      "host": "gpu-a10",
+      "remote_execution_config_hash": "sha256:27100293e953ca8c184acb9899101a58b9fae1ea947791a239c74358bdc3f34a"
     },
     {
       "id": "pytorch-cuda-devel-torch2.6.0-py311-cu124",
@@ -141,7 +144,8 @@
         "inplace_build"
       ],
       "cache_policy": "remote_build",
-      "host": "gpu-a10"
+      "host": "gpu-a10",
+      "remote_execution_config_hash": "sha256:27100293e953ca8c184acb9899101a58b9fae1ea947791a239c74358bdc3f34a"
     },
     {
       "id": "pytorch-matched-ff89ebc-torch2.4.0-py311-cu124",
@@ -189,7 +193,8 @@
         "python_overlay"
       ],
       "cache_policy": "remote_build",
-      "host": "gpu-a10"
+      "host": "gpu-a10",
+      "remote_execution_config_hash": "sha256:27100293e953ca8c184acb9899101a58b9fae1ea947791a239c74358bdc3f34a"
     },
     {
       "id": "pytorch-matched-06e9dea-torch2.7.0-py311-cpu",
@@ -244,7 +249,8 @@
         "python_overlay"
       ],
       "cache_policy": "remote_build",
-      "host": "gpu-a10"
+      "host": "gpu-a10",
+      "remote_execution_config_hash": "sha256:27100293e953ca8c184acb9899101a58b9fae1ea947791a239c74358bdc3f34a"
     },
     {
       "id": "pytorch-matched-boundary-torch2.2.0-cpu",
@@ -291,7 +297,8 @@
         "python_overlay"
       ],
       "cache_policy": "remote_build",
-      "host": "gpu-a10"
+      "host": "gpu-a10",
+      "remote_execution_config_hash": "sha256:27100293e953ca8c184acb9899101a58b9fae1ea947791a239c74358bdc3f34a"
     },
     {
       "id": "pytorch-matched-boundary-torch2.3.0-cpu",
@@ -338,7 +345,8 @@
         "python_overlay"
       ],
       "cache_policy": "remote_build",
-      "host": "gpu-a10"
+      "host": "gpu-a10",
+      "remote_execution_config_hash": "sha256:27100293e953ca8c184acb9899101a58b9fae1ea947791a239c74358bdc3f34a"
     },
     {
       "id": "pytorch-matched-boundary-torch2.4.0-cpu",
@@ -385,7 +393,8 @@
         "python_overlay"
       ],
       "cache_policy": "remote_build",
-      "host": "gpu-a10"
+      "host": "gpu-a10",
+      "remote_execution_config_hash": "sha256:27100293e953ca8c184acb9899101a58b9fae1ea947791a239c74358bdc3f34a"
     },
     {
       "id": "pytorch-matched-boundary-torch2.5.1-cu124",
@@ -434,7 +443,8 @@
         "python_overlay"
       ],
       "cache_policy": "remote_build",
-      "host": "gpu-a10"
+      "host": "gpu-a10",
+      "remote_execution_config_hash": "sha256:27100293e953ca8c184acb9899101a58b9fae1ea947791a239c74358bdc3f34a"
     },
     {
       "id": "pytorch-matched-boundary-torch2.6.0-cpu",
@@ -481,7 +491,8 @@
         "python_overlay"
       ],
       "cache_policy": "remote_build",
-      "host": "gpu-a10"
+      "host": "gpu-a10",
+      "remote_execution_config_hash": "sha256:27100293e953ca8c184acb9899101a58b9fae1ea947791a239c74358bdc3f34a"
     },
     {
       "id": "pytorch-matched-boundary-torch2.6.0-cu124",
@@ -530,7 +541,8 @@
         "python_overlay"
       ],
       "cache_policy": "remote_build",
-      "host": "gpu-a10"
+      "host": "gpu-a10",
+      "remote_execution_config_hash": "sha256:27100293e953ca8c184acb9899101a58b9fae1ea947791a239c74358bdc3f34a"
     },
     {
       "id": "pytorch-nightly-20260407-torch2.12.0dev-cpu-py311",
@@ -577,7 +589,8 @@
         "python_overlay"
       ],
       "cache_policy": "remote_build",
-      "host": "gpu-a10"
+      "host": "gpu-a10",
+      "remote_execution_config_hash": "sha256:27100293e953ca8c184acb9899101a58b9fae1ea947791a239c74358bdc3f34a"
     },
     {
       "id": "pytorch-boundary-cpu-source-build-py311",
@@ -619,7 +632,8 @@
         "inplace_build"
       ],
       "cache_policy": "remote_build",
-      "host": "gpu-a10"
+      "host": "gpu-a10",
+      "remote_execution_config_hash": "sha256:27100293e953ca8c184acb9899101a58b9fae1ea947791a239c74358bdc3f34a"
     }
   ]
 }

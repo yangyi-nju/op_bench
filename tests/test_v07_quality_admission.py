@@ -19,13 +19,16 @@ from op_bench.evaluator import EvaluationResult
 from op_bench.factory.quality_admission import (
     QualityAdmissionResultIndex,
     QualityAdmissionResultRecord,
+    _selector_payload,
     load_quality_admission_result_index,
     quality_admission_bundle_hash,
     run_quality_admission,
     validate_quality_admission_prompt,
 )
+from op_bench.executor import DockerExecutor
 from op_bench.factory.quality_release import quality_prompt_source_hash
 from op_bench.integrity import replay_spec_hash
+from op_bench.remote import RemoteDockerExecutor, RemoteHost
 from op_bench.runtime.canonical import canonical_sha256
 from op_bench.runtime.validation import ContractError
 from op_bench.task import TaskManifest
@@ -160,6 +163,11 @@ class _FakeEvaluator:
             f"op-bench-{safe_task_id[:48]}-{container_suffix}"
         )
         remote_host = task.environment_host or "synthetic-host"
+        host = RemoteHost(
+            user="root",
+            hostname=remote_host,
+            remote_workspace_root="/synthetic",
+        )
         environment = {
             "executor": task.environment_backend,
             "image": task.environment_image,
@@ -171,6 +179,9 @@ class _FakeEvaluator:
             "remote_user": "root",
             "remote_workspace": f"/synthetic/{container_name}",
             "remote_ccache_dir": None,
+            "remote_execution_config_hash": (
+                host.execution_config_hash()
+            ),
             "host_platform": "synthetic-host-platform",
             "host_machine": "synthetic-host-machine",
             "preflight_passed": True,
@@ -194,16 +205,8 @@ class _FakeEvaluator:
                 container_name,
                 *expected,
             ]
-            return [
-                "ssh",
-                "-o",
-                "StrictHostKeyChecking=accept-new",
-                "-o",
-                "ServerAliveInterval=30",
-                "-o",
-                "ServerAliveCountMax=3",
-                f"root@{remote_host}",
-                shlex.join(remote_command),
+            return host.ssh_command_prefix() + [
+                shlex.join(remote_command)
             ]
 
         commands = []
@@ -324,6 +327,26 @@ def _runner_fixture(
             repository_root / "environments/registry.json"
         ).read_text(encoding="utf-8")
     )
+    environment_asset = next(
+        item
+        for item in environment_payload["environments"]
+        if item["id"] == manifest["environment_ref"]
+    )
+    environment_asset["remote_execution_config_hash"] = RemoteHost(
+        user="root",
+        hostname=environment_asset["host"],
+        remote_workspace_root="/synthetic",
+    ).execution_config_hash()
+    manifest["environment"]["remote_execution_config_hash"] = (
+        environment_asset["remote_execution_config_hash"]
+    )
+    _write_canonical(manifest_path, manifest)
+    task = TaskManifest.load(manifest_path)
+    record["task_manifest_hash"] = canonical_sha256(manifest)
+    record["replay_spec_hash"] = replay_spec_hash(task)
+    record["prompt_source_hash"] = quality_prompt_source_hash(task)
+    _rehash(accepted)
+    _write_canonical(accepted_path, accepted)
     source_payload = json.loads(
         (repository_root / "sources/registry.json").read_text(
             encoding="utf-8"
@@ -403,6 +426,19 @@ def _rewrite_result_bundle_hash(
     _write_canonical(output, payload)
 
 
+def _rewrite_bundle_environments(
+    bundle: Path,
+    evidence: dict[str, object],
+) -> None:
+    evidence["environment"]["observed"] = copy.deepcopy(
+        evidence["baseline"]["environment"]
+    )
+    _write_canonical(bundle / "environment.json", evidence["environment"])
+    for phase in ("baseline", "gold"):
+        _write_canonical(bundle / f"{phase}.log", evidence[phase])
+    _write_canonical(bundle / "evidence.json", evidence)
+
+
 def _verified_bundle_fixture(
     root: Path,
 ) -> tuple[Path, Path, TaskManifest, Path, dict[str, object]]:
@@ -440,6 +476,83 @@ def _verified_bundle_fixture(
 
 
 class V07QualityAdmissionRunnerTests(unittest.TestCase):
+    def test_selector_payload_unwraps_real_backend_commands(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            task = complete_quality_task(Path(directory))
+            expected = ["python", "-m", "pytest", "test_selector"]
+
+            local_data = copy.deepcopy(task.data)
+            local_data["environment"]["backend"] = "local"
+            local_task = TaskManifest(task.task_dir, local_data)
+            self.assertEqual(
+                _selector_payload(
+                    expected,
+                    task=local_task,
+                    environment={},
+                ),
+                expected,
+            )
+
+            container_name = (
+                f"op-bench-{task.task_id[:48]}-aaaaaaaaaaaa"
+            )
+            docker_data = copy.deepcopy(task.data)
+            docker_data["environment"]["backend"] = "docker"
+            docker_task = TaskManifest(task.task_dir, docker_data)
+            docker_environment = {
+                "container_name": container_name,
+                "command_workdir": task.environment_workspace_dir,
+            }
+            docker = DockerExecutor(
+                task.environment_image,
+                task.environment_workspace_dir,
+                container_name=container_name,
+            )
+            self.assertEqual(
+                _selector_payload(
+                    docker.command_for_run(
+                        expected,
+                        Path("/synthetic/workspace"),
+                    ),
+                    task=docker_task,
+                    environment=docker_environment,
+                ),
+                expected,
+            )
+
+            host = RemoteHost(
+                user="root",
+                hostname="gpu-a10",
+                remote_workspace_root="/synthetic",
+            )
+            remote_data = copy.deepcopy(task.data)
+            remote_data["environment"]["backend"] = "remote_docker"
+            remote_data["environment"][
+                "remote_execution_config_hash"
+            ] = host.execution_config_hash()
+            remote_task = TaskManifest(task.task_dir, remote_data)
+            remote_environment = {
+                "container_name": container_name,
+                "command_workdir": task.environment_workspace_dir,
+                "remote_host": host.hostname,
+                "remote_user": host.user,
+                "remote_workspace": f"/synthetic/{container_name}",
+            }
+            remote = RemoteDockerExecutor(
+                host=host,
+                image=task.environment_image,
+                workspace_dir=task.environment_workspace_dir,
+                container_name=container_name,
+            )
+            self.assertEqual(
+                _selector_payload(
+                    remote.command_for_run(expected),
+                    task=remote_task,
+                    environment=remote_environment,
+                ),
+                expected,
+            )
+
     def test_runner_uses_only_index_path_and_verifies_all_four_gates(
         self,
     ) -> None:
@@ -1627,6 +1740,193 @@ class V07QualityAdmissionRunnerTests(unittest.TestCase):
                     output,
                     accepted_path,
                 )
+
+    def test_result_loader_rejects_coordinated_authoritative_environment_drift(
+        self,
+    ) -> None:
+        mutations = {
+            "workspace_dir": "/forged-workspace",
+            "command_workdir": "/forged-workdir",
+            "gpus": "device=7",
+            "preflight_command_count": 999,
+            "preflight_passed": False,
+            "preflight_workdir": "/forged-preflight",
+            "remote_ccache_dir": "/forged-cache",
+            "remote_execution_config_hash": "sha256:" + "f" * 64,
+            "remote_host": "forged.example",
+            "remote_user": "forged-user",
+        }
+        for field, replacement in mutations.items():
+            with self.subTest(field=field):
+                with tempfile.TemporaryDirectory() as directory:
+                    root = Path(directory)
+                    (
+                        accepted_path,
+                        output,
+                        _,
+                        bundle,
+                        evidence,
+                    ) = _verified_bundle_fixture(root)
+                    for phase in ("baseline", "gold"):
+                        environment = evidence[phase]["environment"]
+                        environment[field] = replacement
+                        if field == "command_workdir":
+                            for command in evidence[phase]["commands"]:
+                                remote = shlex.split(command["command"][-1])
+                                workdir = remote.index("--workdir") + 1
+                                remote[workdir] = replacement
+                                command["command"][-1] = shlex.join(remote)
+                        elif field in {"remote_host", "remote_user"}:
+                            target = (
+                                f"{environment['remote_user']}@"
+                                f"{environment['remote_host']}"
+                            )
+                            for command in evidence[phase]["commands"]:
+                                command["command"][-2] = target
+                    _rewrite_bundle_environments(bundle, evidence)
+                    _rewrite_result_bundle_hash(root, output)
+
+                    with self.assertRaises(ContractError):
+                        load_quality_admission_result_index(
+                            root,
+                            output,
+                            accepted_path,
+                        )
+
+    def test_result_loader_rejects_transport_changing_ssh_prefixes(
+        self,
+    ) -> None:
+        host_variants = {
+            "port": RemoteHost(
+                user="root",
+                hostname="gpu-a10",
+                port=1,
+                remote_workspace_root="/synthetic",
+            ),
+            "identity": RemoteHost(
+                user="root",
+                hostname="gpu-a10",
+                identity_file="/tmp/forged-key",
+                remote_workspace_root="/synthetic",
+            ),
+            "hostname override": RemoteHost(
+                user="root",
+                hostname="gpu-a10",
+                remote_workspace_root="/synthetic",
+                extra_ssh_options=("HostName=forged.example",),
+            ),
+            "proxy command": RemoteHost(
+                user="root",
+                hostname="gpu-a10",
+                remote_workspace_root="/synthetic",
+                extra_ssh_options=("ProxyCommand=sh -c 'exit 0'",),
+            ),
+        }
+        for variant, host in host_variants.items():
+            with self.subTest(variant=variant):
+                with tempfile.TemporaryDirectory() as directory:
+                    root = Path(directory)
+                    (
+                        accepted_path,
+                        output,
+                        task,
+                        bundle,
+                        evidence,
+                    ) = _verified_bundle_fixture(root)
+                    for phase in ("baseline", "gold"):
+                        environment = evidence[phase]["environment"]
+                        executor = RemoteDockerExecutor(
+                            host=host,
+                            image=task.environment_image,
+                            workspace_dir=task.environment_workspace_dir,
+                            container_name=environment["container_name"],
+                        )
+                        selectors = (
+                            *task.fail_to_pass_tests,
+                            *task.pass_to_pass_tests,
+                        )
+                        for selector, command in zip(
+                            selectors,
+                            evidence[phase]["commands"],
+                        ):
+                            command["command"] = executor.command_for_run(
+                                task.command_for_test(
+                                    selector,
+                                    python_executable=(
+                                        task.environment_python_executable
+                                    ),
+                                )
+                            )
+                    _rewrite_bundle_environments(bundle, evidence)
+                    _rewrite_result_bundle_hash(root, output)
+
+                    with self.assertRaises(ContractError):
+                        load_quality_admission_result_index(
+                            root,
+                            output,
+                            accepted_path,
+                        )
+
+    def test_result_loader_rejects_minimal_unregistered_ssh_prefix(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (
+                accepted_path,
+                output,
+                _,
+                bundle,
+                evidence,
+            ) = _verified_bundle_fixture(root)
+            for phase in ("baseline", "gold"):
+                environment = evidence[phase]["environment"]
+                target = (
+                    f"{environment['remote_user']}@"
+                    f"{environment['remote_host']}"
+                )
+                for command in evidence[phase]["commands"]:
+                    command["command"] = [
+                        "ssh",
+                        target,
+                        command["command"][-1],
+                    ]
+            _rewrite_bundle_environments(bundle, evidence)
+            _rewrite_result_bundle_hash(root, output)
+
+            with self.assertRaises(ContractError):
+                load_quality_admission_result_index(
+                    root,
+                    output,
+                    accepted_path,
+                )
+
+    def test_result_loader_allows_coordinated_diagnostic_environment_drift(
+        self,
+    ) -> None:
+        for field in ("host_machine", "host_platform"):
+            with self.subTest(field=field):
+                with tempfile.TemporaryDirectory() as directory:
+                    root = Path(directory)
+                    (
+                        accepted_path,
+                        output,
+                        _,
+                        bundle,
+                        evidence,
+                    ) = _verified_bundle_fixture(root)
+                    for phase in ("baseline", "gold"):
+                        evidence[phase]["environment"][field] = (
+                            f"diagnostic-{field}"
+                        )
+                    _rewrite_bundle_environments(bundle, evidence)
+                    _rewrite_result_bundle_hash(root, output)
+
+                    load_quality_admission_result_index(
+                        root,
+                        output,
+                        accepted_path,
+                    )
 
     def test_result_schema_fields_are_exact(self) -> None:
         schema = json.loads(

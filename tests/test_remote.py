@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
+from dataclasses import replace
 from pathlib import Path
 from unittest import mock
 
@@ -52,6 +53,30 @@ class RemoteHostTests(unittest.TestCase):
     def test_rsync_remote_path(self):
         host = RemoteHost(user="ubuntu", hostname="10.0.0.42")
         self.assertEqual(host.rsync_remote_path("/foo"), "ubuntu@10.0.0.42:/foo")
+
+    def test_execution_config_hash_binds_every_remote_setting(self):
+        host = RemoteHost(
+            user="ubuntu",
+            hostname="10.0.0.42",
+            port=2222,
+            identity_file="~/.ssh/gpu_key",
+            remote_workspace_root="/data/op_bench",
+            extra_ssh_options=("Compression=yes",),
+        )
+        variants = (
+            replace(host, user="runner"),
+            replace(host, hostname="gpu.example"),
+            replace(host, port=22),
+            replace(host, identity_file=None),
+            replace(host, remote_workspace_root="/other/root"),
+            replace(host, extra_ssh_options=()),
+        )
+
+        expected = host.execution_config_hash()
+
+        self.assertRegex(expected, r"^sha256:[0-9a-f]{64}$")
+        for variant in variants:
+            self.assertNotEqual(variant.execution_config_hash(), expected)
 
 
 class LoadHostsConfigTests(unittest.TestCase):
@@ -192,6 +217,10 @@ class RemoteDockerExecutorTests(unittest.TestCase):
         self.assertEqual(evidence["remote_host"], "10.0.0.42")
         self.assertEqual(evidence["remote_user"], "ubuntu")
         self.assertEqual(evidence["gpus"], "all")
+        self.assertEqual(
+            evidence["remote_execution_config_hash"],
+            self.host.execution_config_hash(),
+        )
 
     @mock.patch("op_bench.remote.subprocess.run")
     def test_sync_to_remote_runs_mkdir_then_rsync(self, mock_run):

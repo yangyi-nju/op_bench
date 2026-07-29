@@ -193,6 +193,13 @@ class TaskManifest:
         return str(value) if value else None
 
     @property
+    def environment_remote_execution_config_hash(self) -> str | None:
+        value = self.data["environment"].get(
+            "remote_execution_config_hash"
+        )
+        return str(value) if value else None
+
+    @property
     def environment_gpus(self) -> str | None:
         env = self.data["environment"]
         gpus = env.get("gpus")

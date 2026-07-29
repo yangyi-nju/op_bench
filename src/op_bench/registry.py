@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
@@ -99,6 +100,7 @@ class EnvironmentAsset:
         for field in (
             "python_version", "os", "build_mode", "hardware",
             "dependencies", "resource_requirements", "gpus", "host",
+            "remote_execution_config_hash",
         ):
             if field in self.data:
                 defaults[field] = deepcopy(self.data[field])
@@ -218,6 +220,17 @@ class EnvironmentRegistry(_Registry[EnvironmentAsset]):
             raise RegistryError(f"environment asset {asset_id}: docker.image is required")
         if not isinstance(item["preflight"], dict):
             raise RegistryError(f"environment asset {asset_id}: preflight must be an object")
+        if item.get("backend") == "remote_docker":
+            remote_hash = item.get("remote_execution_config_hash")
+            if (
+                not isinstance(remote_hash, str)
+                or re.fullmatch(r"sha256:[0-9a-f]{64}", remote_hash)
+                is None
+            ):
+                raise RegistryError(
+                    f"environment asset {asset_id}: "
+                    "remote_execution_config_hash is required"
+                )
         runtime_artifact = item.get("runtime_artifact")
         if runtime_artifact is not None:
             if not isinstance(runtime_artifact, dict):
@@ -290,6 +303,23 @@ def resolve_task_assets(
         if environment_registry is None:
             raise RegistryError(f"task {task.task_id}: environment_ref requires an environment registry")
         environment_asset = environment_registry.get(task.environment_ref)
+        task_environment = data.get("environment", {})
+        configured_remote_hash = (
+            task_environment.get("remote_execution_config_hash")
+            if isinstance(task_environment, dict)
+            else None
+        )
+        asset_remote_hash = environment_asset.data.get(
+            "remote_execution_config_hash"
+        )
+        if (
+            configured_remote_hash is not None
+            and configured_remote_hash != asset_remote_hash
+        ):
+            raise RegistryError(
+                f"task {task.task_id}: cannot override "
+                "remote_execution_config_hash"
+            )
         data["environment"] = _deep_merge(environment_asset.task_environment_defaults(), data.get("environment", {}))
         data.setdefault("runtime_tier", environment_asset.runtime_tier)
     if task.source_ref:

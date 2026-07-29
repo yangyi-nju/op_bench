@@ -166,6 +166,7 @@ class EnvironmentManager:
             task.environment_image,
             task.environment_workspace_dir,
             container_name=self._container_name(task),
+            gpus=task.environment_gpus,
             labels={
                 "op-bench.managed": "true",
                 "op-bench.task-id": task.task_id,

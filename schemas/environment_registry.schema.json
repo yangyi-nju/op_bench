@@ -12,9 +12,26 @@
         "type": "object",
         "additionalProperties": true,
         "required": ["id", "framework", "runtime_tier", "docker", "preflight"],
+        "allOf": [
+          {
+            "if": {
+              "required": ["backend"],
+              "properties": {
+                "backend": {"const": "remote_docker"}
+              }
+            },
+            "then": {
+              "required": ["remote_execution_config_hash"]
+            }
+          }
+        ],
         "properties": {
           "id": {"type": "string", "minLength": 1},
           "framework": {"type": "string", "minLength": 1},
+          "backend": {
+            "type": "string",
+            "enum": ["local", "docker", "remote_docker"]
+          },
           "runtime_tier": {
             "type": "string",
             "enum": [
@@ -92,6 +109,10 @@
                 }
               }
             }
+          },
+          "remote_execution_config_hash": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
           },
           "preflight": {
             "type": "object",

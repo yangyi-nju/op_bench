@@ -7,6 +7,7 @@ from pathlib import Path
 
 from op_bench.dataset import DatasetManifest
 from op_bench.registry import EnvironmentRegistry, RegistryError, SourceRegistry
+from op_bench.task import TaskManifest
 
 
 class RegistryTests(unittest.TestCase):
@@ -90,6 +91,34 @@ class RegistryTests(unittest.TestCase):
             path.write_text(json.dumps({"version": "v1", "environments": [asset, asset]}), encoding="utf-8")
 
             with self.assertRaisesRegex(RegistryError, "duplicate asset id: duplicate"):
+                EnvironmentRegistry.load(path)
+
+    def test_remote_registry_requires_execution_config_hash(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "registry.json"
+            asset = {
+                "id": "remote",
+                "framework": "pytorch",
+                "runtime_tier": "cpu_python_overlay",
+                "backend": "remote_docker",
+                "docker": {"image": "image"},
+                "preflight": {
+                    "workdir": "/tmp",
+                    "commands": ["python --version"],
+                },
+                "host": "gpu",
+            }
+            path.write_text(
+                json.dumps(
+                    {"version": "v1", "environments": [asset]}
+                ),
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(
+                RegistryError,
+                "remote_execution_config_hash",
+            ):
                 EnvironmentRegistry.load(path)
 
     def test_registry_reports_unknown_asset_id(self) -> None:
@@ -261,6 +290,64 @@ class RegistryTests(unittest.TestCase):
                 resolve_task_assets(
                     TaskManifest.load(task_dir / "task.json"),
                     source_registry=SourceRegistry.load(source_path),
+                )
+
+    def test_asset_resolver_rejects_remote_identity_override(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            environment_path = root / "environments.json"
+            environment_path.write_text(
+                json.dumps(
+                    {
+                        "version": "v1",
+                        "environments": [
+                            {
+                                "id": "remote",
+                                "framework": "pytorch",
+                                "runtime_tier": "cpu_python_overlay",
+                                "backend": "remote_docker",
+                                "docker": {"image": "image"},
+                                "preflight": {
+                                    "workdir": "/tmp",
+                                    "commands": ["python --version"],
+                                },
+                                "host": "gpu",
+                                "remote_execution_config_hash": (
+                                    "sha256:" + "a" * 64
+                                ),
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            task = TaskManifest(
+                task_dir=root,
+                data={
+                    "task_id": "fixture",
+                    "environment_ref": "remote",
+                    "source": {},
+                    "environment": {
+                        "remote_execution_config_hash": (
+                            "sha256:" + "b" * 64
+                        )
+                    },
+                    "evaluation": {},
+                    "artifacts": {},
+                },
+            )
+
+            from op_bench.registry import resolve_task_assets
+
+            with self.assertRaisesRegex(
+                RegistryError,
+                "cannot override remote_execution_config_hash",
+            ):
+                resolve_task_assets(
+                    task,
+                    environment_registry=EnvironmentRegistry.load(
+                        environment_path
+                    ),
                 )
 
 

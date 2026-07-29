@@ -39,6 +39,7 @@ from op_bench.factory.prompt_quality import (
 )
 from op_bench.integrity import REPLAY_SPEC_HASH_KIND, replay_spec_hash
 from op_bench.registry import load_resolved_task
+from op_bench.remote import remote_execution_config_hash
 from op_bench.runtime.canonical import canonical_json, canonical_sha256
 from op_bench.runtime.codex_mcp_adapter import render_mcp_prompt
 from op_bench.runtime.validation import (
@@ -2129,6 +2130,7 @@ def quality_admission_bundle_hash(bundle_path: Path) -> str:
 def _ssh_selector_payload(
     command_parts: list[str],
     *,
+    task: TaskManifest,
     environment: Mapping[str, object],
 ) -> list[str] | None:
     remote_host = environment.get("remote_host")
@@ -2140,23 +2142,34 @@ def _ssh_selector_payload(
         or not remote_user
     ):
         return None
-    target = f"{remote_user}@{remote_host}"
+    expected_config_hash = (
+        task.environment_remote_execution_config_hash
+    )
+    container_name = environment.get("container_name")
+    remote_workspace = environment.get("remote_workspace")
     if (
-        len(command_parts) < 3
+        expected_config_hash is None
+        or not isinstance(container_name, str)
+        or not isinstance(remote_workspace, str)
+        or not remote_workspace.endswith(f"/{container_name}")
+        or len(command_parts) < 3
         or command_parts[0] != "ssh"
-        or command_parts[-2] != target
     ):
         return None
-    option_parts = command_parts[1:-2]
-    position = 0
-    while position < len(option_parts):
-        if (
-            option_parts[position] not in {"-p", "-i", "-o"}
-            or position + 1 >= len(option_parts)
-            or not option_parts[position + 1]
-        ):
-            return None
-        position += 2
+    remote_workspace_root = remote_workspace[
+        : -len(f"/{container_name}")
+    ]
+    ssh_prefix = command_parts[:-1]
+    if (
+        not remote_workspace_root.startswith("/")
+        or ssh_prefix[-1] != f"{remote_user}@{remote_host}"
+        or remote_execution_config_hash(
+            ssh_prefix,
+            remote_workspace_root,
+        )
+        != expected_config_hash
+    ):
+        return None
     try:
         return shlex.split(command_parts[-1])
     except ValueError:
@@ -2194,6 +2207,7 @@ def _selector_payload(
     if backend == "remote_docker":
         remote_payload = _ssh_selector_payload(
             command_parts,
+            task=task,
             environment=environment,
         )
         if (
@@ -2247,14 +2261,70 @@ def _selector_command(
     return matches[0]
 
 
-_IMMUTABLE_EXECUTION_ENVIRONMENT_FIELDS = (
-    "executor",
-    "environment_id",
-    "runtime_tier",
-    "image",
-    "image_digest",
-    "digest_kind",
-    "platform",
+_LOCAL_EXECUTION_ENVIRONMENT_FIELDS = frozenset(
+    {
+        "executor",
+        "python_executable",
+        "python_version",
+        "platform",
+        "machine",
+        "environment_id",
+        "runtime_tier",
+        "image_digest",
+        "digest_kind",
+    }
+)
+_DOCKER_EXECUTION_ENVIRONMENT_FIELDS = frozenset(
+    {
+        "executor",
+        "image",
+        "workspace_dir",
+        "command_workdir",
+        "container_name",
+        "gpus",
+        "docker_available",
+        "host_platform",
+        "host_machine",
+        "preflight_passed",
+        "preflight_command_count",
+        "preflight_workdir",
+        "environment_id",
+        "runtime_tier",
+        "image_digest",
+        "digest_kind",
+        "platform",
+    }
+)
+_REMOTE_EXECUTION_ENVIRONMENT_FIELDS = frozenset(
+    {
+        "executor",
+        "image",
+        "workspace_dir",
+        "command_workdir",
+        "container_name",
+        "gpus",
+        "remote_host",
+        "remote_user",
+        "remote_workspace",
+        "remote_ccache_dir",
+        "remote_execution_config_hash",
+        "host_platform",
+        "host_machine",
+        "preflight_passed",
+        "preflight_command_count",
+        "preflight_workdir",
+        "environment_id",
+        "runtime_tier",
+        "image_digest",
+        "digest_kind",
+        "platform",
+    }
+)
+# These fields describe the controller/runtime for troubleshooting. They do
+# not authorize an execution target, so only shape and cross-phase consistency
+# are required. All execution-affecting values are bound separately below.
+_DIAGNOSTIC_EXECUTION_ENVIRONMENT_FIELDS = frozenset(
+    {"host_machine", "host_platform", "machine", "python_version"}
 )
 _EPHEMERAL_EXECUTION_ENVIRONMENT_FIELDS = frozenset(
     {"container_name", "remote_workspace"}
@@ -2269,21 +2339,66 @@ def _validate_execution_environment(
 ) -> Mapping[str, object]:
     label = f"admission bundle.{phase}.environment"
     environment = require_mapping(value, label)
-    expected = {
+    backend = task.environment_backend
+    expected_fields = {
+        "local": _LOCAL_EXECUTION_ENVIRONMENT_FIELDS,
+        "docker": _DOCKER_EXECUTION_ENVIRONMENT_FIELDS,
+        "remote_docker": _REMOTE_EXECUTION_ENVIRONMENT_FIELDS,
+    }.get(backend)
+    if expected_fields is None:
+        raise ContractError(f"{label}.executor: unsupported backend")
+    if set(environment) != expected_fields:
+        raise ContractError(f"{label}: observed field set mismatch")
+
+    expected: dict[str, object] = {
         "executor": task.environment_backend,
         "environment_id": task.environment_ref,
         "runtime_tier": task.runtime_tier,
-        "image": task.environment_image,
         "image_digest": task.environment_image_digest,
         "digest_kind": task.environment_digest_kind,
         "platform": task.environment_platform,
     }
-    for field in _IMMUTABLE_EXECUTION_ENVIRONMENT_FIELDS:
-        if environment.get(field) != expected[field]:
+    if backend == "local":
+        expected["python_executable"] = (
+            task.environment_python_executable
+        )
+    else:
+        expected.update(
+            {
+                "image": task.environment_image,
+                "workspace_dir": task.environment_workspace_dir,
+                "command_workdir": task.environment_workspace_dir,
+                "gpus": task.environment_gpus,
+                "preflight_passed": True,
+                "preflight_command_count": len(
+                    task.environment_preflight_commands
+                ),
+                "preflight_workdir": (
+                    task.environment_preflight_workdir
+                ),
+            }
+        )
+    if backend == "docker":
+        expected["docker_available"] = True
+    if backend == "remote_docker":
+        expected_hash = require_str(
+            task.environment_remote_execution_config_hash,
+            f"{label}.remote_execution_config_hash.task",
+            pattern=_HASH_PATTERN,
+        )
+        expected["remote_execution_config_hash"] = expected_hash
+    for field, expected_value in expected.items():
+        if environment.get(field) != expected_value:
             raise ContractError(f"{label}.{field}: mismatch")
 
+    for field in (
+        _DIAGNOSTIC_EXECUTION_ENVIRONMENT_FIELDS
+        & set(environment)
+    ):
+        require_str(environment[field], f"{label}.{field}")
+
     container_name = environment.get("container_name")
-    if container_name is not None:
+    if backend in {"docker", "remote_docker"}:
         safe_task_id = "".join(
             character
             if character.isalnum() or character in {"-", "_"}
@@ -2300,14 +2415,42 @@ def _validate_execution_environment(
             raise ContractError(f"{label}.container_name: invalid")
 
     remote_workspace = environment.get("remote_workspace")
-    if remote_workspace is not None:
+    if backend == "remote_docker":
         if (
             not isinstance(remote_workspace, str)
             or not remote_workspace.startswith("/")
-            or container_name is None
             or not remote_workspace.endswith(f"/{container_name}")
         ):
             raise ContractError(f"{label}.remote_workspace: invalid")
+        remote_workspace_root = remote_workspace[
+            : -len(f"/{container_name}")
+        ]
+        if not remote_workspace_root.startswith("/"):
+            raise ContractError(
+                f"{label}.remote_workspace: invalid root"
+            )
+        remote_host = require_str(
+            environment["remote_host"],
+            f"{label}.remote_host",
+        )
+        remote_user = require_str(
+            environment["remote_user"],
+            f"{label}.remote_user",
+        )
+        if not remote_host or not remote_user:
+            raise ContractError(f"{label}.remote target: invalid")
+        ccache_key = (
+            (task.environment_ref or task.runtime_tier)
+            if task.source_loading_mode == "inplace_build"
+            else None
+        )
+        expected_ccache_dir = (
+            f"{remote_workspace_root}/_cache/ccache/{ccache_key}"
+            if ccache_key
+            else None
+        )
+        if environment["remote_ccache_dir"] != expected_ccache_dir:
+            raise ContractError(f"{label}.remote_ccache_dir: mismatch")
     return environment
 
 
