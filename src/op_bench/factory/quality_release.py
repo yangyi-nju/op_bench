@@ -4288,6 +4288,42 @@ def quality_prompt_source_inputs(
     return _quality_agent_task_view(task), _private_answer_index(task)
 
 
+def quality_prompt_source_hash(task: TaskManifest) -> str:
+    """Hash every exact public and private input used for Prompt review."""
+
+    if not isinstance(task, TaskManifest):
+        raise ContractError("task: expected TaskManifest")
+    artifacts = _mapping(task.data.get("artifacts"), "artifacts")
+    evaluation = _mapping(task.data.get("evaluation"), "evaluation")
+    gold_path = _task_relative_file(
+        task.task_dir,
+        artifacts.get("gold_patch"),
+        "artifacts.gold_patch",
+    )
+    hidden_path = _task_relative_file(
+        task.task_dir,
+        artifacts.get(
+            "hidden_test_patch",
+            artifacts.get("test_patch"),
+        ),
+        "artifacts.hidden_test_patch",
+    )
+    return canonical_sha256(
+        {
+            "agent_task_view": _quality_agent_task_view(task),
+            "gold_patch_bytes_hash": quality_bytes_hash(
+                load_regular_file_bytes(gold_path)
+            ),
+            "hidden_test_patch_bytes_hash": quality_bytes_hash(
+                load_regular_file_bytes(hidden_path)
+            ),
+            "patch_scope": task.data.get("patch_scope"),
+            "fail_to_pass": evaluation.get("fail_to_pass"),
+            "pass_to_pass": evaluation.get("pass_to_pass"),
+        }
+    )
+
+
 def _validate_readmission(
     value: Mapping[str, object],
     *,
@@ -4371,7 +4407,7 @@ def _validate_readmission(
         json.loads(admission_bytes.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise ContractError("admission evidence: invalid JSON") from exc
-    expected_admission_hash = _bytes_hash(admission_bytes)
+    expected_admission_hash = quality_bytes_hash(admission_bytes)
     if value["admission_evidence_hash"] != expected_admission_hash:
         raise ContractError("admission_evidence_hash mismatch")
 
@@ -4532,7 +4568,7 @@ def _admission_truth(task: TaskManifest) -> tuple[str, tuple[str, ...]]:
         )
     if not isinstance(payload, Mapping):
         return (
-            _bytes_hash(admission_bytes),
+            quality_bytes_hash(admission_bytes),
             ("admission: evidence must be an object",),
         )
     errors: list[str] = []
@@ -4541,7 +4577,9 @@ def _admission_truth(task: TaskManifest) -> tuple[str, tuple[str, ...]]:
 
     hash_kind = payload.get("task_manifest_hash_kind")
     if hash_kind is None:
-        expected_manifest_hash = _bytes_hash(task.task_json_path.read_bytes())
+        expected_manifest_hash = quality_bytes_hash(
+            task.task_json_path.read_bytes()
+        )
     elif hash_kind == REPLAY_SPEC_HASH_KIND:
         expected_manifest_hash = replay_spec_hash(task)
     else:
@@ -4631,7 +4669,7 @@ def _admission_truth(task: TaskManifest) -> tuple[str, tuple[str, ...]]:
         task=task,
         phase="gold",
     )
-    return _bytes_hash(admission_bytes), tuple(_ordered_unique(errors))
+    return quality_bytes_hash(admission_bytes), tuple(_ordered_unique(errors))
 
 
 def _expect_admission_value(
@@ -5130,7 +5168,7 @@ def _require_hash(value: object, path: str) -> str:
     return text
 
 
-def _bytes_hash(value: bytes) -> str:
+def quality_bytes_hash(value: bytes) -> str:
     return f"sha256:{hashlib.sha256(value).hexdigest()}"
 
 
@@ -5144,7 +5182,7 @@ def _json_hash(value: object) -> str:
             sort_keys=True,
             separators=(",", ":"),
         ).encode("utf-8")
-        return _bytes_hash(encoded)
+        return quality_bytes_hash(encoded)
 
 
 def _prefixed(path: str, exc: BaseException) -> str:
@@ -5209,7 +5247,9 @@ __all__ = [
     "QualityTaskRecord",
     "build_historical_dispositions",
     "load_quality_candidate_captures",
+    "quality_bytes_hash",
     "quality_prompt_source_inputs",
+    "quality_prompt_source_hash",
     "validate_candidate_index",
     "validate_quality_task",
     "write_quality_candidate_funnel",

@@ -6,6 +6,7 @@ from pathlib import Path
 import shutil
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from op_bench.factory.quality_admission import (
     QualityAcceptedTaskIndex,
@@ -15,6 +16,7 @@ from op_bench.factory.quality_admission import (
     load_quality_accepted_task_index,
     validate_quality_accepted_task_index,
 )
+from op_bench.factory.quality_release import quality_prompt_source_hash
 from op_bench.runtime.canonical import canonical_sha256
 from op_bench.runtime.validation import ContractError
 from op_bench.integrity import replay_spec_hash
@@ -174,6 +176,7 @@ def _accepted_fixture(
         "task_path": f"tasks/pytorch/{task_name}",
         "task_manifest_hash": canonical_sha256(manifest),
         "replay_spec_hash": replay_spec_hash(task),
+        "prompt_source_hash": quality_prompt_source_hash(task),
     }
     historical = json.loads(HISTORICAL.read_text(encoding="utf-8"))
     accepted: dict[str, object] = {
@@ -198,6 +201,28 @@ def _accepted_fixture(
     accepted_path = root / "factory/v0.7/p8/accepted_tasks.json"
     _write_canonical(accepted_path, accepted)
     return accepted_path, accepted, record
+
+
+def _synthetic_accepted_records(
+    record: dict[str, object],
+    count: int,
+) -> list[dict[str, object]]:
+    records: list[dict[str, object]] = []
+    for index in range(count):
+        selected = copy.deepcopy(record)
+        selected["screening_record_index"] = index
+        selected["pr_number"] = 200000 + index
+        selected["candidate_id"] = (
+            "quality-candidate:v1:" + f"{index + 1:064x}"
+        )
+        selected["decision_id"] = (
+            "quality-decision:v1:" + f"{index + 1:064x}"
+        )
+        selected["task_id"] = f"synthetic__{index:02d}"
+        selected["public_task_id"] = f"opbench-v07-t{8000 + index:04d}"
+        selected["task_path"] = f"tasks/pytorch/synthetic_{index:02d}"
+        records.append(selected)
+    return records
 
 
 def _reassessment() -> dict[str, object]:
@@ -552,25 +577,7 @@ class V07ExpansionArtifactContractTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             _, accepted, record = _accepted_fixture(root)
-            records: list[dict[str, object]] = []
-            for index in range(35):
-                selected = copy.deepcopy(record)
-                selected["screening_record_index"] = index
-                selected["pr_number"] = 200000 + index
-                selected["candidate_id"] = (
-                    "quality-candidate:v1:" + f"{index + 1:064x}"
-                )
-                selected["decision_id"] = (
-                    "quality-decision:v1:" + f"{index + 1:064x}"
-                )
-                selected["task_id"] = f"synthetic__{index:02d}"
-                selected["public_task_id"] = (
-                    f"opbench-v07-t{8000 + index:04d}"
-                )
-                selected["task_path"] = (
-                    f"tasks/pytorch/synthetic_{index:02d}"
-                )
-                records.append(selected)
+            records = _synthetic_accepted_records(record, 35)
             accepted["status"] = "complete"
             accepted["tasks"] = records
             accepted["task_count"] = 35
@@ -586,6 +593,102 @@ class V07ExpansionArtifactContractTests(unittest.TestCase):
             _rehash(accepted)
             with self.assertRaisesRegex(ContractError, "retained_count"):
                 QualityAcceptedTaskIndex.from_dict(accepted)
+
+    def test_official_counts_are_fixed_to_14_retained_and_36_required(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _, accepted, record = _accepted_fixture(root)
+            for retained, required in ((13, 37), (15, 35)):
+                with self.subTest(retained=retained, required=required):
+                    mutated = copy.deepcopy(accepted)
+                    mutated["retained_count"] = retained
+                    mutated["required_task_count"] = required
+                    _rehash(mutated)
+                    with self.assertRaisesRegex(
+                        ContractError, "retained_count"
+                    ):
+                        QualityAcceptedTaskIndex.from_dict(mutated)
+
+            accepted["tasks"] = _synthetic_accepted_records(record, 35)
+            accepted["task_count"] = 35
+            _rehash(accepted)
+            loaded = QualityAcceptedTaskIndex.from_dict(accepted)
+            self.assertEqual(loaded.task_count, 35)
+
+            accepted["tasks"] = _synthetic_accepted_records(record, 36)
+            accepted["task_count"] = 36
+            _rehash(accepted)
+            with self.assertRaisesRegex(ContractError, "building"):
+                QualityAcceptedTaskIndex.from_dict(accepted)
+
+    def test_complete_status_automatically_requires_official_strict_mode(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _, accepted, record = _accepted_fixture(root)
+            accepted["status"] = "complete"
+            accepted["tasks"] = _synthetic_accepted_records(record, 36)
+            accepted["task_count"] = 36
+            _rehash(accepted)
+            other = root / "scratch/accepted.json"
+            _write_canonical(other, accepted)
+
+            with self.assertRaisesRegex(ContractError, "official"):
+                load_quality_accepted_task_index(
+                    root,
+                    other,
+                    require_complete=False,
+                )
+
+    def test_complete_status_automatically_runs_formal_source_validators(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path, accepted, record = _accepted_fixture(root)
+            accepted["status"] = "complete"
+            accepted["tasks"] = _synthetic_accepted_records(record, 36)
+            accepted["task_count"] = 36
+            _rehash(accepted)
+            _write_canonical(path, accepted)
+            complete_index = QualityAcceptedTaskIndex.from_dict(accepted)
+
+            with (
+                patch.object(
+                    QualityAcceptedTaskIndex,
+                    "from_dict",
+                    return_value=complete_index,
+                ),
+                patch(
+                    "op_bench.factory.quality_admission"
+                    "._load_screening_artifacts",
+                    return_value=(object(), object()),
+                ),
+                patch(
+                    "op_bench.factory.quality_admission"
+                    "._validate_reassessment_binding",
+                ),
+                patch(
+                    "op_bench.factory.quality_admission"
+                    "._validate_task_binding",
+                ),
+                patch(
+                    "op_bench.factory.quality_admission"
+                    ".validate_historical_index",
+                    return_value=("formal historical failure",),
+                ),
+            ):
+                with self.assertRaisesRegex(
+                    ContractError, "formal historical failure"
+                ):
+                    load_quality_accepted_task_index(
+                        root,
+                        path,
+                        require_complete=False,
+                    )
 
     def test_public_complete_validator_requires_official_path(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

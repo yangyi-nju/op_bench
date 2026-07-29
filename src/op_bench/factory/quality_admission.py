@@ -10,9 +10,9 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime, timezone
-import hashlib
 import json
 from pathlib import Path, PurePosixPath
+import shlex
 from typing import Callable, ClassVar
 
 from op_bench.admission import AdmissionRunner
@@ -25,6 +25,8 @@ from op_bench.factory.contracts import FactoryArtifactReference
 from op_bench.factory.quality_release import (
     QualityCandidateDecision,
     QualityCandidateRecord,
+    quality_bytes_hash,
+    quality_prompt_source_hash,
     quality_prompt_source_inputs,
     validate_candidate_index,
     validate_historical_index,
@@ -34,7 +36,7 @@ from op_bench.factory.prompt_quality import (
     PromptQualityEvidence,
     validate_prompt_quality_evidence,
 )
-from op_bench.integrity import replay_spec_hash
+from op_bench.integrity import REPLAY_SPEC_HASH_KIND, replay_spec_hash
 from op_bench.registry import load_resolved_task
 from op_bench.runtime.canonical import canonical_json, canonical_sha256
 from op_bench.runtime.codex_mcp_adapter import render_mcp_prompt
@@ -75,7 +77,16 @@ _OFFICIAL_HISTORICAL_INDEX = (
 _OFFICIAL_CANDIDATE_INDEX = (
     "factory/v0.7/p8/screening/screening_index.json"
 )
+_OFFICIAL_RETAINED_COUNT = 14
+_OFFICIAL_REQUIRED_TASK_COUNT = 36
 _PREFLIGHT_STATUSES = ("not_run", "passed", "failed")
+_ADMISSION_BUNDLE_FILES = (
+    "baseline.log",
+    "environment.json",
+    "evidence.json",
+    "gold.log",
+    "source.json",
+)
 
 
 def _utc_seconds(value: object, path: str) -> str:
@@ -421,6 +432,7 @@ class QualityAcceptedTaskRecord:
     task_path: str
     task_manifest_hash: str
     replay_spec_hash: str
+    prompt_source_hash: str
 
     @classmethod
     def wire_fields(cls) -> tuple[str, ...]:
@@ -439,6 +451,7 @@ class QualityAcceptedTaskRecord:
             "task_path",
             "task_manifest_hash",
             "replay_spec_hash",
+            "prompt_source_hash",
         )
 
     def __post_init__(self) -> None:
@@ -499,6 +512,11 @@ class QualityAcceptedTaskRecord:
             "accepted_task.replay_spec_hash",
             pattern=_HASH_PATTERN,
         )
+        require_str(
+            self.prompt_source_hash,
+            "accepted_task.prompt_source_hash",
+            pattern=_HASH_PATTERN,
+        )
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -520,6 +538,7 @@ class QualityAcceptedTaskRecord:
             "task_path": self.task_path,
             "task_manifest_hash": self.task_manifest_hash,
             "replay_spec_hash": self.replay_spec_hash,
+            "prompt_source_hash": self.prompt_source_hash,
         }
 
     @classmethod
@@ -596,6 +615,11 @@ class QualityAcceptedTaskRecord:
                 f"{path}.replay_spec_hash",
                 pattern=_HASH_PATTERN,
             ),
+            prompt_source_hash=require_str(
+                data["prompt_source_hash"],
+                f"{path}.prompt_source_hash",
+                pattern=_HASH_PATTERN,
+            ),
         )
 
 
@@ -653,21 +677,20 @@ class QualityAcceptedTaskIndex:
         require_int(
             self.retained_count,
             "accepted_index.retained_count",
-            minimum=0,
+            minimum=_OFFICIAL_RETAINED_COUNT,
         )
-        if self.retained_count > 25:
+        if self.retained_count != _OFFICIAL_RETAINED_COUNT:
             raise ContractError(
-                "accepted_index.retained_count: must be <= 25"
+                "accepted_index.retained_count: expected exactly 14"
             )
         require_int(
             self.required_task_count,
             "accepted_index.required_task_count",
-            minimum=1,
+            minimum=_OFFICIAL_REQUIRED_TASK_COUNT,
         )
-        if self.required_task_count != 50 - self.retained_count:
+        if self.required_task_count != _OFFICIAL_REQUIRED_TASK_COUNT:
             raise ContractError(
-                "accepted_index.required_task_count: expected 50 - "
-                "retained_count"
+                "accepted_index.required_task_count: expected exactly 36"
             )
         _relative_posix_path(
             self.candidate_index_path,
@@ -1054,6 +1077,10 @@ def _validate_task_binding(
         raise ContractError(
             "accepted_task.replay_spec_hash: manifest mismatch"
         )
+    if quality_prompt_source_hash(task) != record.prompt_source_hash:
+        raise ContractError(
+            "accepted_task.prompt_source_hash: Prompt source mismatch"
+        )
 
 
 def load_quality_accepted_task_index(
@@ -1064,21 +1091,33 @@ def load_quality_accepted_task_index(
 ) -> QualityAcceptedTaskIndex:
     """Load and cross-bind a building or final expansion Task index."""
 
-    if require_complete:
-        expected = root / PurePosixPath(_OFFICIAL_ACCEPTED_INDEX)
-        if index_path.absolute() != expected.absolute():
+    index_path = _repository_input_file(
+        root,
+        index_path,
+        "accepted_index.path",
+    )
+    index = QualityAcceptedTaskIndex.from_dict(
+        load_canonical_json_artifact(index_path)
+    )
+    strict_complete = require_complete or index.status == "complete"
+    if strict_complete:
+        if (
+            _repository_relative(
+                root,
+                index_path,
+                "accepted_index.path",
+            )
+            != _OFFICIAL_ACCEPTED_INDEX
+        ):
             raise ContractError(
                 "accepted_index: official validation requires "
                 f"{_OFFICIAL_ACCEPTED_INDEX}"
             )
-    index = QualityAcceptedTaskIndex.from_dict(
-        load_canonical_json_artifact(index_path)
-    )
     if require_complete and index.status != "complete":
         raise ContractError(
             "accepted_index: official validation requires complete status"
         )
-    if require_complete and (
+    if strict_complete and (
         index.historical_index_path != _OFFICIAL_HISTORICAL_INDEX
         or index.candidate_index_path != _OFFICIAL_CANDIDATE_INDEX
     ):
@@ -1155,7 +1194,7 @@ def load_quality_accepted_task_index(
         )
         _validate_task_binding(root, record, candidate)
 
-    if require_complete:
+    if strict_complete:
         historical_errors = validate_historical_index(root, historical_path)
         if historical_errors:
             raise ContractError(
@@ -1190,11 +1229,22 @@ def validate_quality_accepted_task_index(
 
 def validate_quality_admission_prompt(
     task: TaskManifest,
+    *,
+    expected_source_hash: str,
 ) -> PromptQualityEvidence:
     """Revalidate stored Prompt evidence from the Task's exact live inputs."""
 
     if not isinstance(task, TaskManifest):
         raise ContractError("task: expected TaskManifest")
+    require_str(
+        expected_source_hash,
+        "quality_admission.prompt.expected_source_hash",
+        pattern=_HASH_PATTERN,
+    )
+    if quality_prompt_source_hash(task) != expected_source_hash:
+        raise ContractError(
+            "quality_admission.prompt.source hash: mismatch"
+        )
     quality = require_mapping(
         task.data.get("quality"), "quality_admission.task.quality"
     )
@@ -1282,6 +1332,8 @@ class QualityAdmissionResultRecord:
     baseline_status: str | None
     gold_status: str | None
     admission_evidence_hash: str | None
+    admission_bundle_path: str | None
+    admission_bundle_hash: str | None
     final_quality_errors: tuple[str, ...]
     verified: bool
 
@@ -1305,6 +1357,8 @@ class QualityAdmissionResultRecord:
             "baseline_status",
             "gold_status",
             "admission_evidence_hash",
+            "admission_bundle_path",
+            "admission_bundle_hash",
             "final_quality_errors",
             "verified",
         )
@@ -1372,6 +1426,22 @@ class QualityAdmissionResultRecord:
             "admission_result.admission_evidence_hash",
             pattern=_HASH_PATTERN,
         )
+        if self.admission_bundle_path is not None:
+            _relative_posix_path(
+                self.admission_bundle_path,
+                "admission_result.admission_bundle_path",
+            )
+        _optional_str(
+            self.admission_bundle_hash,
+            "admission_result.admission_bundle_hash",
+            pattern=_HASH_PATTERN,
+        )
+        if (self.admission_bundle_path is None) != (
+            self.admission_bundle_hash is None
+        ):
+            raise ContractError(
+                "admission_result.admission_bundle: path/hash mismatch"
+            )
         if not isinstance(self.final_quality_errors, tuple) or len(
             self.final_quality_errors
         ) != len(set(self.final_quality_errors)):
@@ -1394,6 +1464,8 @@ class QualityAdmissionResultRecord:
             and self.baseline_status == "baseline_reproduced"
             and self.gold_status == "resolved"
             and self.admission_evidence_hash is not None
+            and self.admission_bundle_path is not None
+            and self.admission_bundle_hash is not None
         )
         quality_passed = not self.final_quality_errors
         expected_verified = (
@@ -1416,6 +1488,8 @@ class QualityAdmissionResultRecord:
             or self.baseline_status is not None
             or self.gold_status is not None
             or self.admission_evidence_hash is not None
+            or self.admission_bundle_path is not None
+            or self.admission_bundle_hash is not None
             or self.admission_verified
         ):
             raise ContractError(
@@ -1425,10 +1499,21 @@ class QualityAdmissionResultRecord:
             self.baseline_status is not None
             or self.gold_status is not None
             or self.admission_evidence_hash is not None
+            or self.admission_bundle_path is not None
+            or self.admission_bundle_hash is not None
             or self.admission_verified
         ):
             raise ContractError(
                 "admission_result: partial Admission outcome"
+            )
+        if self.admission_decision is not None and (
+            self.admission_evidence_hash is None
+            or self.admission_bundle_path is None
+            or self.admission_bundle_hash is None
+        ):
+            raise ContractError(
+                "admission_result: Admission outcome requires stable "
+                "evidence and full bundle"
             )
         if self.admission_verified != (
             self.admission_decision == "verified"
@@ -1456,6 +1541,8 @@ class QualityAdmissionResultRecord:
             "baseline_status": self.baseline_status,
             "gold_status": self.gold_status,
             "admission_evidence_hash": self.admission_evidence_hash,
+            "admission_bundle_path": self.admission_bundle_path,
+            "admission_bundle_hash": self.admission_bundle_hash,
             "final_quality_errors": list(self.final_quality_errors),
             "verified": self.verified,
         }
@@ -1534,6 +1621,15 @@ class QualityAdmissionResultRecord:
             admission_evidence_hash=_optional_str(
                 data["admission_evidence_hash"],
                 f"{path}.admission_evidence_hash",
+                pattern=_HASH_PATTERN,
+            ),
+            admission_bundle_path=_optional_str(
+                data["admission_bundle_path"],
+                f"{path}.admission_bundle_path",
+            ),
+            admission_bundle_hash=_optional_str(
+                data["admission_bundle_hash"],
+                f"{path}.admission_bundle_hash",
                 pattern=_HASH_PATTERN,
             ),
             final_quality_errors=_error_tuple(
@@ -1759,20 +1855,147 @@ class QualityAdmissionResultIndex:
         return index
 
 
-def _bytes_hash(value: bytes) -> str:
-    return f"sha256:{hashlib.sha256(value).hexdigest()}"
-
-
 def _repository_relative(root: Path, path: Path, label: str) -> str:
-    try:
-        relative = path.absolute().relative_to(root.absolute())
-    except ValueError as exc:
-        raise ContractError(
-            f"{label}: expected path inside repository root"
-        ) from exc
-    return _relative_posix_path(
-        relative.as_posix(), label, suffix=".json"
+    return _repository_relative_path(
+        root,
+        path,
+        label,
+        suffix=".json",
     )
+
+
+def _repository_relative_path(
+    root: Path,
+    path: Path,
+    label: str,
+    *,
+    suffix: str | None = None,
+) -> str:
+    absolute_path = _repository_path(root, path, label)
+    relative = _relative_to_repository(root, absolute_path, label)
+    return _relative_posix_path(
+        relative.as_posix(), label, suffix=suffix
+    )
+
+
+def _relative_to_repository(
+    root: Path,
+    absolute_path: Path,
+    label: str,
+) -> Path:
+    for repository_root in (root.absolute(), root.resolve()):
+        try:
+            return absolute_path.relative_to(repository_root)
+        except ValueError:
+            continue
+    raise ContractError(f"{label}: expected path inside repository root")
+
+
+def _repository_path(root: Path, path: Path, label: str) -> Path:
+    if not isinstance(root, Path) or not root.is_dir() or root.is_symlink():
+        raise ContractError("root: expected real repository directory")
+    if not isinstance(path, Path):
+        raise ContractError(f"{label}: expected Path")
+    absolute_root = root.absolute()
+    absolute_path = path.absolute()
+    relative = _relative_to_repository(root, absolute_path, label)
+    current = (
+        root.resolve()
+        if absolute_path.is_relative_to(root.resolve())
+        else absolute_root
+    )
+    for part in relative.parts:
+        current = current / part
+        if current.is_symlink():
+            raise ContractError(f"{label}: symlink ancestor is forbidden")
+    return absolute_path
+
+
+def _repository_input_file(
+    root: Path,
+    path: Path,
+    label: str,
+) -> Path:
+    absolute_path = _repository_path(root, path, label)
+    if not absolute_path.is_file():
+        raise ContractError(f"{label}: expected regular file")
+    return absolute_path
+
+
+def _paths_alias(first: Path, second: Path) -> bool:
+    if first == second:
+        return True
+    if first.exists() and second.exists():
+        try:
+            return first.samefile(second)
+        except OSError:
+            return False
+    return False
+
+
+def _path_is_within(path: Path, directory: Path) -> bool:
+    try:
+        path.relative_to(directory)
+    except ValueError:
+        return False
+    return True
+
+
+def _reject_output_collision(
+    output_path: Path,
+    *,
+    protected_files: tuple[Path, ...] = (),
+    protected_directories: tuple[Path, ...] = (),
+) -> None:
+    for protected in protected_files:
+        if _paths_alias(output_path, protected):
+            raise ContractError(
+                "quality_admission.output collision: authoritative input"
+            )
+    for protected in protected_directories:
+        if _path_is_within(output_path, protected):
+            raise ContractError(
+                "quality_admission.output collision: authoritative directory"
+            )
+
+
+def _authorize_result_replacement(
+    output_path: Path,
+    *,
+    accepted_index_path: str,
+    accepted_index_hash: str,
+    environment_registry_path: str,
+    environment_registry_hash: str,
+    source_registry_path: str,
+    source_registry_hash: str,
+) -> None:
+    if not output_path.exists():
+        return
+    try:
+        previous = QualityAdmissionResultIndex.from_dict(
+            load_canonical_json_artifact(output_path)
+        )
+    except (ContractError, OSError, UnicodeDecodeError, ValueError) as exc:
+        raise ContractError(
+            "quality_admission.output collision: existing file is not "
+            "this result artifact"
+        ) from exc
+    expected = {
+        "accepted_index_path": accepted_index_path,
+        "accepted_index_hash": accepted_index_hash,
+        "environment_registry_path": environment_registry_path,
+        "environment_registry_hash": environment_registry_hash,
+        "source_registry_path": source_registry_path,
+        "source_registry_hash": source_registry_hash,
+    }
+    if any(
+        getattr(previous, field) != value
+        for field, value in expected.items()
+    ):
+        raise ContractError(
+            "quality_admission.output collision: existing result belongs "
+            "to different inputs"
+        )
 
 
 def _write_canonical_file(
@@ -1816,7 +2039,7 @@ def _rebind_readmission(
         "quality_admission.task.quality.readmission_evidence",
     )
     payload = dict(load_canonical_json_artifact(path))
-    payload["admission_evidence_hash"] = _bytes_hash(
+    payload["admission_evidence_hash"] = quality_bytes_hash(
         load_regular_file_bytes(admission_evidence_path)
     )
     payload["content_hash"] = canonical_sha256(
@@ -1827,6 +2050,368 @@ def _rebind_readmission(
         }
     )
     _write_canonical_file(path, payload, root=task.task_dir)
+
+
+def _load_json_mapping(path: Path, label: str) -> Mapping[str, object]:
+    try:
+        value = json.loads(load_regular_file_bytes(path).decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ContractError(f"{label}: invalid JSON") from exc
+    return require_mapping(value, label)
+
+
+def _bundle_file_names(
+    evidence: Mapping[str, object],
+) -> tuple[str, ...]:
+    if evidence.get("gold") is None:
+        return tuple(
+            name for name in _ADMISSION_BUNDLE_FILES if name != "gold.log"
+        )
+    return _ADMISSION_BUNDLE_FILES
+
+
+def quality_admission_bundle_hash(bundle_path: Path) -> str:
+    """Hash the exact, closed set of files in one Admission bundle."""
+
+    if (
+        not isinstance(bundle_path, Path)
+        or bundle_path.is_symlink()
+        or not bundle_path.is_dir()
+    ):
+        raise ContractError("admission bundle: expected real directory")
+    evidence = _load_json_mapping(
+        bundle_path / "evidence.json",
+        "admission bundle.evidence",
+    )
+    expected_names = _bundle_file_names(evidence)
+    actual_names = tuple(
+        sorted(path.name for path in bundle_path.iterdir())
+    )
+    if actual_names != expected_names:
+        raise ContractError(
+            "admission bundle: expected exact file set "
+            f"{list(expected_names)!r}"
+        )
+    hashes: dict[str, str] = {}
+    for name in expected_names:
+        selected = bundle_path / name
+        if selected.is_symlink():
+            raise ContractError(
+                f"admission bundle.{name}: symlink is forbidden"
+            )
+        hashes[name] = quality_bytes_hash(load_regular_file_bytes(selected))
+    return canonical_sha256(hashes)
+
+
+def _selector_command(
+    commands: list[object],
+    selector: str,
+    *,
+    expected_command: list[str],
+    label: str,
+) -> tuple[int, Mapping[str, object]]:
+    matches: list[tuple[int, Mapping[str, object]]] = []
+    for position, value in enumerate(commands):
+        command = require_mapping(
+            value,
+            f"{label}.commands[{position}]",
+        )
+        command_value = require_list(
+            command.get("command"),
+            f"{label}.commands[{position}].command",
+        )
+        command_parts = [
+            require_str(
+                item,
+                f"{label}.commands[{position}].command[]",
+            )
+            for item in command_value
+        ]
+        token_sequences = [command_parts]
+        for part in command_parts:
+            try:
+                token_sequences.append(shlex.split(part))
+            except ValueError:
+                continue
+        if any(
+            any(
+                tokens[start : start + len(expected_command)]
+                == expected_command
+                for start in range(
+                    len(tokens) - len(expected_command) + 1
+                )
+            )
+            for tokens in token_sequences
+        ):
+            matches.append((position, command))
+    if len(matches) != 1:
+        raise ContractError(
+            f"{label}.selector {selector!r}: expected exactly one command"
+        )
+    return matches[0]
+
+
+def _validate_bundle_execution(
+    value: object,
+    *,
+    task: TaskManifest,
+    phase: str,
+) -> Mapping[str, object]:
+    label = f"admission bundle.{phase}"
+    execution = require_exact_fields(
+        value,
+        label,
+        (
+            "task_id",
+            "mode",
+            "status",
+            "fail_to_pass_total",
+            "fail_to_pass_passed",
+            "pass_to_pass_total",
+            "pass_to_pass_passed",
+            "duration_sec",
+            "environment",
+            "commands",
+        ),
+    )
+    fail_total = len(task.fail_to_pass_tests)
+    pass_total = len(task.pass_to_pass_tests)
+    expected = {
+        "task_id": task.task_id,
+        "mode": phase,
+        "status": (
+            "baseline_reproduced" if phase == "baseline" else "resolved"
+        ),
+        "fail_to_pass_total": fail_total,
+        "fail_to_pass_passed": 0 if phase == "baseline" else fail_total,
+        "pass_to_pass_total": pass_total,
+        "pass_to_pass_passed": pass_total,
+    }
+    if fail_total <= 0 or pass_total <= 0:
+        raise ContractError(
+            f"{label}: positive F2P and P2P selectors are required"
+        )
+    for field, expected_value in expected.items():
+        if field.endswith(("_total", "_passed")):
+            require_int(execution[field], f"{label}.{field}", minimum=0)
+        if execution[field] != expected_value:
+            raise ContractError(f"{label}.{field}: mismatch")
+    duration = execution["duration_sec"]
+    if (
+        isinstance(duration, bool)
+        or not isinstance(duration, (int, float))
+        or duration < 0
+    ):
+        raise ContractError(f"{label}.duration_sec: expected non-negative")
+    require_mapping(execution["environment"], f"{label}.environment")
+    commands = require_list(execution["commands"], f"{label}.commands")
+    expected_exit_codes = (
+        (
+            task.fail_to_pass_tests,
+            1 if phase == "baseline" else 0,
+            "fail_to_pass",
+        ),
+        (task.pass_to_pass_tests, 0, "pass_to_pass"),
+    )
+    selector_positions: list[int] = []
+    for selectors, expected_exit_code, axis in expected_exit_codes:
+        for selector in selectors:
+            command_position, command = _selector_command(
+                commands,
+                selector,
+                expected_command=task.command_for_test(
+                    selector,
+                    python_executable=task.environment_python_executable,
+                ),
+                label=f"{label}.{axis}",
+            )
+            selector_positions.append(command_position)
+            exit_code = require_int(
+                command.get("exit_code"),
+                f"{label}.{axis}.selector {selector!r}.exit_code",
+            )
+            if (
+                (expected_exit_code == 0 and exit_code != 0)
+                or (expected_exit_code != 0 and exit_code == 0)
+            ):
+                raise ContractError(
+                    f"{label}.{axis}.selector {selector!r}: "
+                    "exit code mismatch"
+                )
+            if require_bool(
+                command.get("timed_out"),
+                f"{label}.{axis}.selector {selector!r}.timed_out",
+            ):
+                raise ContractError(
+                    f"{label}.{axis}.selector {selector!r}: timed out"
+                )
+    if selector_positions != sorted(set(selector_positions)):
+        raise ContractError(
+            f"{label}.selectors: expected distinct command order"
+        )
+    return execution
+
+
+def _validate_admission_bundle(
+    task: TaskManifest,
+    bundle_path: Path,
+) -> Mapping[str, object]:
+    evidence = _load_json_mapping(
+        bundle_path / "evidence.json",
+        "admission bundle.evidence",
+    )
+    payload = require_exact_fields(
+        evidence,
+        "admission bundle.evidence",
+        (
+            "schema_version",
+            "evidence_id",
+            "task_id",
+            "task_manifest_hash",
+            "task_manifest_hash_kind",
+            "created_at",
+            "source",
+            "environment",
+            "baseline",
+            "gold",
+            "admission",
+        ),
+    )
+    if payload["schema_version"] != "v1":
+        raise ContractError("admission bundle.schema_version: mismatch")
+    if payload["task_id"] != task.task_id:
+        raise ContractError("admission bundle.task_id: mismatch")
+    if payload["task_manifest_hash_kind"] != REPLAY_SPEC_HASH_KIND:
+        raise ContractError(
+            "admission bundle.task_manifest_hash_kind: mismatch"
+        )
+    expected_replay_hash = replay_spec_hash(task)
+    if payload["task_manifest_hash"] != expected_replay_hash:
+        raise ContractError(
+            "admission bundle.task_manifest_hash: mismatch"
+        )
+    created_at = _utc_seconds(
+        payload["created_at"],
+        "admission bundle.created_at",
+    )
+    expected_evidence_id = (
+        f"{task.task_id}:"
+        f"{expected_replay_hash.removeprefix('sha256:')[:12]}:"
+        f"{created_at}"
+    )
+    if payload["evidence_id"] != expected_evidence_id:
+        raise ContractError("admission bundle.evidence_id: mismatch")
+
+    expected_source = {
+        "id": task.source_ref,
+        "repo_url": task.repo_url,
+        "base_commit": task.base_commit,
+        "snapshot_path": (
+            str(task.source_snapshot_path)
+            if task.source_snapshot_path
+            else None
+        ),
+        "snapshot_hash": task.source_snapshot_hash,
+        "snapshot_method": task.source_snapshot_method,
+    }
+    source = require_mapping(
+        payload["source"], "admission bundle.source"
+    )
+    if dict(source) != expected_source:
+        raise ContractError("admission bundle.source: mismatch")
+
+    baseline = _validate_bundle_execution(
+        payload["baseline"],
+        task=task,
+        phase="baseline",
+    )
+    gold = _validate_bundle_execution(
+        payload["gold"],
+        task=task,
+        phase="gold",
+    )
+    expected_environment = {
+        "id": task.environment_ref,
+        "runtime_tier": task.runtime_tier,
+        "backend": task.environment_backend,
+        "image": task.environment_image,
+        "image_digest": task.environment_image_digest,
+        "digest_kind": task.environment_digest_kind,
+        "platform": task.environment_platform,
+        "observed": baseline["environment"],
+    }
+    environment = require_mapping(
+        payload["environment"], "admission bundle.environment"
+    )
+    if dict(environment) != expected_environment:
+        raise ContractError("admission bundle.environment: mismatch")
+    require_mapping(gold["environment"], "admission bundle.gold.environment")
+
+    admission = require_exact_fields(
+        payload["admission"],
+        "admission bundle.admission",
+        ("decision", "verified", "failure_classification"),
+    )
+    if dict(admission) != {
+        "decision": "verified",
+        "verified": True,
+        "failure_classification": None,
+    }:
+        raise ContractError("admission bundle.admission: verified required")
+
+    _validate_bundle_components(bundle_path)
+    quality_admission_bundle_hash(bundle_path)
+    return payload
+
+
+def _validate_bundle_components(
+    bundle_path: Path,
+) -> Mapping[str, object]:
+    evidence = _load_json_mapping(
+        bundle_path / "evidence.json",
+        "admission bundle.evidence",
+    )
+    components = {
+        "source.json": evidence.get("source"),
+        "environment.json": evidence.get("environment"),
+        "baseline.log": evidence.get("baseline"),
+    }
+    if evidence.get("gold") is not None:
+        components["gold.log"] = evidence.get("gold")
+    for name, expected_value in components.items():
+        expected = require_mapping(
+            expected_value,
+            f"admission bundle.evidence.{name}",
+        )
+        component = _load_json_mapping(
+            bundle_path / name,
+            f"admission bundle.{name}",
+        )
+        if dict(component) != dict(expected):
+            raise ContractError(
+                f"admission bundle.{name}: evidence mismatch"
+            )
+    return evidence
+
+
+def _admission_bundle_directory(
+    task: TaskManifest,
+    *,
+    created_at: str,
+    replay_hash: str,
+) -> Path:
+    stamp = (
+        created_at.replace("-", "")
+        .replace(":", "")
+        .removesuffix("Z")
+        + "Z"
+    )
+    return (
+        task.task_dir
+        / "admission"
+        / "full"
+        / f"{stamp}-{replay_hash.removeprefix('sha256:')[:12]}"
+    )
 
 
 def _not_run_errors(gate: str) -> tuple[str, ...]:
@@ -1850,8 +2435,38 @@ def run_quality_admission(
         created_at,
         "quality_admission.created_at",
     )
+    accepted_index_path = _repository_input_file(
+        root,
+        accepted_index_path,
+        "quality_admission.accepted_index_path",
+    )
+    environment_registry_path = _repository_input_file(
+        root,
+        environment_registry_path,
+        "quality_admission.environment_registry_path",
+    )
+    source_registry_path = _repository_input_file(
+        root,
+        source_registry_path,
+        "quality_admission.source_registry_path",
+    )
+    output_path = _repository_path(
+        root,
+        output_path,
+        "quality_admission.output_path",
+    )
     _repository_relative(
-        root, output_path, "quality_admission.output_path"
+        root,
+        output_path,
+        "quality_admission.output_path",
+    )
+    _reject_output_collision(
+        output_path,
+        protected_files=(
+            accepted_index_path,
+            environment_registry_path,
+            source_registry_path,
+        ),
     )
     accepted = load_quality_accepted_task_index(
         root, accepted_index_path, require_complete=False
@@ -1871,6 +2486,48 @@ def run_quality_admission(
     )
     environment_bytes = load_regular_file_bytes(environment_registry_path)
     source_bytes = load_regular_file_bytes(source_registry_path)
+    protected_directories = [
+        _root_path(
+            root,
+            accepted.historical_index_path,
+            "accepted_index.historical_index_path",
+        ).parent,
+        _root_path(
+            root,
+            accepted.candidate_index_path,
+            "accepted_index.candidate_index_path",
+        ).parent,
+    ]
+    protected_directories.extend(
+        _root_path(
+            root,
+            record.task_path,
+            "quality_admission.accepted_task.task_path",
+        )
+        for record in accepted.tasks
+    )
+    protected_directories.extend(
+        _root_path(
+            root,
+            record.reassessment.relative_path,
+            "quality_admission.accepted_task.reassessment",
+        ).parent
+        for record in accepted.tasks
+        if record.reassessment is not None
+    )
+    _reject_output_collision(
+        output_path,
+        protected_directories=tuple(protected_directories),
+    )
+    _authorize_result_replacement(
+        output_path,
+        accepted_index_path=accepted_relative,
+        accepted_index_hash=accepted.content_hash,
+        environment_registry_path=environment_relative,
+        environment_registry_hash=quality_bytes_hash(environment_bytes),
+        source_registry_path=source_relative,
+        source_registry_hash=quality_bytes_hash(source_bytes),
+    )
 
     if preflight is None:
         from scripts.preflight_task import preflight_task
@@ -1900,7 +2557,10 @@ def run_quality_admission(
                 environment_registry_path=environment_registry_path,
                 source_registry_path=source_registry_path,
             )
-            prompt = validate_quality_admission_prompt(task)
+            prompt = validate_quality_admission_prompt(
+                task,
+                expected_source_hash=accepted_record.prompt_source_hash,
+            )
             prompt_hash = prompt.content_hash
         except (ContractError, OSError, UnicodeDecodeError, ValueError) as exc:
             prompt_errors = (f"quality_admission.task: {exc}",)
@@ -1921,6 +2581,8 @@ def run_quality_admission(
         baseline_status: str | None = None
         gold_status: str | None = None
         admission_hash: str | None = None
+        admission_bundle_path: str | None = None
+        admission_bundle_hash: str | None = None
         final_errors: tuple[str, ...]
         if prompt_errors:
             final_errors = _not_run_errors("Prompt")
@@ -1938,10 +2600,49 @@ def run_quality_admission(
                     if evidence.gold is None
                     else str(evidence.gold["status"])
                 )
+                bundle_directory = _admission_bundle_directory(
+                    task,
+                    created_at=evidence.created_at,
+                    replay_hash=evidence.task_manifest_hash,
+                )
+                bundle_directory = _repository_path(
+                    root,
+                    bundle_directory,
+                    "quality_admission.admission_bundle_path",
+                )
+                if bundle_directory.exists() and (
+                    bundle_directory.is_symlink()
+                    or not bundle_directory.is_dir()
+                ):
+                    raise ContractError(
+                        "quality_admission.admission_bundle_path: "
+                        "output collision"
+                    )
+                if bundle_directory.exists():
+                    for existing in bundle_directory.iterdir():
+                        if existing.is_symlink() or not existing.is_file():
+                            raise ContractError(
+                                "quality_admission.admission_bundle_path: "
+                                "unsafe existing entry"
+                            )
+                admission_runner.write_bundle(
+                    evidence,
+                    bundle_directory,
+                )
+                admission_bundle_hash = quality_admission_bundle_hash(
+                    bundle_directory
+                )
+                admission_bundle_path = _repository_relative_path(
+                    root,
+                    bundle_directory,
+                    "quality_admission.admission_bundle_path",
+                )
+                if evidence.verified:
+                    _validate_admission_bundle(task, bundle_directory)
                 stable_path = admission_runner.write_task_evidence(
                     task, evidence
                 )
-                admission_hash = _bytes_hash(
+                admission_hash = quality_bytes_hash(
                     load_regular_file_bytes(stable_path)
                 )
                 _rebind_readmission(task, stable_path)
@@ -1958,6 +2659,18 @@ def run_quality_admission(
                 ValueError,
             ) as exc:
                 final_errors = (f"quality_admission: {exc}",)
+                if (
+                    admission_hash is None
+                    or admission_bundle_path is None
+                    or admission_bundle_hash is None
+                ):
+                    admission_decision = None
+                    admission_verified = False
+                    baseline_status = None
+                    gold_status = None
+                    admission_hash = None
+                    admission_bundle_path = None
+                    admission_bundle_hash = None
 
         verified = (
             prompt_hash is not None
@@ -1968,6 +2681,8 @@ def run_quality_admission(
             and baseline_status == "baseline_reproduced"
             and gold_status == "resolved"
             and admission_hash is not None
+            and admission_bundle_path is not None
+            and admission_bundle_hash is not None
             and not final_errors
         )
         results.append(
@@ -1991,6 +2706,8 @@ def run_quality_admission(
                 baseline_status=baseline_status,
                 gold_status=gold_status,
                 admission_evidence_hash=admission_hash,
+                admission_bundle_path=admission_bundle_path,
+                admission_bundle_hash=admission_bundle_hash,
                 final_quality_errors=tuple(dict.fromkeys(final_errors)),
                 verified=verified,
             )
@@ -2001,9 +2718,9 @@ def run_quality_admission(
         accepted_index_path=accepted_relative,
         accepted_index_hash=accepted.content_hash,
         environment_registry_path=environment_relative,
-        environment_registry_hash=_bytes_hash(environment_bytes),
+        environment_registry_hash=quality_bytes_hash(environment_bytes),
         source_registry_path=source_relative,
-        source_registry_hash=_bytes_hash(source_bytes),
+        source_registry_hash=quality_bytes_hash(source_bytes),
         task_count=len(results),
         verified_count=sum(result.verified for result in results),
         results=tuple(results),
@@ -2021,6 +2738,16 @@ def load_quality_admission_result_index(
 ) -> QualityAdmissionResultIndex:
     """Load result bytes and rebind every outcome to its exact inputs."""
 
+    result_path = _repository_input_file(
+        root,
+        result_path,
+        "admission_results.path",
+    )
+    accepted_index_path = _repository_input_file(
+        root,
+        accepted_index_path,
+        "admission_results.accepted_index_path",
+    )
     result = QualityAdmissionResultIndex.from_dict(
         load_canonical_json_artifact(result_path)
     )
@@ -2050,13 +2777,13 @@ def load_quality_admission_result_index(
         result.source_registry_path,
         "admission_results.source_registry_path",
     )
-    if result.environment_registry_hash != _bytes_hash(
+    if result.environment_registry_hash != quality_bytes_hash(
         load_regular_file_bytes(environment_registry_path)
     ):
         raise ContractError(
             "admission_results.environment_registry_hash: mismatch"
         )
-    if result.source_registry_hash != _bytes_hash(
+    if result.source_registry_hash != quality_bytes_hash(
         load_regular_file_bytes(source_registry_path)
     ):
         raise ContractError(
@@ -2087,8 +2814,16 @@ def load_quality_admission_result_index(
             outcome.task_path,
             f"admission_results.results[{position}].task_path",
         )
+        task = load_resolved_task(
+            task_dir / "task.json",
+            environment_registry_path=environment_registry_path,
+            source_registry_path=source_registry_path,
+        )
         if outcome.prompt_evidence_hash is not None:
-            task = TaskManifest.load(task_dir / "task.json")
+            validate_quality_admission_prompt(
+                task,
+                expected_source_hash=authorized.prompt_source_hash,
+            )
             quality = require_mapping(
                 task.data.get("quality"),
                 f"admission_results.results[{position}].quality",
@@ -2117,10 +2852,79 @@ def load_quality_admission_result_index(
                     f"admission_results.results[{position}]"
                     ".prompt_evidence_hash: mismatch"
                 )
+        if outcome.admission_bundle_path is not None:
+            bundle_relative = PurePosixPath(
+                outcome.admission_bundle_path
+            )
+            expected_prefix = (
+                *PurePosixPath(outcome.task_path).parts,
+                "admission",
+                "full",
+            )
+            if (
+                bundle_relative.parts[: len(expected_prefix)]
+                != expected_prefix
+                or len(bundle_relative.parts) != len(expected_prefix) + 1
+            ):
+                raise ContractError(
+                    f"admission_results.results[{position}]"
+                    ".admission_bundle_path: expected Task-local bundle"
+                )
+            bundle_path = _root_path(
+                root,
+                outcome.admission_bundle_path,
+                f"admission_results.results[{position}]"
+                ".admission_bundle_path",
+            )
+            if outcome.admission_bundle_hash != (
+                quality_admission_bundle_hash(bundle_path)
+            ):
+                raise ContractError(
+                    f"admission_results.results[{position}]"
+                    ".admission_bundle_hash: mismatch"
+                )
+            _validate_bundle_components(bundle_path)
+            if outcome.admission_verified:
+                full_evidence = _validate_admission_bundle(
+                    task,
+                    bundle_path,
+                )
+                full_admission = require_mapping(
+                    full_evidence["admission"],
+                    f"admission_results.results[{position}]"
+                    ".admission_bundle.admission",
+                )
+                full_baseline = require_mapping(
+                    full_evidence["baseline"],
+                    f"admission_results.results[{position}]"
+                    ".admission_bundle.baseline",
+                )
+                full_gold = require_mapping(
+                    full_evidence["gold"],
+                    f"admission_results.results[{position}]"
+                    ".admission_bundle.gold",
+                )
+                full_truth = {
+                    "admission_decision": full_admission.get("decision"),
+                    "admission_verified": full_admission.get("verified"),
+                    "baseline_status": full_baseline.get("status"),
+                    "gold_status": full_gold.get("status"),
+                }
+                expected_full_truth = {
+                    "admission_decision": outcome.admission_decision,
+                    "admission_verified": outcome.admission_verified,
+                    "baseline_status": outcome.baseline_status,
+                    "gold_status": outcome.gold_status,
+                }
+                if full_truth != expected_full_truth:
+                    raise ContractError(
+                        f"admission_results.results[{position}]"
+                        ".admission_bundle: outcome mismatch"
+                    )
         if outcome.admission_evidence_hash is not None:
             stable_path = task_dir / "admission/evidence.json"
             stable_bytes = load_regular_file_bytes(stable_path)
-            if outcome.admission_evidence_hash != _bytes_hash(stable_bytes):
+            if outcome.admission_evidence_hash != quality_bytes_hash(stable_bytes):
                 raise ContractError(
                     f"admission_results.results[{position}]"
                     ".admission_evidence_hash: mismatch"
@@ -2177,5 +2981,17 @@ def load_quality_admission_result_index(
                 raise ContractError(
                     f"admission_results.results[{position}]"
                     ".admission_evidence: outcome mismatch"
+                )
+        if outcome.verified:
+            formal_errors = validate_quality_task(
+                root,
+                task,
+                require_verified=True,
+            )
+            if formal_errors:
+                raise ContractError(
+                    f"admission_results.results[{position}]"
+                    ".quality_readmission: "
+                    + "; ".join(formal_errors)
                 )
     return result

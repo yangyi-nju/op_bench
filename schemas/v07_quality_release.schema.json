@@ -886,7 +886,8 @@
         "origin",
         "task_path",
         "task_manifest_hash",
-        "replay_spec_hash"
+        "replay_spec_hash",
+        "prompt_source_hash"
       ],
       "properties": {
         "screening_record_index": {
@@ -928,12 +929,39 @@
           "pattern": "^tasks/pytorch/[^/\\\\.][^/\\\\]*$"
         },
         "task_manifest_hash": {"$ref": "#/$defs/hash"},
-        "replay_spec_hash": {"$ref": "#/$defs/hash"}
+        "replay_spec_hash": {"$ref": "#/$defs/hash"},
+        "prompt_source_hash": {"$ref": "#/$defs/hash"}
       }
     },
     "quality_accepted_task_index": {
       "type": "object",
       "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {"status": {"const": "building"}},
+            "required": ["status"]
+          },
+          "then": {
+            "properties": {
+              "task_count": {"maximum": 35},
+              "tasks": {"maxItems": 35}
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {"status": {"const": "complete"}},
+            "required": ["status"]
+          },
+          "then": {
+            "properties": {
+              "task_count": {"const": 36},
+              "tasks": {"minItems": 36, "maxItems": 36}
+            }
+          }
+        }
+      ],
       "required": [
         "contract_type",
         "schema_version",
@@ -963,13 +991,11 @@
         "historical_index_hash": {"$ref": "#/$defs/hash"},
         "retained_count": {
           "type": "integer",
-          "minimum": 0,
-          "maximum": 25
+          "const": 14
         },
         "required_task_count": {
           "type": "integer",
-          "minimum": 25,
-          "maximum": 50
+          "const": 36
         },
         "candidate_index_path": {
           "type": "string",
@@ -977,10 +1003,15 @@
         },
         "candidate_index_hash": {"$ref": "#/$defs/hash"},
         "status": {"enum": ["building", "complete"]},
-        "task_count": {"type": "integer", "minimum": 1},
+        "task_count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 36
+        },
         "tasks": {
           "type": "array",
           "minItems": 1,
+          "maxItems": 36,
           "uniqueItems": true,
           "items": {"$ref": "#/$defs/quality_accepted_task_record"}
         },
@@ -1008,6 +1039,8 @@
         "baseline_status",
         "gold_status",
         "admission_evidence_hash",
+        "admission_bundle_path",
+        "admission_bundle_hash",
         "final_quality_errors",
         "verified"
       ],
@@ -1058,6 +1091,21 @@
           "minLength": 1
         },
         "admission_evidence_hash": {
+          "oneOf": [
+            {"type": "null"},
+            {"$ref": "#/$defs/hash"}
+          ]
+        },
+        "admission_bundle_path": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "type": "string",
+              "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\\\)[^/]+(?:/[^/]+)*$"
+            }
+          ]
+        },
+        "admission_bundle_hash": {
           "oneOf": [
             {"type": "null"},
             {"$ref": "#/$defs/hash"}
