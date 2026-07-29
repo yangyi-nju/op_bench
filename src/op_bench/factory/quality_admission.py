@@ -3069,8 +3069,15 @@ def load_quality_admission_result_index(
     root: Path,
     result_path: Path,
     accepted_index_path: Path,
+    *,
+    require_private_bundles: bool = True,
 ) -> QualityAdmissionResultIndex:
-    """Load result bytes and rebind every outcome to its exact inputs."""
+    """Load result bytes and rebind every outcome to its exact inputs.
+
+    Public release artifacts may retain only the hash reference to a detached
+    controller-private Admission bundle.  Strict callers keep the default and
+    require the bundle to be present for full replay.
+    """
 
     result_path = _repository_input_file(
         root,
@@ -3210,51 +3217,56 @@ def load_quality_admission_result_index(
                 f"admission_results.results[{position}]"
                 ".admission_bundle_path",
             )
-            if outcome.admission_bundle_hash != (
-                quality_admission_bundle_hash(bundle_path)
-            ):
-                raise ContractError(
-                    f"admission_results.results[{position}]"
-                    ".admission_bundle_hash: mismatch"
-                )
-            _validate_bundle_components(bundle_path)
-            if outcome.admission_verified:
-                full_evidence = _validate_admission_bundle(
-                    task,
-                    bundle_path,
-                )
-                full_admission = require_mapping(
-                    full_evidence["admission"],
-                    f"admission_results.results[{position}]"
-                    ".admission_bundle.admission",
-                )
-                full_baseline = require_mapping(
-                    full_evidence["baseline"],
-                    f"admission_results.results[{position}]"
-                    ".admission_bundle.baseline",
-                )
-                full_gold = require_mapping(
-                    full_evidence["gold"],
-                    f"admission_results.results[{position}]"
-                    ".admission_bundle.gold",
-                )
-                full_truth = {
-                    "admission_decision": full_admission.get("decision"),
-                    "admission_verified": full_admission.get("verified"),
-                    "baseline_status": full_baseline.get("status"),
-                    "gold_status": full_gold.get("status"),
-                }
-                expected_full_truth = {
-                    "admission_decision": outcome.admission_decision,
-                    "admission_verified": outcome.admission_verified,
-                    "baseline_status": outcome.baseline_status,
-                    "gold_status": outcome.gold_status,
-                }
-                if full_truth != expected_full_truth:
+            if bundle_path.exists() or require_private_bundles:
+                if outcome.admission_bundle_hash != (
+                    quality_admission_bundle_hash(bundle_path)
+                ):
                     raise ContractError(
                         f"admission_results.results[{position}]"
-                        ".admission_bundle: outcome mismatch"
+                        ".admission_bundle_hash: mismatch"
                     )
+                _validate_bundle_components(bundle_path)
+                if outcome.admission_verified:
+                    full_evidence = _validate_admission_bundle(
+                        task,
+                        bundle_path,
+                    )
+                    full_admission = require_mapping(
+                        full_evidence["admission"],
+                        f"admission_results.results[{position}]"
+                        ".admission_bundle.admission",
+                    )
+                    full_baseline = require_mapping(
+                        full_evidence["baseline"],
+                        f"admission_results.results[{position}]"
+                        ".admission_bundle.baseline",
+                    )
+                    full_gold = require_mapping(
+                        full_evidence["gold"],
+                        f"admission_results.results[{position}]"
+                        ".admission_bundle.gold",
+                    )
+                    full_truth = {
+                        "admission_decision": full_admission.get(
+                            "decision"
+                        ),
+                        "admission_verified": full_admission.get(
+                            "verified"
+                        ),
+                        "baseline_status": full_baseline.get("status"),
+                        "gold_status": full_gold.get("status"),
+                    }
+                    expected_full_truth = {
+                        "admission_decision": outcome.admission_decision,
+                        "admission_verified": outcome.admission_verified,
+                        "baseline_status": outcome.baseline_status,
+                        "gold_status": outcome.gold_status,
+                    }
+                    if full_truth != expected_full_truth:
+                        raise ContractError(
+                            f"admission_results.results[{position}]"
+                            ".admission_bundle: outcome mismatch"
+                        )
         if outcome.admission_evidence_hash is not None:
             stable_path = task_dir / "admission/evidence.json"
             stable_bytes = load_regular_file_bytes(stable_path)

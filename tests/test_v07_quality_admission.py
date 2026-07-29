@@ -20,6 +20,7 @@ from op_bench.factory.quality_admission import (
     QualityAdmissionResultIndex,
     QualityAdmissionResultRecord,
     _selector_payload,
+    load_quality_accepted_task_index,
     load_quality_admission_result_index,
     quality_admission_bundle_hash,
     run_quality_admission,
@@ -1655,6 +1656,56 @@ class V07QualityAdmissionRunnerTests(unittest.TestCase):
                             root, output, accepted_path
                         )
 
+    def test_result_loader_allows_detached_private_bundle_only_when_explicit(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (
+                accepted_path,
+                output,
+                environment_registry,
+                source_registry,
+                _,
+            ) = _runner_fixture(root)
+            run_quality_admission(
+                root=root,
+                accepted_index_path=accepted_path,
+                output_path=output,
+                environment_registry_path=environment_registry,
+                source_registry_path=source_registry,
+                created_at="2026-07-30T03:04:05Z",
+                preflight=lambda path: (True, ["passed"]),
+                admission_runner=AdmissionRunner(
+                    evaluator=_FakeEvaluator(),
+                    now=_now,
+                ),
+            )
+            result_payload = json.loads(
+                output.read_text(encoding="utf-8")
+            )
+            bundle = root / result_payload["results"][0][
+                "admission_bundle_path"
+            ]
+            shutil.rmtree(bundle)
+
+            with self.assertRaisesRegex(
+                ContractError, "expected real directory"
+            ):
+                load_quality_admission_result_index(
+                    root,
+                    output,
+                    accepted_path,
+                )
+
+            loaded = load_quality_admission_result_index(
+                root,
+                output,
+                accepted_path,
+                require_private_bundles=False,
+            )
+            self.assertEqual(loaded.to_dict(), result_payload)
+
     def test_result_loader_rejects_each_rehashed_environment_identity_drift(
         self,
     ) -> None:
@@ -2048,22 +2099,36 @@ class V07QualityAdmissionCliTests(unittest.TestCase):
                 root, output, accepted_path
             )
 
-    def test_phase_one_does_not_create_official_placeholder_indexes(
+    def test_building_phase_tracks_verified_official_admission_results(
         self,
     ) -> None:
         repository_root = Path(__file__).resolve().parents[1]
-        self.assertFalse(
-            (
-                repository_root
-                / "factory/v0.7/p8/accepted_tasks.json"
-            ).exists()
+        accepted_path = (
+            repository_root / "factory/v0.7/p8/accepted_tasks.json"
         )
-        self.assertFalse(
-            (
-                repository_root
-                / "factory/v0.7/p8/admission_results.json"
-            ).exists()
+        results_path = (
+            repository_root / "factory/v0.7/p8/admission_results.json"
         )
+        accepted = load_quality_accepted_task_index(
+            repository_root,
+            accepted_path,
+        )
+        results = load_quality_admission_result_index(
+            repository_root,
+            results_path,
+            accepted_path,
+            require_private_bundles=False,
+        )
+
+        self.assertEqual(accepted.status, "building")
+        self.assertGreaterEqual(accepted.task_count, 1)
+        self.assertLess(
+            accepted.task_count,
+            accepted.required_task_count,
+        )
+        self.assertEqual(results.task_count, accepted.task_count)
+        self.assertEqual(results.verified_count, accepted.task_count)
+        self.assertTrue(all(result.verified for result in results.results))
 
 
 if __name__ == "__main__":
