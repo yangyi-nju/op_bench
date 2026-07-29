@@ -25,6 +25,7 @@ def _parser() -> argparse.ArgumentParser:
         )
     )
     parser.add_argument("--input", type=Path, required=True)
+    parser.add_argument("--receipts", type=Path, required=True)
     parser.add_argument("--historical-index", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--created-at", required=True)
@@ -41,6 +42,7 @@ def main(argv: list[str] | None = None) -> int:
         index = write_quality_candidate_funnel(
             ROOT,
             _resolve(args.input),
+            _resolve(args.receipts),
             _resolve(args.historical_index),
             _resolve(args.output_dir),
             args.created_at,

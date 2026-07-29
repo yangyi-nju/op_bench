@@ -155,6 +155,7 @@ _CAPTURE_SET_FIELDS = (
     "schema_version",
     "repository",
     "captured_at",
+    "acquisition_receipt_set_hash",
     "acquisition",
     "candidates",
     "content_hash",
@@ -165,6 +166,9 @@ _CAPTURE_FIELDS = (
     "pr_url",
     "base_commit",
     "merge_commit",
+    "base_ref_name",
+    "head_ref_name",
+    "acquisition_receipt_hash",
     "merged_at",
     "title",
     "description",
@@ -188,6 +192,96 @@ _ACQUISITION_FIELDS = (
     "merge_commit_rule",
     "base_commit_rule",
     "changed_files_rule",
+)
+_ACQUISITION_RECEIPT_FIELDS = (
+    "contract_type",
+    "schema_version",
+    "repository",
+    "pr_number",
+    "pr_url",
+    "merged_at",
+    "merge_commit",
+    "base_commit",
+    "base_ref_name",
+    "head_ref_name",
+    "files_total_count",
+    "files_captured_node_count",
+    "files_has_next_page",
+    "files_pagination_complete",
+    "changed_files_hash",
+    "capture_method",
+    "captured_at",
+    "content_hash",
+)
+_ACQUISITION_RECEIPT_SET_FIELDS = (
+    "contract_type",
+    "schema_version",
+    "repository",
+    "captured_at",
+    "capture_method",
+    "receipts",
+    "content_hash",
+)
+_BACKPORT_REF = re.compile(
+    r"(?:^|[-_/])(?:cherry(?:-pick)?|backport|cp)(?:[-_/]|$)|release",
+    re.IGNORECASE,
+)
+_BACKPORT_TEXT = re.compile(
+    r"cherry[- ]?pick|backport|release/[0-9]",
+    re.IGNORECASE,
+)
+_REVERSAL_TITLE = re.compile(
+    r"\b(?:revert(?:ed|ing)?|back\s+out|rollback)\b",
+    re.IGNORECASE,
+)
+_DISTRIBUTED_ONLY_EVIDENCE = re.compile(
+    r"\bddp\b|DistributedDataParallel|\bTorchElastic\b|"
+    r"torch(?:/|\.)distributed(?:/|\.)elastic",
+    re.IGNORECASE,
+)
+_DISTRIBUTED_TEST_PATH = re.compile(
+    r"(?:^|/)test/distributed/",
+    re.IGNORECASE,
+)
+_DISTRIBUTED_COLLECTIVE_EVIDENCE = re.compile(
+    r"reduce_scatter|all_gather|\bcollectives?\b|\bBucketMode\b",
+    re.IGNORECASE,
+)
+_ROCM_ONLY_EVIDENCE = re.compile(
+    r"\brocm\b|\bhip(?:\s+error|launch|kernel|runtime)\b|hipLaunchKernel",
+    re.IGNORECASE,
+)
+_ROCM_TITLE_SCOPE = re.compile(
+    r"\brocm\b|\bhip\b|\bamd\b",
+    re.IGNORECASE,
+)
+_NVIDIA_EVIDENCE = re.compile(
+    r"\bnvidia\b|\bcudnn\b|\bcublas\b|\bnvcc\b|\bnvrtc\b",
+    re.IGNORECASE,
+)
+_GRADIENT_EVIDENCE = re.compile(
+    r"autograd|backward(?![- ]compatib)|\bgradient\b|"
+    r"\bgrad(?:check)?\b|jvp|vjp",
+    re.IGNORECASE,
+)
+_TEXT_ONLY_CHANGE_TITLE = re.compile(
+    r"\b(?:grammar|spelling|typo)\b.*\b(?:message|docstring|docs?)\b|"
+    r"\b(?:message|docstring|docs?)\b.*\b(?:grammar|spelling|typo)\b",
+    re.IGNORECASE,
+)
+_LOW_SIGNAL_REVIEW_EVIDENCE = re.compile(
+    r"\bDeprecationWarning\b|\bunit test failure\b|"
+    r"\brunnable repro\b|\brepro scripts?\b|"
+    r"\bimports_for_benchmark_kernel\b|\bIndentationError\b|"
+    r"torch/_dynamo/repro/",
+    re.IGNORECASE,
+)
+_FBCODE_TITLE_EVIDENCE = re.compile(r"\bFBCODE\b", re.IGNORECASE)
+# Replaced after the official capture/receipt tree is regenerated. The
+# validator always compares the root-fixed composite against this code-pinned
+# value, independent of the candidate index's physical location.
+_OFFICIAL_QUALITY_ACQUISITION_ROOT = (
+    "sha256:24fee4b07edc634f130681555335246eca7fb0d13e068088ab359cb79bd606e3"
 )
 
 
@@ -382,6 +476,290 @@ class QualityLinkedIssue:
 
 
 @dataclass(frozen=True)
+class QualityCandidateAcquisitionReceipt:
+    contract_type: ClassVar[str] = "quality_candidate_acquisition_receipt"
+    schema_version: ClassVar[str] = "v1"
+
+    repository: str
+    pr_number: int
+    pr_url: str
+    merged_at: str
+    merge_commit: str | None
+    base_commit: str | None
+    base_ref_name: str
+    head_ref_name: str
+    files_total_count: int
+    files_captured_node_count: int
+    files_has_next_page: bool
+    files_pagination_complete: bool
+    changed_files_hash: str
+    capture_method: str
+    captured_at: str
+
+    @classmethod
+    def wire_fields(cls) -> tuple[str, ...]:
+        return _ACQUISITION_RECEIPT_FIELDS
+
+    def __post_init__(self) -> None:
+        if self.repository != "pytorch/pytorch":
+            raise ContractError(
+                "quality_candidate_acquisition_receipt.repository: mismatch"
+            )
+        _positive_int(
+            self.pr_number,
+            "quality_candidate_acquisition_receipt.pr_number",
+        )
+        expected_url = (
+            f"https://github.com/{self.repository}/pull/{self.pr_number}"
+        )
+        if self.pr_url != expected_url:
+            raise ContractError(
+                "quality_candidate_acquisition_receipt.pr_url: mismatch"
+            )
+        _timestamp(
+            self.merged_at,
+            "quality_candidate_acquisition_receipt.merged_at",
+        )
+        _optional_commit(
+            self.merge_commit,
+            "quality_candidate_acquisition_receipt.merge_commit",
+        )
+        _optional_commit(
+            self.base_commit,
+            "quality_candidate_acquisition_receipt.base_commit",
+        )
+        _string(
+            self.base_ref_name,
+            "quality_candidate_acquisition_receipt.base_ref_name",
+        )
+        _string(
+            self.head_ref_name,
+            "quality_candidate_acquisition_receipt.head_ref_name",
+        )
+        _positive_int(
+            self.files_total_count,
+            "quality_candidate_acquisition_receipt.files_total_count",
+        )
+        _positive_int(
+            self.files_captured_node_count,
+            "quality_candidate_acquisition_receipt."
+            "files_captured_node_count",
+        )
+        _boolean(
+            self.files_has_next_page,
+            "quality_candidate_acquisition_receipt.files_has_next_page",
+        )
+        _boolean(
+            self.files_pagination_complete,
+            "quality_candidate_acquisition_receipt."
+            "files_pagination_complete",
+        )
+        if (
+            self.files_has_next_page
+            or not self.files_pagination_complete
+            or self.files_total_count != self.files_captured_node_count
+        ):
+            raise ContractError(
+                "quality_candidate_acquisition_receipt.files: "
+                "incomplete GraphQL connection"
+            )
+        _require_hash(
+            self.changed_files_hash,
+            "quality_candidate_acquisition_receipt.changed_files_hash",
+        )
+        if (
+            self.capture_method
+            != "authenticated_read_only_gh_api_graphql"
+        ):
+            raise ContractError(
+                "quality_candidate_acquisition_receipt.capture_method: "
+                "unsupported value"
+            )
+        _timestamp(
+            self.captured_at,
+            "quality_candidate_acquisition_receipt.captured_at",
+        )
+
+    @property
+    def content_hash(self) -> str:
+        return canonical_sha256(self.to_dict(include_hash=False))
+
+    def to_dict(self, *, include_hash: bool = True) -> dict[str, object]:
+        payload: dict[str, object] = {
+            "contract_type": self.contract_type,
+            "schema_version": self.schema_version,
+            "repository": self.repository,
+            "pr_number": self.pr_number,
+            "pr_url": self.pr_url,
+            "merged_at": self.merged_at,
+            "merge_commit": self.merge_commit,
+            "base_commit": self.base_commit,
+            "base_ref_name": self.base_ref_name,
+            "head_ref_name": self.head_ref_name,
+            "files_total_count": self.files_total_count,
+            "files_captured_node_count": self.files_captured_node_count,
+            "files_has_next_page": self.files_has_next_page,
+            "files_pagination_complete": self.files_pagination_complete,
+            "changed_files_hash": self.changed_files_hash,
+            "capture_method": self.capture_method,
+            "captured_at": self.captured_at,
+        }
+        if include_hash:
+            payload["content_hash"] = canonical_sha256(payload)
+        return payload
+
+    @classmethod
+    def from_dict(
+        cls,
+        value: object,
+        *,
+        path: str = "quality_candidate_acquisition_receipt",
+    ) -> "QualityCandidateAcquisitionReceipt":
+        data = _exact_mapping(value, path, cls.wire_fields())
+        if data["contract_type"] != cls.contract_type:
+            raise ContractError(f"{path}.contract_type: mismatch")
+        if data["schema_version"] != cls.schema_version:
+            raise ContractError(f"{path}.schema_version: mismatch")
+        receipt = cls(
+            repository=_string(
+                data["repository"], f"{path}.repository"
+            ),
+            pr_number=_positive_int(
+                data["pr_number"], f"{path}.pr_number"
+            ),
+            pr_url=_string(data["pr_url"], f"{path}.pr_url"),
+            merged_at=_timestamp(
+                data["merged_at"], f"{path}.merged_at"
+            ),
+            merge_commit=_optional_commit(
+                data["merge_commit"], f"{path}.merge_commit"
+            ),
+            base_commit=_optional_commit(
+                data["base_commit"], f"{path}.base_commit"
+            ),
+            base_ref_name=_string(
+                data["base_ref_name"], f"{path}.base_ref_name"
+            ),
+            head_ref_name=_string(
+                data["head_ref_name"], f"{path}.head_ref_name"
+            ),
+            files_total_count=_positive_int(
+                data["files_total_count"],
+                f"{path}.files_total_count",
+            ),
+            files_captured_node_count=_positive_int(
+                data["files_captured_node_count"],
+                f"{path}.files_captured_node_count",
+            ),
+            files_has_next_page=_boolean(
+                data["files_has_next_page"],
+                f"{path}.files_has_next_page",
+            ),
+            files_pagination_complete=_boolean(
+                data["files_pagination_complete"],
+                f"{path}.files_pagination_complete",
+            ),
+            changed_files_hash=_require_hash(
+                data["changed_files_hash"],
+                f"{path}.changed_files_hash",
+            ),
+            capture_method=_string(
+                data["capture_method"], f"{path}.capture_method"
+            ),
+            captured_at=_timestamp(
+                data["captured_at"], f"{path}.captured_at"
+            ),
+        )
+        if data["content_hash"] != receipt.content_hash:
+            raise ContractError(f"{path}.content_hash: payload mismatch")
+        return receipt
+
+
+@dataclass(frozen=True)
+class QualityCandidateExclusion:
+    repository: str
+    pr_number: int
+    kept_pr_number: int
+    base_commit: str | None
+    merge_commit: str | None
+    reason: str
+
+    @classmethod
+    def wire_fields(cls) -> tuple[str, ...]:
+        return (
+            "repository",
+            "pr_number",
+            "kept_pr_number",
+            "base_commit",
+            "merge_commit",
+            "reason",
+        )
+
+    def __post_init__(self) -> None:
+        if self.repository != "pytorch/pytorch":
+            raise ContractError("quality_candidate_exclusion.repository: mismatch")
+        _positive_int(
+            self.pr_number, "quality_candidate_exclusion.pr_number"
+        )
+        _positive_int(
+            self.kept_pr_number,
+            "quality_candidate_exclusion.kept_pr_number",
+        )
+        if self.kept_pr_number >= self.pr_number:
+            raise ContractError(
+                "quality_candidate_exclusion.kept_pr_number: "
+                "lowest PR must be retained"
+            )
+        _optional_commit(
+            self.base_commit, "quality_candidate_exclusion.base_commit"
+        )
+        _optional_commit(
+            self.merge_commit, "quality_candidate_exclusion.merge_commit"
+        )
+        if self.reason != "duplicate.exact_provenance":
+            raise ContractError(
+                "quality_candidate_exclusion.reason: unsupported value"
+            )
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "repository": self.repository,
+            "pr_number": self.pr_number,
+            "kept_pr_number": self.kept_pr_number,
+            "base_commit": self.base_commit,
+            "merge_commit": self.merge_commit,
+            "reason": self.reason,
+        }
+
+    @classmethod
+    def from_dict(
+        cls,
+        value: object,
+        *,
+        path: str = "quality_candidate_exclusion",
+    ) -> "QualityCandidateExclusion":
+        data = _exact_mapping(value, path, cls.wire_fields())
+        return cls(
+            repository=_string(
+                data["repository"], f"{path}.repository"
+            ),
+            pr_number=_positive_int(
+                data["pr_number"], f"{path}.pr_number"
+            ),
+            kept_pr_number=_positive_int(
+                data["kept_pr_number"], f"{path}.kept_pr_number"
+            ),
+            base_commit=_optional_commit(
+                data["base_commit"], f"{path}.base_commit"
+            ),
+            merge_commit=_optional_commit(
+                data["merge_commit"], f"{path}.merge_commit"
+            ),
+            reason=_string(data["reason"], f"{path}.reason"),
+        )
+
+
+@dataclass(frozen=True)
 class QualityCandidateRecord:
     contract_type: ClassVar[str] = "quality_candidate"
     schema_version: ClassVar[str] = "v1"
@@ -392,6 +770,9 @@ class QualityCandidateRecord:
     pr_url: str
     base_commit: str | None
     merge_commit: str | None
+    base_ref_name: str
+    head_ref_name: str
+    acquisition_receipt_hash: str
     merged_at: str
     title: str
     description: str
@@ -419,6 +800,9 @@ class QualityCandidateRecord:
             "pr_url",
             "base_commit",
             "merge_commit",
+            "base_ref_name",
+            "head_ref_name",
+            "acquisition_receipt_hash",
             "merged_at",
             "title",
             "description",
@@ -488,6 +872,17 @@ class QualityCandidateRecord:
                 "quality_candidate: base_commit must be the landed "
                 "commit's distinct first parent"
             )
+        if self.base_ref_name != "main":
+            raise ContractError(
+                "quality_candidate.base_ref_name: expected 'main'"
+            )
+        _string(
+            self.head_ref_name, "quality_candidate.head_ref_name"
+        )
+        _require_hash(
+            self.acquisition_receipt_hash,
+            "quality_candidate.acquisition_receipt_hash",
+        )
         _timestamp(self.merged_at, "quality_candidate.merged_at")
         _text(self.title, "quality_candidate.title")
         _text(self.description, "quality_candidate.description")
@@ -599,6 +994,9 @@ class QualityCandidateRecord:
             "pr_url": self.pr_url,
             "base_commit": self.base_commit,
             "merge_commit": self.merge_commit,
+            "base_ref_name": self.base_ref_name,
+            "head_ref_name": self.head_ref_name,
+            "acquisition_receipt_hash": self.acquisition_receipt_hash,
             "merged_at": self.merged_at,
             "title": self.title,
             "description": self.description,
@@ -653,6 +1051,16 @@ class QualityCandidateRecord:
             ),
             merge_commit=_optional_commit(
                 data["merge_commit"], f"{path}.merge_commit"
+            ),
+            base_ref_name=_string(
+                data["base_ref_name"], f"{path}.base_ref_name"
+            ),
+            head_ref_name=_string(
+                data["head_ref_name"], f"{path}.head_ref_name"
+            ),
+            acquisition_receipt_hash=_require_hash(
+                data["acquisition_receipt_hash"],
+                f"{path}.acquisition_receipt_hash",
             ),
             merged_at=_timestamp(
                 data["merged_at"], f"{path}.merged_at"
@@ -1337,6 +1745,9 @@ class _CapturedQualityCandidate:
     pr_url: str
     base_commit: str | None
     merge_commit: str | None
+    base_ref_name: str
+    head_ref_name: str
+    acquisition_receipt_hash: str
     merged_at: str
     title: str
     description: str
@@ -1357,17 +1768,22 @@ class _CapturedQualityCandidate:
 @dataclass(frozen=True)
 class _QualityCandidateFunnel:
     capture_set: Mapping[str, object]
+    receipt_set: Mapping[str, object]
     records: tuple[QualityCandidateRecord, ...]
     decisions: tuple[QualityCandidateDecision, ...]
+    exclusions: tuple[QualityCandidateExclusion, ...]
     index: Mapping[str, object]
 
 
 def load_quality_candidate_captures(
     path: Path,
+    receipts_path: Path,
 ) -> tuple[QualityCandidateRecord, ...]:
     """Load canonical private captures as unscreened typed candidate facts."""
 
-    capture_set, captures = _load_quality_candidate_capture_set(path)
+    capture_set, captures = _load_quality_candidate_capture_set(
+        path, receipts_path
+    )
     created_at = _timestamp(
         capture_set["captured_at"], "capture_set.captured_at"
     )
@@ -1381,6 +1797,7 @@ def load_quality_candidate_captures(
 def write_quality_candidate_funnel(
     root: Path,
     captures_path: Path,
+    receipts_path: Path,
     historical_index_path: Path,
     output_dir: Path,
     created_at: str,
@@ -1394,8 +1811,10 @@ def write_quality_candidate_funnel(
     _assert_no_symlink_ancestors(output_dir, "output directory")
     funnel = _build_quality_candidate_funnel(
         captures_path,
+        receipts_path,
         historical_index_path,
         created_at,
+        root=root,
     )
     expected_candidate_names: set[str] = set()
     expected_decision_names: set[str] = set()
@@ -1455,8 +1874,12 @@ def validate_candidate_index(
         "historical_k",
         "required_candidate_count",
         "capture_set_hash",
+        "receipt_set_hash",
+        "historical_index_hash",
+        "acquisition_root_hash",
         "capture_count",
         "candidate_count",
+        "exclusion_count",
         "eligible_candidate_count",
         "disposition_counts",
         "proposed_contract_families",
@@ -1464,6 +1887,7 @@ def validate_candidate_index(
         "execution_context_summary",
         "provenance",
         "records",
+        "exclusions",
         "content_hash",
     )
     try:
@@ -1480,6 +1904,26 @@ def validate_candidate_index(
         _require_hash(
             value["capture_set_hash"], "candidate_index.capture_set_hash"
         )
+        receipt_set_hash = _require_hash(
+            value["receipt_set_hash"],
+            "candidate_index.receipt_set_hash",
+        )
+        historical_index_hash = _require_hash(
+            value["historical_index_hash"],
+            "candidate_index.historical_index_hash",
+        )
+        acquisition_root_hash = _require_hash(
+            value["acquisition_root_hash"],
+            "candidate_index.acquisition_root_hash",
+        )
+        if acquisition_root_hash != _quality_acquisition_root_hash(
+            value["capture_set_hash"],
+            receipt_set_hash,
+            historical_index_hash,
+        ):
+            errors.append(
+                "candidate_index.acquisition_root_hash: mismatch"
+            )
         if value["content_hash"] != canonical_sha256(
             {
                 key: item
@@ -1494,6 +1938,29 @@ def validate_candidate_index(
     records_value = value.get("records")
     if not isinstance(records_value, list):
         return (*_ordered_unique(errors), "candidate_index.records: expected array")
+    exclusions_value = value.get("exclusions")
+    if not isinstance(exclusions_value, list):
+        return (
+            *_ordered_unique(errors),
+            "candidate_index.exclusions: expected array",
+        )
+    exclusions: list[QualityCandidateExclusion] = []
+    try:
+        exclusions = [
+            QualityCandidateExclusion.from_dict(
+                item,
+                path=f"candidate_index.exclusions[{index}]",
+            )
+            for index, item in enumerate(exclusions_value)
+        ]
+        excluded_prs = [item.pr_number for item in exclusions]
+        if excluded_prs != sorted(set(excluded_prs)):
+            raise ContractError(
+                "candidate_index.exclusions: "
+                "expected unique ascending PR order"
+            )
+    except ContractError as exc:
+        errors.append(str(exc))
     candidates: list[QualityCandidateRecord] = []
     decisions: list[QualityCandidateDecision] = []
     seen_prs: set[int] = set()
@@ -1570,7 +2037,6 @@ def validate_candidate_index(
                 raise ContractError(f"{path}.disposition: mismatch")
             provenance = (
                 candidate_value.repository,
-                candidate_value.pr_number,
                 candidate_value.base_commit,
                 candidate_value.merge_commit,
             )
@@ -1590,97 +2056,137 @@ def validate_candidate_index(
 
     if len(candidates) == len(records_value):
         try:
+            if set(seen_prs) & {
+                item.pr_number for item in exclusions
+            }:
+                raise ContractError(
+                    "candidate_index.exclusions: candidate PR overlap"
+                )
             _validate_candidate_index_aggregates(
                 value,
                 tuple(candidates),
                 tuple(decisions),
+                tuple(exclusions),
                 require_minimum=require_minimum,
             )
         except ContractError as exc:
             errors.append(str(exc))
 
-    official_index = (
-        index_path.resolve()
-        == (
-            root / "factory/v0.7/p8/screening/screening_index.json"
-        ).resolve()
+    captures_path = root / "factory/v0.7/p8/captures.json"
+    receipts_path = (
+        root / "factory/v0.7/p8/acquisition_receipts.json"
     )
-    if official_index:
-        captures_path = root / "factory/v0.7/p8/captures.json"
-        historical_path = (
-            root / "factory/v0.7/p7/historical_readmission.json"
+    historical_path = (
+        root / "factory/v0.7/p7/historical_readmission.json"
+    )
+    try:
+        capture_root = load_canonical_json_artifact(captures_path)
+        receipt_root = load_canonical_json_artifact(receipts_path)
+        historical_root = load_canonical_json_artifact(historical_path)
+        official_composite = _quality_acquisition_root_hash(
+            _require_hash(
+                capture_root.get("content_hash"),
+                "official_capture.content_hash",
+            ),
+            _require_hash(
+                receipt_root.get("content_hash"),
+                "official_receipts.content_hash",
+            ),
+            _require_hash(
+                historical_root.get("content_hash"),
+                "official_historical.content_hash",
+            ),
         )
-        try:
-            rebuilt = _build_quality_candidate_funnel(
-                captures_path,
-                historical_path,
-                _timestamp(value["created_at"], "candidate_index.created_at"),
+        if official_composite != _OFFICIAL_QUALITY_ACQUISITION_ROOT:
+            errors.append(
+                "candidate_index: pinned official acquisition root mismatch"
             )
-            if encoded != canonical_json(rebuilt.index).encode("utf-8"):
-                errors.append(
-                    "candidate_index: bytes differ from exact capture rebuild"
-                )
-            for candidate, decision in zip(
-                rebuilt.records, rebuilt.decisions
-            ):
-                expected = (
-                    (
-                        index_path.parent
-                        / "candidates"
-                        / f"pr-{candidate.pr_number}.json",
-                        candidate.to_dict(),
-                    ),
-                    (
-                        index_path.parent
-                        / "decisions"
-                        / f"pr-{candidate.pr_number}.json",
-                        decision.to_dict(),
-                    ),
-                )
-                for artifact_path, payload in expected:
-                    if load_regular_file_bytes(artifact_path) != canonical_json(
-                        payload
-                    ).encode("utf-8"):
-                        errors.append(
-                            f"{artifact_path.relative_to(root)}: "
-                            "bytes differ from exact capture rebuild"
-                        )
-        except (ContractError, OSError) as exc:
-            errors.append(f"candidate_index.capture_rebuild: {exc}")
+        rebuilt = _build_quality_candidate_funnel(
+            captures_path,
+            receipts_path,
+            historical_path,
+            _timestamp(value["created_at"], "candidate_index.created_at"),
+            root=root,
+        )
+        if encoded != canonical_json(rebuilt.index).encode("utf-8"):
+            errors.append(
+                "candidate_index: bytes differ from exact official rebuild"
+            )
+        for candidate, decision in zip(
+            rebuilt.records, rebuilt.decisions
+        ):
+            expected = (
+                (
+                    index_path.parent
+                    / "candidates"
+                    / f"pr-{candidate.pr_number}.json",
+                    candidate.to_dict(),
+                ),
+                (
+                    index_path.parent
+                    / "decisions"
+                    / f"pr-{candidate.pr_number}.json",
+                    decision.to_dict(),
+                ),
+            )
+            for artifact_path, payload in expected:
+                if load_regular_file_bytes(
+                    artifact_path
+                ) != canonical_json(payload).encode("utf-8"):
+                    errors.append(
+                        f"{artifact_path}: bytes differ from "
+                        "exact official rebuild"
+                    )
+    except (ContractError, OSError) as exc:
+        errors.append(f"candidate_index.capture_rebuild: {exc}")
     return tuple(_ordered_unique(errors))
 
 
 def _build_quality_candidate_funnel(
     captures_path: Path,
+    receipts_path: Path,
     historical_index_path: Path,
     created_at: str,
+    *,
+    root: Path,
 ) -> _QualityCandidateFunnel:
     _timestamp(created_at, "created_at")
-    capture_set, captures = _load_quality_candidate_capture_set(captures_path)
+    receipt_set, _ = _load_quality_acquisition_receipt_set(
+        receipts_path
+    )
+    capture_set, captures = _load_quality_candidate_capture_set(
+        captures_path,
+        receipts_path,
+    )
+    historical_errors = validate_historical_index(
+        root, historical_index_path
+    )
+    if historical_errors:
+        raise ContractError(
+            "historical_index: full validation failed: "
+            + "; ".join(historical_errors)
+        )
     historical = load_canonical_json_artifact(historical_index_path)
-    if historical.get("contract_type") != "historical_readmission_index":
-        raise ContractError("historical_index.contract_type: mismatch")
-    if historical.get("schema_version") != "v1":
-        raise ContractError("historical_index.schema_version: mismatch")
-    if historical.get("content_hash") != canonical_sha256(
-        {
-            key: item
-            for key, item in historical.items()
-            if key != "content_hash"
-        }
-    ):
-        raise ContractError("historical_index.content_hash: payload mismatch")
-    k = _nonnegative_int(historical.get("k"), "historical_index.k")
-    if k > 25:
-        raise ContractError("historical_index.k: expected at most 25")
+    historical_records = _list(
+        historical.get("records"), "historical_index.records"
+    )
+    k = sum(
+        _mapping(
+            record, f"historical_index.records[{index}]"
+        ).get("disposition")
+        == "retained"
+        for index, record in enumerate(historical_records)
+    )
+    if historical.get("k") != k:
+        raise ContractError(
+            "historical_index.k: retained-record mismatch"
+        )
     if historical.get("required_candidate_count") != 3 * (50 - k):
         raise ContractError(
             "historical_index.required_candidate_count: mismatch"
         )
     historical_prs: set[int] = set()
-    for index, record in enumerate(
-        _list(historical.get("records"), "historical_index.records")
-    ):
+    for index, record in enumerate(historical_records):
         record_data = _mapping(
             record, f"historical_index.records[{index}]"
         )
@@ -1698,11 +2204,34 @@ def _build_quality_candidate_funnel(
 
     records: list[QualityCandidateRecord] = []
     decisions: list[QualityCandidateDecision] = []
+    exclusions: list[QualityCandidateExclusion] = []
+    provenance_keepers: dict[
+        tuple[str, str | None, str | None], int
+    ] = {}
     for capture in captures:
         if capture.pr_number in historical_prs:
             raise ContractError(
                 f"captures: PR {capture.pr_number} is historical"
             )
+        provenance = (
+            capture.repository,
+            capture.base_commit,
+            capture.merge_commit,
+        )
+        kept_pr = provenance_keepers.get(provenance)
+        if kept_pr is not None:
+            exclusions.append(
+                QualityCandidateExclusion(
+                    repository=capture.repository,
+                    pr_number=capture.pr_number,
+                    kept_pr_number=kept_pr,
+                    base_commit=capture.base_commit,
+                    merge_commit=capture.merge_commit,
+                    reason="duplicate.exact_provenance",
+                )
+            )
+            continue
+        provenance_keepers[provenance] = capture.pr_number
         record, decision = _screen_quality_capture(capture, created_at)
         records.append(record)
         decisions.append(decision)
@@ -1716,19 +2245,27 @@ def _build_quality_candidate_funnel(
         capture_set,
         records_tuple,
         decisions_tuple,
+        tuple(exclusions),
         historical_k=k,
+        historical_index_hash=_require_hash(
+            historical.get("content_hash"),
+            "historical_index.content_hash",
+        ),
         created_at=created_at,
     )
     return _QualityCandidateFunnel(
         capture_set=capture_set,
+        receipt_set=receipt_set,
         records=records_tuple,
         decisions=decisions_tuple,
+        exclusions=tuple(exclusions),
         index=index,
     )
 
 
 def _load_quality_candidate_capture_set(
     path: Path,
+    receipts_path: Path,
 ) -> tuple[Mapping[str, object], tuple[_CapturedQualityCandidate, ...]]:
     value = load_canonical_json_artifact(path)
     data = _exact_mapping(
@@ -1741,6 +2278,10 @@ def _load_quality_candidate_capture_set(
     if data["repository"] != "pytorch/pytorch":
         raise ContractError("capture_set.repository: mismatch")
     _timestamp(data["captured_at"], "capture_set.captured_at")
+    receipt_set_hash = _require_hash(
+        data["acquisition_receipt_set_hash"],
+        "capture_set.acquisition_receipt_set_hash",
+    )
     acquisition = _exact_mapping(
         data["acquisition"],
         "capture_set.acquisition",
@@ -1794,24 +2335,149 @@ def _load_quality_candidate_capture_set(
     pr_numbers = [item.pr_number for item in captures]
     if len(set(pr_numbers)) != len(pr_numbers):
         raise ContractError("capture_set.candidates: duplicate PR")
-    provenance = [
-        (
-            item.repository,
-            item.pr_number,
-            item.base_commit,
-            item.merge_commit,
-        )
-        for item in captures
-    ]
-    if len(set(provenance)) != len(provenance):
-        raise ContractError(
-            "capture_set.candidates: exact provenance duplicate"
-        )
     if pr_numbers != sorted(pr_numbers):
         raise ContractError(
             "capture_set.candidates: expected ascending PR number order"
         )
+    loaded_receipt_set, receipts = _load_quality_acquisition_receipt_set(
+        receipts_path
+    )
+    if receipt_set_hash != loaded_receipt_set["content_hash"]:
+        raise ContractError(
+            "capture_set.acquisition_receipt_set_hash: "
+            "receipt root mismatch"
+        )
+    if data["captured_at"] != loaded_receipt_set["captured_at"]:
+        raise ContractError(
+            "capture_set.captured_at: receipt timestamp mismatch"
+        )
+    receipts_by_pr = {item.pr_number: item for item in receipts}
+    if set(pr_numbers) != set(receipts_by_pr):
+        raise ContractError(
+            "capture_set.candidates: receipt PR coverage mismatch"
+        )
+    for capture in captures:
+        _validate_capture_receipt(
+            capture,
+            receipts_by_pr[capture.pr_number],
+        )
     return data, captures
+
+
+def _changed_files_metadata_hash(
+    changed_files: Sequence[QualityChangedFile],
+) -> str:
+    return canonical_sha256(
+        [
+            {
+                "path": item.path,
+                "additions": item.additions,
+                "deletions": item.deletions,
+                "change_type": item.change_type,
+            }
+            for item in changed_files
+        ]
+    )
+
+
+def _load_quality_acquisition_receipt_set(
+    path: Path,
+) -> tuple[
+    Mapping[str, object],
+    tuple[QualityCandidateAcquisitionReceipt, ...],
+]:
+    value = load_canonical_json_artifact(path)
+    data = _exact_mapping(
+        value,
+        "receipt_set",
+        _ACQUISITION_RECEIPT_SET_FIELDS,
+    )
+    if (
+        data["contract_type"]
+        != "quality_candidate_acquisition_receipt_set"
+    ):
+        raise ContractError("receipt_set.contract_type: mismatch")
+    if data["schema_version"] != "v1":
+        raise ContractError("receipt_set.schema_version: mismatch")
+    if data["repository"] != "pytorch/pytorch":
+        raise ContractError("receipt_set.repository: mismatch")
+    captured_at = _timestamp(
+        data["captured_at"], "receipt_set.captured_at"
+    )
+    if (
+        data["capture_method"]
+        != "authenticated_read_only_gh_api_graphql"
+    ):
+        raise ContractError("receipt_set.capture_method: mismatch")
+    if data["content_hash"] != canonical_sha256(
+        {
+            key: item
+            for key, item in data.items()
+            if key != "content_hash"
+        }
+    ):
+        raise ContractError("receipt_set.content_hash: payload mismatch")
+    receipts = tuple(
+        QualityCandidateAcquisitionReceipt.from_dict(
+            item,
+            path=f"receipt_set.receipts[{index}]",
+        )
+        for index, item in enumerate(
+            _list(data["receipts"], "receipt_set.receipts")
+        )
+    )
+    if not receipts:
+        raise ContractError("receipt_set.receipts: expected non-empty array")
+    pr_numbers = [item.pr_number for item in receipts]
+    if pr_numbers != sorted(set(pr_numbers)):
+        raise ContractError(
+            "receipt_set.receipts: duplicate or non-ascending PR number"
+        )
+    if any(item.captured_at != captured_at for item in receipts):
+        raise ContractError(
+            "receipt_set.receipts: captured_at mismatch"
+        )
+    return data, receipts
+
+
+def _validate_capture_receipt(
+    capture: _CapturedQualityCandidate,
+    receipt: QualityCandidateAcquisitionReceipt,
+) -> None:
+    pairs = (
+        ("repository", capture.repository, receipt.repository),
+        ("pr_number", capture.pr_number, receipt.pr_number),
+        ("pr_url", capture.pr_url, receipt.pr_url),
+        ("merged_at", capture.merged_at, receipt.merged_at),
+        ("merge_commit", capture.merge_commit, receipt.merge_commit),
+        ("base_commit", capture.base_commit, receipt.base_commit),
+        ("base_ref_name", capture.base_ref_name, receipt.base_ref_name),
+        ("head_ref_name", capture.head_ref_name, receipt.head_ref_name),
+    )
+    for field, captured, acquired in pairs:
+        if captured != acquired:
+            raise ContractError(
+                f"capture_set.candidate.{field}: receipt mismatch"
+            )
+    if capture.acquisition_receipt_hash != receipt.content_hash:
+        raise ContractError(
+            "capture_set.candidate.acquisition_receipt_hash: mismatch"
+        )
+    if (
+        capture.changed_file_count != receipt.files_total_count
+        or capture.changed_file_count
+        != receipt.files_captured_node_count
+    ):
+        raise ContractError(
+            "capture_set.candidate.changed_file_count: receipt mismatch"
+        )
+    if (
+        _changed_files_metadata_hash(capture.changed_files)
+        != receipt.changed_files_hash
+    ):
+        raise ContractError(
+            "capture_set.candidate.changed_files: receipt digest mismatch"
+        )
 
 
 def _parse_quality_capture(
@@ -1840,6 +2506,34 @@ def _parse_quality_capture(
     ):
         raise ContractError(
             f"{path}.base_commit: expected landed commit first parent"
+        )
+    base_ref_name = _string(
+        data["base_ref_name"], f"{path}.base_ref_name"
+    )
+    if base_ref_name != "main":
+        raise ContractError(
+            f"{path}.base_ref_name: expected primary 'main' PR"
+        )
+    head_ref_name = _string(
+        data["head_ref_name"], f"{path}.head_ref_name"
+    )
+    if _BACKPORT_REF.search(head_ref_name):
+        raise ContractError(
+            f"{path}.head_ref_name: backport/cherry-pick ref denied"
+        )
+    acquisition_receipt_hash = _require_hash(
+        data["acquisition_receipt_hash"],
+        f"{path}.acquisition_receipt_hash",
+    )
+    title = _text(data["title"], f"{path}.title")
+    description = _text(
+        data["description"], f"{path}.description"
+    )
+    if _BACKPORT_TEXT.search(title + "\n" + description):
+        raise ContractError(f"{path}: backport/cherry-pick text denied")
+    if _REVERSAL_TITLE.search(title):
+        raise ContractError(
+            f"{path}.title: expected primary forward fix, not reversal"
         )
     linked_issues = tuple(
         QualityLinkedIssue.from_dict(
@@ -1875,19 +2569,56 @@ def _parse_quality_capture(
             f"{path}.behavioral_test_evidence: "
             "must match changed test files"
         )
+    execution_hints = _parse_candidate_execution_context(
+        data["execution_hints"], f"{path}.execution_hints"
+    )
+    proposed_families = _registry_tuple(
+        data["proposed_contract_families"],
+        f"{path}.proposed_contract_families",
+        CONTRACT_FAMILIES,
+        allow_empty=False,
+    )
+    behavioral_hint_evidence = "\n".join(
+        (
+            title,
+            description,
+            *(
+                item.path
+                for item in changed_files
+                if item.is_test
+            ),
+        )
+    )
+    if (
+        "backward" in execution_hints.phases
+        and _GRADIENT_EVIDENCE.search(behavioral_hint_evidence) is None
+    ):
+        raise ContractError(
+            f"{path}.execution_hints.phases: backward lacks "
+            "behavioral evidence"
+        )
+    if (
+        "gradient" in proposed_families
+        and _GRADIENT_EVIDENCE.search(behavioral_hint_evidence) is None
+    ):
+        raise ContractError(
+            f"{path}.proposed_contract_families: gradient lacks "
+            "behavioral evidence"
+        )
     return _CapturedQualityCandidate(
         repository=repository,
         pr_number=pr_number,
         pr_url=pr_url,
         base_commit=base_commit,
         merge_commit=merge_commit,
+        base_ref_name=base_ref_name,
+        head_ref_name=head_ref_name,
+        acquisition_receipt_hash=acquisition_receipt_hash,
         merged_at=_timestamp(
             data["merged_at"], f"{path}.merged_at"
         ),
-        title=_text(data["title"], f"{path}.title"),
-        description=_text(
-            data["description"], f"{path}.description"
-        ),
+        title=title,
+        description=description,
         linked_issues=linked_issues,
         changed_files=changed_files,
         changed_file_count=changed_file_count,
@@ -1906,15 +2637,8 @@ def _parse_quality_capture(
             f"{path}.required_hardware",
             allow_empty=False,
         ),
-        execution_hints=_parse_candidate_execution_context(
-            data["execution_hints"], f"{path}.execution_hints"
-        ),
-        proposed_contract_families=_registry_tuple(
-            data["proposed_contract_families"],
-            f"{path}.proposed_contract_families",
-            CONTRACT_FAMILIES,
-            allow_empty=False,
-        ),
+        execution_hints=execution_hints,
+        proposed_contract_families=proposed_families,
         proposed_trigger_tags=_registry_tuple(
             data["proposed_trigger_tags"],
             f"{path}.proposed_trigger_tags",
@@ -1949,6 +2673,52 @@ def _screen_quality_capture(
         or capture.execution_hints.distributed
     ):
         hard_reason_set.add("runtime.hardware_outside_v07_scope")
+    hardware_evidence = "\n".join(
+        (
+            capture.title,
+            capture.description,
+            capture.base_ref_name,
+            capture.head_ref_name,
+            *(item.path for item in capture.changed_files),
+        )
+    )
+    behavioral_paths = "\n".join(
+        item.path for item in capture.changed_files if item.is_test
+    )
+    distributed_scope = (
+        _DISTRIBUTED_ONLY_EVIDENCE.search(hardware_evidence) is not None
+        or (
+            _DISTRIBUTED_TEST_PATH.search(behavioral_paths) is not None
+            and _DISTRIBUTED_COLLECTIVE_EVIDENCE.search(
+                hardware_evidence
+            )
+            is not None
+        )
+    )
+    if distributed_scope:
+        hard_reason_set.add("runtime.hardware_outside_v07_scope")
+    execution_hints = (
+        replace(capture.execution_hints, distributed=True)
+        if distributed_scope
+        else capture.execution_hints
+    )
+    if _ROCM_TITLE_SCOPE.search(capture.title):
+        hard_reason_set.add("runtime.hardware_outside_v07_scope")
+    if (
+        _ROCM_ONLY_EVIDENCE.search(hardware_evidence) is not None
+        and _NVIDIA_EVIDENCE.search(hardware_evidence) is None
+    ):
+        hard_reason_set.add("runtime.hardware_outside_v07_scope")
+    if _TEXT_ONLY_CHANGE_TITLE.search(capture.title):
+        hard_reason_set.add(
+            "change.documentation_cleanup_refactor_only"
+        )
+    review_reason_set = set(capture.preliminary_review_reasons)
+    if _LOW_SIGNAL_REVIEW_EVIDENCE.search(hardware_evidence):
+        review_reason_set.add("review.ambiguous_change_context")
+    if _FBCODE_TITLE_EVIDENCE.search(capture.title):
+        review_reason_set.add("review.ambiguous_change_context")
+    review_reasons = tuple(sorted(review_reason_set))
     hard_reasons = tuple(
         reason
         for reason in HARD_CANDIDATE_REJECTION_REASONS
@@ -1956,7 +2726,7 @@ def _screen_quality_capture(
     )
     if hard_reasons:
         status = "hard_rejected"
-    elif capture.preliminary_review_reasons:
+    elif review_reasons:
         status = "deferred_for_review"
     else:
         status = "accepted_for_build"
@@ -1973,6 +2743,9 @@ def _screen_quality_capture(
         pr_url=capture.pr_url,
         base_commit=capture.base_commit,
         merge_commit=capture.merge_commit,
+        base_ref_name=capture.base_ref_name,
+        head_ref_name=capture.head_ref_name,
+        acquisition_receipt_hash=capture.acquisition_receipt_hash,
         merged_at=capture.merged_at,
         title=capture.title,
         description=capture.description,
@@ -1983,7 +2756,7 @@ def _screen_quality_capture(
         source_available=capture.source_available,
         runtime_supported=capture.runtime_supported,
         required_hardware=capture.required_hardware,
-        execution_hints=capture.execution_hints,
+        execution_hints=execution_hints,
         proposed_contract_families=capture.proposed_contract_families,
         proposed_trigger_tags=capture.proposed_trigger_tags,
         candidate_status=status,
@@ -1994,7 +2767,7 @@ def _screen_quality_capture(
         candidate_hash=record.content_hash,
         disposition=status,
         hard_rejection_reasons=hard_reasons,
-        preliminary_review_reasons=capture.preliminary_review_reasons,
+        preliminary_review_reasons=review_reasons,
     )
     decision = QualityCandidateDecision(
         decision_id=decision_id,
@@ -2002,7 +2775,7 @@ def _screen_quality_capture(
         candidate_hash=record.content_hash,
         disposition=status,
         hard_rejection_reasons=hard_reasons,
-        preliminary_review_reasons=capture.preliminary_review_reasons,
+        preliminary_review_reasons=review_reasons,
         created_at=created_at,
     )
     return record, decision
@@ -2012,8 +2785,10 @@ def _quality_candidate_index_payload(
     capture_set: Mapping[str, object],
     records: tuple[QualityCandidateRecord, ...],
     decisions: tuple[QualityCandidateDecision, ...],
+    exclusions: tuple[QualityCandidateExclusion, ...],
     *,
     historical_k: int,
+    historical_index_hash: str,
     created_at: str,
 ) -> Mapping[str, object]:
     if len(records) != len(decisions):
@@ -2053,6 +2828,18 @@ def _quality_candidate_index_payload(
     acquisition = _mapping(
         capture_set["acquisition"], "capture_set.acquisition"
     )
+    capture_set_hash = _require_hash(
+        capture_set["content_hash"], "capture_set.content_hash"
+    )
+    receipt_set_hash = _require_hash(
+        capture_set["acquisition_receipt_set_hash"],
+        "capture_set.acquisition_receipt_set_hash",
+    )
+    acquisition_root_hash = _quality_acquisition_root_hash(
+        capture_set_hash,
+        receipt_set_hash,
+        historical_index_hash,
+    )
     payload: dict[str, object] = {
         "contract_type": "quality_candidate_screening_index",
         "schema_version": "v1",
@@ -2060,11 +2847,15 @@ def _quality_candidate_index_payload(
         "created_at": created_at,
         "historical_k": historical_k,
         "required_candidate_count": 3 * (50 - historical_k),
-        "capture_set_hash": capture_set["content_hash"],
+        "capture_set_hash": capture_set_hash,
+        "receipt_set_hash": receipt_set_hash,
+        "historical_index_hash": historical_index_hash,
+        "acquisition_root_hash": acquisition_root_hash,
         "capture_count": len(
             _list(capture_set["candidates"], "capture_set.candidates")
         ),
         "candidate_count": len(records),
+        "exclusion_count": len(exclusions),
         "eligible_candidate_count": sum(
             decision.disposition != "hard_rejected"
             for decision in decisions
@@ -2110,15 +2901,37 @@ def _quality_candidate_index_payload(
             }
             for record, decision in zip(records, decisions)
         ],
+        "exclusions": [item.to_dict() for item in exclusions],
     }
     payload["content_hash"] = canonical_sha256(payload)
     return payload
+
+
+def _quality_acquisition_root_hash(
+    capture_set_hash: str,
+    receipt_set_hash: str,
+    historical_index_hash: str,
+) -> str:
+    return canonical_sha256(
+        {
+            "capture_set_hash": _require_hash(
+                capture_set_hash, "capture_set_hash"
+            ),
+            "receipt_set_hash": _require_hash(
+                receipt_set_hash, "receipt_set_hash"
+            ),
+            "historical_index_hash": _require_hash(
+                historical_index_hash, "historical_index_hash"
+            ),
+        }
+    )
 
 
 def _validate_candidate_index_aggregates(
     value: Mapping[str, object],
     records: tuple[QualityCandidateRecord, ...],
     decisions: tuple[QualityCandidateDecision, ...],
+    exclusions: tuple[QualityCandidateExclusion, ...],
     *,
     require_minimum: bool,
 ) -> None:
@@ -2134,10 +2947,16 @@ def _validate_candidate_index_aggregates(
         raise ContractError(
             "candidate_index.required_candidate_count: mismatch"
         )
-    if value.get("capture_count") != len(records):
+    if value.get("capture_count") != len(records) + len(exclusions):
         raise ContractError("candidate_index.capture_count: mismatch")
     if value.get("candidate_count") != len(records):
         raise ContractError("candidate_index.candidate_count: mismatch")
+    if value.get("exclusion_count") != len(exclusions):
+        raise ContractError("candidate_index.exclusion_count: mismatch")
+    if value.get("exclusions") != [
+        item.to_dict() for item in exclusions
+    ]:
+        raise ContractError("candidate_index.exclusions: mismatch")
     eligible = sum(
         decision.disposition != "hard_rejected" for decision in decisions
     )
@@ -3676,7 +4495,9 @@ def _write_canonical(path: Path, value: object) -> None:
 __all__ = [
     "HARD_CANDIDATE_REJECTION_REASONS",
     "QUALITY_CANDIDATE_STATUSES",
+    "QualityCandidateAcquisitionReceipt",
     "QualityCandidateDecision",
+    "QualityCandidateExclusion",
     "QualityCandidateRecord",
     "QualityChangedFile",
     "QualityLinkedIssue",

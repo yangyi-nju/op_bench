@@ -171,6 +171,9 @@
         "pr_url",
         "base_commit",
         "merge_commit",
+        "base_ref_name",
+        "head_ref_name",
+        "acquisition_receipt_hash",
         "merged_at",
         "title",
         "description",
@@ -213,6 +216,9 @@
             {"type": "string", "pattern": "^[0-9a-f]{40}$"}
           ]
         },
+        "base_ref_name": {"const": "main"},
+        "head_ref_name": {"type": "string", "minLength": 1},
+        "acquisition_receipt_hash": {"$ref": "#/$defs/hash"},
         "merged_at": {
           "type": "string",
           "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
@@ -287,6 +293,139 @@
         "content_hash": {"$ref": "#/$defs/hash"}
       }
     },
+    "quality_candidate_acquisition_receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_type",
+        "schema_version",
+        "repository",
+        "pr_number",
+        "pr_url",
+        "merged_at",
+        "merge_commit",
+        "base_commit",
+        "base_ref_name",
+        "head_ref_name",
+        "files_total_count",
+        "files_captured_node_count",
+        "files_has_next_page",
+        "files_pagination_complete",
+        "changed_files_hash",
+        "capture_method",
+        "captured_at",
+        "content_hash"
+      ],
+      "properties": {
+        "contract_type": {
+          "const": "quality_candidate_acquisition_receipt"
+        },
+        "schema_version": {"const": "v1"},
+        "repository": {"const": "pytorch/pytorch"},
+        "pr_number": {"type": "integer", "minimum": 1},
+        "pr_url": {
+          "type": "string",
+          "pattern": "^https://github\\.com/pytorch/pytorch/pull/[1-9][0-9]*$"
+        },
+        "merged_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "merge_commit": {
+          "oneOf": [
+            {"type": "null"},
+            {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+          ]
+        },
+        "base_commit": {
+          "oneOf": [
+            {"type": "null"},
+            {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+          ]
+        },
+        "base_ref_name": {"const": "main"},
+        "head_ref_name": {"type": "string", "minLength": 1},
+        "files_total_count": {"type": "integer", "minimum": 1},
+        "files_captured_node_count": {"type": "integer", "minimum": 1},
+        "files_has_next_page": {"const": false},
+        "files_pagination_complete": {"const": true},
+        "changed_files_hash": {"$ref": "#/$defs/hash"},
+        "capture_method": {
+          "const": "authenticated_read_only_gh_api_graphql"
+        },
+        "captured_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "content_hash": {"$ref": "#/$defs/hash"}
+      }
+    },
+    "quality_candidate_acquisition_receipt_set": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_type",
+        "schema_version",
+        "repository",
+        "captured_at",
+        "capture_method",
+        "receipts",
+        "content_hash"
+      ],
+      "properties": {
+        "contract_type": {
+          "const": "quality_candidate_acquisition_receipt_set"
+        },
+        "schema_version": {"const": "v1"},
+        "repository": {"const": "pytorch/pytorch"},
+        "captured_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "capture_method": {
+          "const": "authenticated_read_only_gh_api_graphql"
+        },
+        "receipts": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/quality_candidate_acquisition_receipt"
+          }
+        },
+        "content_hash": {"$ref": "#/$defs/hash"}
+      }
+    },
+    "quality_candidate_exclusion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository",
+        "pr_number",
+        "kept_pr_number",
+        "base_commit",
+        "merge_commit",
+        "reason"
+      ],
+      "properties": {
+        "repository": {"const": "pytorch/pytorch"},
+        "pr_number": {"type": "integer", "minimum": 1},
+        "kept_pr_number": {"type": "integer", "minimum": 1},
+        "base_commit": {
+          "oneOf": [
+            {"type": "null"},
+            {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+          ]
+        },
+        "merge_commit": {
+          "oneOf": [
+            {"type": "null"},
+            {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+          ]
+        },
+        "reason": {"const": "duplicate.exact_provenance"}
+      }
+    },
     "quality_candidate_decision": {
       "type": "object",
       "additionalProperties": false,
@@ -359,8 +498,12 @@
         "historical_k",
         "required_candidate_count",
         "capture_set_hash",
+        "receipt_set_hash",
+        "historical_index_hash",
+        "acquisition_root_hash",
         "capture_count",
         "candidate_count",
+        "exclusion_count",
         "eligible_candidate_count",
         "disposition_counts",
         "proposed_contract_families",
@@ -368,6 +511,7 @@
         "execution_context_summary",
         "provenance",
         "records",
+        "exclusions",
         "content_hash"
       ],
       "properties": {
@@ -385,8 +529,12 @@
           "maximum": 150
         },
         "capture_set_hash": {"$ref": "#/$defs/hash"},
+        "receipt_set_hash": {"$ref": "#/$defs/hash"},
+        "historical_index_hash": {"$ref": "#/$defs/hash"},
+        "acquisition_root_hash": {"$ref": "#/$defs/hash"},
         "capture_count": {"type": "integer", "minimum": 1},
         "candidate_count": {"type": "integer", "minimum": 1},
+        "exclusion_count": {"type": "integer", "minimum": 0},
         "eligible_candidate_count": {"type": "integer", "minimum": 0},
         "disposition_counts": {
           "type": "object",
@@ -495,6 +643,13 @@
                 ]
               }
             }
+          }
+        },
+        "exclusions": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/quality_candidate_exclusion"
           }
         },
         "content_hash": {"$ref": "#/$defs/hash"}
