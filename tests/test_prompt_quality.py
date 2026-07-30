@@ -176,6 +176,32 @@ class PromptQualityScannerTests(unittest.TestCase):
             (),
         )
 
+    def test_private_index_ignores_unavoidable_public_protocol_symbols(self) -> None:
+        hidden_patch = """diff --git a/test/test_foo.py b/test/test_foo.py
+--- a/test/test_foo.py
++++ b/test/test_foo.py
+@@ -0,0 +1,8 @@
++def retained_solution_helper(inputs):
++    carried = list(inputs)
++    with config.patch(
++        {
++            "feature_flag": True,
++        }
++    ):
++        return carried
+"""
+
+        index = build_private_answer_index(
+            gold_patch="",
+            hidden_test_patch=hidden_patch,
+            patch_scope=(),
+            hidden_selectors=(),
+        )
+
+        self.assertIn("retained_solution_helper", index.added_symbols)
+        self.assertNotIn("list", index.added_symbols)
+        self.assertNotIn("patch", index.added_symbols)
+
     def test_private_index_rejects_malformed_or_unsafe_diff_headers(self) -> None:
         for patch in (
             'diff --git "a/torch/foo.py b/torch/foo.py',

@@ -752,6 +752,27 @@
       ],
       "snapshot_mode": "overlay",
       "notes": "v0.7 quality expansion. Overlays the exact Base Inductor index-propagation and symbolic value-range modules into the registered nightly wheel."
+    },
+    {
+      "id": "pytorch-9b22041c-aoti-arrayref-loop-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "9b22041c7a353b59a19becbb51721acc6188b907",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/9b22041c7a353b59a19becbb51721acc6188b907/source",
+      "checksum": null,
+      "snapshot_git_commit": "36b0e9af82e834eb62f05c18cfc6d670bd610029",
+      "tracked_file_count": 21692,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__180370__aoti_minimal_arrayref_while_loop"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 quality expansion. Overlays the exact Base minimal-arrayref CPU wrapper code generator into the registered nightly wheel."
     }
   ]
 }

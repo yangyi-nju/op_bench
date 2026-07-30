@@ -155,7 +155,14 @@ _SOURCE_KEYWORDS = frozenset(
         "yield",
     }
 )
-_PUBLIC_PROMPT_IDENTIFIERS = frozenset({"freezing", "platform"})
+_PUBLIC_PROMPT_IDENTIFIERS = frozenset(
+    {
+        "freezing",
+        "list",
+        "patch",
+        "platform",
+    }
+)
 _PUBLIC_PROMPT_LITERALS = frozenset({"freezing"})
 
 
@@ -454,7 +461,11 @@ def build_private_answer_index(
         paths.add(normalized)
 
     lines = gold_lines + hidden_lines
-    symbols = _source_symbols(lines)
+    symbols = {
+        symbol
+        for symbol in _source_symbols(lines)
+        if symbol.casefold() not in _PUBLIC_PROMPT_IDENTIFIERS
+    }
     identifier_counts = Counter(
         identifier
         for line in lines
