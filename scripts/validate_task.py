@@ -12,6 +12,7 @@ from typing import Any
 
 from op_bench.factory.taxonomy import parse_taxonomy_v2, validate_problem_taxonomy
 from op_bench.runtime.validation import ContractError
+from op_bench.task import is_opaque_host_alias
 
 
 REQUIRED_PATHS = [
@@ -186,6 +187,13 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
         environment = data.get("environment", {})
         if not environment.get("host") and not data.get("environment_ref"):
             errors.append("environment.host is required when environment.backend is 'remote_docker' (or set via environment_ref)")
+    environment_host = data.get("environment", {}).get("host")
+    if environment_host is not None and not is_opaque_host_alias(
+        environment_host
+    ):
+        errors.append(
+            "environment.host must be an opaque lowercase host alias"
+        )
 
     source_loading = data.get("environment", {}).get("source_loading")
     if source_loading is not None:

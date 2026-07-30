@@ -13,10 +13,22 @@ if TYPE_CHECKING:
 
 
 PUBLIC_TASK_ID_PATTERN = r"^opbench-v07-t[0-9]{4}$"
+OPAQUE_HOST_ALIAS_PATTERN = r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?"
 
 
 class InvalidPublicTaskId(ValueError):
     """Raised when an agent-visible Task ID is not an exact opaque v0.7 ID."""
+
+
+class InvalidEnvironmentHostAlias(ValueError):
+    """Raised when a task exposes a connection-like host value."""
+
+
+def is_opaque_host_alias(value: object) -> bool:
+    return (
+        isinstance(value, str)
+        and re.fullmatch(OPAQUE_HOST_ALIAS_PATTERN, value) is not None
+    )
 
 
 @dataclass(frozen=True)
@@ -190,7 +202,13 @@ class TaskManifest:
     @property
     def environment_host(self) -> str | None:
         value = self.data["environment"].get("host")
-        return str(value) if value else None
+        if value is None:
+            return None
+        if not is_opaque_host_alias(value):
+            raise InvalidEnvironmentHostAlias(
+                "environment.host: expected opaque lowercase host alias"
+            )
+        return value
 
     @property
     def environment_remote_execution_config_hash(self) -> str | None:

@@ -26,6 +26,20 @@ class ValidateTaskTests(unittest.TestCase):
     def test_historical_task_may_omit_taxonomy(self) -> None:
         self.assertEqual(validate_manifest(self._manifest()), [])
 
+    def test_remote_task_rejects_non_opaque_inline_host_alias(self) -> None:
+        manifest = self._manifest()
+        manifest["environment"].update(
+            {
+                "backend": "remote_docker",
+                "host": "user@private-host:22",
+            }
+        )
+
+        self.assertIn(
+            "environment.host must be an opaque lowercase host alias",
+            validate_manifest(manifest),
+        )
+
     def test_source_can_explicitly_record_no_linked_issue(self) -> None:
         manifest = self._manifest()
         manifest["source"]["issue_url"] = None

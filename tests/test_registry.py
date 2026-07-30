@@ -383,6 +383,62 @@ class RegistryTests(unittest.TestCase):
                     ),
                 )
 
+    def test_asset_resolver_rejects_remote_host_alias_override(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            environment_path = root / "environments.json"
+            environment_path.write_text(
+                json.dumps(
+                    {
+                        "version": "v1",
+                        "environments": [
+                            {
+                                "id": "remote",
+                                "framework": "pytorch",
+                                "runtime_tier": "cpu_python_overlay",
+                                "backend": "remote_docker",
+                                "docker": {"image": "image"},
+                                "preflight": {
+                                    "workdir": "/tmp",
+                                    "commands": ["python --version"],
+                                },
+                                "host": "gpu",
+                                "remote_execution_config_hash": (
+                                    "sha256:" + "a" * 64
+                                ),
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            task = TaskManifest(
+                task_dir=root,
+                data={
+                    "task_id": "fixture",
+                    "environment_ref": "remote",
+                    "source": {},
+                    "environment": {
+                        "host": "user@private-host:22",
+                    },
+                    "evaluation": {},
+                    "artifacts": {},
+                },
+            )
+
+            from op_bench.registry import resolve_task_assets
+
+            with self.assertRaisesRegex(
+                RegistryError,
+                "cannot override registry host alias",
+            ):
+                resolve_task_assets(
+                    task,
+                    environment_registry=EnvironmentRegistry.load(
+                        environment_path
+                    ),
+                )
+
     def test_asset_resolver_rejects_remote_backend_downgrade(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp).resolve()

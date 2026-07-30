@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Generic, TypeVar
 
-from op_bench.task import TaskManifest
+from op_bench.task import TaskManifest, is_opaque_host_alias
 
 
 class RegistryError(ValueError):
@@ -221,14 +221,7 @@ class EnvironmentRegistry(_Registry[EnvironmentAsset]):
         if not isinstance(item["preflight"], dict):
             raise RegistryError(f"environment asset {asset_id}: preflight must be an object")
         host = item.get("host")
-        if host is not None and (
-            not isinstance(host, str)
-            or re.fullmatch(
-                r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?",
-                host,
-            )
-            is None
-        ):
+        if host is not None and not is_opaque_host_alias(host):
             raise RegistryError(
                 f"environment asset {asset_id}: host alias must be an "
                 "opaque lowercase identifier"
@@ -348,10 +341,26 @@ def resolve_task_assets(
                 f"task {task.task_id}: cannot override "
                 "remote_execution_config_hash"
             )
+        configured_host = (
+            task_environment.get("host")
+            if isinstance(task_environment, dict)
+            else None
+        )
+        asset_host = environment_defaults.get("host")
+        if configured_host is not None and configured_host != asset_host:
+            raise RegistryError(
+                f"task {task.task_id}: cannot override registry host alias"
+            )
         data["environment"] = _deep_merge(
             environment_defaults,
             data.get("environment", {}),
         )
+        resolved_host = data["environment"].get("host")
+        if resolved_host is not None and not is_opaque_host_alias(resolved_host):
+            raise RegistryError(
+                f"task {task.task_id}: resolved host alias must be an "
+                "opaque lowercase identifier"
+            )
         data.setdefault("runtime_tier", environment_asset.runtime_tier)
     if task.source_ref:
         if source_registry is None:
