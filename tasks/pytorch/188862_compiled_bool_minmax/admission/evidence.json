@@ -5,14 +5,14 @@
     "verified": true
   },
   "baseline": {
-    "duration_sec": 50.480493833,
+    "duration_sec": 94.442710541,
     "fail_to_pass_passed": 0,
     "fail_to_pass_total": 1,
     "mode": "baseline",
     "pass_to_pass_passed": 1,
     "pass_to_pass_total": 1,
     "status": "baseline_reproduced",
-    "task_id": "pytorch__181263__vmap_serde_roundtrip"
+    "task_id": "pytorch__188862__compiled_bool_minmax"
   },
   "created_at": "2026-07-30T02:55:00Z",
   "environment": {
@@ -24,26 +24,26 @@
     "platform": "linux/amd64",
     "runtime_tier": "cpu_python_overlay"
   },
-  "evidence_id": "pytorch__181263__vmap_serde_roundtrip:3d6402fa7015:2026-07-30T02:55:00Z",
+  "evidence_id": "pytorch__188862__compiled_bool_minmax:278087541b40:2026-07-30T02:55:00Z",
   "gold": {
-    "duration_sec": 54.38321537500002,
+    "duration_sec": 100.69564383300002,
     "fail_to_pass_passed": 1,
     "fail_to_pass_total": 1,
     "mode": "gold",
     "pass_to_pass_passed": 1,
     "pass_to_pass_total": 1,
     "status": "resolved",
-    "task_id": "pytorch__181263__vmap_serde_roundtrip"
+    "task_id": "pytorch__188862__compiled_bool_minmax"
   },
   "schema_version": "v1",
   "source": {
-    "base_commit": "5f18efdecccfcfd875fc306227bfa3e1156571a2",
-    "id": "pytorch-5f18efde-vmap-serde-overlay",
+    "base_commit": "a7c0766a73e2bb496f13aa59652d4d7f3192d538",
+    "id": "pytorch-a7c0766a-bool-minmax-overlay",
     "repo_url": "https://github.com/pytorch/pytorch.git",
     "snapshot_hash": null,
     "snapshot_method": null
   },
-  "task_id": "pytorch__181263__vmap_serde_roundtrip",
-  "task_manifest_hash": "sha256:3d6402fa7015c3796676588696a726c676513a9532b7f47e8007c4af30e8318b",
+  "task_id": "pytorch__188862__compiled_bool_minmax",
+  "task_manifest_hash": "sha256:278087541b401d702c40545e39c09d0c68fc610fcf953feb05d3d0a31fe18feb",
   "task_manifest_hash_kind": "replay_spec_v1"
 }

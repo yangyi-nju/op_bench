@@ -5,7 +5,7 @@
     "verified": true
   },
   "baseline": {
-    "duration_sec": 70.31676604100001,
+    "duration_sec": 70.689917917,
     "fail_to_pass_passed": 0,
     "fail_to_pass_total": 1,
     "mode": "baseline",
@@ -14,7 +14,7 @@
     "status": "baseline_reproduced",
     "task_id": "pytorch__180886__fx_dce_effectful_packet"
   },
-  "created_at": "2026-07-30T01:02:00Z",
+  "created_at": "2026-07-30T02:55:00Z",
   "environment": {
     "backend": "remote_docker",
     "digest_kind": "local_image_id",
@@ -24,9 +24,9 @@
     "platform": "linux/amd64",
     "runtime_tier": "cpu_python_overlay"
   },
-  "evidence_id": "pytorch__180886__fx_dce_effectful_packet:70a76d8cfe78:2026-07-30T01:02:00Z",
+  "evidence_id": "pytorch__180886__fx_dce_effectful_packet:70a76d8cfe78:2026-07-30T02:55:00Z",
   "gold": {
-    "duration_sec": 70.44935029199999,
+    "duration_sec": 70.990999875,
     "fail_to_pass_passed": 1,
     "fail_to_pass_total": 1,
     "mode": "gold",

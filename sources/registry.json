@@ -731,6 +731,27 @@
       ],
       "snapshot_mode": "overlay",
       "notes": "v0.7 quality expansion. Overlays the exact Base torch/_library/utils.py plus its Base-compatible torch/fx/node.py into the registered nightly wheel; only utils.py is in the production patch scope."
+    },
+    {
+      "id": "pytorch-a7c0766a-bool-minmax-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "a7c0766a73e2bb496f13aa59652d4d7f3192d538",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/a7c0766a73e2bb496f13aa59652d4d7f3192d538/source",
+      "checksum": null,
+      "snapshot_git_commit": "2d377966553c8b6b0b6d14cae5011ba8879df559",
+      "tracked_file_count": 21596,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__188862__compiled_bool_minmax"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 quality expansion. Overlays the exact Base Inductor index-propagation and symbolic value-range modules into the registered nightly wheel."
     }
   ]
 }
