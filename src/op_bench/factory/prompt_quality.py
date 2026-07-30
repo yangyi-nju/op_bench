@@ -161,9 +161,11 @@ _PUBLIC_PROMPT_IDENTIFIERS = frozenset(
         "list",
         "patch",
         "platform",
+        "reduction",
+        "return",
     }
 )
-_PUBLIC_PROMPT_LITERALS = frozenset({"freezing"})
+_PUBLIC_PROMPT_LITERALS = frozenset({"freezing", "triton"})
 
 
 def _sorted_unique(values: tuple[str, ...], *, path: str) -> tuple[str, ...]:

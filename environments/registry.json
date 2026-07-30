@@ -593,6 +593,57 @@
       "remote_execution_config_hash": "sha256:27100293e953ca8c184acb9899101a58b9fae1ea947791a239c74358bdc3f34a"
     },
     {
+      "id": "pytorch-nightly-20260407-torch2.12.0dev-cu126-py311",
+      "framework": "pytorch",
+      "runtime_tier": "cuda_python_overlay",
+      "backend": "remote_docker",
+      "docker": {
+        "image": "op-bench/pytorch-nightly-cu126:2.12.0.dev20260407-py311",
+        "digest": "sha256:64e7e26eafc78146ff711445f13fc692111f688bf6b87505d945996206a3d068",
+        "digest_kind": "local_image_id",
+        "dockerfile": "pytorch-nightly-20260407-cu126/Dockerfile",
+        "build_context": "pytorch-nightly-20260407-cu126",
+        "platform": "linux/amd64"
+      },
+      "runtime_artifact": {
+        "strategy": "matched_nightly_wheel",
+        "artifact_kind": "official_wheel",
+        "artifact_id": "torch-2.12.0.dev20260407+cu126-cp311-cp311-manylinux_2_28_x86_64.whl",
+        "artifact_digest": "sha256:676cf93c822752750a4dd78bbaa5b1da96ea4334e60007704f327e7b5c0156b0",
+        "artifact_digest_kind": "wheel_sha256",
+        "torch_version": "2.12.0.dev20260407+cu126",
+        "python_abi": "cp311-cp311"
+      },
+      "python": "3.11",
+      "packages": {
+        "torch": "2.12.0.dev20260407+cu126",
+        "torch_git_version": "6a13e444ee88996ff01cd2bab41d7f2857291646",
+        "triton": "3.7.0+git9c288bc5",
+        "cuda": "12.6"
+      },
+      "hardware": {
+        "requires_gpu": true,
+        "cuda": "12.6",
+        "device": "cuda",
+        "min_memory_gb": 16,
+        "min_compute_capability": "7.0"
+      },
+      "gpus": "all",
+      "preflight": {
+        "workdir": "/tmp",
+        "commands": [
+          "python --version",
+          "python -c \"import torch; print(torch.__version__); print(torch.version.git_version); print(torch.version.cuda); print(torch.cuda.is_available()); print(torch.cuda.get_device_name(0))\""
+        ]
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "cache_policy": "remote_build",
+      "host": "gpu-a10",
+      "remote_execution_config_hash": "sha256:27100293e953ca8c184acb9899101a58b9fae1ea947791a239c74358bdc3f34a"
+    },
+    {
       "id": "pytorch-boundary-cpu-source-build-py311",
       "framework": "pytorch",
       "runtime_tier": "cpu_source_snapshot_fuller",

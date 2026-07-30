@@ -1,0 +1,75 @@
+diff --git a/test/op_bench/test_inductor_tiling_compatibility.py b/test/op_bench/test_inductor_tiling_compatibility.py
+new file mode 100644
+index 00000000000..430d562c3083
+--- /dev/null
++++ b/test/op_bench/test_inductor_tiling_compatibility.py
+@@ -0,0 +1,69 @@
++import contextlib
++import unittest
++
++import sympy
++import torch
++import torch.nn.functional as F
++from torch._inductor import config
++from torch._inductor.graph import GraphLowering
++from torch._inductor.virtualized import V
++
++
++class InductorTilingCompatibilityTests(unittest.TestCase):
++    def test_incomplete_reduction_tiling_is_rejected_and_falls_back(self):
++        from torch._inductor.codegen.simd import SIMDKernel
++
++        graph = GraphLowering(torch.fx.symbolic_trace(lambda: 0))
++        with contextlib.ExitStack() as stack:
++            stack.enter_context(V.set_graph_handler(graph))
++            compatible = SIMDKernel.is_compatible(
++                [sympy.Integer(1), sympy.Integer(2), sympy.Integer(2)],
++                [[], [sympy.Integer(2), sympy.Integer(2), sympy.Integer(2)]],
++            )
++        self.assertFalse(compatible)
++
++        torch.manual_seed(0)
++        logits = torch.randn((2, 3, 2, 2), device="cuda", dtype=torch.float32)
++        target = torch.randint(0, 3, (2, 2, 2), device="cuda")
++
++        def loss_fn(value, labels):
++            return F.nll_loss(
++                value.log_softmax(dim=1),
++                labels,
++                reduction="mean",
++            )
++
++        expected = loss_fn(logits, target)
++        torch._dynamo.reset()
++        with config.patch({"triton.tile_reductions": True}):
++            actual = torch.compile(loss_fn, fullgraph=True)(logits, target)
++        torch.cuda.synchronize()
++        torch.testing.assert_close(actual, expected)
++
++    def test_compatible_reduction_tiling_remains_available(self):
++        from torch._inductor.codegen.simd import SIMDKernel
++
++        graph = GraphLowering(torch.fx.symbolic_trace(lambda: 0))
++        with contextlib.ExitStack() as stack:
++            stack.enter_context(V.set_graph_handler(graph))
++            compatible = SIMDKernel.is_compatible(
++                [sympy.Integer(1), sympy.Integer(2), sympy.Integer(4)],
++                [[], [sympy.Integer(2), sympy.Integer(4)]],
++            )
++        self.assertTrue(compatible)
++
++        values = torch.arange(64, device="cuda", dtype=torch.float32).reshape(8, 8)
++
++        def reduction_fn(value):
++            return value.sum(dim=1)
++
++        expected = reduction_fn(values)
++        torch._dynamo.reset()
++        with config.patch({"triton.tile_reductions": True}):
++            actual = torch.compile(reduction_fn, fullgraph=True)(values)
++        torch.cuda.synchronize()
++        torch.testing.assert_close(actual, expected)
++
++
++if __name__ == "__main__":
++    unittest.main()

@@ -773,6 +773,27 @@
       ],
       "snapshot_mode": "overlay",
       "notes": "v0.7 quality expansion. Overlays the exact Base minimal-arrayref CPU wrapper code generator into the registered nightly wheel."
+    },
+    {
+      "id": "pytorch-f97ca50c-inductor-tiling-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "f97ca50ce1822af045505a6951d562e48d4d9ca5",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/f97ca50ce1822af045505a6951d562e48d4d9ca5/source",
+      "checksum": null,
+      "snapshot_git_commit": "e5a84f4c53e885360b7ba420ac723b0a8f138a63",
+      "tracked_file_count": 21706,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__177673__compiled_reduction_tiling_fallback"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 quality expansion. Overlays the exact Base Inductor SIMD tiling compatibility logic into the registered nightly wheel."
     }
   ]
 }

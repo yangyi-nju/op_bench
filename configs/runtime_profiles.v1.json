@@ -574,6 +574,63 @@
     {
       "contract_type": "runtime_profile",
       "schema_version": "v1",
+      "profile_id": "remote-cuda-expansion-nightly-torch2.12.0dev20260407-cu126-py311-v1",
+      "backend": "remote_docker",
+      "runtime_tier": "cuda_python_overlay",
+      "source_loading_mode": "python_overlay",
+      "platform": "linux/amd64+cuda12.6",
+      "image": {
+        "contract_type": "content_identity",
+        "schema_version": "v1",
+        "identity_type": "image",
+        "identifier": "op-bench/pytorch-nightly-cu126:2.12.0.dev20260407-py311",
+        "digest": "sha256:64e7e26eafc78146ff711445f13fc692111f688bf6b87505d945996206a3d068",
+        "digest_kind": "image_id"
+      },
+      "hardware": {
+        "contract_type": "content_identity",
+        "schema_version": "v1",
+        "identity_type": "hardware",
+        "identifier": "linux-amd64-cuda12.6-sm70-16gb-v1",
+        "digest": "sha256:ee58327522b0de2dc74dece3c947705fe5429d2791637b334b7c9a4bf9e7f2e1",
+        "digest_kind": "declared"
+      },
+      "requires_gpu": true,
+      "network_policy": "denied",
+      "timeout_ms": 900000,
+      "mount_policy": {
+        "contract_type": "mount_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-sync-readonly-v1",
+        "workspace_target": "/workspace",
+        "source_access": "remote_sync",
+        "artifact_access": "controller_only",
+        "root_filesystem": "read_only_container"
+      },
+      "resource_policy": {
+        "contract_type": "resource_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-cuda-overlay-v1",
+        "cpu_millis": 8000,
+        "memory_bytes": 17179869184,
+        "pids_limit": 1024,
+        "gpu_count": 1
+      },
+      "cleanup_policy": {
+        "contract_type": "cleanup_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-attempt-owned-v1",
+        "scope": "attempt_owned_only",
+        "grace_ms": 10000,
+        "timeout_ms": 90000,
+        "remove_workspace": true,
+        "remove_process": true,
+        "remove_container": true
+      }
+    },
+    {
+      "contract_type": "runtime_profile",
+      "schema_version": "v1",
       "profile_id": "remote-cuda-kernel-pytorch-2.6-cu124-v1",
       "backend": "remote_docker",
       "runtime_tier": "cuda_kernel_build",

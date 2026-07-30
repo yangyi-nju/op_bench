@@ -180,15 +180,17 @@ class PromptQualityScannerTests(unittest.TestCase):
         hidden_patch = """diff --git a/test/test_foo.py b/test/test_foo.py
 --- a/test/test_foo.py
 +++ b/test/test_foo.py
-@@ -0,0 +1,8 @@
+@@ -0,0 +1,10 @@
 +def retained_solution_helper(inputs):
 +    carried = list(inputs)
++    reduction = carried
 +    with config.patch(
 +        {
 +            "feature_flag": True,
 +        }
 +    ):
 +        return carried
++    backend = "TRITON"
 """
 
         index = build_private_answer_index(
@@ -201,6 +203,16 @@ class PromptQualityScannerTests(unittest.TestCase):
         self.assertIn("retained_solution_helper", index.added_symbols)
         self.assertNotIn("list", index.added_symbols)
         self.assertNotIn("patch", index.added_symbols)
+        self.assertNotIn("return", index.added_symbols)
+        self.assertNotIn("reduction", index.internal_names)
+        self.assertNotIn("TRITON", index.distinctive_literals)
+        self.assertEqual(
+            scan_rendered_prompt(
+                "Repair the compiled Triton reduction and return a workspace patch.",
+                index,
+            ),
+            (),
+        )
 
     def test_private_index_rejects_malformed_or_unsafe_diff_headers(self) -> None:
         for patch in (
