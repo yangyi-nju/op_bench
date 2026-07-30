@@ -176,7 +176,9 @@ class PromptQualityScannerTests(unittest.TestCase):
             (),
         )
 
-    def test_private_index_ignores_unavoidable_public_protocol_symbols(self) -> None:
+    def test_private_index_keeps_domain_terms_without_task_scoped_vocabulary(
+        self,
+    ) -> None:
         hidden_patch = """diff --git a/test/test_foo.py b/test/test_foo.py
 --- a/test/test_foo.py
 +++ b/test/test_foo.py
@@ -204,14 +206,52 @@ class PromptQualityScannerTests(unittest.TestCase):
         self.assertNotIn("list", index.added_symbols)
         self.assertNotIn("patch", index.added_symbols)
         self.assertNotIn("return", index.added_symbols)
-        self.assertNotIn("reduction", index.internal_names)
-        self.assertNotIn("TRITON", index.distinctive_literals)
+        self.assertIn("reduction", index.internal_names)
+        self.assertIn("TRITON", index.distinctive_literals)
         self.assertEqual(
-            scan_rendered_prompt(
+            [finding.code for finding in scan_rendered_prompt(
                 "Repair the compiled Triton reduction and return a workspace patch.",
                 index,
-            ),
-            (),
+            )],
+            [
+                "answer.distinctive_literal",
+                "answer.internal_name",
+            ],
+        )
+
+    def test_v2_private_index_uses_only_explicit_task_public_vocabulary(
+        self,
+    ) -> None:
+        hidden_patch = """diff --git a/test/test_foo.py b/test/test_foo.py
+--- a/test/test_foo.py
++++ b/test/test_foo.py
+@@ -0,0 +1,4 @@
++def retained_solution_helper(inputs):
++    reduction = inputs
++    backend = "TRITON"
++    private_sentinel = reduction
+"""
+
+        index = build_private_answer_index(
+            gold_patch="",
+            hidden_test_patch=hidden_patch,
+            patch_scope=(),
+            hidden_selectors=(),
+            scanner_version="prompt-overlap-v2",
+            public_identifiers=("reduction",),
+            public_literals=("triton",),
+        )
+
+        self.assertEqual(index.scanner_version, "prompt-overlap-v2")
+        self.assertNotIn("reduction", index.internal_names)
+        self.assertNotIn("TRITON", index.distinctive_literals)
+        self.assertIn("private_sentinel", index.internal_names)
+        self.assertEqual(
+            [finding.code for finding in scan_rendered_prompt(
+                "Repair the Triton reduction without exposing private_sentinel.",
+                index,
+            )],
+            ["answer.internal_name"],
         )
 
     def test_private_index_rejects_malformed_or_unsafe_diff_headers(self) -> None:
@@ -307,6 +347,31 @@ abcdef
         self.assertIn("Widget", index.added_symbols)
         self.assertNotIn("value_", index.added_symbols)
 
+    def test_private_index_does_not_treat_python_calls_as_cpp_symbols(
+        self,
+    ) -> None:
+        hidden_patch = """diff --git a/test/test_foo.py b/test/test_foo.py
+--- a/test/test_foo.py
++++ b/test/test_foo.py
+@@ -0,0 +1,7 @@
++def wrapper(fn, left, right):
++    compiled = torch.compile(
++        fn,
++        options={"max_autotune": True},
++    )
++    return torch.bmm(left, right)
++
+"""
+
+        index = build_private_answer_index(
+            gold_patch="",
+            hidden_test_patch=hidden_patch,
+            patch_scope=(),
+            hidden_selectors=(),
+        )
+
+        self.assertEqual(index.added_symbols, ("wrapper",))
+
     def test_scanner_normalizes_comparison_literal_spacing(self) -> None:
         index = PrivateAnswerIndex(
             changed_paths=(),
@@ -345,6 +410,32 @@ def evidence_payload() -> dict[str, object]:
 
 
 class PromptQualityEvidenceTests(unittest.TestCase):
+    def test_evidence_requires_private_index_for_same_scanner_version(
+        self,
+    ) -> None:
+        view = public_task_view()
+        with self.assertRaisesRegex(ContractError, "scanner_version mismatch"):
+            build_prompt_quality_evidence(
+                task_id="pytorch__empty_addmv",
+                public_task_id="opbench-v07-t0001",
+                rendered_prompt=render_mcp_prompt(view),
+                agent_task_view=view,
+                private_index=empty_private_index(),
+                scanner_version="prompt-overlap-v2",
+                blind_review={
+                    "decision": "accepted",
+                    "reviewer": "reviewer-id",
+                    "reviewed_at": "2026-07-29T00:00:00Z",
+                },
+                semantic_review={
+                    "decision": "equivalent",
+                    "reviewer": "curator-id",
+                    "reviewed_at": "2026-07-29T00:00:00Z",
+                },
+                decision="accepted",
+                created_at="2026-07-29T00:00:00Z",
+            )
+
     def test_accepted_evidence_cannot_be_directly_asserted_without_source_inputs(self) -> None:
         with self.assertRaises(TypeError):
             PromptQualityEvidence(
@@ -540,6 +631,10 @@ class PromptQualityEvidenceTests(unittest.TestCase):
         self.assertFalse(schema["additionalProperties"])
         self.assertEqual(set(schema["required"]), set(PromptQualityEvidence.wire_fields()))
         self.assertEqual(set(schema["properties"]), set(PromptQualityEvidence.wire_fields()))
+        self.assertEqual(
+            schema["properties"]["scanner_version"]["enum"],
+            ["prompt-overlap-v1", "prompt-overlap-v2"],
+        )
 
     def test_evidence_mutations_fail_closed(self) -> None:
         selected = evidence_payload()

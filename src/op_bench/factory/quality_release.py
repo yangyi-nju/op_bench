@@ -2155,7 +2155,10 @@ def validate_quality_task(
     if prompt is not None and public_task_id is not None:
         try:
             view = _quality_agent_task_view(task)
-            private_index = _private_answer_index(task)
+            private_index = _private_answer_index(
+                task,
+                scanner_version=prompt.scanner_version,
+            )
             validate_prompt_quality_evidence(
                 prompt,
                 rendered_prompt=render_mcp_prompt(view),
@@ -4249,7 +4252,57 @@ def _quality_agent_task_view(task: TaskManifest) -> dict[str, object]:
     ).to_dict()
 
 
-def _private_answer_index(task: TaskManifest):
+def _prompt_scanner_version(task: TaskManifest) -> str:
+    quality = _mapping(task.data.get("quality"), "quality")
+    prompt_path = _task_relative_file(
+        task.task_dir,
+        quality.get("prompt_evidence"),
+        "quality.prompt_evidence",
+    )
+    prompt = load_factory_contract(prompt_path)
+    if not isinstance(prompt, PromptQualityEvidence):
+        raise ContractError(
+            "quality.prompt_evidence: expected PromptQualityEvidence"
+        )
+    return prompt.scanner_version
+
+
+def _task_public_scanner_vocabulary(
+    task: TaskManifest,
+) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """Return only declared domain terms that are also visible in Prompt."""
+
+    operator = _mapping(task.data.get("operator"), "operator")
+    public_tokens = {
+        token.casefold()
+        for token in re.findall(
+            r"[A-Za-z_][A-Za-z0-9_]*",
+            render_mcp_prompt(_quality_agent_task_view(task)),
+        )
+    }
+    declared: list[str] = []
+    for field in ("framework", "operator_name"):
+        value = operator.get(field)
+        if isinstance(value, str):
+            declared.append(value)
+    tags = operator.get("tags")
+    if isinstance(tags, list):
+        declared.extend(value for value in tags if isinstance(value, str))
+    tokens = {
+        token.casefold()
+        for value in declared
+        for token in re.findall(r"[A-Za-z_][A-Za-z0-9_]*", value)
+        if token.casefold() in public_tokens
+    }
+    vocabulary = tuple(sorted(tokens))
+    return vocabulary, vocabulary
+
+
+def _private_answer_index(
+    task: TaskManifest,
+    *,
+    scanner_version: str = "prompt-overlap-v1",
+) -> PrivateAnswerIndex:
     artifacts = task.data.get("artifacts")
     if not isinstance(artifacts, Mapping):
         raise ContractError("artifacts: expected object")
@@ -4268,6 +4321,13 @@ def _private_answer_index(task: TaskManifest):
         "artifacts.hidden_test_patch",
     )
     spec = full_task_spec_from_v05(task)
+    public_identifiers: tuple[str, ...] = ()
+    public_literals: tuple[str, ...] = ()
+    if scanner_version == "prompt-overlap-v2":
+        (
+            public_identifiers,
+            public_literals,
+        ) = _task_public_scanner_vocabulary(task)
     return build_private_answer_index(
         gold_patch=load_regular_file_bytes(gold_path).decode("utf-8"),
         hidden_test_patch=load_regular_file_bytes(hidden_path).decode("utf-8"),
@@ -4275,17 +4335,30 @@ def _private_answer_index(task: TaskManifest):
         hidden_selectors=tuple(
             selector.selector_id for selector in spec.hidden_tests
         ),
+        scanner_version=scanner_version,
+        public_identifiers=public_identifiers,
+        public_literals=public_literals,
     )
 
 
 def quality_prompt_source_inputs(
     task: TaskManifest,
+    *,
+    scanner_version: str | None = None,
 ) -> tuple[Mapping[str, object], PrivateAnswerIndex]:
     """Rebuild the exact public and private Prompt-review source inputs."""
 
     if not isinstance(task, TaskManifest):
         raise ContractError("task: expected TaskManifest")
-    return _quality_agent_task_view(task), _private_answer_index(task)
+    selected_version = (
+        _prompt_scanner_version(task)
+        if scanner_version is None
+        else scanner_version
+    )
+    return _quality_agent_task_view(task), _private_answer_index(
+        task,
+        scanner_version=selected_version,
+    )
 
 
 def quality_prompt_source_hash(task: TaskManifest) -> str:
@@ -4308,20 +4381,27 @@ def quality_prompt_source_hash(task: TaskManifest) -> str:
         ),
         "artifacts.hidden_test_patch",
     )
-    return canonical_sha256(
-        {
-            "agent_task_view": _quality_agent_task_view(task),
-            "gold_patch_bytes_hash": quality_bytes_hash(
-                load_regular_file_bytes(gold_path)
-            ),
-            "hidden_test_patch_bytes_hash": quality_bytes_hash(
-                load_regular_file_bytes(hidden_path)
-            ),
-            "patch_scope": task.data.get("patch_scope"),
-            "fail_to_pass": evaluation.get("fail_to_pass"),
-            "pass_to_pass": evaluation.get("pass_to_pass"),
+    payload: dict[str, object] = {
+        "agent_task_view": _quality_agent_task_view(task),
+        "gold_patch_bytes_hash": quality_bytes_hash(
+            load_regular_file_bytes(gold_path)
+        ),
+        "hidden_test_patch_bytes_hash": quality_bytes_hash(
+            load_regular_file_bytes(hidden_path)
+        ),
+        "patch_scope": task.data.get("patch_scope"),
+        "fail_to_pass": evaluation.get("fail_to_pass"),
+        "pass_to_pass": evaluation.get("pass_to_pass"),
+    }
+    scanner_version = _prompt_scanner_version(task)
+    if scanner_version == "prompt-overlap-v2":
+        identifiers, literals = _task_public_scanner_vocabulary(task)
+        payload["scanner"] = {
+            "version": scanner_version,
+            "public_identifiers": list(identifiers),
+            "public_literals": list(literals),
         }
-    )
+    return canonical_sha256(payload)
 
 
 def _validate_readmission(

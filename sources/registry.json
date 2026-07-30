@@ -794,6 +794,27 @@
       ],
       "snapshot_mode": "overlay",
       "notes": "v0.7 quality expansion. Overlays the exact Base Inductor SIMD tiling compatibility logic into the registered nightly wheel."
+    },
+    {
+      "id": "pytorch-048c2ae8-dynamic-bmm-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "048c2ae8480abaae0686256bfcd3b24a2fad7f29",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/048c2ae8480abaae0686256bfcd3b24a2fad7f29/source",
+      "checksum": null,
+      "snapshot_git_commit": "fe878fb59d889c6971bb9b1c79e8e563e905951e",
+      "tracked_file_count": 21534,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__178617__dynamic_large_batch_bmm"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 quality expansion. Overlays the exact Base BMM launch and Triton template files plus the Base template-heuristics compatibility dependency into the registered nightly wheel; the enforced patch scope remains limited to the two production BMM files."
     }
   ]
 }

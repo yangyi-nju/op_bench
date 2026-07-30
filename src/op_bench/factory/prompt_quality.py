@@ -51,7 +51,12 @@ _HUNK_COUNTS = re.compile(
     r"@@ -[0-9]+(?:,([0-9]+))? \+[0-9]+(?:,([0-9]+))? @@"
 )
 _CPP_SIGNATURE_NAME = re.compile(r"([~A-Za-z_][A-Za-z0-9_:~]*)\s*\(")
-_CPP_CONTROL = re.compile(r"^\s*(?:if|for|while|switch|catch)\b")
+_CPP_CONTROL = re.compile(
+    r"^\s*(?:if|for|while|switch|catch|return|raise|with|yield)\b"
+)
+_PYTHON_CALL_ASSIGNMENT = re.compile(
+    r"^\s*[A-Za-z_][A-Za-z0-9_.]*\s*=\s*"
+)
 _PULL_REQUEST = re.compile(r"\bpr\s*#\s*[0-9]+\b", re.IGNORECASE)
 _PULL_URL = re.compile(
     r"https?://(?:www\.)?github\.com/[^\s/]+/[^\s/]+/pulls?/[0-9]+(?:[^\s]*)?",
@@ -161,11 +166,10 @@ _PUBLIC_PROMPT_IDENTIFIERS = frozenset(
         "list",
         "patch",
         "platform",
-        "reduction",
-        "return",
     }
 )
-_PUBLIC_PROMPT_LITERALS = frozenset({"freezing", "triton"})
+_PUBLIC_PROMPT_LITERALS = frozenset({"freezing"})
+_SCANNER_VERSIONS = ("prompt-overlap-v1", "prompt-overlap-v2")
 
 
 def _sorted_unique(values: tuple[str, ...], *, path: str) -> tuple[str, ...]:
@@ -194,8 +198,18 @@ class PrivateAnswerIndex:
     distinctive_literals: tuple[str, ...]
     hidden_selectors: tuple[str, ...]
     internal_names: tuple[str, ...] = ()
+    scanner_version: str = "prompt-overlap-v1"
 
     def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "scanner_version",
+            require_enum(
+                self.scanner_version,
+                "private_answer_index.scanner_version",
+                _SCANNER_VERSIONS,
+            ),
+        )
         for field in (
             "changed_paths",
             "added_symbols",
@@ -272,8 +286,16 @@ def _finding(code: str, field: str, matched: str) -> PromptFinding:
     )
 
 
-def empty_private_index() -> PrivateAnswerIndex:
-    return PrivateAnswerIndex((), (), (), ())
+def empty_private_index(
+    scanner_version: str = "prompt-overlap-v1",
+) -> PrivateAnswerIndex:
+    return PrivateAnswerIndex(
+        (),
+        (),
+        (),
+        (),
+        scanner_version=scanner_version,
+    )
 
 
 def _header_path(value: str, *, prefix: str, path: str, allow_null: bool) -> str | None:
@@ -396,7 +418,11 @@ def _source_symbols(lines: tuple[str, ...]) -> set[str]:
                 symbols.add(match.group(1))
         if line.lstrip().startswith("@"):
             continue
-        if "(" not in line or _CPP_CONTROL.match(line) is not None:
+        if (
+            "(" not in line
+            or _CPP_CONTROL.match(line) is not None
+            or _PYTHON_CALL_ASSIGNMENT.match(line) is not None
+        ):
             continue
         signature = line.strip()
         for next_line in lines[index + 1 : index + 9]:
@@ -419,14 +445,18 @@ def _source_symbols(lines: tuple[str, ...]) -> set[str]:
     return symbols
 
 
-def _distinctive_literals(lines: tuple[str, ...]) -> set[str]:
+def _distinctive_literals(
+    lines: tuple[str, ...],
+    *,
+    public_literals: frozenset[str],
+) -> set[str]:
     literals: set[str] = set()
     for line in lines:
         for match in _QUOTED_LITERAL.finditer(line):
             value = match.group("value")
             if (
                 len(value) >= 6
-                and value.casefold() not in _PUBLIC_PROMPT_LITERALS
+                and value.casefold() not in public_literals
             ):
                 literals.add(value)
         for match in _COMPARISON_LITERAL.finditer(line):
@@ -442,13 +472,51 @@ def build_private_answer_index(
     hidden_test_patch: str,
     patch_scope: tuple[str, ...],
     hidden_selectors: tuple[str, ...],
+    scanner_version: str = "prompt-overlap-v1",
+    public_identifiers: tuple[str, ...] = (),
+    public_literals: tuple[str, ...] = (),
 ) -> PrivateAnswerIndex:
     """Extract answer-side facts from diffs without loading framework code."""
 
     for name, value in (("gold_patch", gold_patch), ("hidden_test_patch", hidden_test_patch)):
         require_str(value, name, min_length=0)
-    if not isinstance(patch_scope, tuple) or not isinstance(hidden_selectors, tuple):
-        raise ContractError("private_answer_index: patch_scope and hidden_selectors must be tuples")
+    if (
+        not isinstance(patch_scope, tuple)
+        or not isinstance(hidden_selectors, tuple)
+        or not isinstance(public_identifiers, tuple)
+        or not isinstance(public_literals, tuple)
+    ):
+        raise ContractError(
+            "private_answer_index: patch_scope, hidden_selectors, and public "
+            "vocabulary must be tuples"
+        )
+    selected_version = require_enum(
+        scanner_version,
+        "private_answer_index.scanner_version",
+        _SCANNER_VERSIONS,
+    )
+    if selected_version == "prompt-overlap-v1" and (
+        public_identifiers or public_literals
+    ):
+        raise ContractError(
+            "private_answer_index: v1 does not support task public vocabulary"
+        )
+    scoped_identifiers = frozenset(
+        require_str(
+            value,
+            f"public_identifiers[{index}]",
+        ).casefold()
+        for index, value in enumerate(public_identifiers)
+    )
+    scoped_literals = frozenset(
+        require_str(
+            value,
+            f"public_literals[{index}]",
+        ).casefold()
+        for index, value in enumerate(public_literals)
+    )
+    allowed_identifiers = _PUBLIC_PROMPT_IDENTIFIERS | scoped_identifiers
+    allowed_literals = _PUBLIC_PROMPT_LITERALS | scoped_literals
 
     gold_paths, gold_lines = _parse_unified_diff(gold_patch, path="gold_patch")
     hidden_paths, hidden_lines = _parse_unified_diff(
@@ -466,7 +534,7 @@ def build_private_answer_index(
     symbols = {
         symbol
         for symbol in _source_symbols(lines)
-        if symbol.casefold() not in _PUBLIC_PROMPT_IDENTIFIERS
+        if symbol.casefold() not in allowed_identifiers
     }
     identifier_counts = Counter(
         identifier
@@ -479,14 +547,20 @@ def build_private_answer_index(
         for identifier, count in identifier_counts.items()
         if count <= 2
         and identifier not in symbols
-        and identifier.casefold() not in _PUBLIC_PROMPT_IDENTIFIERS
+        and identifier.casefold() not in allowed_identifiers
     }
     return PrivateAnswerIndex(
         changed_paths=tuple(paths),
         added_symbols=tuple(symbols),
-        distinctive_literals=tuple(_distinctive_literals(lines)),
+        distinctive_literals=tuple(
+            _distinctive_literals(
+                lines,
+                public_literals=allowed_literals,
+            )
+        ),
         hidden_selectors=hidden_selectors,
         internal_names=tuple(internal_names),
+        scanner_version=selected_version,
     )
 
 
@@ -635,11 +709,24 @@ class PromptQualityEvidence:
             raise ContractError(
                 "prompt_quality.public_task_id: does not match agent_task_view"
             )
+        selected_scanner_version = require_enum(
+            scanner_version,
+            "prompt_quality.scanner_version",
+            _SCANNER_VERSIONS,
+        )
+        if private_index.scanner_version != selected_scanner_version:
+            raise ContractError(
+                "prompt_quality.scanner_version mismatch with private index"
+            )
         object.__setattr__(self, "task_id", task_id)
         object.__setattr__(self, "public_task_id", public_task_id)
         object.__setattr__(self, "prompt_hash", canonical_sha256(canonical_prompt))
         object.__setattr__(self, "agent_task_view_hash", canonical_sha256(payload))
-        object.__setattr__(self, "scanner_version", scanner_version)
+        object.__setattr__(
+            self,
+            "scanner_version",
+            selected_scanner_version,
+        )
         object.__setattr__(
             self,
             "findings",
@@ -679,7 +766,15 @@ class PromptQualityEvidence:
             "prompt_quality.agent_task_view_hash",
             pattern=_SHA256_PATTERN,
         )
-        require_str(self.scanner_version, "prompt_quality.scanner_version", pattern=r"[a-z0-9][a-z0-9._-]*")
+        object.__setattr__(
+            self,
+            "scanner_version",
+            require_enum(
+                self.scanner_version,
+                "prompt_quality.scanner_version",
+                _SCANNER_VERSIONS,
+            ),
+        )
         if not isinstance(self.findings, tuple) or not all(
             isinstance(finding, PromptFinding) for finding in self.findings
         ):
@@ -841,6 +936,10 @@ def validate_prompt_quality_evidence(
     if evidence.agent_task_view_hash != expected_view_hash:
         raise ContractError(
             "prompt_quality.agent_task_view_hash: does not match agent_task_view"
+        )
+    if evidence.scanner_version != private_index.scanner_version:
+        raise ContractError(
+            "prompt_quality.scanner_version mismatch with private index"
         )
     expected_findings = scan_rendered_prompt(canonical_prompt, private_index)
     if evidence.findings != expected_findings:

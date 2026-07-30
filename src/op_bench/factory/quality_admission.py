@@ -1265,7 +1265,10 @@ def validate_quality_admission_prompt(
         raise ContractError(
             "quality_admission.prompt: expected PromptQualityEvidence"
         )
-    agent_task_view, private_index = quality_prompt_source_inputs(task)
+    agent_task_view, private_index = quality_prompt_source_inputs(
+        task,
+        scanner_version=loaded.scanner_version,
+    )
     validate_prompt_quality_evidence(
         loaded,
         rendered_prompt=render_mcp_prompt(agent_task_view),

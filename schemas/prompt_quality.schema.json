@@ -43,7 +43,10 @@
     },
     "scanner_version": {
       "type": "string",
-      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+      "enum": [
+        "prompt-overlap-v1",
+        "prompt-overlap-v2"
+      ]
     },
     "findings": {
       "type": "array",

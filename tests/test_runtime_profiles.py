@@ -5,6 +5,7 @@ import importlib
 import importlib.util
 import json
 from pathlib import Path
+import re
 import tempfile
 import unittest
 
@@ -15,6 +16,7 @@ from op_bench.runtime.validation import ContractError
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 REGISTRY_PATH = REPO_ROOT / "configs" / "runtime_profiles.v1.json"
+ENVIRONMENT_REGISTRY_PATH = REPO_ROOT / "environments" / "registry.json"
 REGISTRY_SCHEMA_PATH = REPO_ROOT / "schemas" / "runtime_profile_registry.schema.json"
 RUNTIME_SCHEMA_PATH = REPO_ROOT / "schemas" / "runtime_contracts.schema.json"
 EXPECTED_PROFILE_IDS = (
@@ -117,6 +119,40 @@ class RuntimeProfileRegistryTests(unittest.TestCase):
         ):
             with self.subTest(forbidden=forbidden):
                 self.assertNotIn(forbidden, flattened)
+
+    def test_controller_environment_registry_keeps_remote_targets_private(
+        self,
+    ) -> None:
+        payload = json.loads(
+            ENVIRONMENT_REGISTRY_PATH.read_text(encoding="utf-8")
+        )
+        flattened = canonical_json(payload)
+
+        for forbidden in (
+            "hostname",
+            "identity_file",
+            "remote_user",
+            "/Users/",
+            "/home/",
+            "~/.ssh",
+            "root@",
+        ):
+            with self.subTest(forbidden=forbidden):
+                self.assertNotIn(forbidden, flattened)
+        self.assertIsNone(
+            re.search(
+                r"(?<![0-9])(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?![0-9])",
+                flattened,
+            )
+        )
+        for environment in payload["environments"]:
+            alias = environment.get("host")
+            if alias is None:
+                continue
+            with self.subTest(environment=environment["id"]):
+                self.assertRegex(alias, r"[a-z0-9][a-z0-9-]*")
+                self.assertNotIn(".", alias)
+                self.assertNotIn("/", alias)
 
     def test_gpu_profiles_and_resource_counts_are_consistent(self) -> None:
         profiles_module = importlib.import_module("op_bench.runtime.profiles")

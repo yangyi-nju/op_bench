@@ -5,7 +5,7 @@
     "verified": true
   },
   "baseline": {
-    "duration_sec": 93.61725508299423,
+    "duration_sec": 94.75594391598133,
     "fail_to_pass_passed": 0,
     "fail_to_pass_total": 1,
     "mode": "baseline",
@@ -14,7 +14,7 @@
     "status": "baseline_reproduced",
     "task_id": "pytorch__188862__compiled_bool_minmax"
   },
-  "created_at": "2026-07-30T07:40:00Z",
+  "created_at": "2026-07-30T08:30:00Z",
   "environment": {
     "backend": "remote_docker",
     "digest_kind": "local_image_id",
@@ -24,9 +24,9 @@
     "platform": "linux/amd64",
     "runtime_tier": "cpu_python_overlay"
   },
-  "evidence_id": "pytorch__188862__compiled_bool_minmax:278087541b40:2026-07-30T07:40:00Z",
+  "evidence_id": "pytorch__188862__compiled_bool_minmax:278087541b40:2026-07-30T08:30:00Z",
   "gold": {
-    "duration_sec": 100.28563350002514,
+    "duration_sec": 99.18964966695057,
     "fail_to_pass_passed": 1,
     "fail_to_pass_total": 1,
     "mode": "gold",
