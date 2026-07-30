@@ -1,0 +1,94 @@
+diff --git a/test/op_bench/test_fx_dce_effectful_packet.py b/test/op_bench/test_fx_dce_effectful_packet.py
+new file mode 100644
+index 00000000000..8f45d688b5b
+--- /dev/null
++++ b/test/op_bench/test_fx_dce_effectful_packet.py
+@@ -0,0 +1,88 @@
++import unittest
++
++import torch
++from torch._higher_order_ops.effects import _register_effectful_op
++from torch._library.effects import EffectType
++from torch.fx.node import _side_effectful_functions
++
++
++class FxDceEffectfulPacketTests(unittest.TestCase):
++    def _trace_unused_packet(self, packet):
++        class PacketModule(torch.nn.Module):
++            def forward(self, value):
++                packet(value)
++                return value
++
++        traced = torch.fx.symbolic_trace(PacketModule())
++        nodes = [
++            node
++            for node in traced.graph.nodes
++            if node.op == "call_function" and node.target is packet
++        ]
++        self.assertEqual(len(nodes), 1)
++        self.assertEqual(len(nodes[0].users), 0)
++        return traced
++
++    def _assert_packet_survives(self, packet):
++        traced = self._trace_unused_packet(packet)
++        traced.graph.eliminate_dead_code()
++        after = [
++            node
++            for node in traced.graph.nodes
++            if node.op == "call_function" and node.target is packet
++        ]
++        self.assertEqual(
++            len(after),
++            1,
++            "graph cleanup removed the retained call",
++        )
++
++    def test_effect_marked_packet_survives_dce(self):
++        library = torch.library.Library("opbench_dce_effect", "DEF")
++        library.define("touch(Tensor input) -> Tensor")
++        library.impl("touch", lambda value: value.clone(), "CPU")
++        library.impl("touch", lambda value: value.clone(), "Meta")
++        packet = torch.ops.opbench_dce_effect.touch
++        handle = _register_effectful_op(packet.default, EffectType.ORDERED)
++
++        try:
++            self._assert_packet_survives(packet)
++        finally:
++            handle.destroy()
++            del library
++
++        direct_library = torch.library.Library("opbench_dce_direct", "DEF")
++        direct_library.define("touch(Tensor input) -> Tensor")
++        direct_library.impl("touch", lambda value: value.clone(), "CPU")
++        direct_library.impl("touch", lambda value: value.clone(), "Meta")
++        direct_packet = torch.ops.opbench_dce_direct.touch
++        _side_effectful_functions.add(direct_packet)
++
++        try:
++            self._assert_packet_survives(direct_packet)
++        finally:
++            _side_effectful_functions.discard(direct_packet)
++            del direct_library
++
++    def test_unregistered_pure_packet_is_eliminated(self):
++        library = torch.library.Library("opbench_dce_pure", "DEF")
++        library.define("copy(Tensor input) -> Tensor")
++        library.impl("copy", lambda value: value.clone(), "CPU")
++        library.impl("copy", lambda value: value.clone(), "Meta")
++        packet = torch.ops.opbench_dce_pure.copy
++
++        try:
++            traced = self._trace_unused_packet(packet)
++            traced.graph.eliminate_dead_code()
++            after = [
++                node
++                for node in traced.graph.nodes
++                if node.op == "call_function" and node.target is packet
++            ]
++            self.assertEqual(after, [])
++        finally:
++            del library
++
++
++if __name__ == "__main__":
++    unittest.main()

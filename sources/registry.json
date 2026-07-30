@@ -710,6 +710,27 @@
       ],
       "snapshot_mode": "overlay",
       "notes": "v0.7 quality expansion. Overlays the exact Base serialize.py plus its Base-compatible serde schema.py into the registered nightly wheel; only serialize.py is in the production patch scope."
+    },
+    {
+      "id": "pytorch-324a7f79-fx-dce-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "324a7f79cd4b0ed63a8f6e64f27ce19424551d47",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/324a7f79cd4b0ed63a8f6e64f27ce19424551d47/source",
+      "checksum": null,
+      "snapshot_git_commit": "f76cd0417d8853ce19670ccd16b199528c1da23d",
+      "tracked_file_count": 21779,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__180886__fx_dce_effectful_packet"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 quality expansion. Overlays the exact Base torch/_library/utils.py plus its Base-compatible torch/fx/node.py into the registered nightly wheel; only utils.py is in the production patch scope."
     }
   ]
 }
