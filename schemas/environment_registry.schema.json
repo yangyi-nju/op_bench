@@ -114,6 +114,10 @@
             "type": "string",
             "pattern": "^sha256:[0-9a-f]{64}$"
           },
+          "host": {
+            "type": "string",
+            "pattern": "^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$"
+          },
           "preflight": {
             "type": "object",
             "additionalProperties": false,

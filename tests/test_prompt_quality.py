@@ -11,6 +11,7 @@ from op_bench.factory.prompt_quality import (
     PromptQualityEvidence,
     build_private_answer_index,
     build_prompt_quality_evidence,
+    controlled_public_scanner_vocabulary,
     empty_private_index,
     scan_rendered_prompt,
     validate_prompt_quality_evidence,
@@ -253,6 +254,36 @@ class PromptQualityScannerTests(unittest.TestCase):
             )],
             ["answer.internal_name"],
         )
+
+    def test_v2_public_vocabulary_rejects_self_declared_private_terms(
+        self,
+    ) -> None:
+        vocabulary = controlled_public_scanner_vocabulary(
+            declared_terms=(
+                "pytorch",
+                "reduction",
+                "triton",
+                "private_sentinel",
+            ),
+            rendered_prompt=(
+                "Repair the PyTorch Triton reduction without exposing "
+                "private_sentinel."
+            ),
+        )
+
+        self.assertEqual(vocabulary, ("pytorch", "reduction", "triton"))
+        with self.assertRaisesRegex(
+            ContractError,
+            "unsupported controlled public vocabulary",
+        ):
+            build_private_answer_index(
+                gold_patch="",
+                hidden_test_patch="",
+                patch_scope=(),
+                hidden_selectors=(),
+                scanner_version="prompt-overlap-v2",
+                public_identifiers=("private_sentinel",),
+            )
 
     def test_private_index_rejects_malformed_or_unsafe_diff_headers(self) -> None:
         for patch in (

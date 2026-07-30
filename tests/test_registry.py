@@ -121,6 +121,39 @@ class RegistryTests(unittest.TestCase):
             ):
                 EnvironmentRegistry.load(path)
 
+    def test_environment_registry_rejects_non_opaque_host_aliases(self) -> None:
+        for host in (
+            "user@private-host:22",
+            "private-host:22",
+            "private host",
+            "private.example",
+            "/private-host",
+            "-private-host",
+            "private-host-",
+        ):
+            with self.subTest(host=host), tempfile.TemporaryDirectory() as tmp:
+                path = Path(tmp) / "registry.json"
+                asset = {
+                    "id": "remote",
+                    "framework": "pytorch",
+                    "runtime_tier": "cuda_python_overlay",
+                    "backend": "remote_docker",
+                    "docker": {"image": "image"},
+                    "preflight": {
+                        "workdir": "/tmp",
+                        "commands": ["python --version"],
+                    },
+                    "host": host,
+                    "remote_execution_config_hash": "sha256:" + "a" * 64,
+                }
+                path.write_text(
+                    json.dumps({"version": "v1", "environments": [asset]}),
+                    encoding="utf-8",
+                )
+
+                with self.assertRaisesRegex(RegistryError, "host alias"):
+                    EnvironmentRegistry.load(path)
+
     def test_registry_reports_unknown_asset_id(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "registry.json"

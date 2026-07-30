@@ -220,6 +220,19 @@ class EnvironmentRegistry(_Registry[EnvironmentAsset]):
             raise RegistryError(f"environment asset {asset_id}: docker.image is required")
         if not isinstance(item["preflight"], dict):
             raise RegistryError(f"environment asset {asset_id}: preflight must be an object")
+        host = item.get("host")
+        if host is not None and (
+            not isinstance(host, str)
+            or re.fullmatch(
+                r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?",
+                host,
+            )
+            is None
+        ):
+            raise RegistryError(
+                f"environment asset {asset_id}: host alias must be an "
+                "opaque lowercase identifier"
+            )
         if item.get("backend") == "remote_docker":
             remote_hash = item.get("remote_execution_config_hash")
             if (

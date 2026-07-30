@@ -150,9 +150,12 @@ class RuntimeProfileRegistryTests(unittest.TestCase):
             if alias is None:
                 continue
             with self.subTest(environment=environment["id"]):
-                self.assertRegex(alias, r"[a-z0-9][a-z0-9-]*")
-                self.assertNotIn(".", alias)
-                self.assertNotIn("/", alias)
+                self.assertIsNotNone(
+                    re.fullmatch(
+                        r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?",
+                        alias,
+                    )
+                )
 
     def test_gpu_profiles_and_resource_counts_are_consistent(self) -> None:
         profiles_module = importlib.import_module("op_bench.runtime.profiles")

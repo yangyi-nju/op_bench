@@ -170,11 +170,58 @@ _PUBLIC_PROMPT_IDENTIFIERS = frozenset(
 )
 _PUBLIC_PROMPT_LITERALS = frozenset({"freezing"})
 _SCANNER_VERSIONS = ("prompt-overlap-v1", "prompt-overlap-v2")
+_CONTROLLED_PUBLIC_SCANNER_TERMS = frozenset(
+    {
+        "bmm",
+        "compile",
+        "compiled",
+        "cpu",
+        "cuda",
+        "dynamic",
+        "inductor",
+        "loss",
+        "nll",
+        "pytorch",
+        "reduction",
+        "torch",
+        "triton",
+    }
+)
 
 
 def _sorted_unique(values: tuple[str, ...], *, path: str) -> tuple[str, ...]:
     normalized = tuple(require_str(value, f"{path}[{index}]") for index, value in enumerate(values))
     return tuple(sorted(set(normalized)))
+
+
+def controlled_public_scanner_vocabulary(
+    *,
+    declared_terms: tuple[str, ...],
+    rendered_prompt: str,
+) -> tuple[str, ...]:
+    """Select visible terms from the evaluator-controlled domain vocabulary."""
+
+    if not isinstance(declared_terms, tuple):
+        raise ContractError("declared_terms: expected tuple")
+    prompt = require_str(rendered_prompt, "rendered_prompt", min_length=0)
+    public_tokens = {
+        token.casefold()
+        for token in _IDENTIFIER.findall(prompt)
+    }
+    declared_tokens = {
+        token.casefold()
+        for index, value in enumerate(declared_terms)
+        for token in _IDENTIFIER.findall(
+            require_str(value, f"declared_terms[{index}]")
+        )
+    }
+    return tuple(
+        sorted(
+            declared_tokens
+            & public_tokens
+            & _CONTROLLED_PUBLIC_SCANNER_TERMS
+        )
+    )
 
 
 def _normalize_path(value: str) -> str | None:
@@ -515,6 +562,13 @@ def build_private_answer_index(
         ).casefold()
         for index, value in enumerate(public_literals)
     )
+    unsupported_vocabulary = (
+        scoped_identifiers | scoped_literals
+    ) - _CONTROLLED_PUBLIC_SCANNER_TERMS
+    if unsupported_vocabulary:
+        raise ContractError(
+            "private_answer_index: unsupported controlled public vocabulary"
+        )
     allowed_identifiers = _PUBLIC_PROMPT_IDENTIFIERS | scoped_identifiers
     allowed_literals = _PUBLIC_PROMPT_LITERALS | scoped_literals
 

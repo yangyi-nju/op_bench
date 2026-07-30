@@ -27,6 +27,7 @@ from op_bench.factory.prompt_quality import (
     PromptQualityEvidence,
     build_private_answer_index,
     build_prompt_quality_evidence,
+    controlled_public_scanner_vocabulary,
     validate_prompt_quality_evidence,
 )
 from op_bench.factory.score_four_support import (
@@ -4270,16 +4271,9 @@ def _prompt_scanner_version(task: TaskManifest) -> str:
 def _task_public_scanner_vocabulary(
     task: TaskManifest,
 ) -> tuple[tuple[str, ...], tuple[str, ...]]:
-    """Return only declared domain terms that are also visible in Prompt."""
+    """Return only controlled declared domain terms also visible in Prompt."""
 
     operator = _mapping(task.data.get("operator"), "operator")
-    public_tokens = {
-        token.casefold()
-        for token in re.findall(
-            r"[A-Za-z_][A-Za-z0-9_]*",
-            render_mcp_prompt(_quality_agent_task_view(task)),
-        )
-    }
     declared: list[str] = []
     for field in ("framework", "operator_name"):
         value = operator.get(field)
@@ -4288,13 +4282,10 @@ def _task_public_scanner_vocabulary(
     tags = operator.get("tags")
     if isinstance(tags, list):
         declared.extend(value for value in tags if isinstance(value, str))
-    tokens = {
-        token.casefold()
-        for value in declared
-        for token in re.findall(r"[A-Za-z_][A-Za-z0-9_]*", value)
-        if token.casefold() in public_tokens
-    }
-    vocabulary = tuple(sorted(tokens))
+    vocabulary = controlled_public_scanner_vocabulary(
+        declared_terms=tuple(declared),
+        rendered_prompt=render_mcp_prompt(_quality_agent_task_view(task)),
+    )
     return vocabulary, vocabulary
 
 
