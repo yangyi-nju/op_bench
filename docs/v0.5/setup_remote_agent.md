@@ -53,9 +53,9 @@ export OPENAI_API_KEY=<your-key>
   "hosts": {
     "gpu-a10": {
       "user": "ubuntu",
-      "hostname": "<server-ip-or-hostname>",
+      "hostname": "worker.example.invalid",
       "port": 22,
-      "identity_file": "~/.ssh/your_key",
+      "identity_file": "/tmp/example-key",
       "remote_workspace_root": "/data/op_bench_workspaces"
     }
   }

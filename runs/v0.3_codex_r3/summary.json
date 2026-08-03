@@ -20,13 +20,13 @@
           "command": [
             "op_bench",
             "copy-source-snapshot",
-            "/Users/bilibili/dev/op_bench/.op_bench_cache/sources/pytorch/pytorch/362b40939dd6faeebf0569beac563afa51e81dcd/source",
-            "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__149693__lazylinear_init-_emmgbk8/workspace"
+            "sources/pytorch/pytorch/362b40939dd6faeebf0569beac563afa51e81dcd/source",
+            "<redacted-user-path>"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__149693__lazylinear_init-_emmgbk8",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 1.1500000255182385e-05,
           "exit_code": 1,
-          "stderr": "source snapshot not found: /Users/bilibili/dev/op_bench/.op_bench_cache/sources/pytorch/pytorch/362b40939dd6faeebf0569beac563afa51e81dcd/source",
+          "stderr": "source snapshot not found: sources/pytorch/pytorch/362b40939dd6faeebf0569beac563afa51e81dcd/source",
           "stdout": "",
           "timed_out": false
         },
@@ -35,11 +35,11 @@
             "git",
             "init"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__149693__lazylinear_init-_emmgbk8/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.011904875005711801,
           "exit_code": 0,
           "stderr": "\u63d0\u793a\uff1a \u4f7f\u7528 'master' \u4f5c\u4e3a\u521d\u59cb\u5206\u652f\u7684\u540d\u79f0\u3002\u8fd9\u4e2a\u9ed8\u8ba4\u5206\u652f\u540d\u79f0\u5728 Git 3.0 \u4e2d\u5c06\u4f1a\u4fee\u6539\u4e3a\n\u63d0\u793a\uff1a \"main\"\u3002\u8981\u4e3a\u60a8\u7684\u6240\u6709\u65b0\u4ed3\u5e93\u914d\u7f6e\u521d\u59cb\u5206\u652f\u540d\u79f0\uff08\u8fd9\u5c06\u7981\u7528\u6b64\u8b66\u544a\uff09\uff0c\u8bf7\u8fd0\u884c\uff1a\n\u63d0\u793a\uff1a\n\u63d0\u793a\uff1a \tgit config --global init.defaultBranch <\u540d\u79f0>\n\u63d0\u793a\uff1a\n\u63d0\u793a\uff1a \u9664\u4e86 'master' \u4e4b\u5916\uff0c\u901a\u5e38\u9009\u5b9a\u7684\u540d\u5b57\u6709 'main'\u3001'trunk' \u548c 'development'\u3002\n\u63d0\u793a\uff1a \u53ef\u4ee5\u901a\u8fc7\u4ee5\u4e0b\u547d\u4ee4\u91cd\u547d\u540d\u65b0\u521b\u5efa\u7684\u5206\u652f\uff1a\n\u63d0\u793a\uff1a\n\u63d0\u793a\uff1a \tgit branch -m <name>\n\u63d0\u793a\uff1a\n\u63d0\u793a\uff1a Disable this message with \"git config set advice.defaultBranchName false\"\n",
-          "stdout": "\u5728 /Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__149693__lazylinear_init-_emmgbk8/workspace/.git/ \u521d\u59cb\u5316\u7a7a\u7684 Git \u4ed3\u5e93\n",
+          "stdout": "\u5728 <redacted-user-path> \u521d\u59cb\u5316\u7a7a\u7684 Git \u4ed3\u5e93\n",
           "timed_out": false
         },
         {
@@ -50,7 +50,7 @@
             "origin",
             "https://github.com/pytorch/pytorch.git"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__149693__lazylinear_init-_emmgbk8/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.005144750000908971,
           "exit_code": 0,
           "stderr": "",
@@ -66,7 +66,7 @@
             "origin",
             "362b40939dd6faeebf0569beac563afa51e81dcd"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__149693__lazylinear_init-_emmgbk8/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 75.09260675001133,
           "exit_code": 128,
           "stderr": "\u81f4\u547d\u9519\u8bef\uff1a\u65e0\u6cd5\u8bbf\u95ee 'https://github.com/pytorch/pytorch.git/'\uff1aFailed to connect to github.com port 443 after 75037 ms: Operation timed out\n",
@@ -97,13 +97,13 @@
           "command": [
             "op_bench",
             "copy-source-snapshot",
-            "/Users/bilibili/dev/op_bench/.op_bench_cache/sources/pytorch/pytorch/8bf3f3fc43bd8c6a35f7dc92e1dfe21623b648bb/source",
-            "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__147599__lazylinear_state_forward-wl8wgl77/workspace"
+            "sources/pytorch/pytorch/8bf3f3fc43bd8c6a35f7dc92e1dfe21623b648bb/source",
+            "<redacted-user-path>"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__147599__lazylinear_state_forward-wl8wgl77",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 2.8624999686144292e-05,
           "exit_code": 1,
-          "stderr": "source snapshot not found: /Users/bilibili/dev/op_bench/.op_bench_cache/sources/pytorch/pytorch/8bf3f3fc43bd8c6a35f7dc92e1dfe21623b648bb/source",
+          "stderr": "source snapshot not found: sources/pytorch/pytorch/8bf3f3fc43bd8c6a35f7dc92e1dfe21623b648bb/source",
           "stdout": "",
           "timed_out": false
         },
@@ -112,11 +112,11 @@
             "git",
             "init"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__147599__lazylinear_state_forward-wl8wgl77/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.014501665995339863,
           "exit_code": 0,
           "stderr": "\u63d0\u793a\uff1a \u4f7f\u7528 'master' \u4f5c\u4e3a\u521d\u59cb\u5206\u652f\u7684\u540d\u79f0\u3002\u8fd9\u4e2a\u9ed8\u8ba4\u5206\u652f\u540d\u79f0\u5728 Git 3.0 \u4e2d\u5c06\u4f1a\u4fee\u6539\u4e3a\n\u63d0\u793a\uff1a \"main\"\u3002\u8981\u4e3a\u60a8\u7684\u6240\u6709\u65b0\u4ed3\u5e93\u914d\u7f6e\u521d\u59cb\u5206\u652f\u540d\u79f0\uff08\u8fd9\u5c06\u7981\u7528\u6b64\u8b66\u544a\uff09\uff0c\u8bf7\u8fd0\u884c\uff1a\n\u63d0\u793a\uff1a\n\u63d0\u793a\uff1a \tgit config --global init.defaultBranch <\u540d\u79f0>\n\u63d0\u793a\uff1a\n\u63d0\u793a\uff1a \u9664\u4e86 'master' \u4e4b\u5916\uff0c\u901a\u5e38\u9009\u5b9a\u7684\u540d\u5b57\u6709 'main'\u3001'trunk' \u548c 'development'\u3002\n\u63d0\u793a\uff1a \u53ef\u4ee5\u901a\u8fc7\u4ee5\u4e0b\u547d\u4ee4\u91cd\u547d\u540d\u65b0\u521b\u5efa\u7684\u5206\u652f\uff1a\n\u63d0\u793a\uff1a\n\u63d0\u793a\uff1a \tgit branch -m <name>\n\u63d0\u793a\uff1a\n\u63d0\u793a\uff1a Disable this message with \"git config set advice.defaultBranchName false\"\n",
-          "stdout": "\u5728 /Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__147599__lazylinear_state_forward-wl8wgl77/workspace/.git/ \u521d\u59cb\u5316\u7a7a\u7684 Git \u4ed3\u5e93\n",
+          "stdout": "\u5728 <redacted-user-path> \u521d\u59cb\u5316\u7a7a\u7684 Git \u4ed3\u5e93\n",
           "timed_out": false
         },
         {
@@ -127,7 +127,7 @@
             "origin",
             "https://github.com/pytorch/pytorch.git"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__147599__lazylinear_state_forward-wl8wgl77/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.005775249999715015,
           "exit_code": 0,
           "stderr": "",
@@ -143,7 +143,7 @@
             "origin",
             "8bf3f3fc43bd8c6a35f7dc92e1dfe21623b648bb"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__147599__lazylinear_state_forward-wl8wgl77/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 75.20924670800741,
           "exit_code": 128,
           "stderr": "\u81f4\u547d\u9519\u8bef\uff1a\u65e0\u6cd5\u8bbf\u95ee 'https://github.com/pytorch/pytorch.git/'\uff1aFailed to connect to github.com port 443 after 75188 ms: Operation timed out\n",
@@ -174,13 +174,13 @@
           "command": [
             "op_bench",
             "copy-source-snapshot",
-            "/Users/bilibili/dev/op_bench/.op_bench_cache/sources/pytorch/pytorch/df6073641079c781e66a905e4f15ee49ac257eb2/source",
-            "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__160952__bilinear_lazy_check-zj__iyae/workspace"
+            "sources/pytorch/pytorch/df6073641079c781e66a905e4f15ee49ac257eb2/source",
+            "<redacted-user-path>"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__160952__bilinear_lazy_check-zj__iyae",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 6.370799383148551e-05,
           "exit_code": 1,
-          "stderr": "source snapshot not found: /Users/bilibili/dev/op_bench/.op_bench_cache/sources/pytorch/pytorch/df6073641079c781e66a905e4f15ee49ac257eb2/source",
+          "stderr": "source snapshot not found: sources/pytorch/pytorch/df6073641079c781e66a905e4f15ee49ac257eb2/source",
           "stdout": "",
           "timed_out": false
         },
@@ -189,11 +189,11 @@
             "git",
             "init"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__160952__bilinear_lazy_check-zj__iyae/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.02290516700304579,
           "exit_code": 0,
           "stderr": "\u63d0\u793a\uff1a \u4f7f\u7528 'master' \u4f5c\u4e3a\u521d\u59cb\u5206\u652f\u7684\u540d\u79f0\u3002\u8fd9\u4e2a\u9ed8\u8ba4\u5206\u652f\u540d\u79f0\u5728 Git 3.0 \u4e2d\u5c06\u4f1a\u4fee\u6539\u4e3a\n\u63d0\u793a\uff1a \"main\"\u3002\u8981\u4e3a\u60a8\u7684\u6240\u6709\u65b0\u4ed3\u5e93\u914d\u7f6e\u521d\u59cb\u5206\u652f\u540d\u79f0\uff08\u8fd9\u5c06\u7981\u7528\u6b64\u8b66\u544a\uff09\uff0c\u8bf7\u8fd0\u884c\uff1a\n\u63d0\u793a\uff1a\n\u63d0\u793a\uff1a \tgit config --global init.defaultBranch <\u540d\u79f0>\n\u63d0\u793a\uff1a\n\u63d0\u793a\uff1a \u9664\u4e86 'master' \u4e4b\u5916\uff0c\u901a\u5e38\u9009\u5b9a\u7684\u540d\u5b57\u6709 'main'\u3001'trunk' \u548c 'development'\u3002\n\u63d0\u793a\uff1a \u53ef\u4ee5\u901a\u8fc7\u4ee5\u4e0b\u547d\u4ee4\u91cd\u547d\u540d\u65b0\u521b\u5efa\u7684\u5206\u652f\uff1a\n\u63d0\u793a\uff1a\n\u63d0\u793a\uff1a \tgit branch -m <name>\n\u63d0\u793a\uff1a\n\u63d0\u793a\uff1a Disable this message with \"git config set advice.defaultBranchName false\"\n",
-          "stdout": "\u5728 /Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__160952__bilinear_lazy_check-zj__iyae/workspace/.git/ \u521d\u59cb\u5316\u7a7a\u7684 Git \u4ed3\u5e93\n",
+          "stdout": "\u5728 <redacted-user-path> \u521d\u59cb\u5316\u7a7a\u7684 Git \u4ed3\u5e93\n",
           "timed_out": false
         },
         {
@@ -204,7 +204,7 @@
             "origin",
             "https://github.com/pytorch/pytorch.git"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__160952__bilinear_lazy_check-zj__iyae/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.009149332996457815,
           "exit_code": 0,
           "stderr": "",
@@ -220,7 +220,7 @@
             "origin",
             "df6073641079c781e66a905e4f15ee49ac257eb2"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__160952__bilinear_lazy_check-zj__iyae/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 26.548991083007422,
           "exit_code": 128,
           "stderr": "\u81f4\u547d\u9519\u8bef\uff1a\u65e0\u6cd5\u8bbf\u95ee 'https://github.com/pytorch/pytorch.git/'\uff1aError in the HTTP2 framing layer\n",
@@ -251,14 +251,14 @@
           "command": [
             "op_bench",
             "copy-source-snapshot",
-            "/Users/bilibili/dev/op_bench/.op_bench_cache/sources/pytorch/pytorch/fefc406a3d0d90db0f808419fb88045f90b213cd/source",
-            "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__162340__nn_arg_length-8jrjka_n/workspace"
+            "sources/pytorch/pytorch/fefc406a3d0d90db0f808419fb88045f90b213cd/source",
+            "<redacted-user-path>"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__162340__nn_arg_length-8jrjka_n",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 5.158090875003836,
           "exit_code": 0,
           "stderr": "",
-          "stdout": "copied source snapshot from /Users/bilibili/dev/op_bench/.op_bench_cache/sources/pytorch/pytorch/fefc406a3d0d90db0f808419fb88045f90b213cd/source\n",
+          "stdout": "copied source snapshot from sources/pytorch/pytorch/fefc406a3d0d90db0f808419fb88045f90b213cd/source\n",
           "timed_out": false
         },
         {
@@ -268,7 +268,7 @@
             "inspect",
             "op-bench/pytorch-cpu:torch2.6.0-py311"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__162340__nn_arg_length-8jrjka_n/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.09680825000395998,
           "exit_code": 0,
           "stderr": "",
@@ -291,7 +291,7 @@
             "--label",
             "op-bench.task-id=pytorch__162340__nn_arg_length",
             "--volume",
-            "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__162340__nn_arg_length-8jrjka_n/workspace:/workspace",
+            "<redacted-user-path>",
             "--workdir",
             "/workspace",
             "op-bench/pytorch-cpu:torch2.6.0-py311",
@@ -299,7 +299,7 @@
             "-f",
             "/dev/null"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__162340__nn_arg_length-8jrjka_n/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.20328341600543354,
           "exit_code": 0,
           "stderr": "",
@@ -316,7 +316,7 @@
             "python",
             "--version"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__162340__nn_arg_length-8jrjka_n/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.049217708001378924,
           "exit_code": 0,
           "stderr": "",
@@ -334,7 +334,7 @@
             "-c",
             "import torch; print(torch.__version__); print(torch.__file__)"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__162340__nn_arg_length-8jrjka_n/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 1.2741445410065353,
           "exit_code": 0,
           "stderr": "",
@@ -345,9 +345,9 @@
           "command": [
             "git",
             "apply",
-            "/Users/bilibili/dev/op_bench/tasks/pytorch/162340_nn_arg_length/artifacts/hidden_test.patch"
+            "tasks/pytorch/162340_nn_arg_length/artifacts/hidden_test.patch"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__162340__nn_arg_length-8jrjka_n/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.013795374994515441,
           "exit_code": 0,
           "stderr": "",
@@ -366,7 +366,7 @@
             "import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('.')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))",
             "{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/nn/modules/conv.py\", \"torch/nn/modules/utils.py\", \"torch/testing/_internal/common_nn.py\", \"torch/testing/_internal/common_mkldnn.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__162340__nn_arg_length-8jrjka_n/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 2.244250124989776,
           "exit_code": 0,
           "stderr": "",
@@ -384,7 +384,7 @@
             "test/nn/test_pooling.py",
             "TestPoolingNN.test_max_unpool3d_input_check"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__162340__nn_arg_length-8jrjka_n/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 2.1891026670055,
           "exit_code": 1,
           "stderr": "E\n======================================================================\nERROR: test_max_unpool3d_input_check (__main__.TestPoolingNN.test_max_unpool3d_input_check)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/tmp/op_bench_runtime/site-packages/torch/testing/_internal/common_utils.py\", line 3108, in wrapper\n    method(*args, **kwargs)\n  File \"/workspace/test/nn/test_pooling.py\", line 485, in test_max_unpool3d_input_check\n    F.max_unpool3d(x, torch.zeros(x.shape, dtype=int), [1, 1])\n  File \"/tmp/op_bench_runtime/site-packages/torch/nn/functional.py\", line 1073, in max_unpool3d\n    return torch._C._nn.max_unpool3d(input, indices, output_size, _stride, padding)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nRuntimeError: There should be exactly three elements (depth, height, width) in output_size, but got 2 elements.\n\nTo execute this test, run the following from the base repo dir:\n    python test/nn/test_pooling.py TestPoolingNN.test_max_unpool3d_input_check\n\nThis message can be suppressed by setting PYTORCH_PRINT_REPRO_ON_FAILURE=0\n\n----------------------------------------------------------------------\nRan 1 test in 0.003s\n\nFAILED (errors=1)\n",
@@ -403,7 +403,7 @@
             "import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('.')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))",
             "{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/nn/modules/conv.py\", \"torch/nn/modules/utils.py\", \"torch/testing/_internal/common_nn.py\", \"torch/testing/_internal/common_mkldnn.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__162340__nn_arg_length-8jrjka_n/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 1.1655232920020353,
           "exit_code": 0,
           "stderr": "",
@@ -421,7 +421,7 @@
             "test/nn/test_pooling.py",
             "TestPoolingNN.test_adaptive_pooling_size_none"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__162340__nn_arg_length-8jrjka_n/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 2.112512958003208,
           "exit_code": 0,
           "stderr": ".\n----------------------------------------------------------------------\nRan 1 test in 0.002s\n\nOK\n",
@@ -477,14 +477,14 @@
           "command": [
             "op_bench",
             "copy-source-snapshot",
-            "/Users/bilibili/dev/op_bench/.op_bench_cache/sources/pytorch/pytorch/618efe837d71c179a96dc851ca08ebd9b10cae1f/source",
-            "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__163961__dataloader_subset-f0eforqx/workspace"
+            "sources/pytorch/pytorch/618efe837d71c179a96dc851ca08ebd9b10cae1f/source",
+            "<redacted-user-path>"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__163961__dataloader_subset-f0eforqx",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 4.966481457988266,
           "exit_code": 0,
           "stderr": "",
-          "stdout": "copied source snapshot from /Users/bilibili/dev/op_bench/.op_bench_cache/sources/pytorch/pytorch/618efe837d71c179a96dc851ca08ebd9b10cae1f/source\n",
+          "stdout": "copied source snapshot from sources/pytorch/pytorch/618efe837d71c179a96dc851ca08ebd9b10cae1f/source\n",
           "timed_out": false
         },
         {
@@ -494,7 +494,7 @@
             "inspect",
             "op-bench/pytorch-cpu:torch2.6.0-py311"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__163961__dataloader_subset-f0eforqx/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.015916125004878268,
           "exit_code": 0,
           "stderr": "",
@@ -517,7 +517,7 @@
             "--label",
             "op-bench.task-id=pytorch__163961__dataloader_subset",
             "--volume",
-            "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__163961__dataloader_subset-f0eforqx/workspace:/workspace",
+            "<redacted-user-path>",
             "--workdir",
             "/workspace",
             "op-bench/pytorch-cpu:torch2.6.0-py311",
@@ -525,7 +525,7 @@
             "-f",
             "/dev/null"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__163961__dataloader_subset-f0eforqx/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.14778045800630935,
           "exit_code": 0,
           "stderr": "",
@@ -542,7 +542,7 @@
             "python",
             "--version"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__163961__dataloader_subset-f0eforqx/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.039068666999810375,
           "exit_code": 0,
           "stderr": "",
@@ -560,7 +560,7 @@
             "-c",
             "import torch; print(torch.__version__); print(torch.__file__)"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__163961__dataloader_subset-f0eforqx/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 1.2204551659960998,
           "exit_code": 0,
           "stderr": "",
@@ -571,9 +571,9 @@
           "command": [
             "git",
             "apply",
-            "/Users/bilibili/dev/op_bench/tasks/pytorch/163961_dataloader_subset/artifacts/hidden_test.patch"
+            "tasks/pytorch/163961_dataloader_subset/artifacts/hidden_test.patch"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__163961__dataloader_subset-f0eforqx/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.008640917003504,
           "exit_code": 0,
           "stderr": "",
@@ -592,7 +592,7 @@
             "import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('.')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))",
             "{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/utils/data/dataset.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__163961__dataloader_subset-f0eforqx/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 1.8304986669973005,
           "exit_code": 0,
           "stderr": "",
@@ -610,7 +610,7 @@
             "test/test_dataloader.py",
             "TestDataLoader.test_subset_override_getitem_requires_getitems"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__163961__dataloader_subset-f0eforqx/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 2.036991708999267,
           "exit_code": 1,
           "stderr": "/workspace/test/test_dataloader.py:77: UserWarning: psutil not found. Some critical data loader tests relying on it (e.g., TestDataLoader.test_proper_exit) will not run.\n  warnings.warn(err_msg)\n/workspace/test/test_dataloader.py:77: UserWarning: psutil not found. Some critical data loader tests relying on it (e.g., TestDataLoader.test_proper_exit) will not run.\n  warnings.warn(err_msg)\nF\n======================================================================\nFAIL: test_subset_override_getitem_requires_getitems (__main__.TestDataLoader.test_subset_override_getitem_requires_getitems)\nTest that subclassing Subset and overriding only __getitem__ without\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/tmp/op_bench_runtime/site-packages/torch/testing/_internal/common_utils.py\", line 3108, in wrapper\n    method(*args, **kwargs)\n  File \"/workspace/test/test_dataloader.py\", line 2580, in test_subset_override_getitem_requires_getitems\n    with self.assertRaises(NotImplementedError) as cm:\nAssertionError: NotImplementedError not raised\n\nTo execute this test, run the following from the base repo dir:\n    python test/test_dataloader.py TestDataLoader.test_subset_override_getitem_requires_getitems\n\nThis message can be suppressed by setting PYTORCH_PRINT_REPRO_ON_FAILURE=0\n\n----------------------------------------------------------------------\nRan 1 test in 0.002s\n\nFAILED (failures=1)\n",
@@ -629,7 +629,7 @@
             "import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('.')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))",
             "{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/utils/data/dataset.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__163961__dataloader_subset-f0eforqx/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 1.083310749992961,
           "exit_code": 0,
           "stderr": "",
@@ -647,7 +647,7 @@
             "test/test_dataloader.py",
             "TestDataLoader.test_subset_custom_getitem"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__163961__dataloader_subset-f0eforqx/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 2.2243813749955734,
           "exit_code": 0,
           "stderr": "/workspace/test/test_dataloader.py:77: UserWarning: psutil not found. Some critical data loader tests relying on it (e.g., TestDataLoader.test_proper_exit) will not run.\n  warnings.warn(err_msg)\n/workspace/test/test_dataloader.py:77: UserWarning: psutil not found. Some critical data loader tests relying on it (e.g., TestDataLoader.test_proper_exit) will not run.\n  warnings.warn(err_msg)\n.\n----------------------------------------------------------------------\nRan 1 test in 0.003s\n\nOK\n",
@@ -703,14 +703,14 @@
           "command": [
             "op_bench",
             "copy-source-snapshot",
-            "/Users/bilibili/dev/op_bench/.op_bench_cache/sources/pytorch/pytorch/d4de871adfac825e12bae9068e1c8433bd58455d/source",
-            "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__168295__autograd_create_graph-ydx65u4g/workspace"
+            "sources/pytorch/pytorch/d4de871adfac825e12bae9068e1c8433bd58455d/source",
+            "<redacted-user-path>"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__168295__autograd_create_graph-ydx65u4g",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 5.002755209003226,
           "exit_code": 0,
           "stderr": "",
-          "stdout": "copied source snapshot from /Users/bilibili/dev/op_bench/.op_bench_cache/sources/pytorch/pytorch/d4de871adfac825e12bae9068e1c8433bd58455d/source\n",
+          "stdout": "copied source snapshot from sources/pytorch/pytorch/d4de871adfac825e12bae9068e1c8433bd58455d/source\n",
           "timed_out": false
         },
         {
@@ -720,7 +720,7 @@
             "inspect",
             "op-bench/pytorch-cpu:torch2.6.0-py311"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__168295__autograd_create_graph-ydx65u4g/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.01571516699914355,
           "exit_code": 0,
           "stderr": "",
@@ -743,7 +743,7 @@
             "--label",
             "op-bench.task-id=pytorch__168295__autograd_create_graph",
             "--volume",
-            "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__168295__autograd_create_graph-ydx65u4g/workspace:/workspace",
+            "<redacted-user-path>",
             "--workdir",
             "/workspace",
             "op-bench/pytorch-cpu:torch2.6.0-py311",
@@ -751,7 +751,7 @@
             "-f",
             "/dev/null"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__168295__autograd_create_graph-ydx65u4g/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.16765758300607558,
           "exit_code": 0,
           "stderr": "",
@@ -768,7 +768,7 @@
             "python",
             "--version"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__168295__autograd_create_graph-ydx65u4g/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.03971591700974386,
           "exit_code": 0,
           "stderr": "",
@@ -786,7 +786,7 @@
             "-c",
             "import torch; print(torch.__version__); print(torch.__file__)"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__168295__autograd_create_graph-ydx65u4g/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 1.2691485000104876,
           "exit_code": 0,
           "stderr": "",
@@ -797,9 +797,9 @@
           "command": [
             "git",
             "apply",
-            "/Users/bilibili/dev/op_bench/tasks/pytorch/168295_autograd_create_graph/artifacts/hidden_test.patch"
+            "tasks/pytorch/168295_autograd_create_graph/artifacts/hidden_test.patch"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__168295__autograd_create_graph-ydx65u4g/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.008321083994815126,
           "exit_code": 0,
           "stderr": "",
@@ -818,7 +818,7 @@
             "import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('.')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))",
             "{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/autograd/__init__.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__168295__autograd_create_graph-ydx65u4g/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 1.9765608750021784,
           "exit_code": 0,
           "stderr": "",
@@ -836,7 +836,7 @@
             "test/test_autograd.py",
             "TestAutograd.test_unused_grad_requires_grad_with_materialize"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__168295__autograd_create_graph-ydx65u4g/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 2.40142841701163,
           "exit_code": 1,
           "stderr": "F\n======================================================================\nFAIL: test_unused_grad_requires_grad_with_materialize (__main__.TestAutograd.test_unused_grad_requires_grad_with_materialize)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/tmp/op_bench_runtime/site-packages/torch/testing/_internal/common_utils.py\", line 3108, in wrapper\n    method(*args, **kwargs)\n  File \"/workspace/test/test_autograd.py\", line 416, in test_unused_grad_requires_grad_with_materialize\n    self.assertFalse(g[1].requires_grad)\nAssertionError: True is not false\n\nTo execute this test, run the following from the base repo dir:\n    python test/test_autograd.py TestAutograd.test_unused_grad_requires_grad_with_materialize\n\nThis message can be suppressed by setting PYTORCH_PRINT_REPRO_ON_FAILURE=0\n\n----------------------------------------------------------------------\nRan 1 test in 0.002s\n\nFAILED (failures=1)\n",
@@ -855,7 +855,7 @@
             "import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('.')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))",
             "{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/autograd/__init__.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__168295__autograd_create_graph-ydx65u4g/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 1.142300666004303,
           "exit_code": 0,
           "stderr": "",
@@ -873,7 +873,7 @@
             "test/test_autograd.py",
             "TestAutograd.test_legacy_function_deprecation_exception"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__168295__autograd_create_graph-ydx65u4g/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 2.397524957996211,
           "exit_code": 0,
           "stderr": "/workspace/test/test_autograd.py:432: DeprecationWarning: <class '__main__.TestAutograd.test_legacy_function_deprecation_exception.<locals>.MyFunction'> should not be instantiated. Methods on autograd functions are all static, so you should invoke them on the class itself. Instantiating an autograd function will raise an error in a future version of PyTorch.\n  MyFunction()(torch.randn(3, 4))\n.\n----------------------------------------------------------------------\nRan 1 test in 0.002s\n\nOK\n",
@@ -929,14 +929,14 @@
           "command": [
             "op_bench",
             "copy-source-snapshot",
-            "/Users/bilibili/dev/op_bench/.op_bench_cache/sources/pytorch/pytorch/6926710adf697e9d2160d43c4a96212dd27ceae0/source",
-            "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__161488__lbfgs_wolfe-b936i3v7/workspace"
+            "sources/pytorch/pytorch/6926710adf697e9d2160d43c4a96212dd27ceae0/source",
+            "<redacted-user-path>"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__161488__lbfgs_wolfe-b936i3v7",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 5.043046417005826,
           "exit_code": 0,
           "stderr": "",
-          "stdout": "copied source snapshot from /Users/bilibili/dev/op_bench/.op_bench_cache/sources/pytorch/pytorch/6926710adf697e9d2160d43c4a96212dd27ceae0/source\n",
+          "stdout": "copied source snapshot from sources/pytorch/pytorch/6926710adf697e9d2160d43c4a96212dd27ceae0/source\n",
           "timed_out": false
         },
         {
@@ -946,7 +946,7 @@
             "inspect",
             "op-bench/pytorch-cpu:torch2.6.0-py311"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__161488__lbfgs_wolfe-b936i3v7/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.01361562499369029,
           "exit_code": 0,
           "stderr": "",
@@ -969,7 +969,7 @@
             "--label",
             "op-bench.task-id=pytorch__161488__lbfgs_wolfe",
             "--volume",
-            "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__161488__lbfgs_wolfe-b936i3v7/workspace:/workspace",
+            "<redacted-user-path>",
             "--workdir",
             "/workspace",
             "op-bench/pytorch-cpu:torch2.6.0-py311",
@@ -977,7 +977,7 @@
             "-f",
             "/dev/null"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__161488__lbfgs_wolfe-b936i3v7/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.1505115830077557,
           "exit_code": 0,
           "stderr": "",
@@ -994,7 +994,7 @@
             "python",
             "--version"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__161488__lbfgs_wolfe-b936i3v7/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.044811208004830405,
           "exit_code": 0,
           "stderr": "",
@@ -1012,7 +1012,7 @@
             "-c",
             "import torch; print(torch.__version__); print(torch.__file__)"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__161488__lbfgs_wolfe-b936i3v7/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 1.2086316249915399,
           "exit_code": 0,
           "stderr": "",
@@ -1023,9 +1023,9 @@
           "command": [
             "git",
             "apply",
-            "/Users/bilibili/dev/op_bench/tasks/pytorch/161488_lbfgs_wolfe/artifacts/hidden_test.patch"
+            "tasks/pytorch/161488_lbfgs_wolfe/artifacts/hidden_test.patch"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__161488__lbfgs_wolfe-b936i3v7/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.007156833991757594,
           "exit_code": 0,
           "stderr": "",
@@ -1044,7 +1044,7 @@
             "import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('.')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))",
             "{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/optim/lbfgs.py\", \"torch/optim/optimizer.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__161488__lbfgs_wolfe-b936i3v7/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 1.995192041998962,
           "exit_code": 0,
           "stderr": "",
@@ -1062,7 +1062,7 @@
             "test/test_optim.py",
             "TestOptimRenewedCPU.test_step_iteration_float32_cpu_float32"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__161488__lbfgs_wolfe-b936i3v7/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 2.4216169999999693,
           "exit_code": 1,
           "stderr": "F\n======================================================================\nFAIL: test_step_iteration_float32_cpu_float32 (__main__.TestOptimRenewedCPU.test_step_iteration_float32_cpu_float32)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/tmp/op_bench_runtime/site-packages/torch/testing/_internal/common_utils.py\", line 3108, in wrapper\n    method(*args, **kwargs)\n  File \"/tmp/op_bench_runtime/site-packages/torch/testing/_internal/common_device_type.py\", line 460, in instantiated_test\n    result = test(self, **param_kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/test/test_optim.py\", line 2334, in test_step_iteration\n    self.assertEqual(counter, 6)\n  File \"/tmp/op_bench_runtime/site-packages/torch/testing/_internal/common_utils.py\", line 4016, in assertEqual\n    raise error_metas.pop()[0].to_error(\nAssertionError: Scalars are not equal!\n\nExpected 6 but got 27.\nAbsolute difference: 21\nRelative difference: 3.5\n\nTo execute this test, run the following from the base repo dir:\n    python test/test_optim.py TestOptimRenewedCPU.test_step_iteration_float32_cpu_float32\n\nThis message can be suppressed by setting PYTORCH_PRINT_REPRO_ON_FAILURE=0\n\n----------------------------------------------------------------------\nRan 1 test in 0.012s\n\nFAILED (failures=1)\n",
@@ -1081,7 +1081,7 @@
             "import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('.')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))",
             "{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/optim/lbfgs.py\", \"torch/optim/optimizer.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__161488__lbfgs_wolfe-b936i3v7/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 1.16638670800603,
           "exit_code": 0,
           "stderr": "",
@@ -1099,7 +1099,7 @@
             "test/test_optim.py",
             "TestOptimRenewedCPU.test_non_empty_state_LBFGS_cpu_float32"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__161488__lbfgs_wolfe-b936i3v7/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 2.3763694160006708,
           "exit_code": 0,
           "stderr": "/pytorch/third_party/ideep/mkl-dnn/src/cpu/aarch64/xbyak_aarch64/src/util_impl_linux.h, 451: Can't read MIDR_EL1 sysfs entry\n.\n----------------------------------------------------------------------\nRan 1 test in 0.007s\n\nOK\n",
@@ -1155,14 +1155,14 @@
           "command": [
             "op_bench",
             "copy-source-snapshot",
-            "/Users/bilibili/dev/op_bench/.op_bench_cache/sources/pytorch/pytorch/6f9ffaa9916c02fa2aaae453db579a942b354708/source",
-            "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__150975__autograd_backward_inputs-zpkelpa_/workspace"
+            "sources/pytorch/pytorch/6f9ffaa9916c02fa2aaae453db579a942b354708/source",
+            "<redacted-user-path>"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__150975__autograd_backward_inputs-zpkelpa_",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 3.9670885000086855,
           "exit_code": 0,
           "stderr": "",
-          "stdout": "copied source snapshot from /Users/bilibili/dev/op_bench/.op_bench_cache/sources/pytorch/pytorch/6f9ffaa9916c02fa2aaae453db579a942b354708/source\n",
+          "stdout": "copied source snapshot from sources/pytorch/pytorch/6f9ffaa9916c02fa2aaae453db579a942b354708/source\n",
           "timed_out": false
         },
         {
@@ -1172,7 +1172,7 @@
             "inspect",
             "op-bench/pytorch-cpu:torch2.6.0-py311"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__150975__autograd_backward_inputs-zpkelpa_/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.01627229199220892,
           "exit_code": 0,
           "stderr": "",
@@ -1195,7 +1195,7 @@
             "--label",
             "op-bench.task-id=pytorch__150975__autograd_backward_inputs",
             "--volume",
-            "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__150975__autograd_backward_inputs-zpkelpa_/workspace:/workspace",
+            "<redacted-user-path>",
             "--workdir",
             "/workspace",
             "op-bench/pytorch-cpu:torch2.6.0-py311",
@@ -1203,7 +1203,7 @@
             "-f",
             "/dev/null"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__150975__autograd_backward_inputs-zpkelpa_/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.16040529101155698,
           "exit_code": 0,
           "stderr": "",
@@ -1220,7 +1220,7 @@
             "python",
             "--version"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__150975__autograd_backward_inputs-zpkelpa_/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.04609849999542348,
           "exit_code": 0,
           "stderr": "",
@@ -1238,7 +1238,7 @@
             "-c",
             "import torch; print(torch.__version__); print(torch.__file__)"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__150975__autograd_backward_inputs-zpkelpa_/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 1.2894357499899343,
           "exit_code": 0,
           "stderr": "",
@@ -1249,9 +1249,9 @@
           "command": [
             "git",
             "apply",
-            "/Users/bilibili/dev/op_bench/tasks/pytorch/150975_autograd_backward_inputs/artifacts/hidden_test.patch"
+            "tasks/pytorch/150975_autograd_backward_inputs/artifacts/hidden_test.patch"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__150975__autograd_backward_inputs-zpkelpa_/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.007131832986488007,
           "exit_code": 0,
           "stderr": "",
@@ -1270,7 +1270,7 @@
             "import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('.')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))",
             "{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/autograd/__init__.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__150975__autograd_backward_inputs-zpkelpa_/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 1.9250504579977132,
           "exit_code": 0,
           "stderr": "",
@@ -1288,7 +1288,7 @@
             "test/test_autograd.py",
             "TestAutograd.test_backward_with_scalar_input"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__150975__autograd_backward_inputs-zpkelpa_/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 2.619238541999948,
           "exit_code": 1,
           "stderr": "E\n======================================================================\nERROR: test_backward_with_scalar_input (__main__.TestAutograd.test_backward_with_scalar_input)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/tmp/op_bench_runtime/site-packages/torch/testing/_internal/common_utils.py\", line 3108, in wrapper\n    method(*args, **kwargs)\n  File \"/workspace/test/test_autograd.py\", line 2513, in test_backward_with_scalar_input\n    out.backward(inputs=x)\n  File \"/tmp/op_bench_runtime/site-packages/torch/_tensor.py\", line 626, in backward\n    torch.autograd.backward(\n  File \"/tmp/op_bench_runtime/site-packages/torch/autograd/__init__.py\", line 328, in backward\n    if inputs is not None and len(inputs) == 0:\n                              ^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/_tensor.py\", line 1132, in __len__\n    raise TypeError(\"len() of a 0-d tensor\")\nTypeError: len() of a 0-d tensor\n\nTo execute this test, run the following from the base repo dir:\n    python test/test_autograd.py TestAutograd.test_backward_with_scalar_input\n\nThis message can be suppressed by setting PYTORCH_PRINT_REPRO_ON_FAILURE=0\n\n----------------------------------------------------------------------\nRan 1 test in 0.002s\n\nFAILED (errors=1)\n",
@@ -1307,7 +1307,7 @@
             "import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('.')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))",
             "{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/autograd/__init__.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__150975__autograd_backward_inputs-zpkelpa_/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 1.1186025420029182,
           "exit_code": 0,
           "stderr": "",
@@ -1325,7 +1325,7 @@
             "test/test_autograd.py",
             "TestAutograd.test_backward_with_nonleaf_inputs"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__150975__autograd_backward_inputs-zpkelpa_/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 2.3395936250017257,
           "exit_code": 0,
           "stderr": "/tmp/op_bench_runtime/site-packages/torch/autograd/graph.py:823: UserWarning: Using backward() with create_graph=True will create a reference cycle between the parameter and its gradient which can cause a memory leak. We recommend using autograd.grad when creating the graph to avoid this. If you have to use this function, make sure to reset the .grad fields of your parameters to None after use to break the cycle and avoid the leak. (Triggered internally at /pytorch/torch/csrc/autograd/engine.cpp:1260.)\n  return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass\n.\n----------------------------------------------------------------------\nRan 1 test in 0.003s\n\nOK\n",
@@ -1381,14 +1381,14 @@
           "command": [
             "op_bench",
             "copy-source-snapshot",
-            "/Users/bilibili/dev/op_bench/.op_bench_cache/sources/pytorch/pytorch/afa78ad08cc748c25e7e82cec02cec4c97c7d3af/source",
-            "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__124385__load_state_dict_prefix-0g9k5zjh/workspace"
+            "sources/pytorch/pytorch/afa78ad08cc748c25e7e82cec02cec4c97c7d3af/source",
+            "<redacted-user-path>"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__124385__load_state_dict_prefix-0g9k5zjh",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 3.8607143749977695,
           "exit_code": 0,
           "stderr": "",
-          "stdout": "copied source snapshot from /Users/bilibili/dev/op_bench/.op_bench_cache/sources/pytorch/pytorch/afa78ad08cc748c25e7e82cec02cec4c97c7d3af/source\n",
+          "stdout": "copied source snapshot from sources/pytorch/pytorch/afa78ad08cc748c25e7e82cec02cec4c97c7d3af/source\n",
           "timed_out": false
         },
         {
@@ -1398,7 +1398,7 @@
             "inspect",
             "op-bench/pytorch-cpu:torch2.6.0-py311"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__124385__load_state_dict_prefix-0g9k5zjh/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.014439499995205551,
           "exit_code": 0,
           "stderr": "",
@@ -1421,7 +1421,7 @@
             "--label",
             "op-bench.task-id=pytorch__124385__load_state_dict_prefix",
             "--volume",
-            "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__124385__load_state_dict_prefix-0g9k5zjh/workspace:/workspace",
+            "<redacted-user-path>",
             "--workdir",
             "/workspace",
             "op-bench/pytorch-cpu:torch2.6.0-py311",
@@ -1429,7 +1429,7 @@
             "-f",
             "/dev/null"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__124385__load_state_dict_prefix-0g9k5zjh/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.15047533399774693,
           "exit_code": 0,
           "stderr": "",
@@ -1446,7 +1446,7 @@
             "python",
             "--version"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__124385__load_state_dict_prefix-0g9k5zjh/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.04102854200755246,
           "exit_code": 0,
           "stderr": "",
@@ -1464,7 +1464,7 @@
             "-c",
             "import torch; print(torch.__version__); print(torch.__file__)"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__124385__load_state_dict_prefix-0g9k5zjh/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 1.2407440829992993,
           "exit_code": 0,
           "stderr": "",
@@ -1475,9 +1475,9 @@
           "command": [
             "git",
             "apply",
-            "/Users/bilibili/dev/op_bench/tasks/pytorch/124385_load_state_dict_prefix/artifacts/hidden_test.patch"
+            "tasks/pytorch/124385_load_state_dict_prefix/artifacts/hidden_test.patch"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__124385__load_state_dict_prefix-0g9k5zjh/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.005874459006008692,
           "exit_code": 0,
           "stderr": "",
@@ -1496,7 +1496,7 @@
             "import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('.')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))",
             "{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/nn/modules/module.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__124385__load_state_dict_prefix-0g9k5zjh/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 1.909914582996862,
           "exit_code": 0,
           "stderr": "",
@@ -1514,7 +1514,7 @@
             "test/nn/test_load_state_dict.py",
             "TestLoadStateDict.test_load_state_dict_with_unexpected_key_swap_True"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__124385__load_state_dict_prefix-0g9k5zjh/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 2.29278995799541,
           "exit_code": 1,
           "stderr": "F\n======================================================================\nFAIL: test_load_state_dict_with_unexpected_key_swap_True (__main__.TestLoadStateDict.test_load_state_dict_with_unexpected_key_swap_True)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/tmp/op_bench_runtime/site-packages/torch/testing/_internal/common_utils.py\", line 3108, in wrapper\n    method(*args, **kwargs)\n  File \"/tmp/op_bench_runtime/site-packages/torch/testing/_internal/common_utils.py\", line 557, in instantiated_test\n    test(self, **param_kwargs)\n  File \"/tmp/op_bench_runtime/site-packages/torch/testing/_internal/common_utils.py\", line 2119, in wrapper\n    fn(*args, **kwargs)\n  File \"/workspace/test/nn/test_load_state_dict.py\", line 474, in test_load_state_dict_with_unexpected_key\n    with self.assertRaisesRegex(RuntimeError, \"Unexpected key\"):\nAssertionError: RuntimeError not raised\n\nTo execute this test, run the following from the base repo dir:\n    python test/nn/test_load_state_dict.py TestLoadStateDict.test_load_state_dict_with_unexpected_key_swap_True\n\nThis message can be suppressed by setting PYTORCH_PRINT_REPRO_ON_FAILURE=0\n\n----------------------------------------------------------------------\nRan 1 test in 0.003s\n\nFAILED (failures=1)\n",
@@ -1533,7 +1533,7 @@
             "import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('.')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))",
             "{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/nn/modules/module.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__124385__load_state_dict_prefix-0g9k5zjh/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 1.2150282920047175,
           "exit_code": 0,
           "stderr": "",
@@ -1551,7 +1551,7 @@
             "test/nn/test_load_state_dict.py",
             "TestLoadStateDict.test_load_state_dict_custom_swap_False"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__124385__load_state_dict_prefix-0g9k5zjh/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 2.0352612499991665,
           "exit_code": 0,
           "stderr": ".\n----------------------------------------------------------------------\nRan 1 test in 0.002s\n\nOK\n",
@@ -1607,14 +1607,14 @@
           "command": [
             "op_bench",
             "copy-source-snapshot",
-            "/Users/bilibili/dev/op_bench/.op_bench_cache/sources/pytorch/pytorch/e3c4d1b7d6ea848f6b5558edf67e66dc28243641/source",
-            "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__143455__set_submodule-vcn4idct/workspace"
+            "sources/pytorch/pytorch/e3c4d1b7d6ea848f6b5558edf67e66dc28243641/source",
+            "<redacted-user-path>"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__143455__set_submodule-vcn4idct",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 3.9149549159919843,
           "exit_code": 0,
           "stderr": "",
-          "stdout": "copied source snapshot from /Users/bilibili/dev/op_bench/.op_bench_cache/sources/pytorch/pytorch/e3c4d1b7d6ea848f6b5558edf67e66dc28243641/source\n",
+          "stdout": "copied source snapshot from sources/pytorch/pytorch/e3c4d1b7d6ea848f6b5558edf67e66dc28243641/source\n",
           "timed_out": false
         },
         {
@@ -1624,7 +1624,7 @@
             "inspect",
             "op-bench/pytorch-cpu:torch2.6.0-py311"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__143455__set_submodule-vcn4idct/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.013665082995430566,
           "exit_code": 0,
           "stderr": "",
@@ -1647,7 +1647,7 @@
             "--label",
             "op-bench.task-id=pytorch__143455__set_submodule",
             "--volume",
-            "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__143455__set_submodule-vcn4idct/workspace:/workspace",
+            "<redacted-user-path>",
             "--workdir",
             "/workspace",
             "op-bench/pytorch-cpu:torch2.6.0-py311",
@@ -1655,7 +1655,7 @@
             "-f",
             "/dev/null"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__143455__set_submodule-vcn4idct/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.1413228750025155,
           "exit_code": 0,
           "stderr": "",
@@ -1672,7 +1672,7 @@
             "python",
             "--version"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__143455__set_submodule-vcn4idct/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.03944054200837854,
           "exit_code": 0,
           "stderr": "",
@@ -1690,7 +1690,7 @@
             "-c",
             "import torch; print(torch.__version__); print(torch.__file__)"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__143455__set_submodule-vcn4idct/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 1.212641917009023,
           "exit_code": 0,
           "stderr": "",
@@ -1701,9 +1701,9 @@
           "command": [
             "git",
             "apply",
-            "/Users/bilibili/dev/op_bench/tasks/pytorch/143455_set_submodule/artifacts/hidden_test.patch"
+            "tasks/pytorch/143455_set_submodule/artifacts/hidden_test.patch"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__143455__set_submodule-vcn4idct/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.007558875004178844,
           "exit_code": 0,
           "stderr": "",
@@ -1722,7 +1722,7 @@
             "import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('.')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))",
             "{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/nn/modules/module.py\", \"torch/testing/_internal/common_nn.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__143455__set_submodule-vcn4idct/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 1.9610797920031473,
           "exit_code": 0,
           "stderr": "",
@@ -1740,7 +1740,7 @@
             "test/test_nn.py",
             "TestNN.test_set_submodule"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__143455__set_submodule-vcn4idct/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 2.4996244580106577,
           "exit_code": 1,
           "stderr": "E\n======================================================================\nERROR: test_set_submodule (__main__.TestNN.test_set_submodule)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/tmp/op_bench_runtime/site-packages/torch/testing/_internal/common_utils.py\", line 3108, in wrapper\n    method(*args, **kwargs)\n  File \"/workspace/test/test_nn.py\", line 1481, in test_set_submodule\n    A.set_submodule(\"net_b.net_c.conv\", new_linear, True)\nTypeError: Module.set_submodule() takes 3 positional arguments but 4 were given\n\nTo execute this test, run the following from the base repo dir:\n    python test/test_nn.py TestNN.test_set_submodule\n\nThis message can be suppressed by setting PYTORCH_PRINT_REPRO_ON_FAILURE=0\n\n----------------------------------------------------------------------\nRan 1 test in 0.002s\n\nFAILED (errors=1)\n",
@@ -1759,7 +1759,7 @@
             "import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('.')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))",
             "{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/nn/modules/module.py\", \"torch/testing/_internal/common_nn.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__143455__set_submodule-vcn4idct/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 1.23453466698993,
           "exit_code": 0,
           "stderr": "",
@@ -1777,7 +1777,7 @@
             "test/test_nn.py",
             "TestNN.test_module_to_argparse"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__143455__set_submodule-vcn4idct/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 2.2779276670044055,
           "exit_code": 0,
           "stderr": ".\n----------------------------------------------------------------------\nRan 1 test in 0.002s\n\nOK\n",

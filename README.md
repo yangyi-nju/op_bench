@@ -76,6 +76,9 @@ PATH=.venv/bin:$PATH python --version
 PATH=.venv/bin:$PATH PYTHONPATH=src python -m unittest discover \
   -s tests -p 'test_*.py'
 
+PATH=.venv/bin:$PATH PYTHONPATH=src python \
+  scripts/check_public_tree_privacy.py
+
 PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/validate_dataset.py \
   datasets/pytorch_v0.7/dataset.json --require-verified
 PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/validate_dataset.py \

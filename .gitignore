@@ -5,6 +5,9 @@
 runs/*/workspaces/
 runs/**/codex_scratch/
 runs/**/claude_scratch/
+runs/**/*.log
+runs/**/*_actions.jsonl
+runs/**/*_last_message.txt
 runs/admission/
 runs/_baseline_cache/
 runs/v0.6_m6_codex_cpu_canary/

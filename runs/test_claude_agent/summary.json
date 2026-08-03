@@ -18,14 +18,14 @@
           "command": [
             "op_bench",
             "copy-source-snapshot",
-            "/Users/bilibili/dev/op_bench/.op_bench_cache/sources/pytorch/pytorch/d4de871adfac825e12bae9068e1c8433bd58455d/source",
-            "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__168295__autograd_create_graph-a15mr1zz/workspace"
+            "sources/pytorch/pytorch/d4de871adfac825e12bae9068e1c8433bd58455d/source",
+            "<redacted-user-path>"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__168295__autograd_create_graph-a15mr1zz",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 5.32462304100045,
           "exit_code": 0,
           "stderr": "",
-          "stdout": "copied source snapshot from /Users/bilibili/dev/op_bench/.op_bench_cache/sources/pytorch/pytorch/d4de871adfac825e12bae9068e1c8433bd58455d/source\n",
+          "stdout": "copied source snapshot from sources/pytorch/pytorch/d4de871adfac825e12bae9068e1c8433bd58455d/source\n",
           "timed_out": false
         },
         {
@@ -35,7 +35,7 @@
             "inspect",
             "op-bench/pytorch-cpu:torch2.6.0-py311"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__168295__autograd_create_graph-a15mr1zz/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.1262043330061715,
           "exit_code": 0,
           "stderr": "",
@@ -58,7 +58,7 @@
             "--label",
             "op-bench.task-id=pytorch__168295__autograd_create_graph",
             "--volume",
-            "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__168295__autograd_create_graph-a15mr1zz/workspace:/workspace",
+            "<redacted-user-path>",
             "--workdir",
             "/workspace",
             "op-bench/pytorch-cpu:torch2.6.0-py311",
@@ -66,7 +66,7 @@
             "-f",
             "/dev/null"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__168295__autograd_create_graph-a15mr1zz/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.22029491599823814,
           "exit_code": 0,
           "stderr": "",
@@ -83,7 +83,7 @@
             "python",
             "--version"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__168295__autograd_create_graph-a15mr1zz/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.04929716700280551,
           "exit_code": 0,
           "stderr": "",
@@ -101,7 +101,7 @@
             "-c",
             "import torch; print(torch.__version__); print(torch.__file__)"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__168295__autograd_create_graph-a15mr1zz/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 1.4486157500068657,
           "exit_code": 0,
           "stderr": "",
@@ -112,9 +112,9 @@
           "command": [
             "git",
             "apply",
-            "/Users/bilibili/dev/op_bench/tasks/pytorch/168295_autograd_create_graph/artifacts/hidden_test.patch"
+            "tasks/pytorch/168295_autograd_create_graph/artifacts/hidden_test.patch"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__168295__autograd_create_graph-a15mr1zz/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.008570125006372109,
           "exit_code": 0,
           "stderr": "",
@@ -133,7 +133,7 @@
             "import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('.')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))",
             "{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/autograd/__init__.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__168295__autograd_create_graph-a15mr1zz/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 2.7192272910033353,
           "exit_code": 0,
           "stderr": "",
@@ -151,7 +151,7 @@
             "test/test_autograd.py",
             "TestAutograd.test_unused_grad_requires_grad_with_materialize"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__168295__autograd_create_graph-a15mr1zz/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 2.6407933329901425,
           "exit_code": 1,
           "stderr": "F\n======================================================================\nFAIL: test_unused_grad_requires_grad_with_materialize (__main__.TestAutograd.test_unused_grad_requires_grad_with_materialize)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/tmp/op_bench_runtime/site-packages/torch/testing/_internal/common_utils.py\", line 3108, in wrapper\n    method(*args, **kwargs)\n  File \"/workspace/test/test_autograd.py\", line 416, in test_unused_grad_requires_grad_with_materialize\n    self.assertFalse(g[1].requires_grad)\nAssertionError: True is not false\n\nTo execute this test, run the following from the base repo dir:\n    python test/test_autograd.py TestAutograd.test_unused_grad_requires_grad_with_materialize\n\nThis message can be suppressed by setting PYTORCH_PRINT_REPRO_ON_FAILURE=0\n\n----------------------------------------------------------------------\nRan 1 test in 0.002s\n\nFAILED (failures=1)\n",
@@ -170,7 +170,7 @@
             "import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('.')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))",
             "{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/autograd/__init__.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__168295__autograd_create_graph-a15mr1zz/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 1.14360387501074,
           "exit_code": 0,
           "stderr": "",
@@ -188,7 +188,7 @@
             "test/test_autograd.py",
             "TestAutograd.test_legacy_function_deprecation_exception"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__168295__autograd_create_graph-a15mr1zz/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 2.464734875000431,
           "exit_code": 0,
           "stderr": "/workspace/test/test_autograd.py:432: DeprecationWarning: <class '__main__.TestAutograd.test_legacy_function_deprecation_exception.<locals>.MyFunction'> should not be instantiated. Methods on autograd functions are all static, so you should invoke them on the class itself. Instantiating an autograd function will raise an error in a future version of PyTorch.\n  MyFunction()(torch.randn(3, 4))\n.\n----------------------------------------------------------------------\nRan 1 test in 0.001s\n\nOK\n",
