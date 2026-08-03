@@ -2,9 +2,15 @@
 
 Release：`opbench-v0.7.0`
 
-状态：Completed
+状态：历史 25-task 冻结已完成；50-task 质量版正在开发
 
 日期：2026-07-28
+
+> 本卡片记录 2026-07-28 的可复现 25-task 历史冻结，不是当前 v0.7
+> 质量扩展的最终 Dataset Card。当前发布合同要求恰好 50 条任务（14 retained +
+> 36 new/replacement）和 122 个 fresh logical Attempts；在这些门禁完成前，旧
+> Hash 不得用于宣称 50-task v0.7 已完成。参见
+> [质量扩展发布合同](quality_expansion.md)。
 
 ## 1. 概览
 

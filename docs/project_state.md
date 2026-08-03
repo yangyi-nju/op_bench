@@ -1,17 +1,17 @@
 # OpBench Project State
 
-更新时间：2026-07-28（Asia/Shanghai）
+更新时间：2026-08-03（Asia/Shanghai）
 
 ## Current baseline
 
 | 项目 | 当前值 |
 | --- | --- |
-| 当前稳定版本 | v0.7 Completed |
-| 数据集 | `opbench-v0.7.0`：25-task cumulative、6-task Boundary、8-task Precision，全部 verified |
-| 正式实验 | v0.7 Validation：18/18 valid，14 resolved，3 F2P failed，1 no patch，0 accepted-cohort retries；v0.6/v0.5 结果保留为历史事实 |
-| 当前开发版本 | v0.8 Device/API Compatibility（Planned） |
-| 当前目标 | 增加 Compatibility Slice 并冻结 Evaluation/Scoring Specification RC |
-| 当前阶段 | v0.7 P1–P5 与 868/868 最终 release gate 已通过；v0.8 尚未开始 |
+| 当前稳定基线 | v0.7 历史 25-task 冻结（Completed，Hash 与实验结果保持有效） |
+| 当前开发版本 | v0.7 50-task 质量扩展（In Progress） |
+| 数据集目标 | 恰好 50 条：14 retained historical + 36 new/replacement；p8 当前正式接纳 6/36，因此正式进度为 20/50 |
+| 实验目标 | 36 条新增/替换各 3 次、14 条 retained 各 1 次，共 122 个 fresh logical Attempts；旧 18-attempt Boundary Validation 仅作历史证据 |
+| 当前目标 | 完成质量优先数据扩充、真实 Admission、Agent 实验和最终发布审计；原 v0.8 Device/API 扩充已合并回本版本 |
+| 当前阶段 | p7 历史重新准入已保留 14 条；p8 新任务正式 verified 6/36，剩余任务继续构建与 Admission |
 | v0.7 P1 产品代码 | Candidate/Decision/FactoryAdmission/DatasetFreeze 合同、B1–B5 taxonomy、确定性筛选、证据门状态机、不可变 Artifact Store、Validator/Freeze/Screening CLI 与 synthetic fixtures 已实现 |
 | v0.7 P2 产品代码 | Matched-runtime Compatibility 合同/Schema、真实 probe/validation CLI、fail-closed promotion、两个 digest-pinned wheel 镜像和 task-local compatibility/Admission evidence 已实现；#129154/#144073 均恢复为 verified |
 | v0.7 P3 数据资产 | 10 条真实候选的确定性漏斗、6 条覆盖 B1–B5 的 verified Boundary Task、6 份 Compatibility/Admission/review 和 6 条完整 8 阶段 Factory chain 已冻结 |
@@ -59,16 +59,19 @@
 | V07-P3 | Passed | 真实 Boundary Task 制作、Compatibility、Admission 与 Factory Promotion | 10 条候选为 6 accepted / 2 deferred / 2 rejected，#147433 人工判为上游 revert；6 条任务覆盖 B1–B5，合计 36/36 compatibility checks，逐条 Baseline F2P 0/1/P2P 1/1、Gold F2P 1/1/P2P 1/1，人工 review 与 8 阶段 Factory chain 均 verified；90 focused、53 final focused、818 full tests 通过，详见 `docs/v0.7/boundary_tasks.md` |
 | V07-P4 | Passed | Dataset Freeze、Release Composition 与真实 Codex Validation Cohort | cumulative/boundary/precision 为 25/6/8 verified Tasks；5 cohorts、18/18 valid、14 resolved、3 F2P failed、1 no patch、0 accepted-cohort retry；五个 root fresh Integrity 14/14、resource ownership/cleanup 和 18 traces 全部通过；68 focused、865 full tests、确定性重建、compile/JSON/Dataset/diff gates 通过，详见 `docs/v0.7/validation_report.md` |
 | V07-P5 | Passed | Dataset Card、双语入口、完成记录与可复现发布门 | `opbench-v0.7.0` 的三份 Dataset hash、18/18 cohort 与 non-leaderboard 边界已冻结；全部 generated Artifact 逐字节重建；最终 868/868 tests 及 compile/JSON/Dataset/link/safety/diff gates 通过 |
-| V07-RELEASE | Passed | v0.7 release closure | P1–P5 全部 Passed；25/6/8 verified Dataset、B1–B5、P1–P5、真实 Codex Validation 和公开文档合同一致 |
+| V07-LEGACY-RELEASE | Passed | 2026-07-28 历史 v0.7 freeze | P1–P5 全部 Passed；25/6/8 verified Dataset、B1–B5、P1–P5、真实 Codex Validation 和公开文档合同一致 |
+| V07-QX-READMISSION | Passed | 旧 25 条任务质量重新准入 | 14 retained、10 retired、1 deferred，证据见 `factory/v0.7/p7/historical_readmission.json` |
+| V07-QX-BUILD | In Progress | 36 条新增/替换任务质量构建与 Admission | `factory/v0.7/p8/accepted_tasks.json` 达到 36/36，且每条 Prompt、复杂度、源码、Runtime、F2P/P2P 和 Admission 证据有效 |
+| V07-QX-EXPERIMENT | Pending | 50-task fresh Agent 实验 | 122/122 logical Attempts 有效并可由 ledger/summary 重建 |
+| V07-QX-RELEASE | Pending | 50-task v0.7 最终发布 | Dataset 恰好 50 条；全量 replay、Integrity、隐私、测试、文档和最终 Hash 审计通过 |
 
 ## Next actions
 
-1. 按 v0.8 既定范围筛选 4–6 条 Device/API Compatibility Task；
-2. 在不改写 v0.7 历史 Artifact 的前提下冻结 Evaluation/Scoring
-   Specification RC；
-3. 明确 Operator Core、Legacy Regression、Budget、Retry、Aggregation
-   和排除规则；
-4. 正式跨 Agent 与 Feedback Ablation 继续留在 v0.9。
+1. 完成剩余新增/替换候选的行为型 Prompt、F2P/P2P、精确源码和复杂度复核；
+2. 在冻结 Runtime 上完成每条真实 Baseline/Gold Admission，达到 36/36；
+3. 冻结 50-task Dataset 并执行 122-attempt fresh Agent 实验；
+4. 重建报告并通过全量 replay、Integrity、隐私、JSON、文档和测试门禁；
+5. 正式跨 Agent 与 Feedback Ablation 继续留在后续研究版本。
 
 ## Status rules
 

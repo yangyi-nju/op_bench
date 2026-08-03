@@ -2,7 +2,14 @@
 
 日期：2026-07-17
 
-状态：Completed；P1–P5 与最终发布门全部通过
+状态：历史 25-task 基线已完成；50-task 质量扩展正在开发
+
+> 版本边界（2026-08-03）：本文主体记录 2026-07-28 已冻结的旧 v0.7
+> Factory/Boundary 发布，相关 Hash 与实验结论保持有效，但它不再是当前 v0.7 的
+> 最终完成条件。当前权威目标是
+> [50-task 质量扩展发布合同](quality_expansion.md)：14 条历史保留任务加 36 条
+> 新增或替换任务，并完成 122 个 fresh logical Attempts。下文的 21–25 条目标与
+> “Completed”段落应理解为历史里程碑证据。
 
 ## 1. 版本定位
 
@@ -463,4 +470,7 @@ v0.7 的以下 Completed 条件已全部满足：
 
 ## 16. 后续边界
 
-v0.8 在已验证的平台和数据工厂上增加 Device/API Compatibility Slice，并冻结 Evaluation/Scoring Specification RC。v0.9 再冻结 Dataset、Agent、Prompt、Feedback、Budget、Hardware 和 Repeat，开展正式多 Agent 比较与 Feedback Ablation。
+原定 v0.8 的 Device/API 数据扩充已并入当前 v0.7 质量扩展，并统一使用
+`docs/v0.7/quality_expansion.md` 的多轴 Taxonomy、Prompt、复杂度和 Admission
+合同。完整 Agent 输出/隐藏推理 trace、正式跨 Agent 比较与 Feedback Ablation
+仍留给后续研究版本。

@@ -7,6 +7,7 @@ import unittest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DATASET_CARD = REPO_ROOT / "docs" / "v0.7" / "dataset_card.md"
+QUALITY_EXPANSION = REPO_ROOT / "docs" / "v0.7" / "quality_expansion.md"
 SUMMARY_PATHS = {
     "cumulative": REPO_ROOT / "datasets" / "pytorch_v0.7" / "summary.json",
     "boundary": (
@@ -160,17 +161,33 @@ class V07ReleaseDocsTests(unittest.TestCase):
                 with self.subTest(path=path.name, forbidden=forbidden):
                     self.assertNotIn(forbidden, text)
 
-    def test_v07_completion_records_freeze_release_evidence(self) -> None:
+    def test_v07_records_preserve_freeze_and_mark_expansion_in_progress(self) -> None:
         records = {
             path: path.read_text(encoding="utf-8")
             for path in COMPLETION_RECORDS
         }
-        self.assertIn("状态：Completed", records[COMPLETION_RECORDS[0]])
+        expansion = QUALITY_EXPANSION.read_text(encoding="utf-8")
+        self.assertIn("50-task 质量扩展正在开发", records[COMPLETION_RECORDS[0]])
         self.assertIn(
-            "当前稳定版本 | v0.7 Completed",
+            "当前开发版本 | v0.7 50-task 质量扩展（In Progress）",
             records[COMPLETION_RECORDS[1]],
         )
-        self.assertIn("## v0.7 - Completed", records[COMPLETION_RECORDS[3]])
+        self.assertIn("| v0.7 | 正在开发 |", records[COMPLETION_RECORDS[2]])
+        self.assertIn(
+            "## v0.7 - In development (50-task quality expansion)",
+            records[COMPLETION_RECORDS[3]],
+        )
+        for required in (
+            "14 retained historical tasks",
+            "36 new or replacement tasks",
+            "122",
+            "AgentTaskView",
+            "medium",
+            "hard",
+            "Prompt",
+        ):
+            with self.subTest(expansion_required=required):
+                self.assertIn(required, expansion)
 
         for path, text in records.items():
             for required in (

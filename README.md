@@ -8,7 +8,7 @@ v0.1 established the isolated replay/evaluation loop. v0.2 added asset registrie
 
 The v0.6 platform is **Completed** across M1–M7: strict versioned contracts, one authoritative workspace and immutable patch, a server-authoritative CLI/MCP action service, deterministic Attempt/trajectory/evaluation/artifact semantics, versioned Runtime Profiles, exact Attempt-owned Local/Docker/Remote resources, conformance and legacy replay, a process-isolated canonical Codex Adapter with resume and Integrity verification, and an executable public Demo/documentation surface. The recovered exact target passed representative Remote CPU, CUDA Overlay, and CUDA Kernel canaries. The complete frozen replay passed all 17 baseline + 17 gold + 51 historical final-patch cases with zero failures, blocks, or differences. A subsequent [real MCP full experiment](docs/v0.6/experiment_report.md) completed 51/51 valid Attempts with 35 resolved, 15 F2P failures, one P2P regression, zero infrastructure-invalid results, and zero retries. These are descriptive platform-validation results, not a causal comparison with v0.5. See the [v0.6 release notes](docs/v0.6/release_notes.md).
 
-The current release is `opbench-v0.7.0`: a reproducible Dataset Factory release with a [25-task cumulative Dataset](datasets/pytorch_v0.7/dataset.json), [6-task Boundary Slice](datasets/pytorch_v0.7_boundary/dataset.json), and [8-task Precision Slice](datasets/pytorch_v0.7_precision/dataset.json). All Tasks are verified, the Boundary Slice spans B1–B5, and the Precision Slice spans P1–P5. Its 18-attempt real Codex validation produced 14 resolved, three F2P failures, one no-patch outcome, and zero accepted-cohort retries. This is descriptive Task/platform evidence with a strict **non-leaderboard** scope, not a formal multi-Agent ranking or causal claim. See the [Dataset Card](docs/v0.7/dataset_card.md), [validation report](docs/v0.7/validation_report.md), [global project plan](docs/project_plan.md), and [current project state](docs/project_state.md).
+The current stable historical freeze is `opbench-v0.7.0`: a reproducible Dataset Factory release with a [25-task cumulative Dataset](datasets/pytorch_v0.7/dataset.json), [6-task Boundary Slice](datasets/pytorch_v0.7_boundary/dataset.json), and [8-task Precision Slice](datasets/pytorch_v0.7_precision/dataset.json). All Tasks are verified, the Boundary Slice spans B1–B5, and the Precision Slice spans P1–P5. Its 18-attempt real Codex validation produced 14 resolved, three F2P failures, one no-patch outcome, and zero accepted-cohort retries. This is descriptive Task/platform evidence with a strict **non-leaderboard** scope, not a formal multi-Agent ranking or causal claim. The active v0.7 work is a [quality-first 50-task expansion](docs/v0.7/quality_expansion.md); it remains in development and does not reuse the 25-task freeze as completion evidence. See the [Dataset Card](docs/v0.7/dataset_card.md), [validation report](docs/v0.7/validation_report.md), [global project plan](docs/project_plan.md), and [current project state](docs/project_state.md).
 
 ## What The Current Code Contains
 
@@ -54,6 +54,7 @@ Development-only experiment adapters have been removed from the public v0.1 surf
 | `docs/v0.6/` | v0.6 standardized Agent evaluation platform design, implementation plan, and acceptance matrix. |
 | `docs/v0.6/experiment_report.md` | v0.6 real MCP full experiment: 51 valid Attempts, outcomes, traces, and integrity evidence. |
 | `docs/v0.7/design.md` | v0.7 Dataset Factory, Boundary Slice, and matched-runtime recovery design. |
+| `docs/v0.7/quality_expansion.md` | Active 50-task quality, taxonomy, Admission, and 122-attempt release contract. |
 | `docs/v0.7/dataset_card.md` | v0.7 release identity, Dataset provenance, taxonomy, validation scope, and limitations. |
 | `docs/v0.7/validation_report.md` | v0.7 18-Attempt real Codex validation and integrity evidence. |
 | `docs/v0.5/design.md` | v0.5 dimension taxonomy and extended evaluation metrics. |
@@ -294,6 +295,7 @@ Platform development follows the stable [v0.6 design](docs/v0.6/design.md), [imp
 - [v0.6 real MCP Agent experiment](docs/v0.6/mcp_agent_experiment.md)
 - [v0.6 real MCP Agent experiment verification](docs/v0.6/mcp_agent_experiment_verification.md)
 - [v0.7 Dataset Factory and Boundary design](docs/v0.7/design.md)
+- [v0.7 50-task quality expansion contract](docs/v0.7/quality_expansion.md)
 - [v0.7 Dataset Card](docs/v0.7/dataset_card.md)
 - [v0.7 validation report](docs/v0.7/validation_report.md)
 - [v0.5 design](docs/v0.5/design.md)

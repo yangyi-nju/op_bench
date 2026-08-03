@@ -8,7 +8,7 @@ v0.1 建立隔离 replay/evaluation 闭环，v0.2 加入资产 registry 和正�
 
 v0.6 平台现已 **Completed**：M1～M7 的严格版本化合同、唯一 Authoritative Workspace 与不可变 Patch、服务端权威 CLI/MCP Action Service、确定性的 Attempt/Trajectory/Evaluation/Artifact 语义、版本化 Runtime Profile、精确 Attempt-owned Local/Docker/Remote 资源、Conformance 与 Legacy Replay、支持 Resume/Integrity 的进程隔离 Canonical Codex Adapter，以及可执行的公开 Demo 和文档入口均已落地。已恢复的精确目标通过代表性 Remote CPU、CUDA Overlay 与 CUDA Kernel canary；完整冻结回放的 17 条 baseline、17 条 gold 和 51 条历史 final patch 共 85/85 全部通过。随后完成的[真实 MCP 全量实验](docs/v0.6/experiment_report.md)得到 51/51 个有效 Attempt，其中 35 个 resolved、15 个 F2P failed、1 个 P2P regression，基础设施无效和重试均为 0；该结果用于平台验证，不构成与 v0.5 的因果对比。详见 [v0.6 发布说明](docs/v0.6/release_notes.md)。
 
-当前发布为 `opbench-v0.7.0`：可复现 Dataset Factory 冻结了 [25-task cumulative 数据集](datasets/pytorch_v0.7/dataset.json)、[6-task Boundary 切片](datasets/pytorch_v0.7_boundary/dataset.json)和 [8-task Precision 切片](datasets/pytorch_v0.7_precision/dataset.json)。全部 Task 均已 verified，Boundary 覆盖 B1–B5，Precision 覆盖 P1–P5。18-attempt 真实 Codex 验证得到 14 个 resolved、3 个 F2P failure、1 个 no-patch outcome，accepted cohort 重试为 0。这是具有严格 **non-leaderboard** 边界的 Task/平台描述性证据，不是正式多 Agent 排名或因果结论。详见 [Dataset Card](docs/v0.7/dataset_card.md)、[验证报告](docs/v0.7/validation_report.md)、[全局项目方案](docs/project_plan.md)和[当前项目状态](docs/project_state.md)。
+当前稳定历史冻结为 `opbench-v0.7.0`：可复现 Dataset Factory 冻结了 [25-task cumulative 数据集](datasets/pytorch_v0.7/dataset.json)、[6-task Boundary 切片](datasets/pytorch_v0.7_boundary/dataset.json)和 [8-task Precision 切片](datasets/pytorch_v0.7_precision/dataset.json)。全部 Task 均已 verified，Boundary 覆盖 B1–B5，Precision 覆盖 P1–P5。18-attempt 真实 Codex 验证得到 14 个 resolved、3 个 F2P failure、1 个 no-patch outcome，accepted cohort 重试为 0。这是具有严格 **non-leaderboard** 边界的 Task/平台描述性证据，不是正式多 Agent 排名或因果结论。当前 v0.7 正在执行[质量优先的 50-task 扩展](docs/v0.7/quality_expansion.md)，不能用旧 25-task 冻结代替新完成证据。详见 [Dataset Card](docs/v0.7/dataset_card.md)、[验证报告](docs/v0.7/validation_report.md)、[全局项目方案](docs/project_plan.md)和[当前项目状态](docs/project_state.md)。
 
 ## 当前代码包含什么
 
@@ -54,6 +54,7 @@ v0.6 平台现已 **Completed**：M1～M7 的严格版本化合同、唯一 Auth
 | `docs/v0.6/` | v0.6 规范 Agent 评测平台设计、实施计划和验收矩阵。 |
 | `docs/v0.6/experiment_report.md` | v0.6 真实 MCP 全量实验：51 个有效 Attempt、结果、Trace 与完整性证据。 |
 | `docs/v0.7/design.md` | v0.7 Dataset Factory、Boundary Slice 与 matched-runtime 恢复设计。 |
+| `docs/v0.7/quality_expansion.md` | 当前 50-task 质量、分类、Admission 与 122-attempt 发布合同。 |
 | `docs/v0.7/dataset_card.md` | v0.7 发布身份、数据集来源、分类、验证范围和限制。 |
 | `docs/v0.7/validation_report.md` | v0.7 18-Attempt 真实 Codex 验证和完整性证据。 |
 | `docs/v0.5/design.md` | v0.5 问题维度分类和扩展评测指标。 |
@@ -252,6 +253,7 @@ Agent 身份、模型调用和控制逻辑运行在 host 侧。每次修复 atte
 - [v0.6 真实 MCP Agent 实验手册](docs/v0.6/mcp_agent_experiment.md)
 - [v0.6 真实 MCP Agent 实验验证](docs/v0.6/mcp_agent_experiment_verification.md)
 - [v0.7 Dataset Factory 与 Boundary 设计](docs/v0.7/design.md)
+- [v0.7 50-task 质量扩展合同](docs/v0.7/quality_expansion.md)
 - [v0.7 Dataset Card](docs/v0.7/dataset_card.md)
 - [v0.7 验证报告](docs/v0.7/validation_report.md)
 - [v0.5 设计方案](docs/v0.5/design.md)

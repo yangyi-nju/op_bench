@@ -4,18 +4,19 @@
 
 文档按版本归档。根目录只保留索引，新增版本时使用 `docs/vX.Y/` 目录，文件名保持小写 snake_case，例如 `design.md`、`developer_guide.md`、`experiment_report.md`、`implementation_plan.md`。
 
-当前发布是 `opbench-v0.7.0`：[25-task cumulative](../datasets/pytorch_v0.7/dataset.json)、[6-task Boundary](../datasets/pytorch_v0.7_boundary/dataset.json)和 [8-task Precision](../datasets/pytorch_v0.7_precision/dataset.json)。验证结果是描述性的 **non-leaderboard** 证据；历史 [v0.6 实验报告](v0.6/experiment_report.md)继续保留。
+当前稳定历史冻结是 `opbench-v0.7.0`：[25-task cumulative](../datasets/pytorch_v0.7/dataset.json)、[6-task Boundary](../datasets/pytorch_v0.7_boundary/dataset.json)和 [8-task Precision](../datasets/pytorch_v0.7_precision/dataset.json)。验证结果是描述性的 **non-leaderboard** 证据；当前 [v0.7 50-task 质量扩展](v0.7/quality_expansion.md)仍在开发，历史 [v0.6 实验报告](v0.6/experiment_report.md)继续保留。
 
 建议按以下顺序阅读：
 
 1. [全局项目方案](project_plan.md)：使命、研究问题、原则、路线图、发布门和 v1.0 目标。
 2. [当前项目状态](project_state.md)：事实基线、当前版本、已确认决策、开放项和下一动作。
 3. [v0.7 Dataset Factory 与 Boundary 设计](v0.7/design.md)：Boundary 分类、Admission Factory、matched-runtime 恢复和数据集合同。
-4. [v0.7 候选检索](v0.7/candidate_search.md)：来源窗口、自动候选漏斗和人工复核结论。
-5. [v0.7 matched-runtime 配置](v0.7/setup_matched_runtime.md)：可复现 source 与 wheel Runtime 准备。
-6. [v0.7 Boundary Task 报告](v0.7/boundary_tasks.md)：已准入 Task 证据和 B1–B5 覆盖。
-7. [v0.7 Dataset Card](v0.7/dataset_card.md)：发布身份、数据集哈希、来源、分类、污染风险和限制。
-8. [v0.7 验证报告](v0.7/validation_report.md)：18-Attempt 真实 Codex 验证 cohort 和完整性证据。
+4. [v0.7 50-task 质量扩展](v0.7/quality_expansion.md)：当前质量门、多轴分类、Admission 和 122-attempt 合同。
+5. [v0.7 候选检索](v0.7/candidate_search.md)：来源窗口、自动候选漏斗和人工复核结论。
+6. [v0.7 matched-runtime 配置](v0.7/setup_matched_runtime.md)：可复现 source 与 wheel Runtime 准备。
+7. [v0.7 Boundary Task 报告](v0.7/boundary_tasks.md)：已准入 Task 证据和 B1–B5 覆盖。
+8. [v0.7 Dataset Card](v0.7/dataset_card.md)：发布身份、数据集哈希、来源、分类、污染风险和限制。
+9. [v0.7 验证报告](v0.7/validation_report.md)：18-Attempt 真实 Codex 验证 cohort 和完整性证据。
 9. [v0.6 平台设计](v0.6/design.md)：统一的 Demo→Platform 架构和完成定义。
 10. [v0.6 实施计划](v0.6/implementation_plan.md)：M1–M7 依赖、实现范围和验证策略。
 11. [v0.6 开发者指南](v0.6/developer_guide.md)：协议选择、Runtime 支持、身份、Artifact、Resume、失败归因和已知限制。

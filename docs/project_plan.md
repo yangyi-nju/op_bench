@@ -2,10 +2,10 @@
 
 > 状态：已批准的项目方向，本地文档重写稿
 >
-> 更新日期：2026-07-28
+> 更新日期：2026-08-03
 >
-> 当前工程基线：`opbench-v0.7.0` Completed，25 条 verified task；
-> 当前路线：v0.8 Device/API Compatibility 与 Evaluation/Scoring RC
+> 当前稳定基线：2026-07-28 的 v0.7 25-task 历史冻结；
+> 当前路线：v0.7 50-task 质量扩展、Admission 与 122-attempt Agent 实验
 >
 > 适用范围：v0.6 至 v1.0，并为 v2.0 预留演进边界
 
@@ -37,7 +37,9 @@ v0.1–v0.5 已经形成真实 Codex 评测闭环：
 
 这些能力证明 OpBench 已经是可运行的评测集 Demo，但平台能力仍分散在 Agent Bridge、Runner、Workspace、Evaluator、RemoteDocker、Resume 和 Reporter 中。不同模块之间缺少统一的版本化协议、Attempt 生命周期、能力语义、轨迹合同和可重建产物边界。
 
-因此当前最重要的工作不是继续增加 Task 数，而是先把已有真实评测闭环升级为规范平台，再在稳定协议上扩充数据和执行正式研究实验。
+因此平台建设阶段首先完成了规范评测闭环；该前置条件现已由 v0.6 和 v0.7
+历史冻结证明。当前最重要的工作是在稳定协议上按质量合同扩充数据并执行完整
+Agent 实验，而不是仅增加未经 Admission 的 Task 数。
 
 ## 3. 目标地平线
 
@@ -193,8 +195,8 @@ v0.5 的 51 次 Attempt 永久标记为 Legacy Baseline，不重命名为 v0.6 P
 | --- | --- | --- | --- |
 | v0.5 | 已完成 | 17 task、51 次真实 Codex Attempt | Legacy Evidence 冻结 |
 | v0.6 | 已完成 | Demo → 规范 Agent 评测平台 | 协议、Runtime、MCP、轨迹、Fresh Eval、Replay、真实 Codex 通过 |
-| v0.7 | 已完成 | Dataset Factory 与 Boundary Slice | 6 条高质量 Boundary Task、完整 Admission、25-task Release |
-| v0.8 | 当前计划 | Compatibility 与 Evaluation/Scoring RC | Operator Core 分层、Compatibility Slice、Spec RC |
+| v0.7 | 正在开发 | 50-task 质量扩展、Admission 与 Agent 实验 | 14 retained + 36 new/replacement、122 Attempts、全量发布审计 |
+| v0.8 | 已合并 | 原 Device/API 数据扩充并入 v0.7 | 不再作为独立当前交付 |
 | v0.9 | 2026-12-21 至 2027-02-14 | 正式多 Agent 实验与反馈消融 | Cohort 冻结、重复完整、统计和轨迹分析完成 |
 | Contingency | 2027-02-15 至 02-28 | P0/P1 修复与必要重跑 | 不新增研究范围 |
 | v1.0 | 2027-03-01 至 04-15 | 论文级研究发布 | 稳定协议、文档、复现、演示和发布 Artifact 完整 |
@@ -216,7 +218,7 @@ v0.6 不扩数据集。它把 v0.5 的真实 Codex Action Bridge Demo 标准化�
 
 七月底可以形成用于简历和演示的中间纵向闭环；它属于 v0.6 的内部工程进度，版本完成标准以 `docs/v0.6/acceptance_matrix.md` 为准。
 
-### 8.2 v0.7：Dataset Factory 与 Boundary
+### 8.2 v0.7：Dataset Factory、历史冻结与 50-task 质量扩展
 
 在 v0.6 冻结协议上：
 
@@ -226,7 +228,7 @@ v0.6 不扩数据集。它把 v0.5 的真实 Codex Action Bridge Demo 标准化�
 - 审计现有 Operator Core 构念；
 - 标记可用于 v0.9 Feedback Ablation 的 Task。
 
-`opbench-v0.7.0` 已 Completed。最终发布冻结 25-task cumulative、6-task
+`opbench-v0.7.0` 在 2026-07-28 的历史发布冻结了 25-task cumulative、6-task
 Boundary、8-task Precision，Dataset hash 分别为
 `sha256:4d7bde25e747bcc041aa5105ce5ce881a3f1e9fe2a7545667cdbc2c14d85064a`、
 `sha256:810a9cc85c576f44edd2672197ab83b7dfee7f674e597c76c78050bd119d606a`
@@ -238,12 +240,18 @@ Boundary、8-task Precision，Dataset hash 分别为
 CPU/CUDA build commands。该证据严格为 **non-leaderboard**、非反馈因果的
 Task/平台验证。
 
-### 8.3 v0.8：Compatibility 与 Spec RC
+当前 v0.7 继续在该基线上执行质量扩展，旧 Hash 与结果不被改写，但也不能作为
+新完成条件。最终累计 Dataset 必须恰好是 14 条重新准入的历史任务加 36 条
+新增或替换任务；新增任务只接受 medium/hard、行为型 Prompt、精确源码和真实
+Baseline/Gold Admission。最终实验矩阵为 122 个 fresh logical Attempts。
+完整合同见 `docs/v0.7/quality_expansion.md`。
 
-- 增加 4–6 条 Device/API Compatibility Task；
-- 冻结 Evaluation/Scoring Specification RC；
-- 明确 Operator Core 与 Legacy Regression；
-- 固定正式实验的 Budget、Retry、Aggregation 和排除规则。
+### 8.3 原 v0.8 范围：已并入 v0.7
+
+- Device/API、精度、边界和其他算子契约不再各自限定少量顶层数据桶；
+- 相关数据扩充使用 v0.7 的多轴 Taxonomy 和同一质量/Admission 标准；
+- Budget、Retry、Aggregation 和排除规则随 50-task Agent 实验共同冻结；
+- v0.8 不再是当前独立开发版本，避免人为拆分同一轮数据质量工作。
 
 ### 8.4 v0.9：正式实验
 
@@ -336,10 +344,9 @@ Task/平台验证。
 
 ## 14. 当前执行顺序
 
-1. v0.6 规范平台与 v0.7 Dataset Factory/Boundary Release 已完成并冻结；
-2. 当前进入 v0.8 Device/API Compatibility 候选与 Admission；
-3. 冻结 Evaluation/Scoring Specification RC；
-4. 明确 Operator Core、Legacy Regression、Budget、Retry、Aggregation
-   和排除规则；
-5. 每个里程碑通过测试和 Artifact 验证后更新状态；
-6. v0.9 再冻结正式多 Agent 与 Feedback Ablation cohort。
+1. 保留 v0.6 平台与 v0.7 历史 25-task Freeze 的不可变证据；
+2. 当前完成 v0.7 剩余新增/替换候选、质量复核与真实 Admission；
+3. 冻结恰好 50 条的累计 Dataset；
+4. 执行并重建 122-attempt fresh Agent 实验；
+5. 通过全量 replay、Integrity、隐私、测试、文档与发布 Hash 审计；
+6. 后续版本再冻结正式多 Agent 与 Feedback Ablation cohort。

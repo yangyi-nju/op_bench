@@ -4,7 +4,17 @@ This file records user-visible OpBench version milestones. Detailed design,
 implementation, and experiment evidence remain in the versioned documents
 under `docs/`.
 
-## v0.7 - Completed
+## v0.7 - In development (50-task quality expansion)
+
+The 2026-07-28 25-task release below remains an immutable, reproducible
+historical freeze. The active v0.7 release now incorporates the planned
+follow-up dataset expansion and is not complete until it contains exactly 14
+re-admitted historical tasks plus 36 new or replacement tasks, with the full
+122-attempt Agent experiment matrix and final release audit. The authoritative
+contract is `docs/v0.7/quality_expansion.md`; the machine-readable p8 index
+remains `status=building` until all gates are met.
+
+### Historical 25-task freeze (completed 2026-07-28)
 
 `opbench-v0.7.0` completed on 2026-07-28:
 

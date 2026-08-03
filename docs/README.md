@@ -4,18 +4,19 @@ Language: English | [中文](README.zh-CN.md)
 
 Documents are archived by version. The docs root keeps only indexes; new versions should use a `docs/vX.Y/` directory with lower snake_case filenames such as `design.md`, `developer_guide.md`, `experiment_report.md`, and `implementation_plan.md`.
 
-The current release is `opbench-v0.7.0`: [25-task cumulative](../datasets/pytorch_v0.7/dataset.json), [6-task Boundary](../datasets/pytorch_v0.7_boundary/dataset.json), and [8-task Precision](../datasets/pytorch_v0.7_precision/dataset.json). Its validation evidence is descriptive and **non-leaderboard**. The historical [v0.6 experiment report](v0.6/experiment_report.md) remains available.
+The current stable historical freeze is `opbench-v0.7.0`: [25-task cumulative](../datasets/pytorch_v0.7/dataset.json), [6-task Boundary](../datasets/pytorch_v0.7_boundary/dataset.json), and [8-task Precision](../datasets/pytorch_v0.7_precision/dataset.json). Its validation evidence is descriptive and **non-leaderboard**. The active [v0.7 50-task quality expansion](v0.7/quality_expansion.md) remains in development. The historical [v0.6 experiment report](v0.6/experiment_report.md) remains available.
 
 Use these documents in this order:
 
 1. [Global project plan](project_plan.md): mission, research questions, principles, roadmap, release gates, and v1.0 target.
 2. [Current project state](project_state.md): factual baseline, active release, decisions, open items, and next actions.
 3. [v0.7 Dataset Factory and Boundary design](v0.7/design.md): boundary taxonomy, admission factory, matched-runtime recovery, and dataset contract.
-4. [v0.7 candidate search](v0.7/candidate_search.md): source window, automated candidate funnel, and human-review dispositions.
-5. [v0.7 matched-runtime setup](v0.7/setup_matched_runtime.md): reproducible source and wheel Runtime preparation.
-6. [v0.7 Boundary task report](v0.7/boundary_tasks.md): admitted Task evidence and B1–B5 coverage.
-7. [v0.7 Dataset Card](v0.7/dataset_card.md): release identity, Dataset hashes, provenance, taxonomy, contamination risks, and limitations.
-8. [v0.7 validation report](v0.7/validation_report.md): the 18-Attempt real Codex validation cohort and integrity evidence.
+4. [v0.7 50-task quality expansion](v0.7/quality_expansion.md): current quality gates, multi-axis taxonomy, Admission, and 122-attempt contract.
+5. [v0.7 candidate search](v0.7/candidate_search.md): source window, automated candidate funnel, and human-review dispositions.
+6. [v0.7 matched-runtime setup](v0.7/setup_matched_runtime.md): reproducible source and wheel Runtime preparation.
+7. [v0.7 Boundary task report](v0.7/boundary_tasks.md): admitted Task evidence and B1–B5 coverage.
+8. [v0.7 Dataset Card](v0.7/dataset_card.md): release identity, Dataset hashes, provenance, taxonomy, contamination risks, and limitations.
+9. [v0.7 validation report](v0.7/validation_report.md): the 18-Attempt real Codex validation cohort and integrity evidence.
 9. [v0.6 platform design](v0.6/design.md): the unified Demo-to-Platform architecture and completion definition.
 10. [v0.6 implementation plan](v0.6/implementation_plan.md): M1–M7 dependencies, implementation scope, and verification strategy.
 11. [v0.6 developer guide](v0.6/developer_guide.md): protocol selection, Runtime support, identity, artifacts, resume, failure attribution, and known limits.
