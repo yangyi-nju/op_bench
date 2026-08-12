@@ -1,0 +1,89 @@
+diff --git a/test/op_bench/test_shared_dynamic_extent_proxy.py b/test/op_bench/test_shared_dynamic_extent_proxy.py
+new file mode 100644
+--- /dev/null
++++ b/test/op_bench/test_shared_dynamic_extent_proxy.py
+@@ -0,0 +1,84 @@
++import unittest
++
++import torch
++import torch.fx as fx
++from torch.fx.experimental.proxy_tensor import (
++    _build_proxy_for_sym_expr,
++    _SympyExprTrackerValue,
++    PythonKeyTracer,
++    set_meta,
++)
++from torch.fx.experimental.symbolic_shapes import ShapeEnv
++from torch.utils._thunk import Thunk
++
++
++class SharedDynamicExtentProxyTests(unittest.TestCase):
++    @staticmethod
++    def symbols():
++        shape_env = ShapeEnv()
++        return shape_env.create_unbacked_symint(), shape_env.create_unbacked_symint()
++
++    @staticmethod
++    def tracker_without_graph(*symbols):
++        tracer = PythonKeyTracer()
++        for symbol in symbols:
++            tracer.sympy_expr_tracker[symbol.node.expr] = _SympyExprTrackerValue(
++                proxy=symbol, value=symbol
++            )
++        return tracer
++
++    @staticmethod
++    def tracker_with_graph(*symbols):
++        tracer = PythonKeyTracer()
++        tracer.root = torch.nn.Module()
++        tracer.graph = fx.Graph(tracer_cls=PythonKeyTracer)
++        for index, symbol in enumerate(symbols):
++            node = tracer.graph.placeholder(f"u{index}")
++            proxy = fx.Proxy(node, tracer)
++            set_meta(proxy, symbol)
++            tracer.sympy_expr_tracker[symbol.node.expr] = _SympyExprTrackerValue(
++                proxy=proxy, value=symbol
++            )
++            tracer.symnode_tracker[symbol] = Thunk(lambda p=proxy: p)
++        return tracer
++
++    def test_square_extent_is_rebuilt_without_existing_output(self):
++        u0, u1 = self.symbols()
++        expression = u0 * u1**2
++        rebuilt = _build_proxy_for_sym_expr(
++            self.tracker_without_graph(u0, u1), expression.node.expr
++        )
++        self.assertIsNotNone(rebuilt)
++        self.assertEqual(rebuilt.node.expr, expression.node.expr)
++
++    def test_cube_extent_registers_an_executable_graph(self):
++        u0, u1 = self.symbols()
++        expression = u0 * u1**3
++        tracer = self.tracker_with_graph(u0, u1)
++        _build_proxy_for_sym_expr(tracer, expression.node.expr, out=expression)
++        output = tracer.symnode_tracker[expression].force()
++        tracer.graph.output(output.node)
++        graph_module = fx.GraphModule(tracer.root, tracer.graph)
++        self.assertEqual(graph_module(2, 3), 54)
++
++    def test_distinct_extent_product_remains_rebuildable(self):
++        u0, u1 = self.symbols()
++        expression = u0 * u1
++        rebuilt = _build_proxy_for_sym_expr(
++            self.tracker_without_graph(u0, u1), expression.node.expr
++        )
++        self.assertIsNotNone(rebuilt)
++        self.assertEqual(rebuilt.node.expr, expression.node.expr)
++
++    def test_affine_extent_remains_rebuildable(self):
++        u0, u1 = self.symbols()
++        expression = u0 + 3 * u1
++        rebuilt = _build_proxy_for_sym_expr(
++            self.tracker_without_graph(u0, u1), expression.node.expr
++        )
++        self.assertIsNotNone(rebuilt)
++        self.assertEqual(rebuilt.node.expr, expression.node.expr)
++
++
++if __name__ == "__main__":
++    unittest.main()

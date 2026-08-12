@@ -1,0 +1,79 @@
+diff --git a/test/op_bench/test_padded_output_copy.py b/test/op_bench/test_padded_output_copy.py
+new file mode 100644
+--- /dev/null
++++ b/test/op_bench/test_padded_output_copy.py
+@@ -0,0 +1,74 @@
++import re
++import unittest
++
++import torch
++from torch._inductor import config
++from torch._inductor.utils import run_and_get_code
++
++
++@unittest.skipUnless(torch.cuda.is_available(), "CUDA required")
++class PaddedOutputCopyTests(unittest.TestCase):
++    @staticmethod
++    def model(x):
++        first = x + 1
++        second = first * 2
++        return torch.cat([first, second], dim=1)
++
++    def setUp(self):
++        torch._dynamo.reset()
++        torch.cuda.empty_cache()
++
++    def tearDown(self):
++        torch._dynamo.reset()
++
++    def compile_case(self, shape, *, aligned):
++        torch._dynamo.reset()
++        torch.manual_seed(0)
++        sample = torch.randn(*shape, device="cuda")
++        patches = {
++            "comprehensive_padding": aligned,
++            "pad_outputs": True,
++            "padding_stride_threshold": 0,
++            "inplace_buffers": False,
++        }
++        with config.patch(patches):
++            actual, sources = run_and_get_code(torch.compile(self.model), sample)
++        expected = self.model(sample)
++        return actual, expected, "\n".join(sources)
++
++    def assert_values(self, actual, expected):
++        torch.testing.assert_close(actual, expected, atol=1e-3, rtol=1e-3)
++        self.assertEqual(actual.shape, expected.shape)
++        self.assertEqual(actual.dtype, expected.dtype)
++        self.assertEqual(actual.device, expected.device)
++
++    def allocation_count(self, source):
++        return len(re.findall(r"= empty_strided_cuda\(", source))
++
++    def test_padded_wide_join_reuses_output_storage(self):
++        actual, expected, source = self.compile_case((128, 131), aligned=True)
++        self.assert_values(actual, expected)
++        self.assertEqual(
++            self.allocation_count(source),
++            1,
++            "aligned result should use exactly one backing buffer",
++        )
++
++    def test_padded_tall_join_reuses_output_storage(self):
++        actual, expected, source = self.compile_case((257, 65), aligned=True)
++        self.assert_values(actual, expected)
++        self.assertEqual(
++            self.allocation_count(source),
++            1,
++            "aligned result should reuse its existing backing buffer",
++        )
++
++    def test_unpadded_join_remains_stable(self):
++        actual, expected, source = self.compile_case((64, 96), aligned=False)
++        self.assert_values(actual, expected)
++        self.assertEqual(actual.stride(), expected.stride())
++        self.assertEqual(self.allocation_count(source), 1)
++
++
++if __name__ == "__main__":
++    unittest.main()

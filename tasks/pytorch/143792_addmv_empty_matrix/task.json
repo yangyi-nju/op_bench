@@ -1,0 +1,198 @@
+{
+  "admission": {
+    "compatibility_evidence": "compatibility/evidence.json",
+    "evidence": "admission/evidence.json",
+    "status": "verified",
+    "verified_at": "2026-07-27T03:30:00Z"
+  },
+  "agent_visible": {
+    "allowed_test_commands": [
+      "{python} test/op_bench_boundary/test_addmv_empty_matrix.py {test}"
+    ],
+    "known_constraints": [
+      "CPU-only; CUDA is not required.",
+      "Optimized behavior must match eager behavior for the empty matrix, beta=0, and ordinary non-empty cases."
+    ],
+    "repo_setup_commands": [],
+    "public_task_id": "opbench-v07-t0014"
+  },
+  "artifacts": {
+    "gold_patch": "artifacts/gold.patch",
+    "hidden_test_patch": "artifacts/hidden_test.patch"
+  },
+  "compatibility": {
+    "evidence": "compatibility/evidence.json",
+    "minimal_operation": "import torch; import torch._decomp.decompositions; torch.addmv(torch.ones(1), torch.ones(1, 1), torch.ones(1))",
+    "selector_module": "test/op_bench_boundary/test_addmv_empty_matrix.py",
+    "target_import": "torch._decomp.decompositions",
+    "target_module": "torch/_decomp/decompositions.py"
+  },
+  "environment": {
+    "backend": "remote_docker",
+    "build_mode": "source-build",
+    "dependencies": [
+      "full PyTorch CPU source build via setup.py develop"
+    ],
+    "hardware": {
+      "device": "cpu",
+      "min_memory_gb": 16,
+      "requires_gpu": false
+    },
+    "host": "gpu-a10",
+    "os": "linux",
+    "platform": "linux/amd64",
+    "preflight_commands": [
+      "ccache --version",
+      "cmake --version",
+      "g++ --version",
+      "{python} --version",
+      "{python} -c \"import expecttest, yaml; print(yaml.__version__)\"",
+      "{python} -c \"import torch; print(torch.__version__); print(torch.__file__)\""
+    ],
+    "preflight_workdir": "/tmp",
+    "python_executable": "python",
+    "python_version": "3.11",
+    "resource_requirements": {
+      "cpu": true,
+      "gpu": false
+    },
+    "source_loading": {
+      "build_environment": {
+        "BUILD_TEST": "0",
+        "CC": "gcc",
+        "CCACHE_BASEDIR": "/workspace",
+        "CCACHE_DIR": "/workspace/.ccache",
+        "CCACHE_NOHASHDIR": "true",
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
+        "CMAKE_C_COMPILER_LAUNCHER": "ccache",
+        "CXX": "g++",
+        "MAX_JOBS": "8",
+        "USE_CUDA": "0",
+        "USE_DISTRIBUTED": "0",
+        "USE_FBGEMM": "0",
+        "USE_FLASH_ATTENTION": "0",
+        "USE_GLOO": "0",
+        "USE_KINETO": "0",
+        "USE_KLEIDIAI": "0",
+        "USE_MEM_EFF_ATTENTION": "0",
+        "USE_MKLDNN": "0",
+        "USE_NCCL": "0",
+        "USE_NNPACK": "0",
+        "USE_QNNPACK": "0",
+        "USE_ROCM": "0",
+        "USE_TENSORPIPE": "0",
+        "USE_XNNPACK": "0"
+      },
+      "mode": "inplace_build",
+      "sync_before_tests": true
+    },
+    "tier": "cpu_source_snapshot_fuller",
+    "workspace_dir": "/workspace"
+  },
+  "environment_ref": "pytorch-boundary-cpu-source-build-py311",
+  "evaluation": {
+    "fail_to_pass": [
+      "BoundaryAddmvTests.test_zero_sized_matrix"
+    ],
+    "pass_to_pass": [
+      "BoundaryAddmvTests.test_nonempty_and_beta_zero"
+    ],
+    "setup_commands": [],
+    "test_command": "{python} test/op_bench_boundary/test_addmv_empty_matrix.py {test}",
+    "timeout_sec": 900
+  },
+  "metadata": {
+    "admission_status": "verified",
+    "curation_status": "verified",
+    "deterministic": true,
+    "difficulty": "easy",
+    "estimated_runtime_min": 10,
+    "layer": "B",
+    "notes": "Verified by v0.7 matched-runtime compatibility and verified Admission; compatibility evidence sha256:dd5f1e24bd133c978d081a56019eca464d2b2490813274dbc9afc748db797ebf.",
+    "source_loading_verified": true
+  },
+  "operator": {
+    "component": "torch._decomp.decompositions.addmv",
+    "framework": "pytorch",
+    "operator_name": "torch.addmv",
+    "problem_dimension": "boundary",
+    "problem_subclass": "B1",
+    "problem_type": "empty-matrix-semantics",
+    "tags": [
+      "addmv",
+      "empty-matrix",
+      "broadcast",
+      "inductor",
+      "cpu"
+    ]
+  },
+  "patch_scope": {
+    "allowed_paths": [
+      "torch/_decomp/decompositions.py"
+    ],
+    "mode": "enforced"
+  },
+  "runtime_tier": "cpu_source_snapshot_fuller",
+  "source": {
+    "base_commit": "38b3375a81dc3c21d7c0420773187c7c2c3d5835",
+    "checkout_mode": "git",
+    "issue_number": null,
+    "issue_url": null,
+    "merge_commit": "43e1284c9699dfdc3722c2f2913c72aa3b37e869",
+    "pr_number": 143792,
+    "pr_url": "https://github.com/pytorch/pytorch/pull/143792",
+    "repo": "pytorch/pytorch",
+    "repo_url": "https://github.com/pytorch/pytorch.git"
+  },
+  "source_ref": "pytorch-38b3375-boundary-kernel-full",
+  "statement": {
+    "body": "For a 0x0 matrix, empty vector, and broadcastable one-element input, optimized torch.addmv disagrees with eager execution. It must return the eager result for nonzero beta and preserve beta=0 behavior, without regressing ordinary non-empty matrix-vector inputs.",
+    "labels": [
+      "module: inductor",
+      "module: decomposition",
+      "boundary: empty"
+    ],
+    "title": "Optimized torch.addmv disagrees with eager behavior for a zero-sized matrix"
+  },
+  "task_id": "pytorch__143792__addmv_empty_matrix",
+  "version": "v1",
+  "quality": {
+    "complexity_evidence": "quality/complexity.json",
+    "origin": "retained_historical",
+    "prompt_evidence": "quality/prompt.json",
+    "readmission_evidence": "quality/readmission.json"
+  },
+  "taxonomy": {
+    "component_tags": [
+      "aten",
+      "inductor"
+    ],
+    "contract_detail_tags": [
+      "value",
+      "shape"
+    ],
+    "contract_family": "result",
+    "execution_context": {
+      "devices": [
+        "cpu"
+      ],
+      "distributed": false,
+      "modes": [
+        "eager",
+        "compile"
+      ],
+      "phases": [
+        "forward"
+      ]
+    },
+    "failure_type": "wrong_result",
+    "root_cause_tags": [
+      "incorrect_lowering"
+    ],
+    "taxonomy_version": "v2",
+    "trigger_tags": [
+      "empty_or_zero"
+    ]
+  }
+}

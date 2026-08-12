@@ -28,8 +28,8 @@
     "snapshot_path": "../../../.op_bench_cache/sources/pytorch/pytorch/618efe837d71c179a96dc851ca08ebd9b10cae1f/source"
   },
   "statement": {
-    "title": "DataLoader does not respect overridden __getitem__ in Subset subclasses",
-    "body": "When subclassing torch.utils.data.Subset and overriding __getitem__, the DataLoader ignores the overridden method and uses the parent Subset implementation, bypassing custom data transformations.",
+    "title": "Subset accepts custom single-item access that DataLoader batching will bypass",
+    "body": "A derived torch.utils.data.Subset variant that customizes only single-item access is accepted even though DataLoader batching can bypass its transformation. Construction must fail clearly unless the variant also defines compatible batched access; implementations customizing both forms must preserve their transformed values through DataLoader.",
     "labels": [
       "module: nn",
       "bug"
@@ -38,7 +38,7 @@
   "operator": {
     "framework": "pytorch",
     "component": "torch.utils.data",
-    "operator_name": "torch.utils.data.Subset",
+    "operator_name": "torch.utils.data.Subset with DataLoader",
     "problem_type": "dispatch-logic",
     "tags": [
       "utils",
@@ -67,12 +67,13 @@
   "agent_visible": {
     "repo_setup_commands": [],
     "known_constraints": [
-      "Full PyTorch source checkout task.",
-      "Do not assume CUDA availability."
+      "CPU-only; CUDA is not required.",
+      "A derived variant customizing only single-item access must raise, while one implementing both single-item and batched access must preserve its transformations."
     ],
     "allowed_test_commands": [
       "{python} test/test_dataloader.py -k {test}"
-    ]
+    ],
+    "public_task_id": "opbench-v07-t0024"
   },
   "evaluation": {
     "setup_commands": [],
@@ -95,6 +96,40 @@
     "deterministic": true,
     "estimated_runtime_min": 15,
     "layer": "A",
-    "admission_status": "verified"
+    "admission_status": "verified",
+    "source_loading_verified": true
+  },
+  "quality": {
+    "complexity_evidence": "quality/complexity.json",
+    "origin": "retained_historical",
+    "prompt_evidence": "quality/prompt.json",
+    "readmission_evidence": "quality/readmission.json"
+  },
+  "taxonomy": {
+    "component_tags": [],
+    "contract_detail_tags": [
+      "schema",
+      "exception",
+      "compatibility"
+    ],
+    "contract_family": "api_behavior",
+    "execution_context": {
+      "devices": [
+        "cpu"
+      ],
+      "distributed": false,
+      "modes": [
+        "eager"
+      ],
+      "phases": [
+        "forward"
+      ]
+    },
+    "failure_type": "missing_error",
+    "root_cause_tags": [
+      "incorrect_validation"
+    ],
+    "taxonomy_version": "v2",
+    "trigger_tags": []
   }
 }

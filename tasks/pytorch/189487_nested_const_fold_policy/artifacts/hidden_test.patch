@@ -1,0 +1,94 @@
+diff --git a/test/op_bench/test_nested_const_fold_policy.py b/test/op_bench/test_nested_const_fold_policy.py
+new file mode 100644
+--- /dev/null
++++ b/test/op_bench/test_nested_const_fold_policy.py
+@@ -0,0 +1,89 @@
++import operator
++import unittest
++
++import torch
++import torch.utils._pytree as pytree
++from torch.fx.experimental import const_fold
++from torch.fx.experimental.symbolic_shapes import ShapeEnv
++
++
++def pure_parent():
++    class PureSubmodule(torch.nn.Module):
++        def forward(self):
++            return torch.full((5, 10), 2.0) + 1
++
++    exported = torch.export.export(PureSubmodule(), ())
++    parent_graph = torch.fx.Graph()
++    nested = parent_graph.call_module("sub", args=())
++    selected = parent_graph.call_function(
++        operator.getitem,
++        args=(nested, slice(None)),
++    )
++    parent_graph.output((selected,))
++    return torch.fx.GraphModule({"sub": exported.module()}, parent_graph)
++
++
++def symbolic_parent():
++    nested_graph = torch.fx.Graph()
++    extent = ShapeEnv().create_unbacked_symint()
++    materialized = nested_graph.call_function(
++        torch.ops.aten.full.default,
++        args=([extent, 1], 0),
++        kwargs={"dtype": torch.bfloat16},
++    )
++    nested_graph.output((materialized,))
++    nested_module = torch.fx.GraphModule(torch.nn.Module(), nested_graph)
++
++    parent_graph = torch.fx.Graph()
++    nested = parent_graph.call_module("sub", args=())
++    selected = parent_graph.call_function(operator.getitem, args=(nested, 0))
++    parent_graph.output((selected,))
++    return torch.fx.GraphModule({"sub": nested_module}, parent_graph)
++
++
++class NestedConstFoldPolicyTests(unittest.TestCase):
++    def test_selected_nested_node_prevents_atomic_fold(self):
++        def select_fill(node):
++            return node.target == torch.ops.aten.full.default
++
++        folded = const_fold.split_const_subgraphs(
++            pure_parent(),
++            skip_folding_node_fn=select_fill,
++            device_for_folded_attrs="cpu",
++        )
++
++        self.assertIsNone(folded.const_subgraph_module)
++
++    def test_symbolic_nested_node_is_not_evaluated(self):
++        def select_symbolic(node):
++            return any(
++                isinstance(value, torch.SymInt)
++                for value in pytree.tree_leaves((node.args, node.kwargs))
++            )
++
++        folded = const_fold.split_const_subgraphs(
++            symbolic_parent(),
++            skip_folding_node_fn=select_symbolic,
++            device_for_folded_attrs="cpu",
++        )
++
++        self.assertIsNone(folded.const_subgraph_module)
++        folded.run_folding()
++
++    def test_unselected_pure_nested_graph_still_folds(self):
++        folded = const_fold.split_const_subgraphs(
++            pure_parent(),
++            skip_folding_node_fn=lambda node: False,
++            device_for_folded_attrs="cpu",
++        )
++
++        self.assertIsNotNone(folded.const_subgraph_module)
++        folded.run_folding()
++        torch.testing.assert_close(
++            folded()[0],
++            torch.full((5, 10), 3.0),
++        )
++
++
++if __name__ == "__main__":
++    unittest.main()

@@ -32,7 +32,8 @@
         "python_overlay"
       ],
       "cache_policy": "remote_build",
-      "host": "gpu-a10"
+      "host": "gpu-a10",
+      "remote_execution_config_hash": "sha256:27100293e953ca8c184acb9899101a58b9fae1ea947791a239c74358bdc3f34a"
     },
     {
       "id": "pytorch-cpu-compile-torch2.6.0-py311",
@@ -67,7 +68,8 @@
         "python_overlay"
       ],
       "cache_policy": "remote_build",
-      "host": "gpu-a10"
+      "host": "gpu-a10",
+      "remote_execution_config_hash": "sha256:27100293e953ca8c184acb9899101a58b9fae1ea947791a239c74358bdc3f34a"
     },
     {
       "id": "pytorch-cuda-torch2.6.0-py311-cu124",
@@ -103,7 +105,8 @@
         "python_overlay"
       ],
       "cache_policy": "remote_build",
-      "host": "gpu-a10"
+      "host": "gpu-a10",
+      "remote_execution_config_hash": "sha256:27100293e953ca8c184acb9899101a58b9fae1ea947791a239c74358bdc3f34a"
     },
     {
       "id": "pytorch-cuda-devel-torch2.6.0-py311-cu124",
@@ -141,7 +144,1098 @@
         "inplace_build"
       ],
       "cache_policy": "remote_build",
-      "host": "gpu-a10"
+      "host": "gpu-a10",
+      "remote_execution_config_hash": "sha256:27100293e953ca8c184acb9899101a58b9fae1ea947791a239c74358bdc3f34a"
+    },
+    {
+      "id": "pytorch-matched-ff89ebc-torch2.4.0-py311-cu124",
+      "framework": "pytorch",
+      "runtime_tier": "cuda_python_overlay",
+      "backend": "remote_docker",
+      "docker": {
+        "image": "op-bench/pytorch-matched-ff89ebc:torch2.4.0-cu124-py311",
+        "digest": "sha256:f7fdabf3d4d9fc01c8d0f67961986968b06eb49d3724361c7ce64c1564f865c7",
+        "digest_kind": "local_image_id",
+        "dockerfile": "pytorch-matched-ff89ebc-cu124/Dockerfile",
+        "build_context": "pytorch-matched-ff89ebc-cu124",
+        "platform": "linux/amd64"
+      },
+      "runtime_artifact": {
+        "strategy": "matched_wheel",
+        "artifact_kind": "official_wheel",
+        "artifact_id": "torch-2.4.0+cu124-cp311-cp311-linux_x86_64.whl",
+        "artifact_digest": "sha256:81397ff1c84a3f2c666d2627144ecac268665325726267e092a80113385ad3e8",
+        "artifact_digest_kind": "wheel_sha256",
+        "torch_version": "2.4.0+cu124",
+        "python_abi": "cp311-cp311"
+      },
+      "python": "3.11",
+      "packages": {
+        "torch": "2.4.0+cu124",
+        "cuda": "12.4"
+      },
+      "hardware": {
+        "requires_gpu": true,
+        "cuda": "12.4",
+        "device": "cuda",
+        "min_memory_gb": 16,
+        "min_compute_capability": "7.0"
+      },
+      "gpus": "all",
+      "preflight": {
+        "workdir": "/tmp",
+        "commands": [
+          "python --version",
+          "python -c \"import torch; print(torch.__version__); print(torch.version.cuda); print(torch.cuda.is_available()); print(torch.cuda.get_device_name(0))\""
+        ]
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "cache_policy": "remote_build",
+      "host": "gpu-a10",
+      "remote_execution_config_hash": "sha256:27100293e953ca8c184acb9899101a58b9fae1ea947791a239c74358bdc3f34a"
+    },
+    {
+      "id": "pytorch-matched-06e9dea-torch2.7.0-py311-cpu",
+      "framework": "pytorch",
+      "runtime_tier": "cpu_python_overlay",
+      "backend": "remote_docker",
+      "docker": {
+        "image": "op-bench/pytorch-matched-06e9dea:torch2.7.0-cpu-py311",
+        "digest": "sha256:ccd5eb7b2703b9b2ac7c7a9e47cd56ffe77135e3a62b29be4d821833e318056f",
+        "digest_kind": "local_image_id",
+        "dockerfile": "pytorch-matched-06e9dea-cpu/Dockerfile",
+        "build_context": "pytorch-matched-06e9dea-cpu",
+        "platform": "linux/amd64"
+      },
+      "runtime_artifact": {
+        "strategy": "matched_wheel",
+        "artifact_kind": "official_wheel",
+        "artifact_id": "torch-2.7.0+cpu-cp311-cp311-manylinux_2_28_x86_64.whl",
+        "artifact_digest": "sha256:6b7edcbf8bb0b9ac2e6c001434797c5ec3f25394f91eb0ed7aeeeeed9ad4500f",
+        "artifact_digest_kind": "wheel_sha256",
+        "torch_version": "2.7.0+cpu",
+        "python_abi": "cp311-cp311",
+        "companion_artifacts": [
+          {
+            "artifact_kind": "official_wheel",
+            "artifact_id": "torchvision-0.22.0+cpu-cp311-cp311-manylinux_2_28_x86_64.whl",
+            "artifact_digest": "sha256:670082705cfb51a35ae35090b5a0e66ec09e6d9c3845e16417399adec7a17ff2",
+            "artifact_digest_kind": "wheel_sha256"
+          }
+        ]
+      },
+      "python": "3.11",
+      "packages": {
+        "torch": "2.7.0+cpu",
+        "torchvision": "0.22.0+cpu"
+      },
+      "hardware": {
+        "requires_gpu": false,
+        "cuda": null,
+        "device": "cpu",
+        "min_memory_gb": 8
+      },
+      "preflight": {
+        "workdir": "/tmp",
+        "commands": [
+          "g++ --version",
+          "python --version",
+          "python -c \"import torch, torchvision; print(torch.__version__); print(torchvision.__version__); print(torch.__file__)\""
+        ]
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "cache_policy": "remote_build",
+      "host": "gpu-a10",
+      "remote_execution_config_hash": "sha256:27100293e953ca8c184acb9899101a58b9fae1ea947791a239c74358bdc3f34a"
+    },
+    {
+      "id": "pytorch-matched-boundary-torch2.2.0-cpu",
+      "framework": "pytorch",
+      "runtime_tier": "cpu_python_overlay",
+      "backend": "remote_docker",
+      "docker": {
+        "image": "op-bench/pytorch-matched-boundary:torch2.2.0-cpu-py311",
+        "digest": "sha256:9f529f436111a2b69dc1ad25df1f8f180023e030fb86f5c5808b04f3f020ba93",
+        "digest_kind": "local_image_id",
+        "dockerfile": "pytorch-matched-boundary-torch2.2.0-cpu/Dockerfile",
+        "build_context": "pytorch-matched-boundary-torch2.2.0-cpu",
+        "platform": "linux/amd64"
+      },
+      "runtime_artifact": {
+        "strategy": "matched_wheel",
+        "artifact_kind": "official_wheel",
+        "artifact_id": "torch-2.2.0+cpu-cp311-cp311-linux_x86_64.whl",
+        "artifact_digest": "sha256:2a8ff4440c1f024ad7982018c378470d2ae0a72f2bc269a22b1a677e09bdd3b1",
+        "artifact_digest_kind": "wheel_sha256",
+        "torch_version": "2.2.0+cpu",
+        "python_abi": "cp311-cp311"
+      },
+      "python": "3.11",
+      "packages": {
+        "torch": "2.2.0+cpu",
+        "triton": "2.2.0"
+      },
+      "hardware": {
+        "requires_gpu": false,
+        "cuda": null,
+        "device": "cpu",
+        "min_memory_gb": 8
+      },
+      "preflight": {
+        "workdir": "/tmp",
+        "commands": [
+          "g++ --version",
+          "python --version",
+          "python -c \"import torch; print(torch.__version__); print(torch.__file__)\""
+        ]
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "cache_policy": "remote_build",
+      "host": "gpu-a10",
+      "remote_execution_config_hash": "sha256:27100293e953ca8c184acb9899101a58b9fae1ea947791a239c74358bdc3f34a"
+    },
+    {
+      "id": "pytorch-matched-boundary-torch2.3.0-cpu",
+      "framework": "pytorch",
+      "runtime_tier": "cpu_python_overlay",
+      "backend": "remote_docker",
+      "docker": {
+        "image": "op-bench/pytorch-matched-boundary:torch2.3.0-cpu-py311",
+        "digest": "sha256:c1078f123ab2ea0e5ad89a35e456eacda203f98bfbbfd810a27a654d4a80a423",
+        "digest_kind": "local_image_id",
+        "dockerfile": "pytorch-matched-boundary-torch2.3.0-cpu/Dockerfile",
+        "build_context": "pytorch-matched-boundary-torch2.3.0-cpu",
+        "platform": "linux/amd64"
+      },
+      "runtime_artifact": {
+        "strategy": "matched_wheel",
+        "artifact_kind": "official_wheel",
+        "artifact_id": "torch-2.3.0+cpu-cp311-cp311-linux_x86_64.whl",
+        "artifact_digest": "sha256:97a38b25ee0e3d020691e7846efbca62a3d8a57645c027dcb5ba0adfec36fe55",
+        "artifact_digest_kind": "wheel_sha256",
+        "torch_version": "2.3.0+cpu",
+        "python_abi": "cp311-cp311"
+      },
+      "python": "3.11",
+      "packages": {
+        "torch": "2.3.0+cpu",
+        "triton": "2.3.0"
+      },
+      "hardware": {
+        "requires_gpu": false,
+        "cuda": null,
+        "device": "cpu",
+        "min_memory_gb": 8
+      },
+      "preflight": {
+        "workdir": "/tmp",
+        "commands": [
+          "g++ --version",
+          "python --version",
+          "python -c \"import torch; print(torch.__version__); print(torch.__file__)\""
+        ]
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "cache_policy": "remote_build",
+      "host": "gpu-a10",
+      "remote_execution_config_hash": "sha256:27100293e953ca8c184acb9899101a58b9fae1ea947791a239c74358bdc3f34a"
+    },
+    {
+      "id": "pytorch-matched-boundary-torch2.4.0-cpu",
+      "framework": "pytorch",
+      "runtime_tier": "cpu_python_overlay",
+      "backend": "remote_docker",
+      "docker": {
+        "image": "op-bench/pytorch-matched-boundary:torch2.4.0-cpu-py311",
+        "digest": "sha256:e221898f5d6816e56297a8b7dc715b1fa307883b5c3861b4a5de94c13002ec49",
+        "digest_kind": "local_image_id",
+        "dockerfile": "pytorch-matched-boundary-torch2.4.0-cpu/Dockerfile",
+        "build_context": "pytorch-matched-boundary-torch2.4.0-cpu",
+        "platform": "linux/amd64"
+      },
+      "runtime_artifact": {
+        "strategy": "matched_wheel",
+        "artifact_kind": "official_wheel",
+        "artifact_id": "torch-2.4.0+cpu-cp311-cp311-linux_x86_64.whl",
+        "artifact_digest": "sha256:14a7a8b595347dddca594f9e448b93ce68ce4f871acbd32cf04bda7c03664c0c",
+        "artifact_digest_kind": "wheel_sha256",
+        "torch_version": "2.4.0+cpu",
+        "python_abi": "cp311-cp311"
+      },
+      "python": "3.11",
+      "packages": {
+        "torch": "2.4.0+cpu",
+        "triton": "3.0.0"
+      },
+      "hardware": {
+        "requires_gpu": false,
+        "cuda": null,
+        "device": "cpu",
+        "min_memory_gb": 8
+      },
+      "preflight": {
+        "workdir": "/tmp",
+        "commands": [
+          "g++ --version",
+          "python --version",
+          "python -c \"import torch; print(torch.__version__); print(torch.__file__)\""
+        ]
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "cache_policy": "remote_build",
+      "host": "gpu-a10",
+      "remote_execution_config_hash": "sha256:27100293e953ca8c184acb9899101a58b9fae1ea947791a239c74358bdc3f34a"
+    },
+    {
+      "id": "pytorch-matched-boundary-torch2.5.1-cu124",
+      "framework": "pytorch",
+      "runtime_tier": "cuda_python_overlay",
+      "backend": "remote_docker",
+      "docker": {
+        "image": "op-bench/pytorch-matched-boundary:torch2.5.1-cu124-py311",
+        "digest": "sha256:a3ba76381b2f6b11f50d222abfc8cf8676144b4bacafe61708de29de140b37d5",
+        "digest_kind": "local_image_id",
+        "dockerfile": "pytorch-matched-boundary-torch2.5.1-cu124/Dockerfile",
+        "build_context": "pytorch-matched-boundary-torch2.5.1-cu124",
+        "platform": "linux/amd64"
+      },
+      "runtime_artifact": {
+        "strategy": "matched_wheel",
+        "artifact_kind": "official_wheel",
+        "artifact_id": "torch-2.5.1+cu124-cp311-cp311-linux_x86_64.whl",
+        "artifact_digest": "sha256:6b2966ede9affe2fd69e0765691ca723ec870e0c34c7761f4d5b8e318383fdaf",
+        "artifact_digest_kind": "wheel_sha256",
+        "torch_version": "2.5.1+cu124",
+        "python_abi": "cp311-cp311"
+      },
+      "python": "3.11",
+      "packages": {
+        "torch": "2.5.1+cu124",
+        "triton": "3.1.0",
+        "cuda": "12.4"
+      },
+      "hardware": {
+        "requires_gpu": true,
+        "cuda": "12.4",
+        "device": "cuda",
+        "min_memory_gb": 16,
+        "min_compute_capability": "7.0"
+      },
+      "gpus": "all",
+      "preflight": {
+        "workdir": "/tmp",
+        "commands": [
+          "python --version",
+          "python -c \"import torch; print(torch.__version__); print(torch.version.cuda); print(torch.cuda.is_available()); print(torch.cuda.get_device_name(0))\""
+        ]
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "cache_policy": "remote_build",
+      "host": "gpu-a10",
+      "remote_execution_config_hash": "sha256:27100293e953ca8c184acb9899101a58b9fae1ea947791a239c74358bdc3f34a"
+    },
+    {
+      "id": "pytorch-matched-boundary-torch2.6.0-cpu",
+      "framework": "pytorch",
+      "runtime_tier": "cpu_python_overlay",
+      "backend": "remote_docker",
+      "docker": {
+        "image": "op-bench/pytorch-matched-boundary:torch2.6.0-cpu-py311",
+        "digest": "sha256:2ae237f6407253e8d86d721afefe0e4cd031d3c4193a9ca68fea343953652e55",
+        "digest_kind": "local_image_id",
+        "dockerfile": "pytorch-matched-boundary-torch2.6.0-cpu/Dockerfile",
+        "build_context": "pytorch-matched-boundary-torch2.6.0-cpu",
+        "platform": "linux/amd64"
+      },
+      "runtime_artifact": {
+        "strategy": "matched_wheel",
+        "artifact_kind": "official_wheel",
+        "artifact_id": "torch-2.6.0+cpu-cp311-cp311-linux_x86_64.whl",
+        "artifact_digest": "sha256:5b6ae523bfb67088a17ca7734d131548a2e60346c622621e4248ed09dd0790cc",
+        "artifact_digest_kind": "wheel_sha256",
+        "torch_version": "2.6.0+cpu",
+        "python_abi": "cp311-cp311"
+      },
+      "python": "3.11",
+      "packages": {
+        "torch": "2.6.0+cpu",
+        "triton": "3.2.0"
+      },
+      "hardware": {
+        "requires_gpu": false,
+        "cuda": null,
+        "device": "cpu",
+        "min_memory_gb": 8
+      },
+      "preflight": {
+        "workdir": "/tmp",
+        "commands": [
+          "g++ --version",
+          "python --version",
+          "python -c \"import torch; print(torch.__version__); print(torch.__file__)\""
+        ]
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "cache_policy": "remote_build",
+      "host": "gpu-a10",
+      "remote_execution_config_hash": "sha256:27100293e953ca8c184acb9899101a58b9fae1ea947791a239c74358bdc3f34a"
+    },
+    {
+      "id": "pytorch-matched-boundary-torch2.6.0-cu124",
+      "framework": "pytorch",
+      "runtime_tier": "cuda_python_overlay",
+      "backend": "remote_docker",
+      "docker": {
+        "image": "op-bench/pytorch-matched-boundary:torch2.6.0-cu124-py311",
+        "digest": "sha256:6ef9ad46672d4c4bbf565441b2fe0cdc4c4e1709a0f8c7179a825281a667010f",
+        "digest_kind": "local_image_id",
+        "dockerfile": "pytorch-matched-boundary-torch2.6.0-cu124/Dockerfile",
+        "build_context": "pytorch-matched-boundary-torch2.6.0-cu124",
+        "platform": "linux/amd64"
+      },
+      "runtime_artifact": {
+        "strategy": "matched_wheel",
+        "artifact_kind": "official_wheel",
+        "artifact_id": "torch-2.6.0+cu124-cp311-cp311-linux_x86_64.whl",
+        "artifact_digest": "sha256:d4c3e9a8d31a7c0fcbb9da17c31a1917e1fac26c566a4cfbd8c9568ad7cade79",
+        "artifact_digest_kind": "wheel_sha256",
+        "torch_version": "2.6.0+cu124",
+        "python_abi": "cp311-cp311"
+      },
+      "python": "3.11",
+      "packages": {
+        "torch": "2.6.0+cu124",
+        "triton": "3.2.0",
+        "cuda": "12.4"
+      },
+      "hardware": {
+        "requires_gpu": true,
+        "cuda": "12.4",
+        "device": "cuda",
+        "min_memory_gb": 16,
+        "min_compute_capability": "7.0"
+      },
+      "gpus": "all",
+      "preflight": {
+        "workdir": "/tmp",
+        "commands": [
+          "python --version",
+          "python -c \"import torch; print(torch.__version__); print(torch.version.cuda); print(torch.cuda.is_available()); print(torch.cuda.get_device_name(0))\""
+        ]
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "cache_policy": "remote_build",
+      "host": "gpu-a10",
+      "remote_execution_config_hash": "sha256:27100293e953ca8c184acb9899101a58b9fae1ea947791a239c74358bdc3f34a"
+    },
+    {
+      "id": "pytorch-nightly-20260407-torch2.12.0dev-cpu-py311",
+      "framework": "pytorch",
+      "runtime_tier": "cpu_python_overlay",
+      "backend": "remote_docker",
+      "docker": {
+        "image": "op-bench/pytorch-nightly-cpu:2.12.0.dev20260407-py311",
+        "digest": "sha256:1cc689314e1e00bbd5c2d79ae098ecce6bb00592ea0d51cda7f6610970425d9b",
+        "digest_kind": "local_image_id",
+        "dockerfile": "pytorch-nightly-20260407-cpu/Dockerfile",
+        "build_context": "pytorch-nightly-20260407-cpu",
+        "platform": "linux/amd64"
+      },
+      "runtime_artifact": {
+        "strategy": "matched_nightly_wheel",
+        "artifact_kind": "official_wheel",
+        "artifact_id": "torch-2.12.0.dev20260407+cpu-cp311-cp311-manylinux_2_28_x86_64.whl",
+        "artifact_digest": "sha256:b20f1e71842d9f1a7c21a0525058d1d2f56efe8e6c32b4978113bb606b4cf385",
+        "artifact_digest_kind": "wheel_sha256",
+        "torch_version": "2.12.0.dev20260407+cpu",
+        "python_abi": "cp311-cp311"
+      },
+      "python": "3.11",
+      "packages": {
+        "torch": "2.12.0.dev20260407+cpu",
+        "torch_git_version": "6a13e444ee88996ff01cd2bab41d7f2857291646"
+      },
+      "hardware": {
+        "requires_gpu": false,
+        "cuda": null,
+        "device": "cpu",
+        "min_memory_gb": 8
+      },
+      "preflight": {
+        "workdir": "/tmp",
+        "commands": [
+          "g++ --version",
+          "python --version",
+          "python -c \"import expecttest, torch; print(torch.__version__); print(torch.version.git_version); print(torch.__file__)\""
+        ]
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "cache_policy": "remote_build",
+      "host": "gpu-a10",
+      "remote_execution_config_hash": "sha256:27100293e953ca8c184acb9899101a58b9fae1ea947791a239c74358bdc3f34a"
+    },
+    {
+      "id": "pytorch-nightly-20260417-torch2.13.0dev-cu126-devel-py311",
+      "framework": "pytorch",
+      "runtime_tier": "cuda_python_overlay",
+      "backend": "remote_docker",
+      "docker": {
+        "image": "op-bench/pytorch-nightly-cu126-devel:2.13.0.dev20260417-py311",
+        "digest": "sha256:c2be263d373e3e3a88076d49b49ee3a50921c4e7e1c9aa0702c994ad8681cecd",
+        "digest_kind": "local_image_id",
+        "dockerfile": "pytorch-nightly-20260417-cu126-devel/Dockerfile",
+        "build_context": "pytorch-nightly-20260417-cu126-devel",
+        "platform": "linux/amd64"
+      },
+      "runtime_artifact": {
+        "strategy": "matched_nightly_wheel",
+        "artifact_kind": "official_wheel",
+        "artifact_id": "torch-2.13.0.dev20260417+cu126-cp311-cp311-manylinux_2_28_x86_64.whl",
+        "artifact_digest": "sha256:df6c5a82e50a7662c8807020db95fbb749803db59679f21dbc228cec377b9789",
+        "artifact_digest_kind": "wheel_sha256",
+        "torch_version": "2.13.0.dev20260417+cu126",
+        "python_abi": "cp311-cp311"
+      },
+      "python": "3.11",
+      "packages": {
+        "torch": "2.13.0.dev20260417+cu126",
+        "torch_git_version": "9f57cbdfdfee3bc1743f136d97c61d87ce98e3aa",
+        "triton": "3.7.0+git9c288bc5",
+        "cuda": "12.6"
+      },
+      "hardware": {
+        "requires_gpu": true,
+        "cuda": "12.6",
+        "device": "cuda",
+        "min_memory_gb": 16,
+        "min_compute_capability": "7.0"
+      },
+      "gpus": "all",
+      "preflight": {
+        "workdir": "/tmp",
+        "commands": [
+          "nvidia-smi",
+          "nvcc --version",
+          "g++ --version",
+          "python --version",
+          "python -c \"import shutil, torch, triton; assert torch.__version__ == '2.13.0.dev20260417+cu126'; assert torch.version.git_version == '9f57cbdfdfee3bc1743f136d97c61d87ce98e3aa'; assert torch.version.cuda == '12.6'; assert torch.cuda.is_available(); assert shutil.which('nvcc'); assert shutil.which('g++'); print(torch.__version__); print(torch.version.git_version); print(torch.version.cuda); print(torch.cuda.get_device_name(0)); print(triton.__version__)\""
+        ]
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "cache_policy": "remote_build",
+      "host": "gpu-a10",
+      "remote_execution_config_hash": "sha256:27100293e953ca8c184acb9899101a58b9fae1ea947791a239c74358bdc3f34a"
+    },
+    {
+      "id": "pytorch-nightly-20260423-torch2.13.0dev-cpu-py311",
+      "framework": "pytorch",
+      "runtime_tier": "cpu_python_overlay",
+      "backend": "remote_docker",
+      "docker": {
+        "image": "op-bench/pytorch-nightly-cpu:2.13.0.dev20260423-py311",
+        "digest": "sha256:3f51b94d27c7b9fb5935cb79d678f4565a27bf3d6ec3fdb6518368d3ca0f6b2e",
+        "digest_kind": "local_image_id",
+        "dockerfile": "pytorch-nightly-20260423-cpu/Dockerfile",
+        "build_context": "pytorch-nightly-20260423-cpu",
+        "platform": "linux/amd64"
+      },
+      "runtime_artifact": {
+        "strategy": "matched_nightly_wheel",
+        "artifact_kind": "official_wheel",
+        "artifact_id": "torch-2.13.0.dev20260423+cpu-cp311-cp311-manylinux_2_28_x86_64.whl",
+        "artifact_digest": "sha256:2d486620bf726bfd8d83e982ed95cc8f62b13dd132ac44c6775e1fb41a2d0733",
+        "artifact_digest_kind": "wheel_sha256",
+        "torch_version": "2.13.0.dev20260423+cpu",
+        "python_abi": "cp311-cp311"
+      },
+      "python": "3.11",
+      "packages": {
+        "torch": "2.13.0.dev20260423+cpu",
+        "torch_git_version": "267d84373f11047e8dd0991cd1b0dd78ddee6fb0"
+      },
+      "hardware": {
+        "requires_gpu": false,
+        "cuda": null,
+        "device": "cpu",
+        "min_memory_gb": 8
+      },
+      "preflight": {
+        "workdir": "/tmp",
+        "commands": [
+          "python --version",
+          "python -c \"import expecttest, torch; assert torch.__version__ == '2.13.0.dev20260423+cpu'; assert torch.version.git_version == '267d84373f11047e8dd0991cd1b0dd78ddee6fb0'; print(torch.__version__); print(torch.version.git_version); print(torch.__file__)\""
+        ]
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "cache_policy": "remote_build",
+      "host": "gpu-a10",
+      "remote_execution_config_hash": "sha256:27100293e953ca8c184acb9899101a58b9fae1ea947791a239c74358bdc3f34a"
+    },
+    {
+      "id": "pytorch-nightly-20260612-torch2.14.0dev-cpu-py311",
+      "framework": "pytorch",
+      "runtime_tier": "cpu_python_overlay",
+      "backend": "remote_docker",
+      "docker": {
+        "image": "op-bench/pytorch-nightly-cpu:2.14.0.dev20260612-py311",
+        "digest": "sha256:32df30b84320a2a274a73f4bec7248794e21a00875dbf92e12a67827eed7ee77",
+        "digest_kind": "local_image_id",
+        "dockerfile": "pytorch-nightly-20260612-cpu/Dockerfile",
+        "build_context": "pytorch-nightly-20260612-cpu",
+        "platform": "linux/amd64"
+      },
+      "runtime_artifact": {
+        "strategy": "matched_nightly_wheel",
+        "artifact_kind": "official_wheel",
+        "artifact_id": "torch-2.14.0.dev20260612+cpu-cp311-cp311-manylinux_2_28_x86_64.whl",
+        "artifact_digest": "sha256:fcb88e9690c95f7a813afa2d47359c3f805938b88781de8d84d1b5c5cc3514e9",
+        "artifact_digest_kind": "wheel_sha256",
+        "torch_version": "2.14.0.dev20260612+cpu",
+        "python_abi": "cp311-cp311"
+      },
+      "python": "3.11",
+      "packages": {
+        "torch": "2.14.0.dev20260612+cpu",
+        "torch_git_version": "b858202e04fee5be87860df073caef017babd896"
+      },
+      "hardware": {
+        "requires_gpu": false,
+        "cuda": null,
+        "device": "cpu",
+        "min_memory_gb": 8
+      },
+      "preflight": {
+        "workdir": "/tmp",
+        "commands": [
+          "python --version",
+          "python -c \"import expecttest, torch; assert torch.__version__ == '2.14.0.dev20260612+cpu'; assert torch.version.git_version == 'b858202e04fee5be87860df073caef017babd896'; print(torch.__version__); print(torch.version.git_version); print(torch.__file__)\""
+        ]
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "cache_policy": "remote_build",
+      "host": "gpu-a10",
+      "remote_execution_config_hash": "sha256:27100293e953ca8c184acb9899101a58b9fae1ea947791a239c74358bdc3f34a"
+    },
+    {
+      "id": "pytorch-nightly-20260612-torch2.14.0dev-cu126-devel-py311",
+      "framework": "pytorch",
+      "runtime_tier": "cuda_python_overlay",
+      "backend": "remote_docker",
+      "docker": {
+        "image": "op-bench/pytorch-nightly-cu126-devel:2.14.0.dev20260612-py311",
+        "digest": "sha256:b9371ef49c56c89e4752b0dc3d64ebd5784d67fd0e77a579640ed33c48747511",
+        "digest_kind": "local_image_id",
+        "dockerfile": "pytorch-nightly-20260612-cu126-devel/Dockerfile",
+        "build_context": "pytorch-nightly-20260612-cu126-devel",
+        "platform": "linux/amd64"
+      },
+      "runtime_artifact": {
+        "strategy": "matched_nightly_wheel",
+        "artifact_kind": "official_wheel",
+        "artifact_id": "torch-2.14.0.dev20260612+cu126-cp311-cp311-manylinux_2_28_x86_64.whl",
+        "artifact_digest": "sha256:24378ffefa5746d2edb98d39d815190e68afa4d2fe086fb873da5e43acc37192",
+        "artifact_digest_kind": "wheel_sha256",
+        "torch_version": "2.14.0.dev20260612+cu126",
+        "python_abi": "cp311-cp311"
+      },
+      "python": "3.11",
+      "packages": {
+        "torch": "2.14.0.dev20260612+cu126",
+        "torch_git_version": "b858202e04fee5be87860df073caef017babd896",
+        "triton": "3.7.0+git9c288bc5",
+        "cuda": "12.6"
+      },
+      "hardware": {
+        "requires_gpu": true,
+        "cuda": "12.6",
+        "device": "cuda",
+        "min_memory_gb": 16,
+        "min_compute_capability": "7.0"
+      },
+      "gpus": "all",
+      "preflight": {
+        "workdir": "/tmp",
+        "commands": [
+          "nvidia-smi",
+          "nvcc --version",
+          "g++ --version",
+          "python --version",
+          "python -c \"import shutil, torch, triton; assert torch.__version__ == '2.14.0.dev20260612+cu126'; assert torch.version.git_version == 'b858202e04fee5be87860df073caef017babd896'; assert torch.version.cuda == '12.6'; assert torch.cuda.is_available(); assert shutil.which('nvcc'); assert shutil.which('g++'); print(torch.__version__); print(torch.version.git_version); print(torch.version.cuda); print(torch.cuda.get_device_name(0)); print(triton.__version__)\""
+        ]
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "cache_policy": "remote_build",
+      "host": "gpu-a10",
+      "remote_execution_config_hash": "sha256:27100293e953ca8c184acb9899101a58b9fae1ea947791a239c74358bdc3f34a"
+    },
+    {
+      "id": "pytorch-nightly-20260612-torch2.14.0dev-cu126-py311",
+      "framework": "pytorch",
+      "runtime_tier": "cuda_python_overlay",
+      "backend": "remote_docker",
+      "docker": {
+        "image": "op-bench/pytorch-nightly-cu126:2.14.0.dev20260612-py311",
+        "digest": "sha256:929583ddcaece7ca525f484d4ed9509c44f723260d18bb5738c6265cc798c275",
+        "digest_kind": "local_image_id",
+        "dockerfile": "pytorch-nightly-20260612-cu126/Dockerfile",
+        "build_context": "pytorch-nightly-20260612-cu126",
+        "platform": "linux/amd64"
+      },
+      "runtime_artifact": {
+        "strategy": "matched_nightly_wheel",
+        "artifact_kind": "official_wheel",
+        "artifact_id": "torch-2.14.0.dev20260612+cu126-cp311-cp311-manylinux_2_28_x86_64.whl",
+        "artifact_digest": "sha256:24378ffefa5746d2edb98d39d815190e68afa4d2fe086fb873da5e43acc37192",
+        "artifact_digest_kind": "wheel_sha256",
+        "torch_version": "2.14.0.dev20260612+cu126",
+        "python_abi": "cp311-cp311"
+      },
+      "python": "3.11",
+      "packages": {
+        "torch": "2.14.0.dev20260612+cu126",
+        "torch_git_version": "b858202e04fee5be87860df073caef017babd896",
+        "triton": "3.7.0+git9c288bc5",
+        "cuda": "12.6"
+      },
+      "hardware": {
+        "requires_gpu": true,
+        "cuda": "12.6",
+        "device": "cuda",
+        "min_memory_gb": 16,
+        "min_compute_capability": "7.0"
+      },
+      "gpus": "all",
+      "preflight": {
+        "workdir": "/tmp",
+        "commands": [
+          "python --version",
+          "python -c \"import torch, triton; assert torch.__version__ == '2.14.0.dev20260612+cu126'; assert torch.version.git_version == 'b858202e04fee5be87860df073caef017babd896'; assert torch.version.cuda == '12.6'; assert torch.cuda.is_available(); print(torch.__version__); print(torch.version.git_version); print(torch.version.cuda); print(torch.cuda.get_device_name(0)); print(triton.__version__)\""
+        ]
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "cache_policy": "remote_build",
+      "host": "gpu-a10",
+      "remote_execution_config_hash": "sha256:27100293e953ca8c184acb9899101a58b9fae1ea947791a239c74358bdc3f34a"
+    },
+    {
+      "id": "pytorch-nightly-20260707-torch2.14.0dev-cpu-py311",
+      "framework": "pytorch",
+      "runtime_tier": "cpu_python_overlay",
+      "backend": "remote_docker",
+      "docker": {
+        "image": "op-bench/pytorch-nightly-cpu:2.14.0.dev20260707-py311",
+        "digest": "sha256:dbc620efdd3258493bef9c245f7f8db2df45334a96d01ea32146ce62f97701cb",
+        "digest_kind": "local_image_id",
+        "dockerfile": "pytorch-nightly-20260707-cpu/Dockerfile",
+        "build_context": "pytorch-nightly-20260707-cpu",
+        "platform": "linux/amd64"
+      },
+      "runtime_artifact": {
+        "strategy": "matched_nightly_wheel",
+        "artifact_kind": "official_wheel",
+        "artifact_id": "torch-2.14.0.dev20260707+cpu-cp311-cp311-manylinux_2_28_x86_64.whl",
+        "artifact_digest": "sha256:2404762b4bd7f4da79f336aa8a55b1be5467a360a06a2b84d7f8d85ed65de1e2",
+        "artifact_digest_kind": "wheel_sha256",
+        "torch_version": "2.14.0.dev20260707+cpu",
+        "python_abi": "cp311-cp311"
+      },
+      "python": "3.11",
+      "packages": {
+        "torch": "2.14.0.dev20260707+cpu",
+        "torch_git_version": "91ee0e8a8ae2ab8df31662af070af6ae572ce0df"
+      },
+      "hardware": {
+        "requires_gpu": false,
+        "cuda": null,
+        "device": "cpu",
+        "min_memory_gb": 8
+      },
+      "preflight": {
+        "workdir": "/tmp",
+        "commands": [
+          "python --version",
+          "python -c \"import expecttest, torch; assert torch.__version__ == '2.14.0.dev20260707+cpu'; assert torch.version.git_version == '91ee0e8a8ae2ab8df31662af070af6ae572ce0df'; print(torch.__version__); print(torch.version.git_version); print(torch.__file__)\""
+        ]
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "cache_policy": "remote_build",
+      "host": "gpu-a10",
+      "remote_execution_config_hash": "sha256:27100293e953ca8c184acb9899101a58b9fae1ea947791a239c74358bdc3f34a"
+    },
+    {
+      "id": "pytorch-nightly-20260707-torch2.14.0dev-cu126-devel-py311",
+      "framework": "pytorch",
+      "runtime_tier": "cuda_python_overlay",
+      "backend": "remote_docker",
+      "docker": {
+        "image": "op-bench/pytorch-nightly-cu126-devel:2.14.0.dev20260707-py311",
+        "digest": "sha256:657bcf2d939c468caf99e0ec7b440e05a64e14798c9002ea6df9c25c0070e0a4",
+        "digest_kind": "local_image_id",
+        "dockerfile": "pytorch-nightly-20260707-cu126-devel/Dockerfile",
+        "build_context": "pytorch-nightly-20260707-cu126-devel",
+        "platform": "linux/amd64"
+      },
+      "runtime_artifact": {
+        "strategy": "matched_nightly_wheel",
+        "artifact_kind": "official_wheel",
+        "artifact_id": "torch-2.14.0.dev20260707+cu126-cp311-cp311-manylinux_2_28_x86_64.whl",
+        "artifact_digest": "sha256:8acf2606bd79ba7f508c4584bdfdc6e75379562ac4afe86c96cddb931f0bbbe7",
+        "artifact_digest_kind": "wheel_sha256",
+        "torch_version": "2.14.0.dev20260707+cu126",
+        "python_abi": "cp311-cp311"
+      },
+      "python": "3.11",
+      "packages": {
+        "torch": "2.14.0.dev20260707+cu126",
+        "torch_git_version": "91ee0e8a8ae2ab8df31662af070af6ae572ce0df",
+        "triton": "3.7.0+git9c288bc5",
+        "cuda": "12.6"
+      },
+      "hardware": {
+        "requires_gpu": true,
+        "cuda": "12.6",
+        "device": "cuda",
+        "min_memory_gb": 16,
+        "min_compute_capability": "7.0"
+      },
+      "gpus": "all",
+      "preflight": {
+        "workdir": "/tmp",
+        "commands": [
+          "nvidia-smi",
+          "nvcc --version",
+          "g++ --version",
+          "python --version",
+          "python -c \"import shutil, torch, triton; assert torch.__version__ == '2.14.0.dev20260707+cu126'; assert torch.version.git_version == '91ee0e8a8ae2ab8df31662af070af6ae572ce0df'; assert torch.version.cuda == '12.6'; assert torch.cuda.is_available(); assert shutil.which('nvcc'); assert shutil.which('g++'); print(torch.__version__); print(torch.version.git_version); print(torch.version.cuda); print(torch.cuda.get_device_name(0)); print(triton.__version__)\""
+        ]
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "cache_policy": "remote_build",
+      "host": "gpu-a10",
+      "remote_execution_config_hash": "sha256:27100293e953ca8c184acb9899101a58b9fae1ea947791a239c74358bdc3f34a"
+    },
+    {
+      "id": "pytorch-nightly-20260710-torch2.14.0dev-cpu-py311",
+      "framework": "pytorch",
+      "runtime_tier": "cpu_python_overlay",
+      "backend": "remote_docker",
+      "docker": {
+        "image": "op-bench/pytorch-nightly-cpu:2.14.0.dev20260710-py311",
+        "digest": "sha256:3163c72d501e3640d7fb18f9a5bafaf182b501d035474f3eee105859ec4a3047",
+        "digest_kind": "local_image_id",
+        "dockerfile": "pytorch-nightly-20260710-cpu/Dockerfile",
+        "build_context": "pytorch-nightly-20260710-cpu",
+        "platform": "linux/amd64"
+      },
+      "runtime_artifact": {
+        "strategy": "matched_nightly_wheel",
+        "artifact_kind": "official_wheel",
+        "artifact_id": "torch-2.14.0.dev20260710+cpu-cp311-cp311-manylinux_2_28_x86_64.whl",
+        "artifact_digest": "sha256:76990afa33b8b11692e71b8ad24a7cd578caa432bfe88e96ae951e507348f24a",
+        "artifact_digest_kind": "wheel_sha256",
+        "torch_version": "2.14.0.dev20260710+cpu",
+        "python_abi": "cp311-cp311"
+      },
+      "python": "3.11",
+      "packages": {
+        "torch": "2.14.0.dev20260710+cpu",
+        "torch_git_version": "0ce05af6274d975672dd30447bf00010317288ef"
+      },
+      "hardware": {
+        "requires_gpu": false,
+        "cuda": null,
+        "device": "cpu",
+        "min_memory_gb": 8
+      },
+      "preflight": {
+        "workdir": "/tmp",
+        "commands": [
+          "python --version",
+          "python -c \"import expecttest, torch; assert torch.__version__ == '2.14.0.dev20260710+cpu'; assert torch.version.git_version == '0ce05af6274d975672dd30447bf00010317288ef'; print(torch.__version__); print(torch.version.git_version); print(torch.__file__)\""
+        ]
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "cache_policy": "remote_build",
+      "host": "gpu-a10",
+      "remote_execution_config_hash": "sha256:27100293e953ca8c184acb9899101a58b9fae1ea947791a239c74358bdc3f34a"
+    },
+    {
+      "id": "pytorch-nightly-20260407-torch2.12.0dev-cu126-py311",
+      "framework": "pytorch",
+      "runtime_tier": "cuda_python_overlay",
+      "backend": "remote_docker",
+      "docker": {
+        "image": "op-bench/pytorch-nightly-cu126:2.12.0.dev20260407-py311",
+        "digest": "sha256:64e7e26eafc78146ff711445f13fc692111f688bf6b87505d945996206a3d068",
+        "digest_kind": "local_image_id",
+        "dockerfile": "pytorch-nightly-20260407-cu126/Dockerfile",
+        "build_context": "pytorch-nightly-20260407-cu126",
+        "platform": "linux/amd64"
+      },
+      "runtime_artifact": {
+        "strategy": "matched_nightly_wheel",
+        "artifact_kind": "official_wheel",
+        "artifact_id": "torch-2.12.0.dev20260407+cu126-cp311-cp311-manylinux_2_28_x86_64.whl",
+        "artifact_digest": "sha256:676cf93c822752750a4dd78bbaa5b1da96ea4334e60007704f327e7b5c0156b0",
+        "artifact_digest_kind": "wheel_sha256",
+        "torch_version": "2.12.0.dev20260407+cu126",
+        "python_abi": "cp311-cp311"
+      },
+      "python": "3.11",
+      "packages": {
+        "torch": "2.12.0.dev20260407+cu126",
+        "torch_git_version": "6a13e444ee88996ff01cd2bab41d7f2857291646",
+        "triton": "3.7.0+git9c288bc5",
+        "cuda": "12.6"
+      },
+      "hardware": {
+        "requires_gpu": true,
+        "cuda": "12.6",
+        "device": "cuda",
+        "min_memory_gb": 16,
+        "min_compute_capability": "7.0"
+      },
+      "gpus": "all",
+      "preflight": {
+        "workdir": "/tmp",
+        "commands": [
+          "python --version",
+          "python -c \"import torch; print(torch.__version__); print(torch.version.git_version); print(torch.version.cuda); print(torch.cuda.is_available()); print(torch.cuda.get_device_name(0))\""
+        ]
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "cache_policy": "remote_build",
+      "host": "gpu-a10",
+      "remote_execution_config_hash": "sha256:27100293e953ca8c184acb9899101a58b9fae1ea947791a239c74358bdc3f34a"
+    },
+    {
+      "id": "pytorch-nightly-20260710-torch2.14.0dev-cu126-devel-py311",
+      "framework": "pytorch",
+      "runtime_tier": "cuda_python_overlay",
+      "backend": "remote_docker",
+      "docker": {
+        "image": "op-bench/pytorch-nightly-cu126-devel:2.14.0.dev20260710-py311",
+        "digest": "sha256:e0c5bb1b96994f64195389d47a6617f004f61526b27a0eb369a50e55e57f6d51",
+        "digest_kind": "local_image_id",
+        "dockerfile": "pytorch-nightly-20260710-cu126-devel/Dockerfile",
+        "build_context": "pytorch-nightly-20260710-cu126-devel",
+        "platform": "linux/amd64"
+      },
+      "runtime_artifact": {
+        "strategy": "matched_nightly_wheel",
+        "artifact_kind": "official_wheel",
+        "artifact_id": "torch-2.14.0.dev20260710+cu126-cp311-cp311-manylinux_2_28_x86_64.whl",
+        "artifact_digest": "sha256:12ff1b41862cd2573864e1e15d720697fee49726c13a5f1e21c218baf6849fb6",
+        "artifact_digest_kind": "wheel_sha256",
+        "torch_version": "2.14.0.dev20260710+cu126",
+        "python_abi": "cp311-cp311"
+      },
+      "python": "3.11",
+      "packages": {
+        "torch": "2.14.0.dev20260710+cu126",
+        "torch_git_version": "0ce05af6274d975672dd30447bf00010317288ef",
+        "triton": "3.7.0+git9c288bc5",
+        "cuda": "12.6"
+      },
+      "hardware": {
+        "requires_gpu": true,
+        "cuda": "12.6",
+        "device": "cuda",
+        "min_memory_gb": 16,
+        "min_compute_capability": "7.0"
+      },
+      "gpus": "all",
+      "preflight": {
+        "workdir": "/tmp",
+        "commands": [
+          "nvidia-smi",
+          "nvcc --version",
+          "g++ --version",
+          "python --version",
+          "python -c \"import shutil, torch, triton; assert torch.__version__ == '2.14.0.dev20260710+cu126'; assert torch.version.git_version == '0ce05af6274d975672dd30447bf00010317288ef'; assert torch.version.cuda == '12.6'; assert torch.cuda.is_available(); assert shutil.which('nvcc'); assert shutil.which('g++'); print(torch.__version__); print(torch.version.git_version); print(torch.version.cuda); print(torch.cuda.get_device_name(0)); print(triton.__version__)\""
+        ]
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "cache_policy": "remote_build",
+      "host": "gpu-a10",
+      "remote_execution_config_hash": "sha256:27100293e953ca8c184acb9899101a58b9fae1ea947791a239c74358bdc3f34a"
+    },
+    {
+      "id": "pytorch-nightly-20260710-torch2.14.0dev-cu126-py311",
+      "framework": "pytorch",
+      "runtime_tier": "cuda_python_overlay",
+      "backend": "remote_docker",
+      "docker": {
+        "image": "op-bench/pytorch-nightly-cu126:2.14.0.dev20260710-py311",
+        "digest": "sha256:4f5eb40b1cbc2122d37f91b601a840b6055da2af2d94abdbd003a2a4ec3e3407",
+        "digest_kind": "local_image_id",
+        "dockerfile": "pytorch-nightly-20260710-cu126/Dockerfile",
+        "build_context": "pytorch-nightly-20260710-cu126",
+        "platform": "linux/amd64"
+      },
+      "runtime_artifact": {
+        "strategy": "matched_nightly_wheel",
+        "artifact_kind": "official_wheel",
+        "artifact_id": "torch-2.14.0.dev20260710+cu126-cp311-cp311-manylinux_2_28_x86_64.whl",
+        "artifact_digest": "sha256:12ff1b41862cd2573864e1e15d720697fee49726c13a5f1e21c218baf6849fb6",
+        "artifact_digest_kind": "wheel_sha256",
+        "torch_version": "2.14.0.dev20260710+cu126",
+        "python_abi": "cp311-cp311"
+      },
+      "python": "3.11",
+      "packages": {
+        "torch": "2.14.0.dev20260710+cu126",
+        "torch_git_version": "0ce05af6274d975672dd30447bf00010317288ef",
+        "triton": "3.7.0+git9c288bc5",
+        "cuda": "12.6"
+      },
+      "hardware": {
+        "requires_gpu": true,
+        "cuda": "12.6",
+        "device": "cuda",
+        "min_memory_gb": 16,
+        "min_compute_capability": "7.0"
+      },
+      "gpus": "all",
+      "preflight": {
+        "workdir": "/tmp",
+        "commands": [
+          "python --version",
+          "python -c \"import torch, triton; assert torch.__version__ == '2.14.0.dev20260710+cu126'; assert torch.version.git_version == '0ce05af6274d975672dd30447bf00010317288ef'; assert torch.version.cuda == '12.6'; assert torch.cuda.is_available(); print(torch.__version__); print(torch.version.git_version); print(torch.version.cuda); print(torch.cuda.get_device_name(0)); print(triton.__version__)\""
+        ]
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "cache_policy": "remote_build",
+      "host": "gpu-a10",
+      "remote_execution_config_hash": "sha256:27100293e953ca8c184acb9899101a58b9fae1ea947791a239c74358bdc3f34a"
+    },
+    {
+      "id": "pytorch-boundary-cpu-source-build-cmake3-py311",
+      "framework": "pytorch",
+      "runtime_tier": "cpu_source_snapshot_fuller",
+      "backend": "remote_docker",
+      "docker": {
+        "image": "op-bench/pytorch-boundary-cpu-source-build:py311-cmake3",
+        "digest": "sha256:a4c41603044bf3a9a9345edfdaee96caa25e39fd3c552c0162e21f7955cf0626",
+        "digest_kind": "local_image_id",
+        "dockerfile": "pytorch-boundary-cpu-source-build-cmake3/Dockerfile",
+        "build_context": "pytorch-boundary-cpu-source-build-cmake3",
+        "platform": "linux/amd64"
+      },
+      "python": "3.11",
+      "packages": {
+        "torch_bootstrap": "2.6.0+cpu",
+        "ccache": "4.5.1",
+        "cmake": ">=3.27,<4",
+        "gcc": "11.4.0",
+        "pyyaml": "6.0.3"
+      },
+      "hardware": {
+        "requires_gpu": false,
+        "cuda": null,
+        "device": "cpu",
+        "min_memory_gb": 16
+      },
+      "preflight": {
+        "workdir": "/tmp",
+        "commands": [
+          "ccache --version",
+          "cmake --version",
+          "g++ --version",
+          "python --version",
+          "python -c \"import expecttest, yaml; print(yaml.__version__)\"",
+          "python -c \"import torch; print(torch.__version__); print(torch.__file__)\""
+        ]
+      },
+      "source_loading_modes": [
+        "inplace_build"
+      ],
+      "cache_policy": "remote_build",
+      "host": "gpu-a10",
+      "remote_execution_config_hash": "sha256:27100293e953ca8c184acb9899101a58b9fae1ea947791a239c74358bdc3f34a"
+    },
+    {
+      "id": "pytorch-boundary-cpu-source-build-py311",
+      "framework": "pytorch",
+      "runtime_tier": "cpu_source_snapshot_fuller",
+      "backend": "remote_docker",
+      "docker": {
+        "image": "op-bench/pytorch-boundary-cpu-source-build:py311",
+        "digest": "sha256:8288840b43b1f770a34cb1fcbc3429eadd0375bebe23baee18d7fcc10e6dadec",
+        "digest_kind": "local_image_id",
+        "dockerfile": "pytorch-boundary-cpu-source-build/Dockerfile",
+        "build_context": "pytorch-boundary-cpu-source-build",
+        "platform": "linux/amd64"
+      },
+      "python": "3.11",
+      "packages": {
+        "torch_bootstrap": "2.6.0+cpu",
+        "ccache": "4.5.1",
+        "gcc": "11.4.0",
+        "pyyaml": "6.0.3"
+      },
+      "hardware": {
+        "requires_gpu": false,
+        "cuda": null,
+        "device": "cpu",
+        "min_memory_gb": 16
+      },
+      "preflight": {
+        "workdir": "/tmp",
+        "commands": [
+          "ccache --version",
+          "g++ --version",
+          "python --version",
+          "python -c \"import expecttest, yaml; print(yaml.__version__)\"",
+          "python -c \"import torch; print(torch.__version__); print(torch.__file__)\""
+        ]
+      },
+      "source_loading_modes": [
+        "inplace_build"
+      ],
+      "cache_policy": "remote_build",
+      "host": "gpu-a10",
+      "remote_execution_config_hash": "sha256:27100293e953ca8c184acb9899101a58b9fae1ea947791a239c74358bdc3f34a"
     }
   ]
 }

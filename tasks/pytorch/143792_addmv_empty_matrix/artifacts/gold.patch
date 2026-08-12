@@ -1,0 +1,11 @@
+diff --git a/torch/_decomp/decompositions.py b/torch/_decomp/decompositions.py
+index 8aa43c9e1cf..d2b92342b7f 100644
+--- a/torch/_decomp/decompositions.py
++++ b/torch/_decomp/decompositions.py
+@@ -1508,4 +1508,6 @@ def addmv(self: Tensor, mat1: Tensor, vec: Tensor, beta: int = 1, alpha: int = 1):
+     out = alpha * torch.mv(mat1, vec)
+     if beta == 0:
+         return out
++    if out.numel() == 0:  # handle empty matrix
++        return beta * self
+     return out + beta * self

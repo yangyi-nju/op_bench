@@ -10,9 +10,15 @@ from unittest.mock import patch
 
 from op_bench.dataset import DatasetManifest
 from op_bench.integrity import replay_spec_hash
+from op_bench.registry import (
+    EnvironmentRegistry,
+    SourceRegistry,
+    resolve_task_assets,
+)
 from op_bench.runtime.legacy import (
     LegacyV05Defaults,
     _executable_source_revision,
+    agent_task_view_from_v05,
     agent_spec_for_v1_adapter,
     full_task_spec_from_v05,
     run_manifest_from_v05_dataset,
@@ -20,6 +26,7 @@ from op_bench.runtime.legacy import (
 )
 from op_bench.runtime.profiles import load_runtime_profile_registry
 from op_bench.runtime.run_artifacts import AttemptArtifactStore
+from op_bench.runtime.task_view import project_agent_task_view
 from op_bench.runtime.validation import ContractError
 from op_bench.task import TaskManifest
 from tests.test_runtime_contracts import agent_spec
@@ -32,16 +39,375 @@ from tests.runtime_git_fixture import (
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DATASET_PATH = REPO_ROOT / "datasets" / "pytorch_v0.5" / "dataset.json"
+BOUNDARY_DATASET_PATH = (
+    REPO_ROOT
+    / "archives"
+    / "v0.7-pre-quality"
+    / "datasets"
+    / "pytorch_v0.7_boundary"
+    / "dataset.json"
+)
 PROFILE_REGISTRY_PATH = REPO_ROOT / "configs" / "runtime_profiles.v1.json"
 PROFILE_BY_ENVIRONMENT = {
+    "pytorch-boundary-cpu-source-build-py311": "remote-cpu-source-boundary-py311-v1",
     "pytorch-cpu-torch2.6.0-py311": "remote-cpu-pytorch-2.6-py311-v1",
     "pytorch-cpu-compile-torch2.6.0-py311": "remote-cpu-compile-pytorch-2.6-py311-v1",
     "pytorch-cuda-torch2.6.0-py311-cu124": "remote-cuda-overlay-pytorch-2.6-cu124-v1",
     "pytorch-cuda-devel-torch2.6.0-py311-cu124": "remote-cuda-kernel-pytorch-2.6-cu124-v1",
+    "pytorch-matched-boundary-torch2.2.0-cpu": "remote-cpu-boundary-torch2.2-py311-v1",
+    "pytorch-matched-boundary-torch2.3.0-cpu": "remote-cpu-boundary-torch2.3-py311-v1",
+    "pytorch-matched-boundary-torch2.4.0-cpu": "remote-cpu-boundary-torch2.4-py311-v1",
+    "pytorch-matched-boundary-torch2.6.0-cu124": "remote-cuda-boundary-torch2.6-cu124-v1",
+    "pytorch-matched-ff89ebc-torch2.4.0-py311-cu124": "remote-cuda-matched-torch2.4-cu124-py311-v1",
+    "pytorch-matched-06e9dea-torch2.7.0-py311-cpu": "remote-cpu-matched-torch2.7-py311-v1",
+    "pytorch-nightly-20260407-torch2.12.0dev-cpu-py311": "remote-cpu-expansion-nightly-torch2.12.0dev20260407-py311-v1",
+    "pytorch-nightly-20260407-torch2.12.0dev-cu126-py311": "remote-cuda-expansion-nightly-torch2.12.0dev20260407-cu126-py311-v1",
 }
 
 
+def quality_tasks(
+    *public_task_ids: str | None,
+) -> tuple[TaskManifest, ...]:
+    originals = DatasetManifest.load(DATASET_PATH).load_tasks(verified_only=True)
+    selected: list[TaskManifest] = []
+    for original, public_task_id in zip(originals, public_task_ids):
+        data = copy.deepcopy(original.data)
+        agent_visible = data.setdefault("agent_visible", {})
+        if public_task_id is None:
+            agent_visible.pop("public_task_id", None)
+        else:
+            agent_visible["public_task_id"] = public_task_id
+        selected.append(TaskManifest(task_dir=original.task_dir, data=data))
+    return tuple(selected)
+
+
+def quality_dataset(tasks: tuple[TaskManifest, ...]) -> DatasetManifest:
+    return DatasetManifest(
+        dataset_dir=REPO_ROOT,
+        data={
+            "dataset_id": "quality-fixture",
+            "version": "v0.7",
+            "status": "verified",
+            "tasks": [
+                {
+                    "task_id": task.task_id,
+                    "task_path": str(task.task_dir),
+                    "admission_status": "verified",
+                    "environment_status": "ready",
+                    "source_status": "ready",
+                    "replay_status": "verified",
+                    "admission_evidence": str(task.task_dir / "admission/evidence.json"),
+                }
+                for task in tasks
+            ],
+        },
+    )
+
+
 class LegacyV05ProjectionTests(unittest.TestCase):
+    def test_quality_task_uses_opaque_public_identity_only_at_public_boundary(
+        self,
+    ) -> None:
+        task = quality_tasks("opbench-v07-t0001")[0]
+
+        spec = full_task_spec_from_v05(task)
+
+        self.assertEqual(task.public_task_id, "opbench-v07-t0001")
+        self.assertEqual(spec.task.identifier, "opbench-v07-t0001")
+        self.assertNotIn(str(task.data["source"]["pr_number"]), spec.task.identifier)
+        self.assertEqual(spec.gold_patch.identifier, f"{task.task_id}:gold-patch")
+        self.assertEqual(
+            spec.hidden_test_asset.identifier,
+            f"{task.task_id}:hidden-test",
+        )
+        self.assertEqual(spec.admission.identifier, f"{task.task_id}:admission")
+
+    def test_quality_manifest_uses_uniform_repository_root_capability(self) -> None:
+        tasks = quality_tasks("opbench-v07-t0001", "opbench-v07-t0002")
+        dataset = quality_dataset(tasks)
+        with patch.object(DatasetManifest, "load", return_value=dataset), patch.object(
+            DatasetManifest,
+            "load_tasks",
+            return_value=list(tasks),
+        ):
+            manifest = run_manifest_from_v05_dataset(
+                REPO_ROOT / "unused-quality-dataset.json",
+                agents=(agent_spec_for_v1_adapter("scripted_canonical"),),
+                repeat=1,
+                created_at="2026-07-29T00:00:00Z",
+            )
+
+        self.assertEqual(
+            manifest.capability_policy.policy_id,
+            "opbench-v0.7-repository-root-v1",
+        )
+        self.assertEqual(manifest.capability_policy.writable_paths, (".",))
+        self.assertTrue(
+            all(
+                view.capability_policy.writable_paths == (".",)
+                for view in manifest.task_views
+            )
+        )
+        public_bytes = repr(tuple(view.to_dict() for view in manifest.task_views))
+        for task in tasks:
+            self.assertNotIn(task.task_id, public_bytes)
+            self.assertNotIn(str(task.data["source"]["pr_number"]), public_bytes)
+            self.assertNotIn(task.patch_scope_paths[0], public_bytes)
+
+    def test_manifest_rejects_mixed_opaque_and_canonical_task_identities(self) -> None:
+        tasks = quality_tasks("opbench-v07-t0001", None)
+        dataset = quality_dataset(tasks)
+        with patch.object(DatasetManifest, "load", return_value=dataset), patch.object(
+            DatasetManifest,
+            "load_tasks",
+            return_value=list(tasks),
+        ):
+            with self.assertRaisesRegex(ContractError, "public_task_id"):
+                run_manifest_from_v05_dataset(
+                    REPO_ROOT / "unused-mixed-dataset.json",
+                    agents=(agent_spec_for_v1_adapter("scripted_canonical"),),
+                    repeat=1,
+                    created_at="2026-07-29T00:00:00Z",
+                )
+
+    def test_projection_rejects_non_string_and_non_opaque_public_task_ids(
+        self,
+    ) -> None:
+        for invalid in (
+            True,
+            7,
+            "",
+            "task-v07-empty-addmv",
+            "opbench-v07-t001",
+            "opbench-v07-t0001-extra",
+        ):
+            with self.subTest(public_task_id=invalid):
+                task = quality_tasks(invalid)[0]  # type: ignore[arg-type]
+                with self.assertRaisesRegex(ContractError, "public_task_id"):
+                    full_task_spec_from_v05(task)
+
+    def test_invalid_public_task_id_cannot_activate_root_capability(self) -> None:
+        tasks = quality_tasks("opbench-v07-t0001", "pytorch__private")
+        dataset = quality_dataset(tasks)
+        with patch.object(DatasetManifest, "load", return_value=dataset), patch.object(
+            DatasetManifest,
+            "load_tasks",
+            return_value=list(tasks),
+        ):
+            with self.assertRaisesRegex(ContractError, "public_task_id"):
+                run_manifest_from_v05_dataset(
+                    REPO_ROOT / "unused-invalid-dataset.json",
+                    agents=(agent_spec_for_v1_adapter("scripted_canonical"),),
+                    repeat=1,
+                    created_at="2026-07-29T00:00:00Z",
+                )
+
+    def test_quality_runtime_bundle_resolves_private_assets_by_public_identity(
+        self,
+    ) -> None:
+        tasks = quality_tasks("opbench-v07-t0001")
+        dataset = quality_dataset(tasks)
+        with patch.object(DatasetManifest, "load", return_value=dataset), patch.object(
+            DatasetManifest,
+            "load_tasks",
+            return_value=list(tasks),
+        ):
+            bundle = runtime_bundle_from_v05_dataset(
+                REPO_ROOT / "unused-quality-dataset.json",
+                agents=(agent_spec_for_v1_adapter("scripted_canonical"),),
+                repeat=1,
+                created_at="2026-07-29T00:00:00Z",
+            )
+
+        spec = bundle.manifest.tasks[0]
+        binding = bundle.private_tasks[0]
+        self.assertEqual(spec.task.identifier, "opbench-v07-t0001")
+        self.assertEqual(binding.task_id, tasks[0].task_id)
+        self.assertEqual(
+            bundle.public_task_ids_by_canonical,
+            ((tasks[0].task_id, "opbench-v07-t0001"),),
+        )
+        self.assertEqual(bundle.source_for(spec), binding.source)
+        self.assertEqual(bundle.hidden_asset_for(spec), binding.hidden_asset)
+
+    def test_quality_task_identity_digest_uses_only_public_projection_facts(
+        self,
+    ) -> None:
+        original = quality_tasks("opbench-v07-t0001")[0]
+        private_changed_data = copy.deepcopy(original.data)
+        private_changed_data["patch_scope"]["allowed_paths"] = (
+            list(original.patch_scope_paths) + ["private/extra.py"]
+        )
+        private_changed = TaskManifest(
+            task_dir=original.task_dir,
+            data=private_changed_data,
+        )
+        public_changed_data = copy.deepcopy(original.data)
+        public_changed_data["statement"]["body"] += " Publicly visible clarification."
+        public_changed = TaskManifest(
+            task_dir=original.task_dir,
+            data=public_changed_data,
+        )
+
+        selected = full_task_spec_from_v05(original)
+        private_variant = full_task_spec_from_v05(private_changed)
+        public_variant = full_task_spec_from_v05(public_changed)
+
+        self.assertEqual(selected.task.digest_kind, "canonical_config")
+        self.assertNotEqual(selected.task.digest, replay_spec_hash(original))
+        self.assertEqual(selected.task.digest, private_variant.task.digest)
+        self.assertNotEqual(selected.task.digest, public_variant.task.digest)
+
+    def test_public_projection_does_not_require_private_artifact_files(
+        self,
+    ) -> None:
+        original = quality_tasks("opbench-v07-t0001")[0]
+        defaults = LegacyV05Defaults.standard()
+        expected = project_agent_task_view(
+            full_task_spec_from_v05(original),
+            defaults.capability_policy,
+            defaults.budget_policy,
+        )
+
+        with tempfile.TemporaryDirectory() as directory:
+            task_without_private_files = TaskManifest(
+                task_dir=Path(directory),
+                data=copy.deepcopy(original.data),
+            )
+            actual = agent_task_view_from_v05(
+                task_without_private_files,
+                defaults.capability_policy,
+                defaults.budget_policy,
+            )
+
+        self.assertEqual(actual, expected)
+
+    def test_projects_all_boundary_environments_to_exact_runtime_profiles(
+        self,
+    ) -> None:
+        registry = load_runtime_profile_registry(PROFILE_REGISTRY_PATH)
+        profiles = {profile.profile_id: profile for profile in registry.profiles}
+        matched = 0
+
+        boundary_tasks = DatasetManifest.load(
+            BOUNDARY_DATASET_PATH
+        ).load_tasks(verified_only=True)
+        for task in boundary_tasks:
+            self.assertIn(task.environment_ref, PROFILE_BY_ENVIRONMENT)
+            matched += 1
+            projected = full_task_spec_from_v05(task)
+            with self.subTest(task=task.task_id):
+                self.assertEqual(
+                    projected.runtime,
+                    profiles[PROFILE_BY_ENVIRONMENT[task.environment_ref]],
+                )
+                self.assertEqual(
+                    projected.runtime.source_loading_mode,
+                    task.source_loading_mode,
+                )
+                self.assertEqual(
+                    projected.runtime.timeout_ms,
+                    task.timeout_sec * 1_000,
+                )
+        self.assertEqual(matched, 6)
+
+    def test_projects_restored_matched_environments_to_exact_runtime_profiles(
+        self,
+    ) -> None:
+        registry = load_runtime_profile_registry(PROFILE_REGISTRY_PATH)
+        profiles = {profile.profile_id: profile for profile in registry.profiles}
+        cases = (
+            (
+                "129154_exp_decomp_numerics",
+                "pytorch-matched-ff89ebc-torch2.4.0-py311-cu124",
+                "op-bench/pytorch-matched-ff89ebc:torch2.4.0-cu124-py311",
+                "sha256:f7fdabf3d4d9fc01c8d0f67961986968b06eb49d3724361c7ce64c1564f865c7",
+                True,
+            ),
+            (
+                "144073_vector_norm_scalar_overflow",
+                "pytorch-matched-06e9dea-torch2.7.0-py311-cpu",
+                "op-bench/pytorch-matched-06e9dea:torch2.7.0-cpu-py311",
+                "sha256:ccd5eb7b2703b9b2ac7c7a9e47cd56ffe77135e3a62b29be4d821833e318056f",
+                False,
+            ),
+        )
+
+        for directory, environment_ref, image, digest, requires_gpu in cases:
+            task = TaskManifest.load(
+                REPO_ROOT / "tasks/pytorch" / directory / "task.json"
+            )
+            with self.subTest(task=task.task_id):
+                self.assertEqual(task.environment_ref, environment_ref)
+                self.assertIn(
+                    PROFILE_BY_ENVIRONMENT[environment_ref],
+                    profiles,
+                    "restored matched Runtime Profile is missing",
+                )
+                projected = full_task_spec_from_v05(task)
+                profile = profiles[PROFILE_BY_ENVIRONMENT[environment_ref]]
+                self.assertEqual(projected.runtime, profile)
+                self.assertEqual(projected.runtime.image.identifier, image)
+                self.assertEqual(projected.runtime.image.digest, digest)
+                self.assertEqual(projected.runtime.platform, "linux/amd64")
+                self.assertIs(projected.runtime.requires_gpu, requires_gpu)
+                self.assertEqual(
+                    projected.runtime.source_loading_mode,
+                    task.source_loading_mode,
+                )
+                self.assertEqual(
+                    projected.runtime.timeout_ms,
+                    task.timeout_sec * 1_000,
+                )
+
+    def test_projects_quality_nightly_environment_to_exact_runtime_profile(
+        self,
+    ) -> None:
+        original = TaskManifest.load(
+            REPO_ROOT
+            / "tasks/pytorch/124385_load_state_dict_prefix/task.json"
+        )
+        data = copy.deepcopy(original.data)
+        data["environment_ref"] = (
+            "pytorch-nightly-20260407-torch2.12.0dev-cpu-py311"
+        )
+        data["environment"] = {
+            "backend": "remote_docker",
+            "tier": "cpu_python_overlay",
+            "source_loading": copy.deepcopy(
+                original.data["environment"]["source_loading"]
+            ),
+        }
+        task = resolve_task_assets(
+            TaskManifest(task_dir=original.task_dir, data=data),
+            environment_registry=EnvironmentRegistry.load(
+                REPO_ROOT / "environments/registry.json"
+            ),
+            source_registry=SourceRegistry.load(
+                REPO_ROOT / "sources/registry.json"
+            ),
+        )
+        profiles = {
+            profile.profile_id: profile
+            for profile in load_runtime_profile_registry(
+                PROFILE_REGISTRY_PATH
+            ).profiles
+        }
+
+        projected = full_task_spec_from_v05(task)
+        expected = profiles[PROFILE_BY_ENVIRONMENT[task.environment_ref]]
+        self.assertEqual(projected.runtime, expected)
+        self.assertEqual(
+            projected.runtime.image.identifier,
+            "op-bench/pytorch-nightly-cpu:2.12.0.dev20260407-py311",
+        )
+        self.assertEqual(
+            projected.runtime.image.digest,
+            "sha256:1cc689314e1e00bbd5c2d79ae098ecce6bb00592ea0d51cda7f6610970425d9b",
+        )
+        self.assertEqual(projected.runtime.timeout_ms, 900_000)
+        self.assertFalse(projected.runtime.requires_gpu)
+
     def test_real_mcp_agent_identity_binds_model_cli_protocol_and_prompt(self) -> None:
         selected = agent_spec_for_v1_adapter(
             "codex_mcp_canonical",
@@ -193,6 +559,29 @@ class LegacyV05ProjectionTests(unittest.TestCase):
             set_submodule.source_overlay_paths,
         )
 
+    def test_private_runtime_bindings_preserve_source_build_timeout(self) -> None:
+        dataset_path = BOUNDARY_DATASET_PATH
+        bundle = runtime_bundle_from_v05_dataset(
+            dataset_path,
+            agents=(agent_spec(),),
+            repeat=1,
+            created_at="2026-07-27T00:00:00Z",
+            selected_task_ids=("pytorch__143792__addmv_empty_matrix",),
+        )
+
+        task = TaskManifest.load(
+            REPO_ROOT / "tasks" / "pytorch" / "143792_addmv_empty_matrix" / "task.json"
+        )
+        binding = bundle.private_tasks[0]
+        self.assertEqual(
+            binding.source_loading_timeout_ms,
+            task.build_timeout_sec * 1_000,
+        )
+        self.assertEqual(
+            bundle.source_loading_timeout_ms_for(bundle.manifest.tasks[0]),
+            task.build_timeout_sec * 1_000,
+        )
+
     def test_private_runtime_bindings_use_resolvable_executable_commits(self) -> None:
         bundle = runtime_bundle_from_v05_dataset(
             DATASET_PATH,
@@ -299,6 +688,22 @@ class LegacyV05ProjectionTests(unittest.TestCase):
         )
         self.assertEqual(first.platform_version, defaults.platform_version)
         self.assertEqual(first.action_protocol, defaults.action_protocol)
+        self.assertEqual(
+            first.capability_policy.writable_paths,
+            tuple(
+                sorted(
+                    {
+                        path
+                        for task in first.tasks
+                        for path in task.patch_scope
+                    }
+                )
+            ),
+        )
+        self.assertEqual(
+            first.capability_policy.policy_id,
+            defaults.capability_policy.policy_id,
+        )
 
     def test_projection_does_not_embed_remote_host_or_absolute_paths(self) -> None:
         task = DatasetManifest.load(DATASET_PATH).load_tasks(verified_only=True)[0]

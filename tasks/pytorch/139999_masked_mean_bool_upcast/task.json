@@ -10,7 +10,9 @@
     "verified_at": "2026-07-10T12:04:42Z"
   },
   "patch_scope": {
-    "allowed_paths": ["torch/masked/_ops.py"],
+    "allowed_paths": [
+      "torch/masked/_ops.py"
+    ],
     "mode": "enforced"
   },
   "source": {
@@ -26,18 +28,26 @@
     "snapshot_path": "../../../.op_bench_cache/sources/pytorch/pytorch/60a505022f3fdf070b3a73225d8a39009caa216b/source"
   },
   "statement": {
-    "title": "torch.masked.mean on bool tensor silently accumulates in bool dtype, clamping totals",
-    "body": "`torch.masked.mean` with a bool input tensor infers `dtype=torch.bool` for the internal sum, so any count of 2 or more reduces to `True` (1). The result is wrong instead of raising an error. Fix: explicitly reject non-floating/complex dtypes with a clear `ValueError`.",
-    "labels": ["module: masked", "topic: numerical"]
+    "title": "Masked tensor averaging accepts a boolean input",
+    "body": "The masked tensor averaging API accepts a boolean tensor and returns a boolean value even though averaging requires a decimal or complex result dtype. A boolean input without a supported output dtype must raise a clear ValueError, while ordinary masked averages must remain unchanged.",
+    "labels": [
+      "module: masked",
+      "topic: numerical"
+    ]
   },
   "operator": {
     "framework": "pytorch",
     "component": "torch.masked._ops.mean",
-    "operator_name": "torch.masked.mean",
+    "operator_name": "torch masked tensor averaging",
     "problem_type": "dtype-accumulation-error",
     "problem_dimension": "precision",
     "problem_subclass": "P1",
-    "tags": ["masked", "bool", "dtype-promotion", "cpu"]
+    "tags": [
+      "masked",
+      "bool",
+      "dtype-promotion",
+      "cpu"
+    ]
   },
   "environment": {
     "backend": "remote_docker",
@@ -55,13 +65,23 @@
     "os": "linux",
     "platform": "linux/amd64",
     "build_mode": "prebuilt-wheel",
-    "hardware": {"device": "cpu", "min_memory_gb": 8},
-    "resource_requirements": {"cpu": true, "gpu": false},
-    "dependencies": ["pytorch wheel with selected Python source overlay"],
+    "hardware": {
+      "device": "cpu",
+      "min_memory_gb": 8
+    },
+    "resource_requirements": {
+      "cpu": true,
+      "gpu": false
+    },
+    "dependencies": [
+      "pytorch wheel with selected Python source overlay"
+    ],
     "source_loading": {
       "mode": "python_overlay",
       "installed_package": "torch",
-      "overlay_paths": ["torch/masked/_ops.py"],
+      "overlay_paths": [
+        "torch/masked/_ops.py"
+      ],
       "runtime_site_packages": "/tmp/op_bench_runtime/site-packages",
       "sync_before_tests": true
     },
@@ -73,18 +93,22 @@
   "agent_visible": {
     "repo_setup_commands": [],
     "known_constraints": [
-      "CPU-only task; no CUDA required.",
-      "The bug is in torch/masked/_ops.py — the mean function does not validate that the dtype is floating-point or complex before accumulating.",
-      "Modify only torch/masked/_ops.py."
+      "CPU-only; CUDA is not required.",
+      "Boolean input must raise, and decimal input must continue to produce the expected average."
     ],
     "allowed_test_commands": [
       "{python} test/test_op_bench_masked_mean_bool.py {test}"
-    ]
+    ],
+    "public_task_id": "opbench-v07-t0011"
   },
   "evaluation": {
     "setup_commands": [],
-    "fail_to_pass": ["TestMaskedMeanBoolRaises.test_masked_mean_bool_raises"],
-    "pass_to_pass": ["TestMaskedMeanBoolRaises.test_masked_mean_float_still_works"],
+    "fail_to_pass": [
+      "TestMaskedMeanBoolRaises.test_masked_mean_bool_raises"
+    ],
+    "pass_to_pass": [
+      "TestMaskedMeanBoolRaises.test_masked_mean_float_still_works"
+    ],
     "test_command": "{python} test/test_op_bench_masked_mean_bool.py {test}",
     "timeout_sec": 900
   },
@@ -99,5 +123,41 @@
     "estimated_runtime_min": 10,
     "layer": "A",
     "admission_status": "verified"
+  },
+  "quality": {
+    "complexity_evidence": "quality/complexity.json",
+    "origin": "retained_historical",
+    "prompt_evidence": "quality/prompt.json",
+    "readmission_evidence": "quality/readmission.json"
+  },
+  "taxonomy": {
+    "component_tags": [
+      "aten"
+    ],
+    "contract_detail_tags": [
+      "dtype",
+      "exception"
+    ],
+    "contract_family": "api_behavior",
+    "execution_context": {
+      "devices": [
+        "cpu"
+      ],
+      "distributed": false,
+      "modes": [
+        "eager"
+      ],
+      "phases": [
+        "forward"
+      ]
+    },
+    "failure_type": "missing_error",
+    "root_cause_tags": [
+      "incorrect_validation"
+    ],
+    "taxonomy_version": "v2",
+    "trigger_tags": [
+      "invalid_or_endpoint_parameter"
+    ]
   }
 }

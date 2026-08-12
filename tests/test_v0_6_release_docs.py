@@ -34,6 +34,13 @@ ACCEPTANCE_MATRIX = ROOT / "docs" / "v0.6" / "acceptance_matrix.md"
 PROJECT_STATE = ROOT / "docs" / "project_state.md"
 CHANGELOG = ROOT / "CHANGELOG.md"
 LINK_PATTERN = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
+V06_PROFILE_IDS = (
+    "local-cpu-process-v1",
+    "remote-cpu-compile-pytorch-2.6-py311-v1",
+    "remote-cpu-pytorch-2.6-py311-v1",
+    "remote-cuda-kernel-pytorch-2.6-cu124-v1",
+    "remote-cuda-overlay-pytorch-2.6-cu124-v1",
+)
 
 
 class V06ReleaseDocumentationTests(unittest.TestCase):
@@ -154,13 +161,8 @@ class V06ReleaseDocumentationTests(unittest.TestCase):
         text = GUIDE.read_text(encoding="utf-8")
         self.assertIn("Status: `opbench-v0.6.0` is Completed", text)
         self.assertIn("85/85", text)
-        registry = json.loads(
-            (ROOT / "configs" / "runtime_profiles.v1.json").read_text(
-                encoding="utf-8"
-            )
-        )
-        for profile in registry["profiles"]:
-            self.assertIn(profile["profile_id"], text)
+        for profile_id in V06_PROFILE_IDS:
+            self.assertIn(profile_id, text)
         for fragment in (
             "attempt_validity",
             "agent_terminal",
@@ -342,8 +344,13 @@ class V06ReleaseDocumentationTests(unittest.TestCase):
         )
 
         project_state = PROJECT_STATE.read_text(encoding="utf-8")
-        self.assertIn("| 当前稳定版本 | v0.6 Completed |", project_state)
+        self.assertIn(
+            "| 当前稳定基线 | `opbench-v0.7.0` 50-task 质量版已完成",
+            project_state,
+        )
         self.assertIn("| V06-RELEASE | Passed |", project_state)
+        self.assertIn("`opbench-v0.6.0` 统一发布", project_state)
+        self.assertIn("| V07-QX-RELEASE | Passed |", project_state)
 
         changelog = CHANGELOG.read_text(encoding="utf-8")
         self.assertIn("## v0.6 - Completed", changelog)

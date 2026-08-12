@@ -61,6 +61,177 @@
     {
       "contract_type": "runtime_profile",
       "schema_version": "v1",
+      "profile_id": "remote-cpu-boundary-torch2.2-py311-v1",
+      "backend": "remote_docker",
+      "runtime_tier": "cpu_python_overlay",
+      "source_loading_mode": "python_overlay",
+      "platform": "linux/amd64",
+      "image": {
+        "contract_type": "content_identity",
+        "schema_version": "v1",
+        "identity_type": "image",
+        "identifier": "op-bench/pytorch-matched-boundary:torch2.2.0-cpu-py311",
+        "digest": "sha256:9f529f436111a2b69dc1ad25df1f8f180023e030fb86f5c5808b04f3f020ba93",
+        "digest_kind": "image_id"
+      },
+      "hardware": {
+        "contract_type": "content_identity",
+        "schema_version": "v1",
+        "identity_type": "hardware",
+        "identifier": "linux-amd64-cpu-v1",
+        "digest": "sha256:d9283c87a841844b5acd8ccc94713796826a0be69034506d7a7448661b119beb",
+        "digest_kind": "declared"
+      },
+      "requires_gpu": false,
+      "network_policy": "denied",
+      "timeout_ms": 300000,
+      "mount_policy": {
+        "contract_type": "mount_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-sync-readonly-v1",
+        "workspace_target": "/workspace",
+        "source_access": "remote_sync",
+        "artifact_access": "controller_only",
+        "root_filesystem": "read_only_container"
+      },
+      "resource_policy": {
+        "contract_type": "resource_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-cpu-standard-v1",
+        "cpu_millis": 4000,
+        "memory_bytes": 8589934592,
+        "pids_limit": 512,
+        "gpu_count": 0
+      },
+      "cleanup_policy": {
+        "contract_type": "cleanup_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-attempt-owned-v1",
+        "scope": "attempt_owned_only",
+        "grace_ms": 5000,
+        "timeout_ms": 60000,
+        "remove_workspace": true,
+        "remove_process": true,
+        "remove_container": true
+      }
+    },
+    {
+      "contract_type": "runtime_profile",
+      "schema_version": "v1",
+      "profile_id": "remote-cpu-boundary-torch2.3-py311-v1",
+      "backend": "remote_docker",
+      "runtime_tier": "cpu_python_overlay",
+      "source_loading_mode": "python_overlay",
+      "platform": "linux/amd64",
+      "image": {
+        "contract_type": "content_identity",
+        "schema_version": "v1",
+        "identity_type": "image",
+        "identifier": "op-bench/pytorch-matched-boundary:torch2.3.0-cpu-py311",
+        "digest": "sha256:c1078f123ab2ea0e5ad89a35e456eacda203f98bfbbfd810a27a654d4a80a423",
+        "digest_kind": "image_id"
+      },
+      "hardware": {
+        "contract_type": "content_identity",
+        "schema_version": "v1",
+        "identity_type": "hardware",
+        "identifier": "linux-amd64-cpu-v1",
+        "digest": "sha256:d9283c87a841844b5acd8ccc94713796826a0be69034506d7a7448661b119beb",
+        "digest_kind": "declared"
+      },
+      "requires_gpu": false,
+      "network_policy": "denied",
+      "timeout_ms": 300000,
+      "mount_policy": {
+        "contract_type": "mount_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-sync-readonly-v1",
+        "workspace_target": "/workspace",
+        "source_access": "remote_sync",
+        "artifact_access": "controller_only",
+        "root_filesystem": "read_only_container"
+      },
+      "resource_policy": {
+        "contract_type": "resource_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-cpu-standard-v1",
+        "cpu_millis": 4000,
+        "memory_bytes": 8589934592,
+        "pids_limit": 512,
+        "gpu_count": 0
+      },
+      "cleanup_policy": {
+        "contract_type": "cleanup_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-attempt-owned-v1",
+        "scope": "attempt_owned_only",
+        "grace_ms": 5000,
+        "timeout_ms": 60000,
+        "remove_workspace": true,
+        "remove_process": true,
+        "remove_container": true
+      }
+    },
+    {
+      "contract_type": "runtime_profile",
+      "schema_version": "v1",
+      "profile_id": "remote-cpu-boundary-torch2.4-py311-v1",
+      "backend": "remote_docker",
+      "runtime_tier": "cpu_python_overlay",
+      "source_loading_mode": "python_overlay",
+      "platform": "linux/amd64",
+      "image": {
+        "contract_type": "content_identity",
+        "schema_version": "v1",
+        "identity_type": "image",
+        "identifier": "op-bench/pytorch-matched-boundary:torch2.4.0-cpu-py311",
+        "digest": "sha256:e221898f5d6816e56297a8b7dc715b1fa307883b5c3861b4a5de94c13002ec49",
+        "digest_kind": "image_id"
+      },
+      "hardware": {
+        "contract_type": "content_identity",
+        "schema_version": "v1",
+        "identity_type": "hardware",
+        "identifier": "linux-amd64-cpu-v1",
+        "digest": "sha256:d9283c87a841844b5acd8ccc94713796826a0be69034506d7a7448661b119beb",
+        "digest_kind": "declared"
+      },
+      "requires_gpu": false,
+      "network_policy": "denied",
+      "timeout_ms": 900000,
+      "mount_policy": {
+        "contract_type": "mount_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-sync-readonly-v1",
+        "workspace_target": "/workspace",
+        "source_access": "remote_sync",
+        "artifact_access": "controller_only",
+        "root_filesystem": "read_only_container"
+      },
+      "resource_policy": {
+        "contract_type": "resource_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-cpu-standard-v1",
+        "cpu_millis": 4000,
+        "memory_bytes": 8589934592,
+        "pids_limit": 512,
+        "gpu_count": 0
+      },
+      "cleanup_policy": {
+        "contract_type": "cleanup_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-attempt-owned-v1",
+        "scope": "attempt_owned_only",
+        "grace_ms": 5000,
+        "timeout_ms": 60000,
+        "remove_workspace": true,
+        "remove_process": true,
+        "remove_container": true
+      }
+    },
+    {
+      "contract_type": "runtime_profile",
+      "schema_version": "v1",
       "profile_id": "remote-cpu-compile-pytorch-2.6-py311-v1",
       "backend": "remote_docker",
       "runtime_tier": "cpu_python_overlay",
@@ -101,6 +272,348 @@
         "cpu_millis": 8000,
         "memory_bytes": 17179869184,
         "pids_limit": 1024,
+        "gpu_count": 0
+      },
+      "cleanup_policy": {
+        "contract_type": "cleanup_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-attempt-owned-v1",
+        "scope": "attempt_owned_only",
+        "grace_ms": 5000,
+        "timeout_ms": 60000,
+        "remove_workspace": true,
+        "remove_process": true,
+        "remove_container": true
+      }
+    },
+    {
+      "contract_type": "runtime_profile",
+      "schema_version": "v1",
+      "profile_id": "remote-cpu-expansion-nightly-torch2.12.0dev20260407-py311-v1",
+      "backend": "remote_docker",
+      "runtime_tier": "cpu_python_overlay",
+      "source_loading_mode": "python_overlay",
+      "platform": "linux/amd64",
+      "image": {
+        "contract_type": "content_identity",
+        "schema_version": "v1",
+        "identity_type": "image",
+        "identifier": "op-bench/pytorch-nightly-cpu:2.12.0.dev20260407-py311",
+        "digest": "sha256:1cc689314e1e00bbd5c2d79ae098ecce6bb00592ea0d51cda7f6610970425d9b",
+        "digest_kind": "image_id"
+      },
+      "hardware": {
+        "contract_type": "content_identity",
+        "schema_version": "v1",
+        "identity_type": "hardware",
+        "identifier": "linux-amd64-cpu-compile-v1",
+        "digest": "sha256:45013d178c47733bc6238fe2238f68463447a03d044741d0daa8a21973232ea4",
+        "digest_kind": "declared"
+      },
+      "requires_gpu": false,
+      "network_policy": "denied",
+      "timeout_ms": 900000,
+      "mount_policy": {
+        "contract_type": "mount_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-sync-readonly-v1",
+        "workspace_target": "/workspace",
+        "source_access": "remote_sync",
+        "artifact_access": "controller_only",
+        "root_filesystem": "read_only_container"
+      },
+      "resource_policy": {
+        "contract_type": "resource_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-cpu-compile-v1",
+        "cpu_millis": 8000,
+        "memory_bytes": 17179869184,
+        "pids_limit": 1024,
+        "gpu_count": 0
+      },
+      "cleanup_policy": {
+        "contract_type": "cleanup_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-attempt-owned-v1",
+        "scope": "attempt_owned_only",
+        "grace_ms": 5000,
+        "timeout_ms": 60000,
+        "remove_workspace": true,
+        "remove_process": true,
+        "remove_container": true
+      }
+    },
+    {
+      "contract_type": "runtime_profile",
+      "schema_version": "v1",
+      "profile_id": "remote-cpu-expansion-nightly-torch2.13.0dev20260423-py311-v1",
+      "backend": "remote_docker",
+      "runtime_tier": "cpu_python_overlay",
+      "source_loading_mode": "python_overlay",
+      "platform": "linux/amd64",
+      "image": {
+        "contract_type": "content_identity",
+        "schema_version": "v1",
+        "identity_type": "image",
+        "identifier": "op-bench/pytorch-nightly-cpu:2.13.0.dev20260423-py311",
+        "digest": "sha256:3f51b94d27c7b9fb5935cb79d678f4565a27bf3d6ec3fdb6518368d3ca0f6b2e",
+        "digest_kind": "image_id"
+      },
+      "hardware": {
+        "contract_type": "content_identity",
+        "schema_version": "v1",
+        "identity_type": "hardware",
+        "identifier": "linux-amd64-cpu-compile-v1",
+        "digest": "sha256:45013d178c47733bc6238fe2238f68463447a03d044741d0daa8a21973232ea4",
+        "digest_kind": "declared"
+      },
+      "requires_gpu": false,
+      "network_policy": "denied",
+      "timeout_ms": 900000,
+      "mount_policy": {
+        "contract_type": "mount_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-sync-readonly-v1",
+        "workspace_target": "/workspace",
+        "source_access": "remote_sync",
+        "artifact_access": "controller_only",
+        "root_filesystem": "read_only_container"
+      },
+      "resource_policy": {
+        "contract_type": "resource_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-cpu-compile-v1",
+        "cpu_millis": 8000,
+        "memory_bytes": 17179869184,
+        "pids_limit": 1024,
+        "gpu_count": 0
+      },
+      "cleanup_policy": {
+        "contract_type": "cleanup_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-attempt-owned-v1",
+        "scope": "attempt_owned_only",
+        "grace_ms": 5000,
+        "timeout_ms": 60000,
+        "remove_workspace": true,
+        "remove_process": true,
+        "remove_container": true
+      }
+    },
+    {
+      "contract_type": "runtime_profile",
+      "schema_version": "v1",
+      "profile_id": "remote-cpu-expansion-nightly-torch2.14.0dev20260612-py311-v1",
+      "backend": "remote_docker",
+      "runtime_tier": "cpu_python_overlay",
+      "source_loading_mode": "python_overlay",
+      "platform": "linux/amd64",
+      "image": {
+        "contract_type": "content_identity",
+        "schema_version": "v1",
+        "identity_type": "image",
+        "identifier": "op-bench/pytorch-nightly-cpu:2.14.0.dev20260612-py311",
+        "digest": "sha256:32df30b84320a2a274a73f4bec7248794e21a00875dbf92e12a67827eed7ee77",
+        "digest_kind": "image_id"
+      },
+      "hardware": {
+        "contract_type": "content_identity",
+        "schema_version": "v1",
+        "identity_type": "hardware",
+        "identifier": "linux-amd64-cpu-compile-v1",
+        "digest": "sha256:45013d178c47733bc6238fe2238f68463447a03d044741d0daa8a21973232ea4",
+        "digest_kind": "declared"
+      },
+      "requires_gpu": false,
+      "network_policy": "denied",
+      "timeout_ms": 900000,
+      "mount_policy": {
+        "contract_type": "mount_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-sync-readonly-v1",
+        "workspace_target": "/workspace",
+        "source_access": "remote_sync",
+        "artifact_access": "controller_only",
+        "root_filesystem": "read_only_container"
+      },
+      "resource_policy": {
+        "contract_type": "resource_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-cpu-compile-v1",
+        "cpu_millis": 8000,
+        "memory_bytes": 17179869184,
+        "pids_limit": 1024,
+        "gpu_count": 0
+      },
+      "cleanup_policy": {
+        "contract_type": "cleanup_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-attempt-owned-v1",
+        "scope": "attempt_owned_only",
+        "grace_ms": 5000,
+        "timeout_ms": 60000,
+        "remove_workspace": true,
+        "remove_process": true,
+        "remove_container": true
+      }
+    },
+    {
+      "contract_type": "runtime_profile",
+      "schema_version": "v1",
+      "profile_id": "remote-cpu-expansion-nightly-torch2.14.0dev20260707-py311-v1",
+      "backend": "remote_docker",
+      "runtime_tier": "cpu_python_overlay",
+      "source_loading_mode": "python_overlay",
+      "platform": "linux/amd64",
+      "image": {
+        "contract_type": "content_identity",
+        "schema_version": "v1",
+        "identity_type": "image",
+        "identifier": "op-bench/pytorch-nightly-cpu:2.14.0.dev20260707-py311",
+        "digest": "sha256:dbc620efdd3258493bef9c245f7f8db2df45334a96d01ea32146ce62f97701cb",
+        "digest_kind": "image_id"
+      },
+      "hardware": {
+        "contract_type": "content_identity",
+        "schema_version": "v1",
+        "identity_type": "hardware",
+        "identifier": "linux-amd64-cpu-compile-v1",
+        "digest": "sha256:45013d178c47733bc6238fe2238f68463447a03d044741d0daa8a21973232ea4",
+        "digest_kind": "declared"
+      },
+      "requires_gpu": false,
+      "network_policy": "denied",
+      "timeout_ms": 900000,
+      "mount_policy": {
+        "contract_type": "mount_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-sync-readonly-v1",
+        "workspace_target": "/workspace",
+        "source_access": "remote_sync",
+        "artifact_access": "controller_only",
+        "root_filesystem": "read_only_container"
+      },
+      "resource_policy": {
+        "contract_type": "resource_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-cpu-compile-v1",
+        "cpu_millis": 8000,
+        "memory_bytes": 17179869184,
+        "pids_limit": 1024,
+        "gpu_count": 0
+      },
+      "cleanup_policy": {
+        "contract_type": "cleanup_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-attempt-owned-v1",
+        "scope": "attempt_owned_only",
+        "grace_ms": 5000,
+        "timeout_ms": 60000,
+        "remove_workspace": true,
+        "remove_process": true,
+        "remove_container": true
+      }
+    },
+    {
+      "contract_type": "runtime_profile",
+      "schema_version": "v1",
+      "profile_id": "remote-cpu-expansion-nightly-torch2.14.0dev20260710-py311-v1",
+      "backend": "remote_docker",
+      "runtime_tier": "cpu_python_overlay",
+      "source_loading_mode": "python_overlay",
+      "platform": "linux/amd64",
+      "image": {
+        "contract_type": "content_identity",
+        "schema_version": "v1",
+        "identity_type": "image",
+        "identifier": "op-bench/pytorch-nightly-cpu:2.14.0.dev20260710-py311",
+        "digest": "sha256:3163c72d501e3640d7fb18f9a5bafaf182b501d035474f3eee105859ec4a3047",
+        "digest_kind": "image_id"
+      },
+      "hardware": {
+        "contract_type": "content_identity",
+        "schema_version": "v1",
+        "identity_type": "hardware",
+        "identifier": "linux-amd64-cpu-compile-v1",
+        "digest": "sha256:45013d178c47733bc6238fe2238f68463447a03d044741d0daa8a21973232ea4",
+        "digest_kind": "declared"
+      },
+      "requires_gpu": false,
+      "network_policy": "denied",
+      "timeout_ms": 900000,
+      "mount_policy": {
+        "contract_type": "mount_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-sync-readonly-v1",
+        "workspace_target": "/workspace",
+        "source_access": "remote_sync",
+        "artifact_access": "controller_only",
+        "root_filesystem": "read_only_container"
+      },
+      "resource_policy": {
+        "contract_type": "resource_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-cpu-compile-v1",
+        "cpu_millis": 8000,
+        "memory_bytes": 17179869184,
+        "pids_limit": 1024,
+        "gpu_count": 0
+      },
+      "cleanup_policy": {
+        "contract_type": "cleanup_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-attempt-owned-v1",
+        "scope": "attempt_owned_only",
+        "grace_ms": 5000,
+        "timeout_ms": 60000,
+        "remove_workspace": true,
+        "remove_process": true,
+        "remove_container": true
+      }
+    },
+    {
+      "contract_type": "runtime_profile",
+      "schema_version": "v1",
+      "profile_id": "remote-cpu-matched-torch2.7-py311-v1",
+      "backend": "remote_docker",
+      "runtime_tier": "cpu_python_overlay",
+      "source_loading_mode": "python_overlay",
+      "platform": "linux/amd64",
+      "image": {
+        "contract_type": "content_identity",
+        "schema_version": "v1",
+        "identity_type": "image",
+        "identifier": "op-bench/pytorch-matched-06e9dea:torch2.7.0-cpu-py311",
+        "digest": "sha256:ccd5eb7b2703b9b2ac7c7a9e47cd56ffe77135e3a62b29be4d821833e318056f",
+        "digest_kind": "image_id"
+      },
+      "hardware": {
+        "contract_type": "content_identity",
+        "schema_version": "v1",
+        "identity_type": "hardware",
+        "identifier": "linux-amd64-cpu-v1",
+        "digest": "sha256:d9283c87a841844b5acd8ccc94713796826a0be69034506d7a7448661b119beb",
+        "digest_kind": "declared"
+      },
+      "requires_gpu": false,
+      "network_policy": "denied",
+      "timeout_ms": 900000,
+      "mount_policy": {
+        "contract_type": "mount_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-sync-readonly-v1",
+        "workspace_target": "/workspace",
+        "source_access": "remote_sync",
+        "artifact_access": "controller_only",
+        "root_filesystem": "read_only_container"
+      },
+      "resource_policy": {
+        "contract_type": "resource_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-cpu-standard-v1",
+        "cpu_millis": 4000,
+        "memory_bytes": 8589934592,
+        "pids_limit": 512,
         "gpu_count": 0
       },
       "cleanup_policy": {
@@ -175,6 +688,576 @@
     {
       "contract_type": "runtime_profile",
       "schema_version": "v1",
+      "profile_id": "remote-cpu-source-boundary-cmake3-py311-v1",
+      "backend": "remote_docker",
+      "runtime_tier": "cpu_source_snapshot_fuller",
+      "source_loading_mode": "inplace_build",
+      "platform": "linux/amd64",
+      "image": {
+        "contract_type": "content_identity",
+        "schema_version": "v1",
+        "identity_type": "image",
+        "identifier": "op-bench/pytorch-boundary-cpu-source-build:py311-cmake3",
+        "digest": "sha256:a4c41603044bf3a9a9345edfdaee96caa25e39fd3c552c0162e21f7955cf0626",
+        "digest_kind": "image_id"
+      },
+      "hardware": {
+        "contract_type": "content_identity",
+        "schema_version": "v1",
+        "identity_type": "hardware",
+        "identifier": "linux-amd64-cpu-compile-v1",
+        "digest": "sha256:45013d178c47733bc6238fe2238f68463447a03d044741d0daa8a21973232ea4",
+        "digest_kind": "declared"
+      },
+      "requires_gpu": false,
+      "network_policy": "denied",
+      "timeout_ms": 900000,
+      "mount_policy": {
+        "contract_type": "mount_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-sync-readonly-v1",
+        "workspace_target": "/workspace",
+        "source_access": "remote_sync",
+        "artifact_access": "controller_only",
+        "root_filesystem": "read_only_container"
+      },
+      "resource_policy": {
+        "contract_type": "resource_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-cpu-compile-v1",
+        "cpu_millis": 8000,
+        "memory_bytes": 17179869184,
+        "pids_limit": 1024,
+        "gpu_count": 0
+      },
+      "cleanup_policy": {
+        "contract_type": "cleanup_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-attempt-owned-v1",
+        "scope": "attempt_owned_only",
+        "grace_ms": 5000,
+        "timeout_ms": 60000,
+        "remove_workspace": true,
+        "remove_process": true,
+        "remove_container": true
+      }
+    },
+    {
+      "contract_type": "runtime_profile",
+      "schema_version": "v1",
+      "profile_id": "remote-cpu-source-boundary-py311-v1",
+      "backend": "remote_docker",
+      "runtime_tier": "cpu_source_snapshot_fuller",
+      "source_loading_mode": "inplace_build",
+      "platform": "linux/amd64",
+      "image": {
+        "contract_type": "content_identity",
+        "schema_version": "v1",
+        "identity_type": "image",
+        "identifier": "op-bench/pytorch-boundary-cpu-source-build:py311",
+        "digest": "sha256:8288840b43b1f770a34cb1fcbc3429eadd0375bebe23baee18d7fcc10e6dadec",
+        "digest_kind": "image_id"
+      },
+      "hardware": {
+        "contract_type": "content_identity",
+        "schema_version": "v1",
+        "identity_type": "hardware",
+        "identifier": "linux-amd64-cpu-compile-v1",
+        "digest": "sha256:45013d178c47733bc6238fe2238f68463447a03d044741d0daa8a21973232ea4",
+        "digest_kind": "declared"
+      },
+      "requires_gpu": false,
+      "network_policy": "denied",
+      "timeout_ms": 900000,
+      "mount_policy": {
+        "contract_type": "mount_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-sync-readonly-v1",
+        "workspace_target": "/workspace",
+        "source_access": "remote_sync",
+        "artifact_access": "controller_only",
+        "root_filesystem": "read_only_container"
+      },
+      "resource_policy": {
+        "contract_type": "resource_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-cpu-compile-v1",
+        "cpu_millis": 8000,
+        "memory_bytes": 17179869184,
+        "pids_limit": 1024,
+        "gpu_count": 0
+      },
+      "cleanup_policy": {
+        "contract_type": "cleanup_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-attempt-owned-v1",
+        "scope": "attempt_owned_only",
+        "grace_ms": 5000,
+        "timeout_ms": 60000,
+        "remove_workspace": true,
+        "remove_process": true,
+        "remove_container": true
+      }
+    },
+    {
+      "contract_type": "runtime_profile",
+      "schema_version": "v1",
+      "profile_id": "remote-cuda-boundary-torch2.6-cu124-v1",
+      "backend": "remote_docker",
+      "runtime_tier": "cuda_python_overlay",
+      "source_loading_mode": "python_overlay",
+      "platform": "linux/amd64",
+      "image": {
+        "contract_type": "content_identity",
+        "schema_version": "v1",
+        "identity_type": "image",
+        "identifier": "op-bench/pytorch-matched-boundary:torch2.6.0-cu124-py311",
+        "digest": "sha256:6ef9ad46672d4c4bbf565441b2fe0cdc4c4e1709a0f8c7179a825281a667010f",
+        "digest_kind": "image_id"
+      },
+      "hardware": {
+        "contract_type": "content_identity",
+        "schema_version": "v1",
+        "identity_type": "hardware",
+        "identifier": "linux-amd64-cuda12.4-16gb-v1",
+        "digest": "sha256:4df159a2fe6c397255ac612f01b7a73a5eaecc898135b5419f86a91b8cd4bea0",
+        "digest_kind": "declared"
+      },
+      "requires_gpu": true,
+      "network_policy": "denied",
+      "timeout_ms": 300000,
+      "mount_policy": {
+        "contract_type": "mount_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-sync-readonly-v1",
+        "workspace_target": "/workspace",
+        "source_access": "remote_sync",
+        "artifact_access": "controller_only",
+        "root_filesystem": "read_only_container"
+      },
+      "resource_policy": {
+        "contract_type": "resource_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-cuda-overlay-v1",
+        "cpu_millis": 8000,
+        "memory_bytes": 17179869184,
+        "pids_limit": 1024,
+        "gpu_count": 1
+      },
+      "cleanup_policy": {
+        "contract_type": "cleanup_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-attempt-owned-v1",
+        "scope": "attempt_owned_only",
+        "grace_ms": 10000,
+        "timeout_ms": 90000,
+        "remove_workspace": true,
+        "remove_process": true,
+        "remove_container": true
+      }
+    },
+    {
+      "contract_type": "runtime_profile",
+      "schema_version": "v1",
+      "profile_id": "remote-cuda-expansion-nightly-torch2.12.0dev20260407-cu126-py311-v1",
+      "backend": "remote_docker",
+      "runtime_tier": "cuda_python_overlay",
+      "source_loading_mode": "python_overlay",
+      "platform": "linux/amd64+cuda12.6",
+      "image": {
+        "contract_type": "content_identity",
+        "schema_version": "v1",
+        "identity_type": "image",
+        "identifier": "op-bench/pytorch-nightly-cu126:2.12.0.dev20260407-py311",
+        "digest": "sha256:64e7e26eafc78146ff711445f13fc692111f688bf6b87505d945996206a3d068",
+        "digest_kind": "image_id"
+      },
+      "hardware": {
+        "contract_type": "content_identity",
+        "schema_version": "v1",
+        "identity_type": "hardware",
+        "identifier": "linux-amd64-cuda12.6-sm70-16gb-v1",
+        "digest": "sha256:ee58327522b0de2dc74dece3c947705fe5429d2791637b334b7c9a4bf9e7f2e1",
+        "digest_kind": "declared"
+      },
+      "requires_gpu": true,
+      "network_policy": "denied",
+      "timeout_ms": 900000,
+      "mount_policy": {
+        "contract_type": "mount_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-sync-readonly-v1",
+        "workspace_target": "/workspace",
+        "source_access": "remote_sync",
+        "artifact_access": "controller_only",
+        "root_filesystem": "read_only_container"
+      },
+      "resource_policy": {
+        "contract_type": "resource_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-cuda-overlay-v1",
+        "cpu_millis": 8000,
+        "memory_bytes": 17179869184,
+        "pids_limit": 1024,
+        "gpu_count": 1
+      },
+      "cleanup_policy": {
+        "contract_type": "cleanup_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-attempt-owned-v1",
+        "scope": "attempt_owned_only",
+        "grace_ms": 10000,
+        "timeout_ms": 90000,
+        "remove_workspace": true,
+        "remove_process": true,
+        "remove_container": true
+      }
+    },
+    {
+      "contract_type": "runtime_profile",
+      "schema_version": "v1",
+      "profile_id": "remote-cuda-expansion-nightly-torch2.13.0dev20260417-cu126-devel-py311-v1",
+      "backend": "remote_docker",
+      "runtime_tier": "cuda_python_overlay",
+      "source_loading_mode": "python_overlay",
+      "platform": "linux/amd64+cuda12.6",
+      "image": {
+        "contract_type": "content_identity",
+        "schema_version": "v1",
+        "identity_type": "image",
+        "identifier": "op-bench/pytorch-nightly-cu126-devel:2.13.0.dev20260417-py311",
+        "digest": "sha256:c2be263d373e3e3a88076d49b49ee3a50921c4e7e1c9aa0702c994ad8681cecd",
+        "digest_kind": "image_id"
+      },
+      "hardware": {
+        "contract_type": "content_identity",
+        "schema_version": "v1",
+        "identity_type": "hardware",
+        "identifier": "linux-amd64-cuda12.6-sm70-16gb-v1",
+        "digest": "sha256:ee58327522b0de2dc74dece3c947705fe5429d2791637b334b7c9a4bf9e7f2e1",
+        "digest_kind": "declared"
+      },
+      "requires_gpu": true,
+      "network_policy": "denied",
+      "timeout_ms": 900000,
+      "mount_policy": {
+        "contract_type": "mount_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-sync-readonly-v1",
+        "workspace_target": "/workspace",
+        "source_access": "remote_sync",
+        "artifact_access": "controller_only",
+        "root_filesystem": "read_only_container"
+      },
+      "resource_policy": {
+        "contract_type": "resource_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-cuda-overlay-v1",
+        "cpu_millis": 8000,
+        "memory_bytes": 17179869184,
+        "pids_limit": 1024,
+        "gpu_count": 1
+      },
+      "cleanup_policy": {
+        "contract_type": "cleanup_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-attempt-owned-v1",
+        "scope": "attempt_owned_only",
+        "grace_ms": 10000,
+        "timeout_ms": 90000,
+        "remove_workspace": true,
+        "remove_process": true,
+        "remove_container": true
+      }
+    },
+    {
+      "contract_type": "runtime_profile",
+      "schema_version": "v1",
+      "profile_id": "remote-cuda-expansion-nightly-torch2.14.0dev20260612-cu126-devel-py311-v1",
+      "backend": "remote_docker",
+      "runtime_tier": "cuda_python_overlay",
+      "source_loading_mode": "python_overlay",
+      "platform": "linux/amd64+cuda12.6",
+      "image": {
+        "contract_type": "content_identity",
+        "schema_version": "v1",
+        "identity_type": "image",
+        "identifier": "op-bench/pytorch-nightly-cu126-devel:2.14.0.dev20260612-py311",
+        "digest": "sha256:b9371ef49c56c89e4752b0dc3d64ebd5784d67fd0e77a579640ed33c48747511",
+        "digest_kind": "image_id"
+      },
+      "hardware": {
+        "contract_type": "content_identity",
+        "schema_version": "v1",
+        "identity_type": "hardware",
+        "identifier": "linux-amd64-cuda12.6-sm70-16gb-v1",
+        "digest": "sha256:ee58327522b0de2dc74dece3c947705fe5429d2791637b334b7c9a4bf9e7f2e1",
+        "digest_kind": "declared"
+      },
+      "requires_gpu": true,
+      "network_policy": "denied",
+      "timeout_ms": 900000,
+      "mount_policy": {
+        "contract_type": "mount_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-sync-readonly-v1",
+        "workspace_target": "/workspace",
+        "source_access": "remote_sync",
+        "artifact_access": "controller_only",
+        "root_filesystem": "read_only_container"
+      },
+      "resource_policy": {
+        "contract_type": "resource_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-cuda-overlay-v1",
+        "cpu_millis": 8000,
+        "memory_bytes": 17179869184,
+        "pids_limit": 1024,
+        "gpu_count": 1
+      },
+      "cleanup_policy": {
+        "contract_type": "cleanup_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-attempt-owned-v1",
+        "scope": "attempt_owned_only",
+        "grace_ms": 10000,
+        "timeout_ms": 90000,
+        "remove_workspace": true,
+        "remove_process": true,
+        "remove_container": true
+      }
+    },
+    {
+      "contract_type": "runtime_profile",
+      "schema_version": "v1",
+      "profile_id": "remote-cuda-expansion-nightly-torch2.14.0dev20260612-cu126-py311-v1",
+      "backend": "remote_docker",
+      "runtime_tier": "cuda_python_overlay",
+      "source_loading_mode": "python_overlay",
+      "platform": "linux/amd64+cuda12.6",
+      "image": {
+        "contract_type": "content_identity",
+        "schema_version": "v1",
+        "identity_type": "image",
+        "identifier": "op-bench/pytorch-nightly-cu126:2.14.0.dev20260612-py311",
+        "digest": "sha256:929583ddcaece7ca525f484d4ed9509c44f723260d18bb5738c6265cc798c275",
+        "digest_kind": "image_id"
+      },
+      "hardware": {
+        "contract_type": "content_identity",
+        "schema_version": "v1",
+        "identity_type": "hardware",
+        "identifier": "linux-amd64-cuda12.6-sm70-16gb-v1",
+        "digest": "sha256:ee58327522b0de2dc74dece3c947705fe5429d2791637b334b7c9a4bf9e7f2e1",
+        "digest_kind": "declared"
+      },
+      "requires_gpu": true,
+      "network_policy": "denied",
+      "timeout_ms": 900000,
+      "mount_policy": {
+        "contract_type": "mount_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-sync-readonly-v1",
+        "workspace_target": "/workspace",
+        "source_access": "remote_sync",
+        "artifact_access": "controller_only",
+        "root_filesystem": "read_only_container"
+      },
+      "resource_policy": {
+        "contract_type": "resource_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-cuda-overlay-v1",
+        "cpu_millis": 8000,
+        "memory_bytes": 17179869184,
+        "pids_limit": 1024,
+        "gpu_count": 1
+      },
+      "cleanup_policy": {
+        "contract_type": "cleanup_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-attempt-owned-v1",
+        "scope": "attempt_owned_only",
+        "grace_ms": 10000,
+        "timeout_ms": 90000,
+        "remove_workspace": true,
+        "remove_process": true,
+        "remove_container": true
+      }
+    },
+    {
+      "contract_type": "runtime_profile",
+      "schema_version": "v1",
+      "profile_id": "remote-cuda-expansion-nightly-torch2.14.0dev20260707-cu126-devel-py311-v1",
+      "backend": "remote_docker",
+      "runtime_tier": "cuda_python_overlay",
+      "source_loading_mode": "python_overlay",
+      "platform": "linux/amd64+cuda12.6",
+      "image": {
+        "contract_type": "content_identity",
+        "schema_version": "v1",
+        "identity_type": "image",
+        "identifier": "op-bench/pytorch-nightly-cu126-devel:2.14.0.dev20260707-py311",
+        "digest": "sha256:657bcf2d939c468caf99e0ec7b440e05a64e14798c9002ea6df9c25c0070e0a4",
+        "digest_kind": "image_id"
+      },
+      "hardware": {
+        "contract_type": "content_identity",
+        "schema_version": "v1",
+        "identity_type": "hardware",
+        "identifier": "linux-amd64-cuda12.6-sm70-16gb-v1",
+        "digest": "sha256:ee58327522b0de2dc74dece3c947705fe5429d2791637b334b7c9a4bf9e7f2e1",
+        "digest_kind": "declared"
+      },
+      "requires_gpu": true,
+      "network_policy": "denied",
+      "timeout_ms": 900000,
+      "mount_policy": {
+        "contract_type": "mount_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-sync-readonly-v1",
+        "workspace_target": "/workspace",
+        "source_access": "remote_sync",
+        "artifact_access": "controller_only",
+        "root_filesystem": "read_only_container"
+      },
+      "resource_policy": {
+        "contract_type": "resource_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-cuda-overlay-v1",
+        "cpu_millis": 8000,
+        "memory_bytes": 17179869184,
+        "pids_limit": 1024,
+        "gpu_count": 1
+      },
+      "cleanup_policy": {
+        "contract_type": "cleanup_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-attempt-owned-v1",
+        "scope": "attempt_owned_only",
+        "grace_ms": 10000,
+        "timeout_ms": 90000,
+        "remove_workspace": true,
+        "remove_process": true,
+        "remove_container": true
+      }
+    },
+    {
+      "contract_type": "runtime_profile",
+      "schema_version": "v1",
+      "profile_id": "remote-cuda-expansion-nightly-torch2.14.0dev20260710-cu126-devel-py311-v1",
+      "backend": "remote_docker",
+      "runtime_tier": "cuda_python_overlay",
+      "source_loading_mode": "python_overlay",
+      "platform": "linux/amd64+cuda12.6",
+      "image": {
+        "contract_type": "content_identity",
+        "schema_version": "v1",
+        "identity_type": "image",
+        "identifier": "op-bench/pytorch-nightly-cu126-devel:2.14.0.dev20260710-py311",
+        "digest": "sha256:e0c5bb1b96994f64195389d47a6617f004f61526b27a0eb369a50e55e57f6d51",
+        "digest_kind": "image_id"
+      },
+      "hardware": {
+        "contract_type": "content_identity",
+        "schema_version": "v1",
+        "identity_type": "hardware",
+        "identifier": "linux-amd64-cuda12.6-sm70-16gb-v1",
+        "digest": "sha256:ee58327522b0de2dc74dece3c947705fe5429d2791637b334b7c9a4bf9e7f2e1",
+        "digest_kind": "declared"
+      },
+      "requires_gpu": true,
+      "network_policy": "denied",
+      "timeout_ms": 900000,
+      "mount_policy": {
+        "contract_type": "mount_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-sync-readonly-v1",
+        "workspace_target": "/workspace",
+        "source_access": "remote_sync",
+        "artifact_access": "controller_only",
+        "root_filesystem": "read_only_container"
+      },
+      "resource_policy": {
+        "contract_type": "resource_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-cuda-overlay-v1",
+        "cpu_millis": 8000,
+        "memory_bytes": 17179869184,
+        "pids_limit": 1024,
+        "gpu_count": 1
+      },
+      "cleanup_policy": {
+        "contract_type": "cleanup_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-attempt-owned-v1",
+        "scope": "attempt_owned_only",
+        "grace_ms": 10000,
+        "timeout_ms": 90000,
+        "remove_workspace": true,
+        "remove_process": true,
+        "remove_container": true
+      }
+    },
+    {
+      "contract_type": "runtime_profile",
+      "schema_version": "v1",
+      "profile_id": "remote-cuda-expansion-nightly-torch2.14.0dev20260710-cu126-py311-v1",
+      "backend": "remote_docker",
+      "runtime_tier": "cuda_python_overlay",
+      "source_loading_mode": "python_overlay",
+      "platform": "linux/amd64+cuda12.6",
+      "image": {
+        "contract_type": "content_identity",
+        "schema_version": "v1",
+        "identity_type": "image",
+        "identifier": "op-bench/pytorch-nightly-cu126:2.14.0.dev20260710-py311",
+        "digest": "sha256:4f5eb40b1cbc2122d37f91b601a840b6055da2af2d94abdbd003a2a4ec3e3407",
+        "digest_kind": "image_id"
+      },
+      "hardware": {
+        "contract_type": "content_identity",
+        "schema_version": "v1",
+        "identity_type": "hardware",
+        "identifier": "linux-amd64-cuda12.6-sm70-16gb-v1",
+        "digest": "sha256:ee58327522b0de2dc74dece3c947705fe5429d2791637b334b7c9a4bf9e7f2e1",
+        "digest_kind": "declared"
+      },
+      "requires_gpu": true,
+      "network_policy": "denied",
+      "timeout_ms": 900000,
+      "mount_policy": {
+        "contract_type": "mount_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-sync-readonly-v1",
+        "workspace_target": "/workspace",
+        "source_access": "remote_sync",
+        "artifact_access": "controller_only",
+        "root_filesystem": "read_only_container"
+      },
+      "resource_policy": {
+        "contract_type": "resource_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-cuda-overlay-v1",
+        "cpu_millis": 8000,
+        "memory_bytes": 17179869184,
+        "pids_limit": 1024,
+        "gpu_count": 1
+      },
+      "cleanup_policy": {
+        "contract_type": "cleanup_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-attempt-owned-v1",
+        "scope": "attempt_owned_only",
+        "grace_ms": 10000,
+        "timeout_ms": 90000,
+        "remove_workspace": true,
+        "remove_process": true,
+        "remove_container": true
+      }
+    },
+    {
+      "contract_type": "runtime_profile",
+      "schema_version": "v1",
       "profile_id": "remote-cuda-kernel-pytorch-2.6-cu124-v1",
       "backend": "remote_docker",
       "runtime_tier": "cuda_kernel_build",
@@ -224,6 +1307,63 @@
         "scope": "attempt_owned_only",
         "grace_ms": 10000,
         "timeout_ms": 120000,
+        "remove_workspace": true,
+        "remove_process": true,
+        "remove_container": true
+      }
+    },
+    {
+      "contract_type": "runtime_profile",
+      "schema_version": "v1",
+      "profile_id": "remote-cuda-matched-torch2.4-cu124-py311-v1",
+      "backend": "remote_docker",
+      "runtime_tier": "cuda_python_overlay",
+      "source_loading_mode": "python_overlay",
+      "platform": "linux/amd64",
+      "image": {
+        "contract_type": "content_identity",
+        "schema_version": "v1",
+        "identity_type": "image",
+        "identifier": "op-bench/pytorch-matched-ff89ebc:torch2.4.0-cu124-py311",
+        "digest": "sha256:f7fdabf3d4d9fc01c8d0f67961986968b06eb49d3724361c7ce64c1564f865c7",
+        "digest_kind": "image_id"
+      },
+      "hardware": {
+        "contract_type": "content_identity",
+        "schema_version": "v1",
+        "identity_type": "hardware",
+        "identifier": "linux-amd64-cuda12.4-16gb-v1",
+        "digest": "sha256:4df159a2fe6c397255ac612f01b7a73a5eaecc898135b5419f86a91b8cd4bea0",
+        "digest_kind": "declared"
+      },
+      "requires_gpu": true,
+      "network_policy": "denied",
+      "timeout_ms": 900000,
+      "mount_policy": {
+        "contract_type": "mount_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-sync-readonly-v1",
+        "workspace_target": "/workspace",
+        "source_access": "remote_sync",
+        "artifact_access": "controller_only",
+        "root_filesystem": "read_only_container"
+      },
+      "resource_policy": {
+        "contract_type": "resource_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-cuda-overlay-v1",
+        "cpu_millis": 8000,
+        "memory_bytes": 17179869184,
+        "pids_limit": 1024,
+        "gpu_count": 1
+      },
+      "cleanup_policy": {
+        "contract_type": "cleanup_policy",
+        "schema_version": "v1",
+        "policy_id": "remote-attempt-owned-v1",
+        "scope": "attempt_owned_only",
+        "grace_ms": 10000,
+        "timeout_ms": 90000,
         "remove_workspace": true,
         "remove_process": true,
         "remove_container": true

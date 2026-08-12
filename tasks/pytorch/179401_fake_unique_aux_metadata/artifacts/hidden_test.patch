@@ -1,0 +1,75 @@
+diff --git a/test/op_bench/test_fake_unique_aux_metadata.py b/test/op_bench/test_fake_unique_aux_metadata.py
+new file mode 100644
+index 00000000000..11111111111
+--- /dev/null
++++ b/test/op_bench/test_fake_unique_aux_metadata.py
+@@ -0,0 +1,69 @@
++import unittest
++
++import torch
++
++
++class FakeUniqueAuxiliaryMetadataTests(unittest.TestCase):
++    def _assert_outputs_match(self, observed, expected):
++        self.assertEqual(len(observed), len(expected))
++        for actual, reference in zip(observed, expected):
++            torch.testing.assert_close(actual, reference, rtol=0, atol=0)
++            self.assertEqual(actual.shape, reference.shape)
++            self.assertEqual(actual.dtype, reference.dtype)
++
++    def test_unique_auxiliary_metadata_supports_index_use(self):
++        class UniqueWorkflow(torch.nn.Module):
++            def __init__(self, dim):
++                super().__init__()
++                self.dim = dim
++
++            def forward(self, value):
++                unique, inverse, counts = torch.unique(
++                    value,
++                    dim=self.dim,
++                    return_inverse=True,
++                    return_counts=True,
++                )
++                if self.dim is None:
++                    restored = unique[inverse].reshape_as(value)
++                else:
++                    restored = torch.index_select(unique, self.dim, inverse)
++                return restored, inverse, counts, counts.sum()
++
++        cases = (
++            (
++                UniqueWorkflow(None),
++                torch.tensor([3.0, 1.0, 3.0, 2.0, 1.0]),
++            ),
++            (
++                UniqueWorkflow(0),
++                torch.tensor(
++                    [
++                        [2.0, 1.0],
++                        [4.0, 3.0],
++                        [2.0, 1.0],
++                    ]
++                ),
++            ),
++        )
++        for module, value in cases:
++            with self.subTest(dim=module.dim):
++                expected = module(value)
++                exported = torch.export.export(module, (value,))
++                actual = exported.module()(value)
++                self._assert_outputs_match(actual, expected)
++
++    def test_fake_tensor_elementwise_metadata_preserved(self):
++        from torch._subclasses.fake_tensor import FakeTensorMode
++
++        with FakeTensorMode():
++            value = torch.empty((2, 3), dtype=torch.float32)
++            result = torch.sin(value) + 1
++
++        self.assertEqual(result.shape, value.shape)
++        self.assertEqual(result.dtype, value.dtype)
++        self.assertEqual(result.device.type, "cpu")
++
++
++if __name__ == "__main__":
++    unittest.main()

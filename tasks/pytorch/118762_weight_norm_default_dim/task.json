@@ -1,0 +1,143 @@
+{
+  "admission": {
+    "compatibility_evidence": "compatibility/evidence.json",
+    "evidence": "admission/evidence.json",
+    "status": "verified",
+    "verified_at": "2026-07-27T03:30:00Z"
+  },
+  "agent_visible": {
+    "allowed_test_commands": [
+      "{python} test/op_bench_boundary/test_weight_norm_default_dim.py {test}"
+    ],
+    "known_constraints": [
+      "CPU-only; CUDA is not required.",
+      "Omitting dim selects dimension zero, and explicit dimensions remain supported."
+    ],
+    "repo_setup_commands": [],
+    "public_task_id": "opbench-v07-t0002"
+  },
+  "artifacts": {
+    "gold_patch": "artifacts/gold.patch",
+    "hidden_test_patch": "artifacts/hidden_test.patch"
+  },
+  "compatibility": {
+    "evidence": "compatibility/evidence.json",
+    "minimal_operation": "import torch; import torch._decomp.decompositions; torch.ops.aten._weight_norm_interface(torch.ones(2, 2), torch.ones(2, 1))",
+    "selector_module": "test/op_bench_boundary/test_weight_norm_default_dim.py",
+    "target_import": "torch._decomp.decompositions",
+    "target_module": "torch/_decomp/decompositions.py"
+  },
+  "environment": {
+    "build_mode": "prebuilt-wheel",
+    "source_loading": {
+      "installed_package": "torch",
+      "mode": "python_overlay",
+      "overlay_paths": [
+        "torch/_decomp/decompositions.py"
+      ],
+      "runtime_site_packages": "/tmp/op_bench_runtime/site-packages",
+      "sync_before_tests": true
+    }
+  },
+  "environment_ref": "pytorch-matched-boundary-torch2.3.0-cpu",
+  "evaluation": {
+    "fail_to_pass": [
+      "BoundaryWeightNormTests.test_default_dimension"
+    ],
+    "pass_to_pass": [
+      "BoundaryWeightNormTests.test_explicit_dimension"
+    ],
+    "setup_commands": [],
+    "test_command": "{python} test/op_bench_boundary/test_weight_norm_default_dim.py {test}",
+    "timeout_sec": 300
+  },
+  "metadata": {
+    "admission_status": "verified",
+    "curation_status": "verified",
+    "deterministic": true,
+    "difficulty": "easy",
+    "estimated_runtime_min": 5,
+    "layer": "B",
+    "notes": "Verified by v0.7 matched-runtime compatibility and verified Admission; compatibility evidence sha256:4c720559b92305cfb36ca78309ba4796cfbfbfd10662f22240754c85944c5979.",
+    "source_loading_verified": true
+  },
+  "operator": {
+    "component": "torch._decomp.decompositions._weight_norm_interface",
+    "framework": "pytorch",
+    "operator_name": "ATen weight normalization",
+    "problem_dimension": "boundary",
+    "problem_subclass": "B4",
+    "problem_type": "default-argument-parity",
+    "tags": [
+      "weight-norm",
+      "default-argument",
+      "decomposition",
+      "schema",
+      "cpu"
+    ]
+  },
+  "patch_scope": {
+    "allowed_paths": [
+      "torch/_decomp/decompositions.py"
+    ],
+    "mode": "enforced"
+  },
+  "runtime_tier": "cpu_python_overlay",
+  "source": {
+    "base_commit": "e426924c19500011aa419accc251a923fe857b94",
+    "checkout_mode": "git",
+    "issue_number": null,
+    "issue_url": null,
+    "merge_commit": "e87ac82c98c62a4bc46252a8552a974c4b6a5fbd",
+    "pr_number": 118762,
+    "pr_url": "https://github.com/pytorch/pytorch/pull/118762",
+    "repo": "pytorch/pytorch",
+    "repo_url": "https://github.com/pytorch/pytorch.git"
+  },
+  "source_ref": "pytorch-e426924-boundary-overlay",
+  "statement": {
+    "body": "The native weight-normalization operation accepts a weight and scale without an axis, but an alternate execution path raises for that valid form. Omitting the axis must select axis zero, while calls that specify an axis must remain unchanged.",
+    "labels": [
+      "module: decomposition",
+      "module: nn",
+      "boundary: omitted argument"
+    ],
+    "title": "ATen weight normalization fails when its optional axis is omitted"
+  },
+  "task_id": "pytorch__118762__weight_norm_default_dim",
+  "version": "v1",
+  "quality": {
+    "complexity_evidence": "quality/complexity.json",
+    "origin": "retained_historical",
+    "prompt_evidence": "quality/prompt.json",
+    "readmission_evidence": "quality/readmission.json"
+  },
+  "taxonomy": {
+    "component_tags": [
+      "aten"
+    ],
+    "contract_detail_tags": [
+      "schema",
+      "compatibility"
+    ],
+    "contract_family": "api_behavior",
+    "execution_context": {
+      "devices": [
+        "cpu"
+      ],
+      "distributed": false,
+      "modes": [
+        "eager"
+      ],
+      "phases": [
+        "forward"
+      ]
+    },
+    "failure_type": "unexpected_error",
+    "root_cause_tags": [],
+    "taxonomy_version": "v2",
+    "trigger_tags": [
+      "invalid_or_endpoint_parameter"
+    ]
+  }
+}

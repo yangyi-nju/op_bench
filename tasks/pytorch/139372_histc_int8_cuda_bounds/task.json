@@ -29,9 +29,13 @@
     "snapshot_path": "../../../.op_bench_cache/sources/pytorch/pytorch/356fc41ae04816fe137bc85ccca4087ede291e3e/source"
   },
   "statement": {
-    "title": "CUDA histc does not check min > max for int8 tensors due to low-precision bounds storage",
-    "body": "In `_histc_cuda_template`, min/max bounds are stored in `input_t` (the input element type). For `int8`, this means the bounds comparison is done at int8 precision: `min=256` wraps to 0, so the invalid range `min=256, max=1` is silently accepted. Fix: use `at::acc_type<input_t, true>` (a wider type) for the bounds variables so the comparison is numerically correct.",
-    "labels": ["module: cuda", "topic: bug fixes", "module: histc"]
+    "title": "CUDA torch.histc accepts an invalid range for int8 input",
+    "body": "For a CUDA int8 tensor, torch.histc accepts min=256 and max=1 even though max is not larger than min. It must raise the same clear range error expected for invalid bounds, while valid CUDA histograms and supported integer dtypes continue to work.",
+    "labels": [
+      "module: cuda",
+      "topic: bug fixes",
+      "module: histc"
+    ]
   },
   "operator": {
     "framework": "pytorch",
@@ -40,7 +44,13 @@
     "problem_type": "integer-bounds-precision",
     "problem_dimension": "precision",
     "problem_subclass": "P5",
-    "tags": ["cuda-kernel", "histc", "int8", "bounds-check", "correctness"]
+    "tags": [
+      "cuda-kernel",
+      "histc",
+      "int8",
+      "bounds-check",
+      "correctness"
+    ]
   },
   "environment": {
     "backend": "remote_docker",
@@ -54,9 +64,20 @@
     "os": "linux",
     "platform": "linux/amd64",
     "build_mode": "source-build",
-    "hardware": {"device": "cuda", "requires_gpu": true, "cuda": "12.4", "min_memory_gb": 16, "min_compute_capability": "7.0"},
-    "resource_requirements": {"cpu": true, "gpu": true},
-    "dependencies": ["full PyTorch source build via setup.py develop"],
+    "hardware": {
+      "device": "cuda",
+      "requires_gpu": true,
+      "cuda": "12.4",
+      "min_memory_gb": 16,
+      "min_compute_capability": "7.0"
+    },
+    "resource_requirements": {
+      "cpu": true,
+      "gpu": true
+    },
+    "dependencies": [
+      "full PyTorch source build via setup.py develop"
+    ],
     "source_loading": {
       "mode": "inplace_build",
       "build_environment": {
@@ -74,14 +95,13 @@
   "agent_visible": {
     "repo_setup_commands": [],
     "known_constraints": [
-      "Full PyTorch source build task with CUDA toolchain.",
-      "CUDA GPU is available; tests must run with CUDA tensors.",
-      "The bug is in aten/src/ATen/native/cuda/SummaryOps.cu — bounds variables stored in input_t (int8) lose precision.",
-      "You may also modify torch/testing/_internal/common_methods_invocations.py to add uint8 to dtypesIfCUDA."
+      "A CUDA source-build environment is required.",
+      "The invalid int8 range must raise without regressing valid CUDA histograms."
     ],
     "allowed_test_commands": [
       "{python} test/test_reductions.py -k {test_name}"
-    ]
+    ],
+    "public_task_id": "opbench-v07-t0009"
   },
   "evaluation": {
     "setup_commands": [],
@@ -106,6 +126,49 @@
     "estimated_runtime_min": 90,
     "layer": "A",
     "admission_status": "verified",
-    "notes": "kernel_build tier. Gold: 6 lines widening bounds_t to at::acc_type<input_t,true> in SummaryOps.cu, plus adding uint8 to dtypesIfCUDA in common_methods_invocations. Hidden test: test_histc_int8_bounds_overflow — @onlyCUDA + @dtypes(int8), runtime name test_histc_int8_bounds_overflow_cuda_int8 (avoiding the earlier _cuda_cuda_int8 collision). pass_to_pass: TestReductionsCUDA.test_histc_cuda (plain test_histc(self, device), no decorators)."
+    "notes": "kernel_build tier. Gold: 6 lines widening bounds_t to at::acc_type<input_t,true> in SummaryOps.cu, plus adding uint8 to dtypesIfCUDA in common_methods_invocations. Hidden test: test_histc_int8_bounds_overflow \u2014 @onlyCUDA + @dtypes(int8), runtime name test_histc_int8_bounds_overflow_cuda_int8 (avoiding the earlier _cuda_cuda_int8 collision). pass_to_pass: TestReductionsCUDA.test_histc_cuda (plain test_histc(self, device), no decorators).",
+    "source_loading_verified": true
+  },
+  "quality": {
+    "complexity_evidence": "quality/complexity.json",
+    "origin": "retained_historical",
+    "prompt_evidence": "quality/prompt.json",
+    "readmission_evidence": "quality/readmission.json"
+  },
+  "taxonomy": {
+    "component_tags": [
+      "aten",
+      "cuda_kernel"
+    ],
+    "contract_detail_tags": [
+      "numerical",
+      "dtype",
+      "exception"
+    ],
+    "contract_family": "api_behavior",
+    "execution_context": {
+      "devices": [
+        "cuda"
+      ],
+      "distributed": false,
+      "modes": [
+        "eager"
+      ],
+      "phases": [
+        "forward"
+      ]
+    },
+    "failure_type": "missing_error",
+    "root_cause_tags": [
+      "incorrect_validation",
+      "incorrect_cast"
+    ],
+    "taxonomy_version": "v2",
+    "trigger_tags": [
+      "extreme_value_or_size",
+      "invalid_or_endpoint_parameter",
+      "mixed_dtype_or_precision_mode",
+      "device_specific"
+    ]
   }
 }

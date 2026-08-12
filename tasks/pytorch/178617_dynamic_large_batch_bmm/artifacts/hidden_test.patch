@@ -1,0 +1,81 @@
+diff --git a/test/op_bench/test_dynamic_large_batch_bmm.py b/test/op_bench/test_dynamic_large_batch_bmm.py
+new file mode 100644
+index 00000000000..cce003a6c9e
+--- /dev/null
++++ b/test/op_bench/test_dynamic_large_batch_bmm.py
+@@ -0,0 +1,75 @@
++import unittest
++
++import torch
++
++
++class DynamicLargeBatchBmmTests(unittest.TestCase):
++    M = 64
++    K = 64
++    N = 64
++
++    def setUp(self):
++        if not torch.cuda.is_available():
++            self.skipTest("CUDA is required")
++        torch._dynamo.reset()
++        torch.manual_seed(0)
++
++    def tearDown(self):
++        torch._dynamo.reset()
++        torch.cuda.empty_cache()
++
++    def _inputs(self, batch):
++        left = torch.randn(
++            batch,
++            self.M,
++            self.K,
++            device="cuda",
++            dtype=torch.float16,
++        )
++        right = torch.randn(
++            batch,
++            self.K,
++            self.N,
++            device="cuda",
++            dtype=torch.float16,
++        )
++        return left, right
++
++    def _compiled(self, left, right):
++        torch._dynamo.mark_dynamic(left, 0, min=1, max=2**17)
++        torch._dynamo.mark_dynamic(right, 0, min=1, max=2**17)
++
++        def model(a, b):
++            return torch.bmm(a, b)
++
++        compiled = torch.compile(
++            model,
++            fullgraph=True,
++            options={
++                "max_autotune": True,
++                "max_autotune_gemm_backends": "TRITON",
++            },
++        )
++        return compiled
++
++    def test_large_dynamic_batch_matches_eager(self):
++        small_left, small_right = self._inputs(32)
++        compiled = self._compiled(small_left, small_right)
++        torch.testing.assert_close(
++            compiled(small_left, small_right),
++            torch.bmm(small_left, small_right),
++        )
++
++        large_left, large_right = self._inputs(65537)
++        actual = compiled(large_left, large_right)
++        expected = torch.bmm(large_left, large_right)
++        torch.testing.assert_close(actual, expected)
++
++    def test_ordinary_dynamic_batch_matches_eager(self):
++        left, right = self._inputs(1024)
++        compiled = self._compiled(left, right)
++        torch.testing.assert_close(compiled(left, right), torch.bmm(left, right))
++
++
++if __name__ == "__main__":
++    unittest.main()

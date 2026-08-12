@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 from pathlib import Path, PurePosixPath
+import re
 import shutil
 import shlex
 import signal
@@ -18,6 +19,7 @@ from typing import Callable, Protocol
 from op_bench.runtime.actions import CommandExecution
 from op_bench.runtime.canonical import canonical_sha256
 from op_bench.runtime.contracts import RuntimeProfile
+from op_bench.runtime.manifest import ATTEMPT_PATTERN
 from op_bench.runtime.resources import (
     AttemptResourceLedger,
     RuntimeCleanupEntry,
@@ -41,7 +43,23 @@ from op_bench.runtime.validation import (
 
 
 _BACKENDS = ("local", "docker", "remote_docker", "scripted")
+_REMOTE_COMMAND_MAX_ATTEMPTS = 3
 _REMOTE_TRANSFER_MAX_ATTEMPTS = 3
+_REMOTE_COMMAND_STARTED_SENTINEL = "__OPBENCH_REMOTE_COMMAND_STARTED_V1__"
+_SSH_TRANSPORT_ERROR_MARKERS = (
+    "kex_exchange_identification:",
+    "ssh_exchange_identification:",
+    "connection closed by remote host",
+    "connection reset by peer",
+    "connection timed out",
+    "connection refused",
+    "no route to host",
+    "could not resolve hostname",
+    "host key verification failed",
+    "permission denied (publickey",
+    "client_loop: send disconnect:",
+    "broken pipe",
+)
 
 
 class RuntimeBackendUnavailable(Exception):
@@ -957,11 +975,7 @@ class DockerRuntimeBackend(LocalProcessBackend):
             workdir=target_cwd,
             container_name=container.raw_handle,
             command=argv,
-            python_path=(
-                state.profile.mount_policy.workspace_target
-                if state.profile.source_loading_mode == "inplace_build"
-                else None
-            ),
+            python_path=_runtime_python_path(state.profile),
         )
         try:
             raw = self._argv_runner(executed, None, timeout)
@@ -1315,18 +1329,22 @@ class RemoteDockerRuntimeBackend(LocalProcessBackend):
                 and state.context.target_binding.remote_ccache_seed is not None
                 else "/tmp/op_bench_runtime/ccache"
             ),
-            python_path=(
-                state.profile.mount_policy.workspace_target
-                if state.profile.source_loading_mode == "inplace_build"
-                else None
-            ),
+            python_path=_runtime_python_path(state.profile),
         )
         try:
-            raw = self._argv_runner(
-                _ssh_command(state.context.target_binding, inner),
-                None,
+            raw = _run_remote_command_with_pre_execution_retry(
+                self._argv_runner,
+                _ssh_command(
+                    state.context.target_binding,
+                    _remote_command_with_started_sentinel(inner),
+                ),
                 timeout,
             )
+            if _is_ssh_transport_failure(raw):
+                raise RuntimeBackendUnavailable(
+                    "remote_command_transport_failed",
+                    raw.stderr,
+                )
             return RuntimeCommandResult(
                 command=argv,
                 cwd=cwd,
@@ -2077,6 +2095,14 @@ def _container_exec_command(
     )
 
 
+def _runtime_python_path(profile: RuntimeProfile) -> str | None:
+    if profile.source_loading_mode == "python_overlay":
+        return "/tmp/op_bench_runtime/site-packages"
+    if profile.source_loading_mode == "inplace_build":
+        return profile.mount_policy.workspace_target
+    return None
+
+
 def _logical_container_cwd(target: str, relative: PurePosixPath) -> str:
     base = PurePosixPath(target)
     if str(relative) in {"", "."}:
@@ -2194,11 +2220,125 @@ def _default_argv_runner(
     )
 
 
+def _is_ssh_transport_failure(result: RuntimeCommandResult) -> bool:
+    if result.exit_code != 255 or result.timed_out:
+        return False
+    stderr = result.stderr.casefold()
+    return (
+        any(marker in stderr for marker in _SSH_TRANSPORT_ERROR_MARKERS)
+        or _has_openssh_disconnect_line(result.stderr)
+    )
+
+
+def _is_pre_execution_ssh_transport_failure(
+    result: RuntimeCommandResult,
+    *,
+    remote_started: bool,
+) -> bool:
+    if result.exit_code != 255 or result.timed_out or remote_started:
+        return False
+    stderr = result.stderr.casefold()
+    return (
+        "kex_exchange_identification:" in stderr
+        or "ssh_exchange_identification:" in stderr
+        or _has_openssh_disconnect_line(result.stderr)
+    )
+
+
+def _has_openssh_disconnect_line(stderr: str) -> bool:
+    return any(
+        re.fullmatch(
+            r"connection (?:closed|reset) by \S+ port \d+",
+            line.strip(),
+            flags=re.IGNORECASE,
+        )
+        is not None
+        for line in stderr.splitlines()
+    )
+
+
+def _remote_command_with_started_sentinel(
+    command: tuple[str, ...],
+) -> tuple[str, ...]:
+    return (
+        "sh",
+        "-c",
+        (
+            "printf '%s\\n' "
+            + shlex.quote(_REMOTE_COMMAND_STARTED_SENTINEL)
+            + ' >&2; exec "$@"'
+        ),
+        "opbench-remote-command",
+        *command,
+    )
+
+
+def _consume_remote_started_sentinel(
+    result: RuntimeCommandResult,
+) -> tuple[RuntimeCommandResult, bool]:
+    lines = result.stderr.splitlines(keepends=True)
+    retained = [
+        line
+        for line in lines
+        if line.rstrip("\r\n") != _REMOTE_COMMAND_STARTED_SENTINEL
+    ]
+    if len(retained) == len(lines):
+        return result, False
+    return (
+        RuntimeCommandResult(
+            command=result.command,
+            cwd=result.cwd,
+            exit_code=result.exit_code,
+            stdout=result.stdout,
+            stderr="".join(retained),
+            duration_ms=result.duration_ms,
+            timed_out=result.timed_out,
+        ),
+        True,
+    )
+
+
+def _run_remote_command_with_pre_execution_retry(
+    argv_runner: ArgvRunner,
+    command: tuple[str, ...],
+    timeout_ms: int,
+) -> RuntimeCommandResult:
+    started = time.monotonic_ns()
+    result: RuntimeCommandResult | None = None
+    for attempt in range(_REMOTE_COMMAND_MAX_ATTEMPTS):
+        elapsed_ms = (time.monotonic_ns() - started) // 1_000_000
+        if elapsed_ms >= timeout_ms:
+            break
+        result = argv_runner(
+            command,
+            None,
+            max(1, timeout_ms - elapsed_ms),
+        )
+        result, remote_started = _consume_remote_started_sentinel(result)
+        if not _is_pre_execution_ssh_transport_failure(
+            result,
+            remote_started=remote_started,
+        ):
+            return result
+        if attempt + 1 == _REMOTE_COMMAND_MAX_ATTEMPTS:
+            return result
+    if result is not None:
+        return result
+    raise RuntimeBackendUnavailable("remote_command_transport_failed")
+
+
 def _run_exact_cleanup_command_with_retry(
     argv_runner: ArgvRunner,
     command: tuple[str, ...],
     timeout_ms: int,
+    *,
+    success: Callable[[RuntimeCommandResult], bool] | None = None,
 ) -> RuntimeCommandResult | None:
+    accepted = (
+        success
+        if success is not None
+        else lambda item: item.exit_code == 0 and not item.timed_out
+    )
     started = time.monotonic_ns()
     result: RuntimeCommandResult | None = None
     for _ in range(3):
@@ -2210,9 +2350,95 @@ def _run_exact_cleanup_command_with_retry(
             result = argv_runner(command, None, remaining_ms)
         except RuntimeBackendUnavailable:
             result = None
-        if result is not None and result.exit_code == 0 and not result.timed_out:
+        if result is not None and accepted(result):
             return result
     return result
+
+
+def recover_remote_cleanup_resource(
+    target_binding: RuntimeTargetBinding,
+    handle: RuntimeResourceHandle,
+    *,
+    attempt_id: str,
+    retry_index: int,
+    timeout_ms: int,
+    argv_runner: ArgvRunner | None = None,
+) -> bool:
+    """Retry cleanup for one exact, previously owned remote resource."""
+
+    if not isinstance(target_binding, RuntimeTargetBinding):
+        raise ContractError("target_binding: expected RuntimeTargetBinding")
+    if target_binding.backend != "remote_docker":
+        raise ContractError("target_binding: remote_docker is required for recovery")
+    if not isinstance(handle, RuntimeResourceHandle):
+        raise ContractError("handle: expected RuntimeResourceHandle")
+    attempt = require_str(attempt_id, "attempt_id", pattern=ATTEMPT_PATTERN)
+    retry = require_int(retry_index, "retry_index", minimum=1)
+    timeout = require_int(timeout_ms, "timeout_ms", minimum=1)
+    runner = argv_runner or _default_argv_runner
+    digest = attempt.removeprefix("attempt:v1:")
+
+    if handle.resource_type == "container":
+        base = f"opbench-{digest[:20]}-r{retry:04d}"
+        expected = (
+            base
+            if handle.ordinal == 1
+            else f"{base}-{handle.ordinal:04d}"
+        )
+        if handle.raw_handle != expected:
+            raise ContractError("container recovery handle does not match Attempt identity")
+        def container_absent(item: RuntimeCommandResult) -> bool:
+            if item.timed_out or _is_ssh_transport_failure(item):
+                return False
+            if item.exit_code == 0:
+                return True
+            error = item.stderr.casefold()
+            return "no such container" in error or "no such object" in error
+
+        result = _run_exact_cleanup_command_with_retry(
+            runner,
+            _ssh_command(
+                target_binding,
+                (
+                    target_binding.docker_binary,
+                    "rm",
+                    "--force",
+                    handle.raw_handle,
+                ),
+            ),
+            timeout,
+            success=container_absent,
+        )
+        return result is not None and container_absent(result)
+
+    if handle.resource_type == "remote_workspace":
+        root = target_binding.remote_workspace_root.rstrip("/")
+        leaf = (
+            "workspace"
+            if handle.ordinal == 1
+            else f"workspace-{handle.ordinal:04d}"
+        )
+        remote_path = f"{root}/{digest}/retry-{retry:04d}/{leaf}"
+        expected = f"{_remote_target(target_binding)}:{remote_path}"
+        if handle.raw_handle != expected:
+            raise ContractError(
+                "remote workspace recovery handle does not match Attempt identity"
+            )
+        result = _run_exact_cleanup_command_with_retry(
+            runner,
+            _ssh_command(
+                target_binding,
+                ("rm", "-rf", "--", remote_path),
+            ),
+            timeout,
+        )
+        return (
+            result is not None
+            and result.exit_code == 0
+            and not result.timed_out
+        )
+
+    raise ContractError("handle: unsupported remote cleanup resource type")
 
 
 def _validate_command(command: tuple[str, ...]) -> tuple[str, ...]:
@@ -2384,5 +2610,6 @@ __all__ = [
     "RuntimeLease",
     "RuntimeTargetBinding",
     "RemoteDockerRuntimeBackend",
+    "recover_remote_cleanup_resource",
     "ScriptedRuntimeBackend",
 ]

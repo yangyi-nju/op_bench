@@ -1,0 +1,77 @@
+diff --git a/test/op_bench/test_split_reduction_backward.py b/test/op_bench/test_split_reduction_backward.py
+new file mode 100644
+--- /dev/null
++++ b/test/op_bench/test_split_reduction_backward.py
+@@ -0,0 +1,72 @@
++import unittest
++
++import torch
++from torch._inductor import config, metrics
++
++
++@unittest.skipUnless(torch.cuda.is_available(), "CUDA required")
++class SplitReductionBackwardTests(unittest.TestCase):
++    def setUp(self):
++        torch._dynamo.reset()
++        metrics.reset()
++        torch.manual_seed(0)
++
++    def tearDown(self):
++        torch._dynamo.reset()
++
++    @staticmethod
++    def reference_workload(value, weight, eps):
++        original_dtype = value.dtype
++        promoted = value.float()
++        inverse_rms = torch.rsqrt(
++            promoted.square().sum(dim=-1) / promoted.shape[-1] + eps
++        )
++        return (promoted * inverse_rms[:, None] * weight).to(original_dtype)
++
++    def collect_derivatives(self, callable_obj, value, weight, upstream):
++        value.grad = None
++        weight.grad = None
++        output = callable_obj(value, weight, 1e-5)
++        output.backward(upstream)
++        return value.grad.detach().clone(), weight.grad.detach().clone()
++
++    def run_case(self, rows, columns):
++        value = torch.randn(
++            rows, columns, device="cuda", dtype=torch.float32, requires_grad=True
++        )
++        weight = torch.randn(
++            columns, device="cuda", dtype=torch.float32, requires_grad=True
++        )
++        upstream = torch.randn_like(value)
++        expected = self.collect_derivatives(
++            self.reference_workload, value, weight, upstream
++        )
++        compiled = torch.compile(self.reference_workload, fullgraph=True)
++        actual = self.collect_derivatives(compiled, value, weight, upstream)
++        for observed, reference in zip(actual, expected):
++            torch.testing.assert_close(observed, reference, atol=1e-3, rtol=1e-3)
++        return actual
++
++    def test_large_feature_split_backward_matches_eager(self):
++        patches = {
++            "triton.mix_order_reduction": True,
++            "triton.mix_order_reduction_non_strict_mode": True,
++        }
++        with config.patch(patches):
++            derivatives = self.run_case(13, 8472)
++        self.assertEqual(derivatives[0].shape, (13, 8472))
++        self.assertEqual(derivatives[1].shape, (8472,))
++
++    def test_unsplit_backward_remains_stable(self):
++        patches = {
++            "triton.mix_order_reduction": True,
++            "triton.mix_order_reduction_non_strict_mode": True,
++        }
++        with config.patch(patches):
++            derivatives = self.run_case(8, 1024)
++        self.assertEqual(derivatives[0].shape, (8, 1024))
++        self.assertEqual(derivatives[1].shape, (1024,))
++
++
++if __name__ == "__main__":
++    unittest.main()

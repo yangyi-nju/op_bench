@@ -1,9 +1,13 @@
 .venv/
+.worktrees/
 .claude/
 .op_bench_cache/
 runs/*/workspaces/
 runs/**/codex_scratch/
 runs/**/claude_scratch/
+runs/**/*.log
+runs/**/*_actions.jsonl
+runs/**/*_last_message.txt
 runs/admission/
 runs/_baseline_cache/
 runs/v0.6_m6_codex_cpu_canary/
@@ -15,6 +19,48 @@ runs/v0.6_m6_legacy_replay/
 runs/v0.6_m6_local_codex_input/
 runs/v0.6_m7_demo_input/
 runs/v0.6_m7_scripted_demo/
+runs/v0.7_matched_runtime/
+runs/v0.7_boundary_failed_probes/
+runs/v0.7_boundary_refresh/
+runs/v0.7_validation/
+# v0.7 quality replay/Agent roots contain private Runtime evidence. Keep only
+# their privacy-scanned top-level indexes and the separate public report tree.
+runs/v0.7_quality_replay/tasks/
+runs/v0.7_quality_validation/cohort-*/
+runs/v0.7_quality_admission_staging/
+runs/v0.7_historical_blind_pilots_*/
+runs/v0.7_rejected_*/
+runs/v0.7_task*/
+# Superseded/rejected v0.7 candidate bundles remain local audit material. The
+# selected 50-task release bundles are intentionally not ignored.
+tasks/pytorch/*/admission/full/
+tasks/pytorch/176922_aoti_profile_repeated_dynamic_kernel/
+tasks/pytorch/177860_flex_attention_captured_grad/
+tasks/pytorch/178076_dynamic_isin_decomposition/
+tasks/pytorch/178617_large_batch_bmm_grid/
+tasks/pytorch/179028_integer_range_lowering_registry/
+tasks/pytorch/179278_shared_module_unflatten_order/
+tasks/pytorch/179333_dynamic_large_offset_template/
+tasks/pytorch/179505_broadcast_batch_autotune/
+tasks/pytorch/180370_arrayref_while_loop/
+tasks/pytorch/180583_symbolic_weighted_bce/
+tasks/pytorch/180884_aoti_custom_op_error_context/
+tasks/pytorch/181119_benchmark_alias_storage/
+tasks/pytorch/181469_dimension_annotation_guards/
+tasks/pytorch/181845_symbolic_concat_layout_guard/
+tasks/pytorch/181941_aoti_concurrent_const_fold/
+tasks/pytorch/182083_autograd_worker_teardown/
+tasks/pytorch/182971_aoti_user_stream_events/
+tasks/pytorch/183472_sparse_transposed_output_shape/
+tasks/pytorch/183959_cuda_low_precision_nan_sign/
+tasks/pytorch/183973_unrealized_addmm_bias/
+tasks/pytorch/184514_unsigned_scan_accumulator/
+tasks/pytorch/187209_residual_tiling_fallback/
+tasks/pytorch/188575_inference_boolean_mask_export/
+tasks/pytorch/188758_expand_schema_keyword/
+tasks/pytorch/188771_nested_reduction_pointer_rewind/
+tasks/pytorch/188862_boolean_minmax_propagation/
+tasks/pytorch/189503_aoti_rejected_input_memory/
 __pycache__/
 *.pyc
 .DS_Store

@@ -1,0 +1,113 @@
+diff --git a/test/op_bench/test_benchmark_alias_storage_v2.py b/test/op_bench/test_benchmark_alias_storage_v2.py
+new file mode 100644
+--- /dev/null
++++ b/test/op_bench/test_benchmark_alias_storage_v2.py
+@@ -0,0 +1,108 @@
++import unittest
++from collections import OrderedDict
++from types import MethodType, SimpleNamespace
++
++import torch
++from torch._inductor.codegen.wrapper import PythonWrapperCodegen
++from torch._inductor.utils import IndentedBuffer
++from torch._inductor.virtualized import V
++
++
++class FakeInput:
++    def __init__(self, shape, stride, dtype=torch.float32):
++        self.shape = shape
++        self.stride = stride
++        self.dtype = dtype
++
++    def get_size(self):
++        return self.shape
++
++    def get_stride(self):
++        return self.stride
++
++    def get_device(self):
++        return torch.device("cpu")
++
++    def get_dtype(self):
++        return self.dtype
++
++
++class FakeSizeVars:
++    backed_var_to_val = {}
++
++    @staticmethod
++    def optimization_hints(values, fallback):
++        return list(values)
++
++
++def render_get_args(example_inputs):
++    graph_inputs = OrderedDict(
++        (f"arg{index}", FakeInput(list(value.shape), list(value.stride()), value.dtype))
++        for index, value in enumerate(example_inputs)
++    )
++    graph = SimpleNamespace(
++        constants={},
++        torchbind_constants={},
++        graph_inputs=graph_inputs,
++        example_inputs=example_inputs,
++        sizevars=FakeSizeVars(),
++    )
++    wrapper = object.__new__(PythonWrapperCodegen)
++    wrapper.codegen_python_shape_tuple = MethodType(
++        lambda self, values: repr(tuple(values)), wrapper
++    )
++    output = IndentedBuffer()
++    with V.set_graph_handler(graph):
++        wrapper.benchmark_compiled_module(output)
++    return output.getvalue()
++
++
++def execute_get_args(code):
++    namespace = {"torch": torch}
++    exec(code, namespace)
++    return namespace["get_args"]()
++
++
++class BenchmarkAliasStorageTests(unittest.TestCase):
++    def test_two_views_reuse_one_generated_storage(self):
++        base = torch.arange(64, dtype=torch.float32)
++        left = torch.as_strided(base, (3, 4), (4, 1), 2)
++        right = torch.as_strided(base, (3, 4), (4, 1), 10)
++        code = render_get_args([left, right])
++        self.assertEqual(code.count("_shared_storage_0 = rand_strided("), 1)
++        self.assertEqual(code.count("torch.as_strided(_shared_storage_0"), 2)
++        recreated_left, recreated_right = execute_get_args(code)
++        self.assertEqual(
++            recreated_left.untyped_storage().data_ptr(),
++            recreated_right.untyped_storage().data_ptr(),
++        )
++
++    def test_three_aliases_share_the_same_generated_storage(self):
++        base = torch.arange(96, dtype=torch.float32)
++        views = [torch.as_strided(base, (2, 5), (5, 1), offset) for offset in (0, 10, 20)]
++        recreated = execute_get_args(render_get_args(views))
++        pointers = {value.untyped_storage().data_ptr() for value in recreated}
++        self.assertEqual(len(pointers), 1)
++        self.assertEqual(len(recreated), 3)
++
++    def test_independent_inputs_remain_independent(self):
++        left = torch.randn(2, 3)
++        right = torch.randn(2, 3)
++        code = render_get_args([left, right])
++        self.assertNotIn("_shared_storage_", code)
++        recreated_left, recreated_right = execute_get_args(code)
++        self.assertNotEqual(
++            recreated_left.untyped_storage().data_ptr(),
++            recreated_right.untyped_storage().data_ptr(),
++        )
++
++    def test_single_input_generation_remains_stable(self):
++        code = render_get_args([torch.randn(4, 7)])
++        self.assertNotIn("_shared_storage_", code)
++        (value,) = execute_get_args(code)
++        self.assertEqual(value.shape, (4, 7))
++        self.assertEqual(value.stride(), (7, 1))
++
++
++if __name__ == "__main__":
++    unittest.main()

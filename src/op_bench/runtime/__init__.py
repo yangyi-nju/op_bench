@@ -36,7 +36,10 @@ from op_bench.runtime.codex_adapter import (
     CodexCanonicalAdapter,
     subprocess_command_runner,
 )
-from op_bench.runtime.codex_mcp_adapter import CodexMcpCanonicalAdapter
+from op_bench.runtime.codex_mcp_adapter import (
+    CodexMcpCanonicalAdapter,
+    render_mcp_prompt,
+)
 from op_bench.runtime.artifacts import ArtifactReference, PublicArtifactStore
 from op_bench.runtime.backends import (
     DockerRuntimeBackend,
@@ -307,6 +310,7 @@ __all__ = [
     "rebuild_summary",
     "retry_directory_name",
     "result_record",
+    "render_mcp_prompt",
     "selected_attempts_from_ledger",
     "termination_attribution",
     "verify_action_pairing",

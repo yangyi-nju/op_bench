@@ -1,0 +1,77 @@
+diff --git a/test/op_bench/test_profiled_kernel_scope.py b/test/op_bench/test_profiled_kernel_scope.py
+new file mode 100644
+--- /dev/null
++++ b/test/op_bench/test_profiled_kernel_scope.py
+@@ -0,0 +1,72 @@
++import sys
++import unittest
++from types import SimpleNamespace
++
++import sympy
++from torch._inductor import config
++from torch._inductor.codegen.cpp_wrapper_cpu import CppWrapperCpu
++from torch._inductor.utils import IndentedBuffer
++
++
++def wrapper_instance():
++    wrapper = object.__new__(CppWrapperCpu)
++    wrapper.kernel_numel_expr = set()
++    wrapper.wrapper_call = IndentedBuffer()
++    wrapper.writeline = wrapper.wrapper_call.writeline
++    return wrapper
++
++
++def symbolic_argument(name="kernel_xnumel", value=128):
++    return SimpleNamespace(inner=sympy.Symbol(name), inner_expr=sympy.Integer(value))
++
++
++class ProfiledKernelScopeTests(unittest.TestCase):
++    @unittest.skipUnless(sys.platform in ("linux", "win32"), "profiling scopes are platform-specific")
++    def test_repeated_profiled_call_redeclares_numel(self):
++        wrapper = wrapper_instance()
++        argument = symbolic_argument()
++        graph = object()
++        with config.patch({"cpp.enable_kernel_profile": True}):
++            wrapper._generate_symbolic_call_arg_helper(argument, graph)
++            wrapper._generate_symbolic_call_arg_helper(argument, graph)
++        lines = [line.strip() for line in wrapper.wrapper_call.getvalue().splitlines()]
++        self.assertEqual(sum(line.startswith("int64_t kernel_xnumel =") for line in lines), 2)
++        self.assertEqual(sum(line.startswith("kernel_xnumel =") for line in lines), 0)
++
++    @unittest.skipUnless(sys.platform in ("linux", "win32"), "profiling scopes are platform-specific")
++    def test_three_profiled_scopes_each_receive_a_declaration(self):
++        wrapper = wrapper_instance()
++        argument = symbolic_argument(value=257)
++        graph = object()
++        with config.patch({"cpp.enable_kernel_profile": True}):
++            for _ in range(3):
++                wrapper._generate_symbolic_call_arg_helper(argument, graph)
++        code = wrapper.wrapper_call.getvalue()
++        self.assertEqual(code.count("int64_t kernel_xnumel ="), 3)
++
++    def test_unprofiled_repeated_call_reuses_declaration(self):
++        wrapper = wrapper_instance()
++        argument = symbolic_argument()
++        graph = object()
++        with config.patch({"cpp.enable_kernel_profile": False}):
++            wrapper._generate_symbolic_call_arg_helper(argument, graph)
++            wrapper._generate_symbolic_call_arg_helper(argument, graph)
++        lines = [line.strip() for line in wrapper.wrapper_call.getvalue().splitlines()]
++        self.assertEqual(sum(line.startswith("int64_t kernel_xnumel =") for line in lines), 1)
++        self.assertEqual(sum(line.startswith("kernel_xnumel =") for line in lines), 1)
++
++    @unittest.skipUnless(sys.platform in ("linux", "win32"), "profiling scopes are platform-specific")
++    def test_distinct_graph_scopes_remain_independent(self):
++        wrapper = wrapper_instance()
++        argument = symbolic_argument("kernel_rnumel", 64)
++        with config.patch({"cpp.enable_kernel_profile": True}):
++            wrapper._generate_symbolic_call_arg_helper(argument, object())
++            wrapper._generate_symbolic_call_arg_helper(argument, object())
++        self.assertEqual(
++            wrapper.wrapper_call.getvalue().count("int64_t kernel_rnumel ="),
++            2,
++        )
++
++
++if __name__ == "__main__":
++    unittest.main()

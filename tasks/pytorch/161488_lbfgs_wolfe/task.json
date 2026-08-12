@@ -28,8 +28,8 @@
     "snapshot_path": "../../../.op_bench_cache/sources/pytorch/pytorch/6926710adf697e9d2160d43c4a96212dd27ceae0/source"
   },
   "statement": {
-    "title": "LBFGS optimizer wolfe line search max iteration is incorrect",
-    "body": "The LBFGS optimizer strong_wolfe line search uses an incorrect max iteration count, causing it to terminate too early and produce suboptimal step sizes.",
+    "title": "LBFGS line search stops before the expected closure-call count",
+    "body": "For the supplied deterministic CPU float32 Conv2d-plus-BatchNorm step, torch.optim.LBFGS uses one outer iteration, a configured evaluation value of five, and the bracketed line search. The step currently stops too early: it must invoke the closure six times and leave ordinary LBFGS state valid. The configured value is not a claim that the total closure-call count is five.",
     "labels": [
       "module: nn",
       "bug"
@@ -68,12 +68,14 @@
   "agent_visible": {
     "repo_setup_commands": [],
     "known_constraints": [
-      "Full PyTorch source checkout task.",
-      "Do not assume CUDA availability."
+      "CPU-only; CUDA is not required.",
+      "For the supplied step, the configured evaluation value is five and the expected total closure-call count is six.",
+      "The one-outer-iteration limit and ordinary optimizer state behavior must remain valid."
     ],
     "allowed_test_commands": [
       "{python} test/test_optim.py -k {test}"
-    ]
+    ],
+    "public_task_id": "opbench-v07-t0022"
   },
   "evaluation": {
     "setup_commands": [],
@@ -96,6 +98,38 @@
     "deterministic": true,
     "estimated_runtime_min": 15,
     "layer": "A",
-    "admission_status": "verified"
+    "admission_status": "verified",
+    "source_loading_verified": true
+  },
+  "quality": {
+    "complexity_evidence": "quality/complexity.json",
+    "origin": "retained_historical",
+    "prompt_evidence": "quality/prompt.json",
+    "readmission_evidence": "quality/readmission.json"
+  },
+  "taxonomy": {
+    "component_tags": [],
+    "contract_detail_tags": [
+      "state",
+      "liveness"
+    ],
+    "contract_family": "api_behavior",
+    "execution_context": {
+      "devices": [
+        "cpu"
+      ],
+      "distributed": false,
+      "modes": [
+        "eager"
+      ],
+      "phases": [
+        "forward",
+        "backward"
+      ]
+    },
+    "failure_type": "wrong_result",
+    "root_cause_tags": [],
+    "taxonomy_version": "v2",
+    "trigger_tags": []
   }
 }

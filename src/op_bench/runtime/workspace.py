@@ -10,6 +10,7 @@ import re
 import secrets
 import stat
 import subprocess
+import sys
 import tempfile
 import threading
 from typing import Iterator, Mapping
@@ -46,8 +47,8 @@ class WorkspacePolicy:
 
     def __post_init__(self) -> None:
         require_str(self.policy_id, "policy_id")
-        _validate_scopes(self.writable_paths, "writable_paths")
-        _validate_scopes(self.patch_paths, "patch_paths")
+        _validate_scopes(self.writable_paths, "writable_paths", allow_root=True)
+        _validate_scopes(self.patch_paths, "patch_paths", allow_root=False)
         if not isinstance(self.allowed_modes, tuple) or not self.allowed_modes:
             raise WorkspacePolicyError("allowed_modes: expected non-empty tuple")
         seen_modes: set[int] = set()
@@ -751,12 +752,26 @@ class AuthoritativeWorkspace:
             snapshots[path] = _FileSnapshot(content=content, mode=mode)
 
     def _capture_authoritative_patch(self) -> tuple[tuple[str, ...], bytes]:
-        current = self._snapshot_scope_files()
+        self._assert_root_binding()
+        reported_paths = _changed_workspace_paths(self._root_fd)
+        self._assert_root_binding()
+        base = _commit_path_snapshots(
+            self._root_fd,
+            self.base_commit,
+            self.policy,
+            reported_paths,
+        )
+        self._assert_root_binding()
+        current = {
+            path: snapshot
+            for path in reported_paths
+            if (snapshot := self._snapshot(path)) is not None
+        }
         changed_paths = tuple(
             sorted(
                 path
-                for path in set(self._base_snapshots) | set(current)
-                if self._base_snapshots.get(path) != current.get(path)
+                for path in set(base) | set(current)
+                if base.get(path) != current.get(path)
             )
         )
         if not changed_paths:
@@ -765,10 +780,10 @@ class AuthoritativeWorkspace:
         with tempfile.TemporaryDirectory(prefix="opbench-canonical-diff-") as temporary:
             stage_root = Path(temporary) / "stage"
             stage_root.mkdir()
-            _materialize_snapshots(stage_root, self._base_snapshots)
+            _materialize_snapshots(stage_root, base)
             _git(stage_root, "init", "--quiet")
             _git(stage_root, "add", "--all")
-            for path in sorted(set(self._base_snapshots) - set(current)):
+            for path in sorted(set(base) - set(current)):
                 stage_root.joinpath(*PurePosixPath(path).parts).unlink()
             _materialize_snapshots(stage_root, current)
 
@@ -790,7 +805,7 @@ class AuthoritativeWorkspace:
             )
             tracked = _git(stage_root, *arguments).stdout
             additions: list[bytes] = []
-            for path in sorted(set(current) - set(self._base_snapshots)):
+            for path in sorted(set(current) - set(base)):
                 result = _git(
                     stage_root,
                     "diff",
@@ -883,17 +898,23 @@ class AuthoritativeWorkspace:
         if not self.policy.allow_binary and b"GIT binary patch" in patch_bytes:
             raise WorkspacePolicyError("binary patch is denied")
 
+        base_snapshots = _commit_path_snapshots(
+            self._root_fd,
+            self.base_commit,
+            self.policy,
+            changed_paths,
+        )
         for path in changed_paths:
-            if not _path_in_scopes(path, self.policy.patch_paths):
-                raise WorkspacePolicyError(f"path {path!r}: outside patch scope")
-            self._validate_frozen_path(path)
+            if not _path_in_scopes(path, self.policy.writable_paths):
+                raise WorkspacePolicyError(f"path {path!r}: outside writable scope")
+            self._validate_frozen_path(path, base_snapshots)
 
         parsed_paths = _patch_paths_from_bytes(patch_bytes)
         if parsed_paths != changed_paths:
             raise WorkspacePolicyError(
                 "canonical patch paths do not match authoritative Git status"
             )
-        self._verify_strict_clean_apply(patch_bytes)
+        self._verify_strict_clean_apply(patch_bytes, base_snapshots)
         patch_identity = raw_patch_identity(
             patch_bytes,
             identifier=f"{self.identity.identifier}:final.patch",
@@ -908,19 +929,27 @@ class AuthoritativeWorkspace:
             empty=not patch_bytes,
         )
 
-    def _validate_frozen_path(self, path: str) -> None:
+    def _validate_frozen_path(
+        self,
+        path: str,
+        base_snapshots: Mapping[str, _FileSnapshot],
+    ) -> None:
         current = self._snapshot(path)
-        if current is None and path not in self._base_snapshots:
+        if current is None and path not in base_snapshots:
             raise WorkspacePolicyError(f"deleted path {path!r}: missing from base")
 
-    def _verify_strict_clean_apply(self, patch_bytes: bytes) -> None:
+    def _verify_strict_clean_apply(
+        self,
+        patch_bytes: bytes,
+        base_snapshots: Mapping[str, _FileSnapshot],
+    ) -> None:
         if not patch_bytes:
             return
         with tempfile.TemporaryDirectory(prefix="opbench-clean-apply-") as temporary:
             temporary_root = Path(temporary)
             clean_root = temporary_root / "source"
             clean_root.mkdir()
-            _materialize_snapshots(clean_root, self._base_snapshots)
+            _materialize_snapshots(clean_root, base_snapshots)
             _git(clean_root, "init", "--quiet")
             _git(clean_root, "add", "--all")
             patch_path = temporary_root / "candidate.patch"
@@ -1200,20 +1229,32 @@ class AuthoritativeWorkspace:
                 pass
             raise
 
-def _validate_scopes(scopes: tuple[str, ...], path: str) -> None:
+def _validate_scopes(
+    scopes: tuple[str, ...],
+    path: str,
+    *,
+    allow_root: bool,
+) -> None:
     if not isinstance(scopes, tuple) or not scopes:
         raise WorkspacePolicyError(f"{path}: expected non-empty tuple")
     seen: set[str] = set()
     for index, scope in enumerate(scopes):
         if not isinstance(scope, str) or not scope:
             raise WorkspacePolicyError(f"{path}[{index}]: expected non-empty string")
-        directory = scope.endswith("/")
-        candidate = scope[:-1] if directory else scope
-        try:
-            normalized = _normalize_relative_path(candidate)
-        except WorkspacePolicyError as exc:
-            raise WorkspacePolicyError(f"{path}[{index}]: {exc}") from exc
-        canonical = normalized + "/" if directory else normalized
+        if scope == ".":
+            if not allow_root:
+                raise WorkspacePolicyError(
+                    f"{path}[{index}]: repository root scope is denied"
+                )
+            canonical = scope
+        else:
+            directory = scope.endswith("/")
+            candidate = scope[:-1] if directory else scope
+            try:
+                normalized = _normalize_relative_path(candidate)
+            except WorkspacePolicyError as exc:
+                raise WorkspacePolicyError(f"{path}[{index}]: {exc}") from exc
+            canonical = normalized + "/" if directory else normalized
         if canonical != scope:
             raise WorkspacePolicyError(f"{path}[{index}]: path is not canonical")
         if canonical in seen:
@@ -1243,6 +1284,8 @@ def _normalize_relative_path(path: str) -> str:
 
 
 def _path_in_scopes(path: str, scopes: tuple[str, ...]) -> bool:
+    if "." in scopes:
+        return True
     for scope in scopes:
         if scope.endswith("/"):
             if path.startswith(scope) and len(path) > len(scope):
@@ -1250,6 +1293,21 @@ def _path_in_scopes(path: str, scopes: tuple[str, ...]) -> bool:
         elif path == scope:
             return True
     return False
+
+
+def paths_within_scopes(
+    paths: tuple[str, ...],
+    scopes: tuple[str, ...],
+) -> bool:
+    """Check canonical paths against a validated private scope boundary."""
+
+    if not isinstance(paths, tuple):
+        raise WorkspacePolicyError("paths: expected tuple")
+    _validate_scopes(scopes, "scopes", allow_root=True)
+    normalized = tuple(_normalize_relative_path(path) for path in paths)
+    if normalized != paths or len(set(normalized)) != len(normalized):
+        raise WorkspacePolicyError("paths: expected canonical unique paths")
+    return all(_path_in_scopes(path, scopes) for path in paths)
 
 
 def _same_inode(left: os.stat_result, right: os.stat_result) -> bool:
@@ -1343,7 +1401,41 @@ def _commit_scope_snapshots(
     base_commit: str,
     policy: WorkspacePolicy,
 ) -> dict[str, _FileSnapshot]:
-    result = _git(
+    return _commit_snapshots(
+        root,
+        base_commit,
+        policy,
+        pathspecs=policy.patch_paths,
+        allowed_paths=policy.patch_paths,
+    )
+
+
+def _commit_path_snapshots(
+    root: Path | int,
+    base_commit: str,
+    policy: WorkspacePolicy,
+    paths: tuple[str, ...],
+) -> dict[str, _FileSnapshot]:
+    if not paths:
+        return {}
+    return _commit_snapshots(
+        root,
+        base_commit,
+        policy,
+        pathspecs=paths,
+        allowed_paths=paths,
+    )
+
+
+def _commit_snapshots(
+    root: Path | int,
+    base_commit: str,
+    policy: WorkspacePolicy,
+    *,
+    pathspecs: tuple[str, ...],
+    allowed_paths: tuple[str, ...],
+) -> dict[str, _FileSnapshot]:
+    result = _git_for_root(
         root,
         "ls-tree",
         "-r",
@@ -1351,7 +1443,7 @@ def _commit_scope_snapshots(
         "--full-tree",
         base_commit,
         "--",
-        *policy.patch_paths,
+        *pathspecs,
     )
     snapshots: dict[str, _FileSnapshot] = {}
     for record in result.stdout.split(b"\0"):
@@ -1369,9 +1461,9 @@ def _commit_scope_snapshots(
         except (UnicodeDecodeError, ValueError) as exc:
             raise WorkspacePolicyError("base commit tree contains non-canonical data") from exc
         normalized = _normalize_relative_path(path)
-        if normalized != path or not _path_in_scopes(normalized, policy.patch_paths):
+        if normalized != path or not _path_in_scopes(normalized, allowed_paths):
             raise WorkspacePolicyError(
-                f"base commit returned path outside patch scope: {normalized!r}"
+                f"base commit returned unexpected path: {normalized!r}"
             )
         if object_type != b"blob" or git_mode & 0o170000 != 0o100000:
             if git_mode == 0o120000:
@@ -1388,7 +1480,7 @@ def _commit_scope_snapshots(
             raise WorkspacePolicyError(
                 f"path {normalized!r}: invalid base blob object id"
             )
-        size_output = _git(root, "cat-file", "-s", object_id).stdout.strip()
+        size_output = _git_for_root(root, "cat-file", "-s", object_id).stdout.strip()
         try:
             size = int(size_output.decode("ascii", errors="strict"))
         except (UnicodeDecodeError, ValueError) as exc:
@@ -1397,7 +1489,7 @@ def _commit_scope_snapshots(
             ) from exc
         if size < 0 or size > policy.max_file_bytes:
             raise WorkspacePolicyError(f"path {normalized!r}: exceeds max_file_bytes")
-        content = _git(root, "cat-file", "blob", object_id).stdout
+        content = _git_for_root(root, "cat-file", "blob", object_id).stdout
         if len(content) != size or _git_blob_object_id(content, len(object_id)) != object_id:
             raise WorkspacePolicyError(
                 f"path {normalized!r}: base blob content identity mismatch"
@@ -1408,6 +1500,37 @@ def _commit_scope_snapshots(
             raise WorkspacePolicyError(f"base commit contains duplicate path {normalized!r}")
         snapshots[normalized] = _FileSnapshot(content=content, mode=mode)
     return snapshots
+
+
+def _changed_workspace_paths(root: Path | int) -> tuple[str, ...]:
+    status = _git_for_root(
+        root,
+        "status",
+        "--porcelain=v1",
+        "-z",
+        "--untracked-files=all",
+        "--ignored=matching",
+        "--no-renames",
+    )
+    paths: set[str] = set()
+    for record in status.stdout.split(b"\0"):
+        if not record:
+            continue
+        if len(record) < 4 or record[2:3] != b" ":
+            raise WorkspacePolicyError("authoritative Git status is malformed")
+        try:
+            path = record[3:].decode("utf-8", errors="strict")
+        except UnicodeDecodeError as exc:
+            raise WorkspacePolicyError(
+                "authoritative Git status contains a non-UTF-8 path"
+            ) from exc
+        normalized = _normalize_relative_path(path)
+        if normalized != path:
+            raise WorkspacePolicyError(
+                "authoritative Git status contains a non-canonical path"
+            )
+        paths.add(normalized)
+    return tuple(sorted(paths))
 
 
 def _git_blob_object_id(content: bytes, object_id_length: int) -> str:
@@ -1440,10 +1563,53 @@ def _git(root: Path, *arguments: str, check: bool = True) -> subprocess.Complete
     )
 
 
+def _git_for_root(
+    root: Path | int,
+    *arguments: str,
+    check: bool = True,
+) -> subprocess.CompletedProcess[bytes]:
+    if isinstance(root, int):
+        return _git_at_directory_fd(root, *arguments, check=check)
+    return _git(root, *arguments, check=check)
+
+
+def _git_at_directory_fd(
+    root_fd: int,
+    *arguments: str,
+    check: bool = True,
+) -> subprocess.CompletedProcess[bytes]:
+    if root_fd < 0:
+        raise WorkspaceStateError("workspace authority is closed")
+    launcher = (
+        "import os,sys;"
+        "os.fchdir(int(sys.argv[1]));"
+        "os.execvp('git', ('git', *sys.argv[2:]))"
+    )
+    return _run_git(
+        (
+            sys.executable,
+            "-I",
+            "-c",
+            launcher,
+            str(root_fd),
+            "-c",
+            "core.autocrlf=false",
+            "-c",
+            "core.filemode=true",
+            "-c",
+            "core.quotePath=true",
+            *arguments,
+        ),
+        check=check,
+        pass_fds=(root_fd,),
+    )
+
+
 def _run_git(
     command: tuple[str, ...],
     *,
     check: bool = False,
+    pass_fds: tuple[int, ...] = (),
 ) -> subprocess.CompletedProcess[bytes]:
     try:
         result = subprocess.run(
@@ -1452,6 +1618,7 @@ def _run_git(
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             env=_git_environment(),
+            pass_fds=pass_fds,
         )
     except OSError as exc:
         raise WorkspaceError(f"cannot execute local Git: {exc}") from exc
@@ -1618,5 +1785,6 @@ __all__ = [
     "assert_patch_identity_handoff",
     "build_patch_artifact",
     "patch_paths_from_bytes",
+    "paths_within_scopes",
     "raw_patch_identity",
 ]

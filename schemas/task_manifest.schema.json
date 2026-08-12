@@ -71,9 +71,50 @@
           "type": "string",
           "minLength": 1
         },
+        "compatibility_evidence": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+\\.json$"
+        },
         "verified_at": {
           "type": "string",
           "minLength": 1
+        }
+      }
+    },
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target_module",
+        "target_import",
+        "selector_module",
+        "minimal_operation",
+        "evidence"
+      ],
+      "properties": {
+        "target_module": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$"
+        },
+        "target_import": {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_.]*$"
+        },
+        "selector_module": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+\\.py$"
+        },
+        "minimal_operation": {
+          "type": "string",
+          "pattern": "^import torch;"
+        },
+        "evidence": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+\\.json$"
         }
       }
     },
@@ -100,6 +141,149 @@
       "type": "string",
       "pattern": "^v[0-9]+$"
     },
+    "taxonomy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "taxonomy_version",
+        "contract_family",
+        "execution_context",
+        "failure_type"
+      ],
+      "properties": {
+        "taxonomy_version": {
+          "const": "v2"
+        },
+        "contract_family": {
+          "type": "string",
+          "enum": [
+            "result",
+            "tensor_metadata",
+            "mutation_state",
+            "gradient",
+            "api_behavior",
+            "efficiency_safety"
+          ]
+        },
+        "contract_detail_tags": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "value",
+              "numerical",
+              "shape",
+              "rank",
+              "dtype",
+              "device",
+              "layout",
+              "stride",
+              "alias",
+              "mutation",
+              "state",
+              "serialization",
+              "gradient",
+              "schema",
+              "exception",
+              "compatibility",
+              "performance",
+              "memory",
+              "liveness"
+            ]
+          }
+        },
+        "trigger_tags": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "empty_or_zero",
+              "scalar_or_low_rank",
+              "extreme_value_or_size",
+              "invalid_or_endpoint_parameter",
+              "noncontiguous_or_special_layout",
+              "mixed_dtype_or_precision_mode",
+              "dynamic_shape",
+              "mutation_or_alias",
+              "device_specific"
+            ]
+          }
+        },
+        "execution_context": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["devices", "modes", "phases", "distributed"],
+          "properties": {
+            "devices": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {"type": "string", "enum": ["cpu", "cuda"]}
+            },
+            "modes": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {"type": "string", "enum": ["eager", "compile"]}
+            },
+            "phases": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {"type": "string", "enum": ["forward", "backward"]}
+            },
+            "distributed": {
+              "type": "boolean"
+            }
+          }
+        },
+        "failure_type": {
+          "type": "string",
+          "enum": [
+            "wrong_result",
+            "unexpected_error",
+            "missing_error",
+            "crash_or_hang",
+            "nondeterministic",
+            "performance_regression"
+          ]
+        },
+        "root_cause_tags": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "overflow",
+              "incorrect_validation",
+              "wrong_dispatch",
+              "incorrect_cast",
+              "bad_gradient_formula",
+              "incorrect_lowering"
+            ]
+          }
+        },
+        "component_tags": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "aten",
+              "autograd",
+              "dispatcher",
+              "dynamo",
+              "inductor",
+              "triton",
+              "cuda_kernel",
+              "distributed"
+            ]
+          }
+        }
+      }
+    },
     "source": {
       "type": "object",
       "additionalProperties": false,
@@ -112,12 +296,55 @@
         "base_commit",
         "merge_commit"
       ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "issue_url": {
+                "type": "null"
+              }
+            },
+            "required": [
+              "issue_url"
+            ]
+          },
+          "then": {
+            "properties": {
+              "issue_number": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "issue_number": {
+                "type": "null"
+              }
+            },
+            "required": [
+              "issue_number"
+            ]
+          },
+          "then": {
+            "properties": {
+              "issue_url": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ],
       "properties": {
         "pr_url": {
           "type": "string"
         },
         "issue_url": {
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "repo": {
           "type": "string",
@@ -127,7 +354,10 @@
           "type": "string"
         },
         "issue_number": {
-          "type": "integer",
+          "type": [
+            "integer",
+            "null"
+          ],
           "minimum": 1
         },
         "pr_number": {
@@ -215,13 +445,108 @@
         "problem_type": {
           "type": "string"
         },
+        "problem_dimension": {
+          "type": "string",
+          "enum": [
+            "boundary",
+            "precision"
+          ]
+        },
+        "problem_subclass": {
+          "type": "string",
+          "enum": [
+            "B1",
+            "B2",
+            "B3",
+            "B4",
+            "B5",
+            "P1",
+            "P2",
+            "P3",
+            "P4",
+            "P5"
+          ]
+        },
+        "failure_contract": {
+          "type": "string",
+          "enum": [
+            "wrong-result",
+            "exception",
+            "crash-oob",
+            "silent-acceptance"
+          ]
+        },
         "tags": {
           "type": "array",
           "items": {
             "type": "string"
           }
         }
-      }
+      },
+      "dependentRequired": {
+        "problem_dimension": [
+          "problem_subclass"
+        ],
+        "problem_subclass": [
+          "problem_dimension"
+        ],
+        "failure_contract": [
+          "problem_dimension",
+          "problem_subclass"
+        ]
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "problem_dimension"
+            ],
+            "properties": {
+              "problem_dimension": {
+                "const": "boundary"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "problem_subclass": {
+                "enum": [
+                  "B1",
+                  "B2",
+                  "B3",
+                  "B4",
+                  "B5"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "problem_dimension"
+            ],
+            "properties": {
+              "problem_dimension": {
+                "const": "precision"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "problem_subclass": {
+                "enum": [
+                  "P1",
+                  "P2",
+                  "P3",
+                  "P4",
+                  "P5"
+                ]
+              }
+            }
+          }
+        }
+      ]
     },
     "environment": {
       "type": "object",
@@ -259,7 +584,11 @@
         },
         "host": {
           "type": "string",
-          "minLength": 1
+          "pattern": "^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$"
+        },
+        "remote_execution_config_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
         },
         "gpus": {
           "type": "string",
@@ -424,6 +753,10 @@
         "allowed_test_commands"
       ],
       "properties": {
+        "public_task_id": {
+          "type": "string",
+          "pattern": "^opbench-v07-t[0-9]{4}$"
+        },
         "repo_setup_commands": {
           "type": "array",
           "items": {

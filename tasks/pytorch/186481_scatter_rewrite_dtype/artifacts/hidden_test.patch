@@ -1,0 +1,61 @@
+diff --git a/test/op_bench/test_scatter_rewrite_dtype.py b/test/op_bench/test_scatter_rewrite_dtype.py
+new file mode 100644
+--- /dev/null
++++ b/test/op_bench/test_scatter_rewrite_dtype.py
+@@ -0,0 +1,56 @@
++import unittest
++
++import torch
++from torch._inductor.fx_passes.joint_graph import scatter_upon_const_tensor
++
++
++class CaptureMatch:
++    def __init__(self):
++        self.value = None
++
++    def replace_by_example(self, function, arguments):
++        self.value = function(*arguments)
++
++
++class ScatterRewriteDtypeTests(unittest.TestCase):
++    @staticmethod
++    def reference(indices, dtype):
++        rows, columns = indices.numel(), 64
++        result = torch.full((rows, columns), 3.25, dtype=dtype)
++        return result.scatter(1, indices.unsqueeze(1), -1.5)
++
++    def assert_rewrite_dtype(self, dtype):
++        indices = torch.tensor([1, 7, 13, 31, 47, 63], dtype=torch.int64)
++        expected = self.reference(indices, dtype)
++        match = CaptureMatch()
++        scatter_upon_const_tensor(
++            match,
++            [indices.numel(), 64],
++            3.25,
++            dtype,
++            1,
++            indices.unsqueeze(1),
++            -1.5,
++        )
++        actual = match.value
++        self.assertEqual(actual.dtype, dtype)
++        torch.testing.assert_close(actual, expected)
++
++    def test_float16_scatter_preserves_source_dtype(self):
++        self.assert_rewrite_dtype(torch.float16)
++
++    def test_bfloat16_scatter_preserves_source_dtype(self):
++        self.assert_rewrite_dtype(torch.bfloat16)
++
++    def test_float32_scatter_remains_stable(self):
++        self.assert_rewrite_dtype(torch.float32)
++
++    def test_eager_low_precision_scatter_remains_stable(self):
++        indices = torch.tensor([0, 3, 9], dtype=torch.int64)
++        result = self.reference(indices, torch.float16)
++        self.assertEqual(result.dtype, torch.float16)
++        self.assertTrue(torch.all(result[torch.arange(3), indices] == -1.5))
++
++
++if __name__ == "__main__":
++    unittest.main()

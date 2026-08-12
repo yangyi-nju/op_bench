@@ -28,8 +28,8 @@
     "snapshot_path": "../../../.op_bench_cache/sources/pytorch/pytorch/2409b49a33c0ef594d89f9f477d56abad47e65bf/source"
   },
   "statement": {
-    "title": "SoftMax CUDA ilpReduce underflows size counter, produces wrong output for double",
-    "body": "In the CUDA SoftMax `ilpReduce` and `WriteFpropResultsVectorized` inner loops, the tail iteration unconditionally decrements the loop counter with `size -= blockDim.x`. When the remaining elements are fewer than blockDim.x, this makes `size` underflow (large unsigned value) and the subsequent tail work touches invalid indices. Result: log_softmax + exp does not sum to 1 for certain shapes (e.g. (5, 513) in float64).\n\nFix (2 lines): clamp the decrement to at most `size` itself, so the counter never underflows.",
+    "title": "CUDA logarithmic softmax is not normalized for a float64 width-513 input",
+    "body": "For a CUDA float64 tensor of shape (5, 513), exponentiating torch.nn.functional logarithmic-softmax output along the width does not produce rows that sum to one. The result must satisfy the normalization contract for this tail shape without regressing ordinary CUDA softmax inputs.",
     "labels": [
       "module: cuda",
       "topic: bug fixes"
@@ -38,7 +38,7 @@
   "operator": {
     "framework": "pytorch",
     "component": "aten.native.cuda.softmax",
-    "operator_name": "torch.nn.functional.log_softmax",
+    "operator_name": "torch.nn.functional logarithmic softmax",
     "problem_type": "kernel-index-underflow",
     "problem_dimension": "precision",
     "problem_subclass": "P5",
@@ -68,13 +68,13 @@
   "agent_visible": {
     "repo_setup_commands": [],
     "known_constraints": [
-      "Full PyTorch source build task with CUDA toolchain.",
-      "CUDA GPU is available; tests must run with CUDA tensors.",
-      "The bug is in aten/src/ATen/native/cuda/SoftMax.cu, in the tail-loop `size` decrement."
+      "A CUDA source-build environment is required.",
+      "For float64 input of shape (5, 513), each exponentiated logarithmic-softmax row must sum to one."
     ],
     "allowed_test_commands": [
       "{python} test/test_nn.py -k {test_name}"
-    ]
+    ],
+    "public_task_id": "opbench-v07-t0015"
   },
   "evaluation": {
     "setup_commands": [],
@@ -97,6 +97,45 @@
     "deterministic": true,
     "estimated_runtime_min": 90,
     "layer": "A",
-    "admission_status": "verified"
+    "admission_status": "verified",
+    "source_loading_verified": true
+  },
+  "quality": {
+    "complexity_evidence": "quality/complexity.json",
+    "origin": "retained_historical",
+    "prompt_evidence": "quality/prompt.json",
+    "readmission_evidence": "quality/readmission.json"
+  },
+  "taxonomy": {
+    "component_tags": [
+      "aten",
+      "cuda_kernel"
+    ],
+    "contract_detail_tags": [
+      "value",
+      "numerical"
+    ],
+    "contract_family": "result",
+    "execution_context": {
+      "devices": [
+        "cuda"
+      ],
+      "distributed": false,
+      "modes": [
+        "eager"
+      ],
+      "phases": [
+        "forward"
+      ]
+    },
+    "failure_type": "wrong_result",
+    "root_cause_tags": [
+      "overflow"
+    ],
+    "taxonomy_version": "v2",
+    "trigger_tags": [
+      "extreme_value_or_size",
+      "device_specific"
+    ]
   }
 }

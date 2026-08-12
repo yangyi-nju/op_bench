@@ -1,0 +1,47 @@
+diff --git a/test/op_bench/test_large_guard_materialization.py b/test/op_bench/test_large_guard_materialization.py
+new file mode 100644
+--- /dev/null
++++ b/test/op_bench/test_large_guard_materialization.py
+@@ -0,0 +1,42 @@
++import unittest
++from unittest.mock import patch
++import warnings
++
++from torch.export._unlift import _convert_guards_code_to_fn
++
++
++class LargeGuardMaterializationTests(unittest.TestCase):
++    def test_codegen_survives_pretty_print_recursion(self):
++        with patch("ast.unparse", side_effect=RecursionError("deep expression")):
++            with warnings.catch_warnings(record=True) as caught:
++                warnings.simplefilter("always")
++                guards = _convert_guards_code_to_fn(["args[0] > 0"], [])
++
++        self.assertIsNotNone(guards)
++        guards(3)
++        self.assertTrue(any("guard expression" in str(item.message) for item in caught))
++
++    def test_multiple_runtime_guards_survive_pretty_print_recursion(self):
++        expressions = ["args[0] > 0", "args[1] < 10"]
++        with patch("ast.unparse", side_effect=RecursionError("deep expression")):
++            with warnings.catch_warnings():
++                warnings.simplefilter("ignore")
++                guards = _convert_guards_code_to_fn(expressions, [])
++
++        guards(2, 7)
++        with self.assertRaisesRegex(AssertionError, "args\\[1\\] < 10"):
++            guards(2, 12)
++
++    def test_normal_guard_keeps_validation_semantics(self):
++        guards = _convert_guards_code_to_fn(["args[0] % 2 == 0"], [])
++        guards(4)
++        with self.assertRaisesRegex(AssertionError, "Guard failed"):
++            guards(3)
++
++    def test_empty_guard_set_remains_callable(self):
++        guards = _convert_guards_code_to_fn([], [])
++        self.assertIsNone(guards("unused"))
++
++
++if __name__ == "__main__":
++    unittest.main()

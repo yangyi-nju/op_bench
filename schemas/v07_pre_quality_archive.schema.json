@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OpBench v0.7 pre-quality archive",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "archive_id",
+    "baseline_commit",
+    "task_count",
+    "dataset_hashes",
+    "release_id",
+    "release_hash",
+    "validation_dataset_digest",
+    "validation_attempts",
+    "cohort_ids",
+    "limitations",
+    "content_hash"
+  ],
+  "properties": {
+    "schema_version": {"const": "v1"},
+    "archive_id": {"const": "v0.7-pre-quality"},
+    "baseline_commit": {"const": "4f5addc"},
+    "task_count": {"type": "integer", "minimum": 1},
+    "dataset_hashes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["boundary", "cumulative", "precision"],
+      "properties": {
+        "boundary": {"$ref": "#/$defs/hash"},
+        "cumulative": {"$ref": "#/$defs/hash"},
+        "precision": {"$ref": "#/$defs/hash"}
+      }
+    },
+    "release_id": {
+      "type": "string",
+      "pattern": "^release:v1:[0-9a-f]{64}$"
+    },
+    "release_hash": {"$ref": "#/$defs/hash"},
+    "validation_dataset_digest": {"$ref": "#/$defs/hash"},
+    "validation_attempts": {"type": "integer", "minimum": 1},
+    "cohort_ids": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^cohort:v1:[0-9a-f]{64}$"
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "content_hash": {"$ref": "#/$defs/hash"}
+  },
+  "$defs": {
+    "hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

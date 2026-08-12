@@ -1,0 +1,446 @@
+diff --git a/torch/_dynamo/trace_rules.py b/torch/_dynamo/trace_rules.py
+index 925495d67ba..0633f70c874 100644
+--- a/torch/_dynamo/trace_rules.py
++++ b/torch/_dynamo/trace_rules.py
+@@ -343,6 +343,13 @@ manual_torch_name_rule_map: dict[
+     "torch._C._functorch.unwrap_if_dead": TorchInGraphFunctionVariable,
+     "torch._functorch.predispatch._vmap_increment_nesting": TorchInGraphFunctionVariable,
+     "torch._functorch.predispatch._vmap_decrement_nesting": TorchInGraphFunctionVariable,
++    "torch._functorch.predispatch._jvp_increment_nesting": TorchInGraphFunctionVariable,
++    "torch._functorch.predispatch._jvp_decrement_nesting": TorchInGraphFunctionVariable,
++    "torch._functorch.predispatch._unwrap_for_grad": TorchInGraphFunctionVariable,
++    "torch._functorch.predispatch._make_dual": TorchInGraphFunctionVariable,
++    "torch._functorch.predispatch._unpack_dual": TorchInGraphFunctionVariable,
++    "torch._functorch.predispatch._enter_dual_level": TorchInGraphFunctionVariable,
++    "torch._functorch.predispatch._exit_dual_level": TorchInGraphFunctionVariable,
+     # everything else
+     "torch._functorch.pyfunctorch.coerce_cinterpreter": TorchInGraphFunctionVariable,
+     "torch._higher_order_ops.triton_kernel_wrap.do_prune_configs": UserFunctionVariable,
+@@ -2417,6 +2424,13 @@ torch_non_c_binding_in_graph_functions = dict.fromkeys(
+         "torch._functorch.predispatch._vmap_decrement_nesting",
+         "torch._functorch.predispatch._add_batch_dim",
+         "torch._functorch.predispatch._remove_batch_dim",
++        "torch._functorch.predispatch._jvp_increment_nesting",
++        "torch._functorch.predispatch._jvp_decrement_nesting",
++        "torch._functorch.predispatch._unwrap_for_grad",
++        "torch._functorch.predispatch._make_dual",
++        "torch._functorch.predispatch._unpack_dual",
++        "torch._functorch.predispatch._enter_dual_level",
++        "torch._functorch.predispatch._exit_dual_level",
+         "torch._guards.compile_context",
+         "torch._guards.detect_fake_mode",
+         "torch._guards.tracing",
+diff --git a/torch/_dynamo/variables/ctx_manager.py b/torch/_dynamo/variables/ctx_manager.py
+index 30ebc0ca873..f1e9af52544 100644
+--- a/torch/_dynamo/variables/ctx_manager.py
++++ b/torch/_dynamo/variables/ctx_manager.py
+@@ -357,7 +357,7 @@ class JvpIncrementNestingCtxManagerVariable(ContextWrappingVariable):
+         )
+         self.proxy = tx.output.create_node(
+             "call_function",
+-            torch._C._functorch._jvp_increment_nesting,
++            torch._functorch.predispatch._jvp_increment_nesting,
+             (),
+             {},
+         )
+@@ -368,7 +368,7 @@ class JvpIncrementNestingCtxManagerVariable(ContextWrappingVariable):
+     ) -> VariableTracker:
+         self.cleanup()
+         tx.output.create_node(
+-            "call_function", torch._C._functorch._jvp_decrement_nesting, (), {}
++            "call_function", torch._functorch.predispatch._jvp_decrement_nesting, (), {}
+         )
+         return variables.ConstantVariable.create(None)
+ 
+@@ -439,7 +439,7 @@ class DualLevelContextManager(ContextWrappingVariable):
+         )
+         self.proxy = tx.output.create_node(
+             "call_function",
+-            torch._C._enter_dual_level,
++            torch._functorch.predispatch._enter_dual_level,
+             (),
+             {},
+         )
+@@ -451,9 +451,9 @@ class DualLevelContextManager(ContextWrappingVariable):
+         self.cleanup()
+         tx.output.create_node(
+             "call_function",
+-            torch._C._exit_dual_level,
+-            (self.new_level,),
+-            {},
++            torch._functorch.predispatch._exit_dual_level,
++            (),
++            {"level": self.new_level},
+         )
+         return variables.ConstantVariable.create(None)
+ 
+diff --git a/torch/_export/utils.py b/torch/_export/utils.py
+index f02bea5527c..fab8d7f5765 100644
+--- a/torch/_export/utils.py
++++ b/torch/_export/utils.py
+@@ -216,6 +216,9 @@ def _collect_param_buffer_metadata(mod: torch.fx.GraphModule) -> dict[str, Any]:
+ 
+ 
+ def _maybe_find_pre_dispatch_tf_mode_for_export():
++    if not torch.compiler.is_exporting():
++        return None
++
+     if not torch._C._is_torch_function_mode_enabled():
+         return None
+ 
+diff --git a/torch/_export/verifier.py b/torch/_export/verifier.py
+index 9dbf6dc3a5c..7327e908ac7 100644
+--- a/torch/_export/verifier.py
++++ b/torch/_export/verifier.py
+@@ -246,6 +246,13 @@ class Verifier(metaclass=_VerifierMeta):
+                 torch._functorch.predispatch._vmap_increment_nesting,
+                 torch._functorch.predispatch._vmap_decrement_nesting,
+                 torch._functorch.predispatch.lazy_load_decompositions,
++                torch._functorch.predispatch._make_dual,
++                torch._functorch.predispatch._unpack_dual,
++                torch._functorch.predispatch._jvp_increment_nesting,
++                torch._functorch.predispatch._jvp_decrement_nesting,
++                torch._functorch.predispatch._unwrap_for_grad,
++                torch._functorch.predispatch._enter_dual_level,
++                torch._functorch.predispatch._exit_dual_level,
+             )
+ 
+             if not isinstance(op, _allowed_op_types()):
+diff --git a/torch/_functorch/eager_transforms.py b/torch/_functorch/eager_transforms.py
+index b3bf0f078f8..8c112adfdfc 100644
+--- a/torch/_functorch/eager_transforms.py
++++ b/torch/_functorch/eager_transforms.py
+@@ -19,10 +19,7 @@ from torch._C._functorch import (
+     _func_increment_nesting,  # type: ignore[attr-defined]
+     _grad_decrement_nesting,
+     _grad_increment_nesting,
+-    _jvp_decrement_nesting,
+-    _jvp_increment_nesting,
+     _propagate_functional_input_mutation,  # type: ignore[attr-defined]
+-    _unwrap_for_grad,
+     _unwrap_functional_tensor,
+     _wrap_for_grad,
+     _wrap_functional_tensor,
+@@ -31,6 +28,11 @@ from torch._C._functorch import (
+     is_functorch_wrapped_tensor,
+     set_inplace_requires_grad_allowed,
+ )
++from torch._functorch.predispatch import (
++    _jvp_decrement_nesting,
++    _jvp_increment_nesting,
++    _unwrap_for_grad,
++)
+ from torch._functorch.utils import argnums_t, exposed_in
+ from torch._subclasses.functional_tensor import FunctionalTensor
+ from torch.fx.experimental import const_fold
+diff --git a/torch/_functorch/predispatch.py b/torch/_functorch/predispatch.py
+index ffa66ad8c2b..c482ff18cef 100644
+--- a/torch/_functorch/predispatch.py
++++ b/torch/_functorch/predispatch.py
+@@ -14,12 +14,23 @@ from __future__ import annotations
+ from typing import TYPE_CHECKING
+ 
+ import torch
++from torch._C import (
++    _enter_dual_level as _enter_dual_level_impl,
++    _exit_dual_level as _exit_dual_level_impl,
++)
+ from torch._C._functorch import (
+     _add_batch_dim as _add_batch_dim_impl,
++    _jvp_decrement_nesting as _jvp_decrement_nesting_impl,
++    _jvp_increment_nesting as _jvp_increment_nesting_impl,
+     _remove_batch_dim as _remove_batch_dim_impl,
++    _unwrap_for_grad as _unwrap_for_grad_impl,
+     _vmap_decrement_nesting as _vmap_decrement_nesting_impl,
+     _vmap_increment_nesting as _vmap_increment_nesting_impl,
+ )
++from torch._VF import (  # type: ignore[attr-defined]
++    _make_dual as _make_dual_impl,
++    _unpack_dual as _unpack_dual_impl,
++)
+ 
+ 
+ if TYPE_CHECKING:
+@@ -167,3 +178,120 @@ def lazy_load_decompositions() -> None:
+         _register_python_decomposition_vmap(torch.ops.aten.addr.default)
+ 
+         DECOMPOSITIONS_LOADED = True
++
++
++def _make_dual(
++    tensor: torch.Tensor, tangent: torch.Tensor, *, level: int = 0
++) -> torch.Tensor:
++    """
++    Thin wrapper around torch._VF._make_dual that is used to proxy in
++    PT2 export/compile fx graph for forward-mode AD.
++    """
++    from torch._export.utils import _maybe_find_pre_dispatch_tf_mode_for_export
++
++    mode = _maybe_find_pre_dispatch_tf_mode_for_export()
++
++    if mode:
++        return torch.overrides.handle_torch_function(
++            _make_dual, (tensor, tangent), tensor, tangent, level=level
++        )
++
++    return _make_dual_impl(tensor, tangent, level=level)
++
++
++def _unpack_dual(
++    tensor: torch.Tensor, *, level: int = 0
++) -> tuple[torch.Tensor, torch.Tensor]:
++    """
++    Thin wrapper around torch._VF._unpack_dual that is used to proxy in
++    PT2 export/compile fx graph for forward-mode AD.
++    """
++    from torch._export.utils import _maybe_find_pre_dispatch_tf_mode_for_export
++
++    mode = _maybe_find_pre_dispatch_tf_mode_for_export()
++
++    if mode:
++        return torch.overrides.handle_torch_function(
++            _unpack_dual, (tensor,), tensor, level=level
++        )
++
++    return _unpack_dual_impl(tensor, level=level)
++
++
++def _jvp_increment_nesting() -> int:
++    """
++    Thin wrapper around torch._C._functorch._jvp_increment_nesting that is
++    used to proxy in export/compile graph for forward-mode AD.
++    """
++    from torch._export.utils import _maybe_find_pre_dispatch_tf_mode_for_export
++
++    mode = _maybe_find_pre_dispatch_tf_mode_for_export()
++
++    if mode:
++        return torch.overrides.handle_torch_function(
++            _jvp_increment_nesting,
++            (),
++        )
++    return _jvp_increment_nesting_impl()
++
++
++def _jvp_decrement_nesting() -> int:
++    """
++    Thin wrapper around torch._C._functorch._jvp_decrement_nesting that is
++    used to proxy in export/compile graph for forward-mode AD.
++    """
++    from torch._export.utils import _maybe_find_pre_dispatch_tf_mode_for_export
++
++    mode = _maybe_find_pre_dispatch_tf_mode_for_export()
++
++    if mode:
++        return torch.overrides.handle_torch_function(
++            _jvp_decrement_nesting,
++            (),
++        )
++    return _jvp_decrement_nesting_impl()
++
++
++def _unwrap_for_grad(tensor: torch.Tensor, level: int) -> torch.Tensor:
++    """
++    Thin wrapper around torch._C._functorch._unwrap_for_grad that is used
++    to proxy in PT2 export/compile fx graph for functorch transforms (grad, vjp, jvp).
++    """
++    from torch._export.utils import _maybe_find_pre_dispatch_tf_mode_for_export
++
++    mode = _maybe_find_pre_dispatch_tf_mode_for_export()
++
++    if mode:
++        return torch.overrides.handle_torch_function(
++            _unwrap_for_grad, (tensor,), tensor, level
++        )
++
++    return _unwrap_for_grad_impl(tensor, level)
++
++
++def _enter_dual_level() -> int:
++    """
++    Thin wrapper around torch._C._enter_dual_level that is used to proxy in
++    PT2 export/compile fx graph for forward-mode AD.
++    """
++    from torch._export.utils import _maybe_find_pre_dispatch_tf_mode_for_export
++
++    mode = _maybe_find_pre_dispatch_tf_mode_for_export()
++
++    if mode:
++        return torch.overrides.handle_torch_function(_enter_dual_level, ())
++    return _enter_dual_level_impl()
++
++
++def _exit_dual_level(*, level: int) -> None:
++    """
++    Thin wrapper around torch._C._exit_dual_level that is used to proxy in
++    PT2 export/compile fx graph for forward-mode AD.
++    """
++    from torch._export.utils import _maybe_find_pre_dispatch_tf_mode_for_export
++
++    mode = _maybe_find_pre_dispatch_tf_mode_for_export()
++
++    if mode:
++        return torch.overrides.handle_torch_function(_exit_dual_level, (), level=level)
++    return _exit_dual_level_impl(level=level)
+diff --git a/torch/autograd/forward_ad.py b/torch/autograd/forward_ad.py
+index ce3eb942662..355538c54d3 100644
+--- a/torch/autograd/forward_ad.py
++++ b/torch/autograd/forward_ad.py
+@@ -29,8 +29,12 @@ def enter_dual_level():
+     This function also updates the current level that is used by default
+     by the other functions in this API.
+     """
++    from torch._functorch.predispatch import (
++        _enter_dual_level as _predispatch_enter_dual_level,
++    )
++
+     global _current_level
+-    new_level = torch._C._enter_dual_level()
++    new_level = _predispatch_enter_dual_level()
+     if new_level != _current_level + 1:
+         raise RuntimeError(
+             "Entering a new forward AD level but the current level "
+@@ -57,7 +61,11 @@ def exit_dual_level(*, level=None):
+             "Trying to exit a forward AD level that was not the last one "
+             "that was created. This is not supported."
+         )
+-    torch._C._exit_dual_level(level=level)
++    from torch._functorch.predispatch import (
++        _exit_dual_level as _predispatch_exit_dual_level,
++    )
++
++    _predispatch_exit_dual_level(level=level)
+     _current_level = level - 1
+ 
+ 
+@@ -125,7 +133,9 @@ def make_dual(tensor, tangent, *, level=None):
+             f"Expected tangent to be floating point or complex, but got: {tangent.dtype}"
+         )
+ 
+-    return torch._VF._make_dual(tensor, tangent, level=level)
++    from torch._functorch.predispatch import _make_dual as _predispatch_make_dual
++
++    return _predispatch_make_dual(tensor, tangent, level=level)
+ 
+ 
+ class UnpackedDualTensor(NamedTuple):
+@@ -165,7 +175,9 @@ def unpack_dual(tensor, *, level=None):
+     if level < 0:
+         return UnpackedDualTensor(tensor, None)
+ 
+-    primal, dual = torch._VF._unpack_dual(tensor, level=level)
++    from torch._functorch.predispatch import _unpack_dual as _predispatch_unpack_dual
++
++    primal, dual = _predispatch_unpack_dual(tensor, level=level)
+ 
+     return UnpackedDualTensor(primal, dual)
+ 
+diff --git a/torch/fx/experimental/proxy_tensor.py b/torch/fx/experimental/proxy_tensor.py
+index b97c2dc7c8c..2da681922bb 100644
+--- a/torch/fx/experimental/proxy_tensor.py
++++ b/torch/fx/experimental/proxy_tensor.py
+@@ -1856,16 +1856,32 @@ class PreDispatchTorchFunctionMode(TorchFunctionMode):
+             torch._functorch.predispatch._vmap_increment_nesting,
+             torch._functorch.predispatch._vmap_decrement_nesting,
+             torch._functorch.vmap.lazy_load_decompositions,
++            torch._functorch.predispatch._make_dual,
++            torch._functorch.predispatch._unpack_dual,
++            torch._functorch.predispatch._jvp_increment_nesting,
++            torch._functorch.predispatch._jvp_decrement_nesting,
++            torch._functorch.predispatch._unwrap_for_grad,
++            torch._functorch.predispatch._enter_dual_level,
++            torch._functorch.predispatch._exit_dual_level,
+         ]:
+             _, proxies, _ = _fetch_proxies_and_all_constant_flag(args, self.tracer)
+             out_proxy = self.tracer.create_proxy(
+                 "call_function",
+                 func,
+                 proxies,
+-                {},
++                kwargs,
+             )
+             res = func(*args, **kwargs)
+-            track_tensor_tree(res, out_proxy, constant=None, tracer=self.tracer)
++            # When JVP transforms are active, snapshot_fake calls detach
++            # which goes through C++ functorch dispatch keys, potentially
++            # re-wrapping the result as a grad tracking tensor.
++            # Temporarily disable functorch transforms during tracking to
++            # prevent this corruption of meta["val"].
++            if func in _jvp_predispatch_functions:
++                with torch._C._DisableFuncTorch():
++                    track_tensor_tree(res, out_proxy, constant=None, tracer=self.tracer)
++            else:
++                track_tensor_tree(res, out_proxy, constant=None, tracer=self.tracer)
+             return res
+         return func(*args, **kwargs)
+ 
+@@ -1875,6 +1891,37 @@ _temp_remove_pre_dispatch_torch_function_mode = _make_temp_remove_mode_context_m
+ )
+ 
+ 
++# JVP predispatch functions need special handling during tracing:
++# _DisableFuncTorch prevents grad tracking tensor corruption in snapshot_fake.
++_jvp_predispatch_functions = frozenset(
++    {
++        torch._functorch.predispatch._make_dual,
++        torch._functorch.predispatch._unpack_dual,
++        torch._functorch.predispatch._jvp_increment_nesting,
++        torch._functorch.predispatch._jvp_decrement_nesting,
++        torch._functorch.predispatch._unwrap_for_grad,
++        torch._functorch.predispatch._enter_dual_level,
++        torch._functorch.predispatch._exit_dual_level,
++    }
++)
++
++# These JVP predispatch wrappers manage transform nesting/level state
++# and must survive FX dead code elimination even with zero output users.
++# Registered here rather than in predispatch.py to avoid circular imports
++# (predispatch.py loads before torch.fx during torch.autograd init).
++from torch.fx.node import _side_effectful_functions
++
++
++_side_effectful_functions.update(
++    {
++        torch._functorch.predispatch._jvp_increment_nesting,
++        torch._functorch.predispatch._jvp_decrement_nesting,
++        torch._functorch.predispatch._enter_dual_level,
++        torch._functorch.predispatch._exit_dual_level,
++    }
++)
++
++
+ class ProxyTorchDispatchMode(TorchDispatchMode):
+     # Ensure this is read-only; this exists only for legacy reasons
+     @property
+diff --git a/torch/fx/experimental/symbolic_shapes.py b/torch/fx/experimental/symbolic_shapes.py
+index bb5a1c5c84e..6fc6ed685b3 100644
+--- a/torch/fx/experimental/symbolic_shapes.py
++++ b/torch/fx/experimental/symbolic_shapes.py
+@@ -56,7 +56,7 @@ import torch.utils._pytree as pytree
+ 
+ # NB: The sym_* functions are used via getattr() and must be imported here.
+ from torch import SymBool, SymFloat, SymInt
+-from torch._C._functorch import get_unwrapped, is_batchedtensor
++from torch._C._functorch import get_unwrapped, is_batchedtensor, is_gradtrackingtensor
+ from torch._guards import ShapeGuard, SLoc, Source, TracingContext
+ from torch._library.fake_class_registry import FakeScriptObject
+ from torch._library.opaque_object import is_opaque_value
+@@ -1315,10 +1315,16 @@ def _free_unbacked_symbols_with_path(
+             a, torch.distributed.tensor.DTensor
+         ):
+             match_tensor(a)
+-    elif isinstance(a, torch.Tensor) and is_batchedtensor(a):
++    elif isinstance(a, torch.Tensor) and (
++        is_batchedtensor(a) or is_gradtrackingtensor(a)
++    ):
+         unwrapped_tensor = get_unwrapped(a)
+         r.update(go(unwrapped_tensor, path))
+-    elif isinstance(a, torch.Tensor) and not is_batchedtensor(a):
++    elif (
++        isinstance(a, torch.Tensor)
++        and not is_batchedtensor(a)
++        and not is_gradtrackingtensor(a)
++    ):
+         from torch._subclasses.fake_tensor import FakeTensor
+ 
+         if not isinstance(a, FakeTensor):

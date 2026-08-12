@@ -7,7 +7,7 @@ import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-from op_bench.environment import EnvironmentManager
+from op_bench.environment import EnvironmentManager, source_sync_timeout
 from op_bench.executor import CommandExecutor, CommandResult, LocalExecutor
 from op_bench.patch_scope import validate_patch_scope
 from op_bench.progress import Progress, format_command, format_duration, noop_progress
@@ -106,11 +106,8 @@ class Evaluator:
                 if result.exit_code != 0:
                     return finish("setup_failed")
 
-            # hidden_test.patch may be empty when the PR fixes a pre-existing test
-            # (no test changes in the PR itself). Skip apply in that case.
-            hidden_test_path = task.hidden_test_patch_path
-            if hidden_test_path.exists() and hidden_test_path.read_text(encoding="utf-8").strip():
-                test_patch_result = self._apply_patch(hidden_test_path, workspace)
+            test_patch_result = self.apply_hidden_test_patch(task, workspace)
+            if test_patch_result is not None:
                 command_log.append(test_patch_result)
                 if test_patch_result.timed_out:
                     return finish("timeout")
@@ -144,7 +141,10 @@ class Evaluator:
             sync_to_remote = getattr(runtime_executor, "sync_to_remote", None)
             if callable(sync_to_remote):
                 self.progress(f"{mode}: sync patched workspace to remote")
-                sync_result = sync_to_remote(workspace, timeout_sec=task.timeout_sec)
+                sync_result = sync_to_remote(
+                    workspace,
+                    timeout_sec=source_sync_timeout(task),
+                )
                 command_log.append(sync_result)
                 if sync_result.timed_out:
                     return finish("timeout")
@@ -174,7 +174,12 @@ class Evaluator:
             command_log.extend(pass_commands)
             if any(result.timed_out for result in pass_results):
                 return finish("timeout")
-            if self._has_environment_error(fail_results + pass_results):
+            if self._has_environment_error(pass_results) or (
+                self._has_environment_error(
+                    fail_results,
+                    allow_target_import_failure=True,
+                )
+            ):
                 return finish("environment_error")
             if self._has_runner_error(fail_results + pass_results):
                 return finish("runner_error")
@@ -350,6 +355,20 @@ class Evaluator:
             return result
         return result
 
+    def apply_hidden_test_patch(
+        self,
+        task: TaskManifest,
+        workspace: Path,
+    ) -> CommandResult | None:
+        """Apply the frozen hidden test patch when it contains test changes."""
+        hidden_test_path = task.hidden_test_patch_path
+        if (
+            not hidden_test_path.exists()
+            or not hidden_test_path.read_text(encoding="utf-8").strip()
+        ):
+            return None
+        return self._apply_patch(hidden_test_path, workspace)
+
     def _run_tests(
         self,
         tests: list[str],
@@ -388,7 +407,12 @@ class Evaluator:
             label="load patched source",
         )
 
-    def _has_environment_error(self, results: list[CommandResult]) -> bool:
+    def _has_environment_error(
+        self,
+        results: list[CommandResult],
+        *,
+        allow_target_import_failure: bool = False,
+    ) -> bool:
         if not results:
             return False
         failed_outputs = [
@@ -400,7 +424,6 @@ class Evaluator:
             return False
         environment_markers = (
             "ModuleNotFoundError:",
-            "ImportError:",
             "OSError:",
             "No module named",
             "cannot open shared object file",
@@ -413,10 +436,17 @@ class Evaluator:
             "No working C++ compiler found",
             "fatal error: Python.h: No such file or directory",
         )
-        return any(
-            any(marker in output for marker in environment_markers)
-            for output in failed_outputs
-        )
+        for output in failed_outputs:
+            if any(marker in output for marker in environment_markers):
+                return True
+            if "ImportError:" in output:
+                if (
+                    allow_target_import_failure
+                    and "ImportError: cannot import name" in output
+                ):
+                    continue
+                return True
+        return False
 
     def _has_runner_error(self, results: list[CommandResult]) -> bool:
         for result in results:

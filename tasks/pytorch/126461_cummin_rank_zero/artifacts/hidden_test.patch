@@ -1,0 +1,41 @@
+diff --git a/test/op_bench_boundary/test_cummin_rank_zero.py b/test/op_bench_boundary/test_cummin_rank_zero.py
+new file mode 100644
+--- /dev/null
++++ b/test/op_bench_boundary/test_cummin_rank_zero.py
+@@ -0,0 +1,36 @@
++import unittest
++
++import torch
++
++
++class BoundaryCumulativeTests(unittest.TestCase):
++    def tearDown(self):
++        torch._dynamo.reset()
++
++    def assert_pair_close(self, actual, expected):
++        torch.testing.assert_close(actual.values, expected.values)
++        torch.testing.assert_close(actual.indices, expected.indices)
++
++    def test_rank_zero_cummin_and_cummax(self):
++        scalar = torch.tensor(7.5)
++        for operation in (torch.cummin, torch.cummax):
++            with self.subTest(operation=operation.__name__):
++                def fn(value):
++                    return operation(value, 0)
++
++                compiled = torch.compile(fn, backend="inductor")
++                self.assert_pair_close(compiled(scalar), fn(scalar))
++
++    def test_rank_one_cummin_and_cummax(self):
++        values = torch.tensor([3.0, 1.0, 4.0, -2.0])
++        for operation in (torch.cummin, torch.cummax):
++            with self.subTest(operation=operation.__name__):
++                def fn(value):
++                    return operation(value, 0)
++
++                compiled = torch.compile(fn, backend="inductor")
++                self.assert_pair_close(compiled(values), fn(values))
++
++
++if __name__ == "__main__":
++    unittest.main()

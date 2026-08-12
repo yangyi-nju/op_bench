@@ -503,7 +503,50 @@ def _run(
 def _require_local_git_repository(value: object, path: str) -> Path:
     if not isinstance(value, Path):
         raise ContractError(f"{path}: expected Path")
-    if value.is_symlink() or not value.is_dir() or not (value / ".git").is_dir():
+    if value.is_symlink() or not value.is_dir():
+        raise ContractError(f"{path}: expected local Git repository")
+    git_marker = value / ".git"
+    if git_marker.is_symlink():
+        raise ContractError(f"{path}: expected local Git repository")
+    if git_marker.is_dir():
+        return value
+    if not git_marker.is_file():
+        raise ContractError(f"{path}: expected local Git repository")
+
+    # Linked Git worktrees use a regular .git pointer file instead of a
+    # directory.  Let Git validate that pointer, then require the reported
+    # worktree root and Git directory to resolve to real local directories.
+    resolved = subprocess.run(
+        (
+            "git",
+            "-C",
+            str(value),
+            "rev-parse",
+            "--show-toplevel",
+            "--absolute-git-dir",
+            "--is-inside-work-tree",
+        ),
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        env=_git_environment(),
+    )
+    lines = resolved.stdout.splitlines()
+    if resolved.returncode != 0 or len(lines) != 3:
+        raise ContractError(f"{path}: expected local Git repository")
+    try:
+        top_level = Path(lines[0]).resolve(strict=True)
+        git_dir = Path(lines[1]).resolve(strict=True)
+        repository = value.resolve(strict=True)
+    except OSError as exc:
+        raise ContractError(f"{path}: expected local Git repository") from exc
+    if (
+        lines[2] != "true"
+        or top_level != repository
+        or not git_dir.is_dir()
+        or git_dir.is_symlink()
+    ):
         raise ContractError(f"{path}: expected local Git repository")
     return value
 

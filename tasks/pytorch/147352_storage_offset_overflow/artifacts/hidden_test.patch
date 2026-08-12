@@ -1,0 +1,48 @@
+diff --git a/test/op_bench_boundary/test_storage_offset_overflow.py b/test/op_bench_boundary/test_storage_offset_overflow.py
+new file mode 100644
+--- /dev/null
++++ b/test/op_bench_boundary/test_storage_offset_overflow.py
+@@ -0,0 +1,43 @@
++import unittest
++
++import torch
++
++
++class BoundaryStorageOverflowTests(unittest.TestCase):
++    def test_storage_offset_checked_overflow(self):
++        storage = torch.empty((2, 3), dtype=torch.float64)
++        for offset in (2**63 - 1, 2**61 - 1):
++            with self.subTest(offset=offset):
++                with self.assertRaisesRegex(RuntimeError, "overflow"):
++                    torch.as_strided(
++                        storage,
++                        size=(1,),
++                        stride=(1,),
++                        storage_offset=offset,
++                    )
++
++    def test_normal_and_zero_size_views(self):
++        storage = torch.arange(6.0).reshape(2, 3)
++        view = torch.as_strided(
++            storage,
++            size=(2, 2),
++            stride=(3, 1),
++            storage_offset=1,
++        )
++        torch.testing.assert_close(
++            view,
++            torch.tensor([[1.0, 2.0], [4.0, 5.0]]),
++        )
++
++        empty = torch.as_strided(
++            storage,
++            size=(0,),
++            stride=(1,),
++            storage_offset=2**63 - 1,
++        )
++        self.assertEqual(empty.numel(), 0)
++        self.assertEqual(empty.storage_offset(), 2**63 - 1)
++
++
++if __name__ == "__main__":
++    unittest.main()

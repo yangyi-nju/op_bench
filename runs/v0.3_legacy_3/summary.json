@@ -18,14 +18,14 @@
           "command": [
             "op_bench",
             "copy-source-snapshot",
-            "/Users/bilibili/dev/op_bench/.op_bench_cache/sources/pytorch/pytorch/362b40939dd6faeebf0569beac563afa51e81dcd/source",
-            "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__149693__lazylinear_init-9zuoixuh/workspace"
+            "sources/pytorch/pytorch/362b40939dd6faeebf0569beac563afa51e81dcd/source",
+            "<redacted-user-path>"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__149693__lazylinear_init-9zuoixuh",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 3.7308827499946347,
           "exit_code": 0,
           "stderr": "",
-          "stdout": "copied source snapshot from /Users/bilibili/dev/op_bench/.op_bench_cache/sources/pytorch/pytorch/362b40939dd6faeebf0569beac563afa51e81dcd/source\n",
+          "stdout": "copied source snapshot from sources/pytorch/pytorch/362b40939dd6faeebf0569beac563afa51e81dcd/source\n",
           "timed_out": false
         },
         {
@@ -35,7 +35,7 @@
             "inspect",
             "op-bench/pytorch-cpu:torch2.6.0-py311"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__149693__lazylinear_init-9zuoixuh/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.08744437499262858,
           "exit_code": 0,
           "stderr": "",
@@ -58,7 +58,7 @@
             "--label",
             "op-bench.task-id=pytorch__149693__lazylinear_init",
             "--volume",
-            "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__149693__lazylinear_init-9zuoixuh/workspace:/workspace",
+            "<redacted-user-path>",
             "--workdir",
             "/workspace",
             "op-bench/pytorch-cpu:torch2.6.0-py311",
@@ -66,7 +66,7 @@
             "-f",
             "/dev/null"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__149693__lazylinear_init-9zuoixuh/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.17566045800049324,
           "exit_code": 0,
           "stderr": "",
@@ -83,7 +83,7 @@
             "python",
             "--version"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__149693__lazylinear_init-9zuoixuh/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.04454687499674037,
           "exit_code": 0,
           "stderr": "",
@@ -101,7 +101,7 @@
             "-c",
             "import torch; print(torch.__version__); print(torch.__file__)"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__149693__lazylinear_init-9zuoixuh/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 1.1853693329903763,
           "exit_code": 0,
           "stderr": "",
@@ -112,9 +112,9 @@
           "command": [
             "git",
             "apply",
-            "/Users/bilibili/dev/op_bench/tasks/pytorch/149693_lazylinear_init/artifacts/test.patch"
+            "tasks/pytorch/149693_lazylinear_init/artifacts/test.patch"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__149693__lazylinear_init-9zuoixuh/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.008121916005620733,
           "exit_code": 0,
           "stderr": "",
@@ -133,7 +133,7 @@
             "import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('.')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))",
             "{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/nn/modules/linear.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__149693__lazylinear_init-9zuoixuh/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 2.241912792000221,
           "exit_code": 0,
           "stderr": "",
@@ -151,7 +151,7 @@
             "test/nn/test_lazy_modules.py",
             "TestLazyModules.test_lazy_linear_reset_uses_inferred_in_features"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__149693__lazylinear_init-9zuoixuh/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 2.1208665419981116,
           "exit_code": 1,
           "stderr": "/pytorch/third_party/ideep/mkl-dnn/src/cpu/aarch64/xbyak_aarch64/src/util_impl_linux.h, 451: Can't read MIDR_EL1 sysfs entry\nF\n======================================================================\nFAIL: test_lazy_linear_reset_uses_inferred_in_features (__main__.TestLazyModules.test_lazy_linear_reset_uses_inferred_in_features)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/tmp/op_bench_runtime/site-packages/torch/testing/_internal/common_utils.py\", line 3108, in wrapper\n    method(*args, **kwargs)\n  File \"/tmp/op_bench_runtime/site-packages/torch/testing/_internal/common_utils.py\", line 2250, in wrapper\n    fn(*args, **kwargs)\n  File \"/workspace/test/nn/test_lazy_modules.py\", line 139, in test_lazy_linear_reset_uses_inferred_in_features\n    self.assertEqual(reset_parameters.call_count, 1)\n  File \"/tmp/op_bench_runtime/site-packages/torch/testing/_internal/common_utils.py\", line 4016, in assertEqual\n    raise error_metas.pop()[0].to_error(\nAssertionError: Scalars are not equal!\n\nExpected 1 but got 0.\nAbsolute difference: 1\nRelative difference: 1.0\n\nTo execute this test, run the following from the base repo dir:\n    python test/nn/test_lazy_modules.py TestLazyModules.test_lazy_linear_reset_uses_inferred_in_features\n\nThis message can be suppressed by setting PYTORCH_PRINT_REPRO_ON_FAILURE=0\n\n----------------------------------------------------------------------\nRan 1 test in 0.006s\n\nFAILED (failures=1)\n",
@@ -170,7 +170,7 @@
             "import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('.')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))",
             "{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/nn/modules/linear.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__149693__lazylinear_init-9zuoixuh/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 1.1390129579958739,
           "exit_code": 0,
           "stderr": "",
@@ -188,7 +188,7 @@
             "test/nn/test_lazy_modules.py",
             "TestLazyModules.test_linear_state"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__149693__lazylinear_init-9zuoixuh/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 2.1237598749867175,
           "exit_code": 0,
           "stderr": ".\n----------------------------------------------------------------------\nRan 1 test in 0.003s\n\nOK\n",
@@ -244,14 +244,14 @@
           "command": [
             "op_bench",
             "copy-source-snapshot",
-            "/Users/bilibili/dev/op_bench/.op_bench_cache/sources/pytorch/pytorch/8bf3f3fc43bd8c6a35f7dc92e1dfe21623b648bb/source",
-            "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__147599__lazylinear_state_forward-xjb4x3ow/workspace"
+            "sources/pytorch/pytorch/8bf3f3fc43bd8c6a35f7dc92e1dfe21623b648bb/source",
+            "<redacted-user-path>"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__147599__lazylinear_state_forward-xjb4x3ow",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 3.7617095000023255,
           "exit_code": 0,
           "stderr": "",
-          "stdout": "copied source snapshot from /Users/bilibili/dev/op_bench/.op_bench_cache/sources/pytorch/pytorch/8bf3f3fc43bd8c6a35f7dc92e1dfe21623b648bb/source\n",
+          "stdout": "copied source snapshot from sources/pytorch/pytorch/8bf3f3fc43bd8c6a35f7dc92e1dfe21623b648bb/source\n",
           "timed_out": false
         },
         {
@@ -261,7 +261,7 @@
             "inspect",
             "op-bench/pytorch-cpu:torch2.6.0-py311"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__147599__lazylinear_state_forward-xjb4x3ow/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.013673665991518646,
           "exit_code": 0,
           "stderr": "",
@@ -284,7 +284,7 @@
             "--label",
             "op-bench.task-id=pytorch__147599__lazylinear_state_forward",
             "--volume",
-            "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__147599__lazylinear_state_forward-xjb4x3ow/workspace:/workspace",
+            "<redacted-user-path>",
             "--workdir",
             "/workspace",
             "op-bench/pytorch-cpu:torch2.6.0-py311",
@@ -292,7 +292,7 @@
             "-f",
             "/dev/null"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__147599__lazylinear_state_forward-xjb4x3ow/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.14379233300860506,
           "exit_code": 0,
           "stderr": "",
@@ -309,7 +309,7 @@
             "python",
             "--version"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__147599__lazylinear_state_forward-xjb4x3ow/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.04512300000351388,
           "exit_code": 0,
           "stderr": "",
@@ -327,7 +327,7 @@
             "-c",
             "import torch; print(torch.__version__); print(torch.__file__)"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__147599__lazylinear_state_forward-xjb4x3ow/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 1.2339427090046229,
           "exit_code": 0,
           "stderr": "",
@@ -338,9 +338,9 @@
           "command": [
             "git",
             "apply",
-            "/Users/bilibili/dev/op_bench/tasks/pytorch/147599_lazylinear_state_forward/artifacts/test.patch"
+            "tasks/pytorch/147599_lazylinear_state_forward/artifacts/test.patch"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__147599__lazylinear_state_forward-xjb4x3ow/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.00771679199533537,
           "exit_code": 0,
           "stderr": "",
@@ -359,7 +359,7 @@
             "import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('.')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))",
             "{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/nn/modules/linear.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__147599__lazylinear_state_forward-xjb4x3ow/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 2.029440041995258,
           "exit_code": 0,
           "stderr": "",
@@ -377,7 +377,7 @@
             "test/nn/test_lazylinear_state_op_bench.py",
             "TestLazyLinearStateOpBench.test_lazy_linear_load_state_forward_sets_in_features"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__147599__lazylinear_state_forward-xjb4x3ow/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 1.2222142090031411,
           "exit_code": 1,
           "stderr": "/pytorch/third_party/ideep/mkl-dnn/src/cpu/aarch64/xbyak_aarch64/src/util_impl_linux.h, 451: Can't read MIDR_EL1 sysfs entry\nF\n======================================================================\nFAIL: test_lazy_linear_load_state_forward_sets_in_features (__main__.TestLazyLinearStateOpBench.test_lazy_linear_load_state_forward_sets_in_features)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/workspace/test/nn/test_lazylinear_state_op_bench.py\", line 21, in test_lazy_linear_load_state_forward_sets_in_features\n    self.assertEqual(lazy.in_features, 5)\nAssertionError: 0 != 5\n\n----------------------------------------------------------------------\nRan 1 test in 0.004s\n\nFAILED (failures=1)\n",
@@ -396,7 +396,7 @@
             "import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('.')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))",
             "{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/nn/modules/linear.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__147599__lazylinear_state_forward-xjb4x3ow/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 1.2358157920098165,
           "exit_code": 0,
           "stderr": "",
@@ -414,7 +414,7 @@
             "test/nn/test_lazylinear_state_op_bench.py",
             "TestLazyLinearStateOpBench.test_lazy_linear_regular_forward_still_initializes"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__147599__lazylinear_state_forward-xjb4x3ow/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 1.2610752920008963,
           "exit_code": 0,
           "stderr": "/pytorch/third_party/ideep/mkl-dnn/src/cpu/aarch64/xbyak_aarch64/src/util_impl_linux.h, 451: Can't read MIDR_EL1 sysfs entry\n.\n----------------------------------------------------------------------\nRan 1 test in 0.003s\n\nOK\n",
@@ -470,14 +470,14 @@
           "command": [
             "op_bench",
             "copy-source-snapshot",
-            "/Users/bilibili/dev/op_bench/.op_bench_cache/sources/pytorch/pytorch/df6073641079c781e66a905e4f15ee49ac257eb2/source",
-            "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__160952__bilinear_lazy_check-664b85fo/workspace"
+            "sources/pytorch/pytorch/df6073641079c781e66a905e4f15ee49ac257eb2/source",
+            "<redacted-user-path>"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__160952__bilinear_lazy_check-664b85fo",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 4.691965624995646,
           "exit_code": 0,
           "stderr": "",
-          "stdout": "copied source snapshot from /Users/bilibili/dev/op_bench/.op_bench_cache/sources/pytorch/pytorch/df6073641079c781e66a905e4f15ee49ac257eb2/source\n",
+          "stdout": "copied source snapshot from sources/pytorch/pytorch/df6073641079c781e66a905e4f15ee49ac257eb2/source\n",
           "timed_out": false
         },
         {
@@ -487,7 +487,7 @@
             "inspect",
             "op-bench/pytorch-cpu:torch2.6.0-py311"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__160952__bilinear_lazy_check-664b85fo/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.015363625003374182,
           "exit_code": 0,
           "stderr": "",
@@ -510,7 +510,7 @@
             "--label",
             "op-bench.task-id=pytorch__160952__bilinear_lazy_check",
             "--volume",
-            "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__160952__bilinear_lazy_check-664b85fo/workspace:/workspace",
+            "<redacted-user-path>",
             "--workdir",
             "/workspace",
             "op-bench/pytorch-cpu:torch2.6.0-py311",
@@ -518,7 +518,7 @@
             "-f",
             "/dev/null"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__160952__bilinear_lazy_check-664b85fo/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.17996233399026096,
           "exit_code": 0,
           "stderr": "",
@@ -535,7 +535,7 @@
             "python",
             "--version"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__160952__bilinear_lazy_check-664b85fo/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.0472086250083521,
           "exit_code": 0,
           "stderr": "",
@@ -553,7 +553,7 @@
             "-c",
             "import torch; print(torch.__version__); print(torch.__file__)"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__160952__bilinear_lazy_check-664b85fo/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 1.2329834169941023,
           "exit_code": 0,
           "stderr": "",
@@ -564,9 +564,9 @@
           "command": [
             "git",
             "apply",
-            "/Users/bilibili/dev/op_bench/tasks/pytorch/160952_bilinear_lazy_check/artifacts/test.patch"
+            "tasks/pytorch/160952_bilinear_lazy_check/artifacts/test.patch"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__160952__bilinear_lazy_check-664b85fo/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 0.0069537910021608695,
           "exit_code": 0,
           "stderr": "",
@@ -585,7 +585,7 @@
             "import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('.')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))",
             "{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/nn/modules/linear.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__160952__bilinear_lazy_check-664b85fo/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 1.9366677920043003,
           "exit_code": 0,
           "stderr": "",
@@ -603,7 +603,7 @@
             "test/nn/test_bilinear_lazy_op_bench.py",
             "TestLazyBilinearOpBench.test_lazy_bilinear_can_be_constructed"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__160952__bilinear_lazy_check-664b85fo/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 1.22274374999688,
           "exit_code": 1,
           "stderr": "E\n======================================================================\nERROR: test_lazy_bilinear_can_be_constructed (__main__.TestLazyBilinearOpBench.test_lazy_bilinear_can_be_constructed)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/workspace/test/nn/test_bilinear_lazy_op_bench.py\", line 38, in test_lazy_bilinear_can_be_constructed\n    module = LazyBilinearForTest(3)\n             ^^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/test/nn/test_bilinear_lazy_op_bench.py\", line 13, in __init__\n    super().__init__(0, 0, out_features, bias=bias)\n  File \"/tmp/op_bench_runtime/site-packages/torch/nn/modules/lazy.py\", line 187, in __init__\n    super().__init__(*args, **kwargs)  # type: ignore[misc]\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/tmp/op_bench_runtime/site-packages/torch/nn/modules/linear.py\", line 218, in __init__\n    raise ValueError(f\"in1_features must be > 0, but got {in1_features}\")\nValueError: in1_features must be > 0, but got 0\n\n----------------------------------------------------------------------\nRan 1 test in 0.000s\n\nFAILED (errors=1)\n",
@@ -622,7 +622,7 @@
             "import hashlib\nimport importlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport site\nimport sys\n\ncfg = json.loads(sys.argv[1])\nworkspace = pathlib.Path(cfg[\"workspace_dir\"])\nruntime_site_packages = pathlib.Path(cfg[\"runtime_site_packages\"])\npackage = cfg[\"installed_package\"]\noverlay_paths = cfg[\"overlay_paths\"]\n\nruntime_site_packages.mkdir(parents=True, exist_ok=True)\nos.chdir(\"/tmp\")\n\nmodule = importlib.import_module(package)\npackage_source = pathlib.Path(module.__file__).resolve().parent\npackage_destination = runtime_site_packages / package.split(\".\")[0]\nif not package_destination.exists():\n    shutil.copytree(package_source, package_destination, symlinks=True)\n\npackage_libs_source = package_source.parent / f\"{package.split('.')[0]}.libs\"\npackage_libs_destination = runtime_site_packages / package_libs_source.name\nif package_libs_source.exists() and not package_libs_destination.exists():\n    shutil.copytree(package_libs_source, package_libs_destination, symlinks=True)\n\npth_line = \"import sys; sys.path.insert(0, {!r})\\n\".format(str(runtime_site_packages))\nfor site_packages in site.getsitepackages():\n    site_packages_path = pathlib.Path(site_packages)\n    if site_packages_path.exists():\n        (site_packages_path / \"op_bench_runtime_overlay.pth\").write_text(pth_line, encoding=\"utf-8\")\n\nsynced = []\nfor relative in overlay_paths:\n    relative_path = pathlib.PurePosixPath(relative)\n    if relative_path.is_absolute() or \"..\" in relative_path.parts:\n        raise ValueError(f\"invalid overlay path: {relative}\")\n    source = workspace / pathlib.Path(*relative_path.parts)\n    destination = runtime_site_packages / pathlib.Path(*relative_path.parts)\n    destination.parent.mkdir(parents=True, exist_ok=True)\n    shutil.copy2(source, destination)\n    digest = hashlib.sha256(destination.read_bytes()).hexdigest()\n    synced.append({\"workspace\": str(source), \"runtime\": str(destination), \"sha256\": f\"sha256:{digest}\"})\n\nprint(json.dumps({\"mode\": \"python_overlay\", \"package\": package, \"overlay_files\": synced}, sort_keys=True))",
             "{\"installed_package\": \"torch\", \"overlay_paths\": [\"torch/nn/modules/linear.py\"], \"runtime_site_packages\": \"/tmp/op_bench_runtime/site-packages\", \"workspace_dir\": \"/workspace\"}"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__160952__bilinear_lazy_check-664b85fo/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 1.239105083004688,
           "exit_code": 0,
           "stderr": "",
@@ -640,7 +640,7 @@
             "test/nn/test_bilinear_lazy_op_bench.py",
             "TestLazyBilinearOpBench.test_regular_bilinear_still_runs"
           ],
-          "cwd": "/Users/bilibili/dev/op_bench/.op_bench_cache/workspaces/op-bench-pytorch__160952__bilinear_lazy_check-664b85fo/workspace",
+          "cwd": "<redacted-user-path>",
           "duration_sec": 1.2476926660019672,
           "exit_code": 0,
           "stderr": ".\n----------------------------------------------------------------------\nRan 1 test in 0.002s\n\nOK\n",

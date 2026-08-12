@@ -1,0 +1,197 @@
+{
+  "admission": {
+    "compatibility_evidence": "compatibility/evidence.json",
+    "evidence": "admission/evidence.json",
+    "status": "verified",
+    "verified_at": "2026-07-27T03:30:00Z"
+  },
+  "agent_visible": {
+    "allowed_test_commands": [
+      "{python} test/op_bench_boundary/test_storage_offset_overflow.py {test}"
+    ],
+    "known_constraints": [
+      "A CPU-only source-build environment is required.",
+      "Extreme non-empty storage offsets must raise, while arbitrary offsets for zero-size views must remain valid."
+    ],
+    "repo_setup_commands": [],
+    "public_task_id": "opbench-v07-t0017"
+  },
+  "artifacts": {
+    "gold_patch": "artifacts/gold.patch",
+    "hidden_test_patch": "artifacts/hidden_test.patch"
+  },
+  "compatibility": {
+    "evidence": "compatibility/evidence.json",
+    "minimal_operation": "import torch; torch.as_strided(torch.arange(4), (2,), (1,), 1)",
+    "selector_module": "test/op_bench_boundary/test_storage_offset_overflow.py",
+    "target_import": "torch",
+    "target_module": "torch/__init__.py"
+  },
+  "environment": {
+    "backend": "remote_docker",
+    "build_mode": "source-build",
+    "dependencies": [
+      "full PyTorch CPU source build via setup.py develop"
+    ],
+    "hardware": {
+      "device": "cpu",
+      "min_memory_gb": 16,
+      "requires_gpu": false
+    },
+    "host": "gpu-a10",
+    "os": "linux",
+    "platform": "linux/amd64",
+    "preflight_commands": [
+      "ccache --version",
+      "cmake --version",
+      "g++ --version",
+      "{python} --version",
+      "{python} -c \"import expecttest, yaml; print(yaml.__version__)\"",
+      "{python} -c \"import torch; print(torch.__version__); print(torch.__file__)\""
+    ],
+    "preflight_workdir": "/tmp",
+    "python_executable": "python",
+    "python_version": "3.11",
+    "resource_requirements": {
+      "cpu": true,
+      "gpu": false
+    },
+    "source_loading": {
+      "build_environment": {
+        "BUILD_TEST": "0",
+        "CC": "gcc",
+        "CCACHE_BASEDIR": "/workspace",
+        "CCACHE_DIR": "/workspace/.ccache",
+        "CCACHE_NOHASHDIR": "true",
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
+        "CMAKE_C_COMPILER_LAUNCHER": "ccache",
+        "CXX": "g++",
+        "MAX_JOBS": "8",
+        "USE_CUDA": "0",
+        "USE_DISTRIBUTED": "0",
+        "USE_FBGEMM": "0",
+        "USE_FLASH_ATTENTION": "0",
+        "USE_GLOO": "0",
+        "USE_KINETO": "0",
+        "USE_KLEIDIAI": "0",
+        "USE_MEM_EFF_ATTENTION": "0",
+        "USE_MKLDNN": "0",
+        "USE_NCCL": "0",
+        "USE_NNPACK": "0",
+        "USE_QNNPACK": "0",
+        "USE_ROCM": "0",
+        "USE_TENSORPIPE": "0",
+        "USE_XNNPACK": "0"
+      },
+      "mode": "inplace_build",
+      "sync_before_tests": true
+    },
+    "tier": "cpu_source_snapshot_fuller",
+    "workspace_dir": "/workspace"
+  },
+  "environment_ref": "pytorch-boundary-cpu-source-build-py311",
+  "evaluation": {
+    "build_timeout_sec": 21600,
+    "fail_to_pass": [
+      "BoundaryStorageOverflowTests.test_storage_offset_checked_overflow"
+    ],
+    "pass_to_pass": [
+      "BoundaryStorageOverflowTests.test_normal_and_zero_size_views"
+    ],
+    "setup_commands": [],
+    "test_command": "{python} test/op_bench_boundary/test_storage_offset_overflow.py {test}",
+    "timeout_sec": 900
+  },
+  "metadata": {
+    "admission_status": "verified",
+    "curation_status": "verified",
+    "deterministic": true,
+    "difficulty": "hard",
+    "estimated_runtime_min": 90,
+    "layer": "B",
+    "notes": "Verified by v0.7 matched-runtime compatibility and verified Admission; compatibility evidence sha256:93223f57b8175ceb6490d81c425cfcc273ccfa9a39c04c5eb2797b4b4e475af5.",
+    "source_loading_verified": true
+  },
+  "operator": {
+    "component": "aten.native.checkInBoundsForStorage",
+    "framework": "pytorch",
+    "operator_name": "torch.as_strided",
+    "problem_dimension": "boundary",
+    "problem_subclass": "B3",
+    "problem_type": "checked-overflow",
+    "tags": [
+      "as-strided",
+      "storage-offset",
+      "overflow",
+      "bounds-check",
+      "cpu-source-build"
+    ]
+  },
+  "patch_scope": {
+    "allowed_paths": [
+      "aten/src/ATen/native/Resize.h"
+    ],
+    "mode": "enforced"
+  },
+  "runtime_tier": "cpu_source_snapshot_fuller",
+  "source": {
+    "base_commit": "6ccbff1450bb3936636377d3910906f5666ddcfa",
+    "checkout_mode": "git",
+    "issue_number": null,
+    "issue_url": null,
+    "merge_commit": "e64441915fdefdd30ad57edc58d5eaca2ef77470",
+    "pr_number": 147352,
+    "pr_url": "https://github.com/pytorch/pytorch/pull/147352",
+    "repo": "pytorch/pytorch",
+    "repo_url": "https://github.com/pytorch/pytorch.git"
+  },
+  "source_ref": "pytorch-6ccbff1-boundary-kernel-full",
+  "statement": {
+    "body": "torch.as_strided can accept an extreme int64 storage_offset for a non-empty view instead of reporting an arithmetic range violation, permitting an invalid out-of-bounds view. Such offsets must raise a controlled exception, while normal views and the documented arbitrary-offset behavior for zero-size views remain valid.",
+    "labels": [
+      "module: aten",
+      "boundary: integer overflow",
+      "operator: as_strided"
+    ],
+    "title": "torch.as_strided accepts an out-of-range storage offset for a non-empty view"
+  },
+  "task_id": "pytorch__147352__storage_offset_overflow",
+  "version": "v1",
+  "quality": {
+    "complexity_evidence": "quality/complexity.json",
+    "origin": "retained_historical",
+    "prompt_evidence": "quality/prompt.json",
+    "readmission_evidence": "quality/readmission.json"
+  },
+  "taxonomy": {
+    "component_tags": [
+      "aten"
+    ],
+    "contract_detail_tags": [
+      "memory"
+    ],
+    "contract_family": "efficiency_safety",
+    "execution_context": {
+      "devices": [
+        "cpu"
+      ],
+      "distributed": false,
+      "modes": [
+        "eager"
+      ],
+      "phases": [
+        "forward"
+      ]
+    },
+    "failure_type": "missing_error",
+    "root_cause_tags": [
+      "overflow"
+    ],
+    "taxonomy_version": "v2",
+    "trigger_tags": [
+      "empty_or_zero",
+      "extreme_value_or_size"
+    ]
+  }
+}

@@ -1,0 +1,71 @@
+diff --git a/test/op_bench/test_lazy_scratch_grid_extent.py b/test/op_bench/test_lazy_scratch_grid_extent.py
+new file mode 100644
+--- /dev/null
++++ b/test/op_bench/test_lazy_scratch_grid_extent.py
+@@ -0,0 +1,66 @@
++import unittest
++
++from torch._inductor.codegen.cpp_wrapper_gpu import DeferredTritonCallWrapper
++from torch._inductor.utils import IndentedBuffer
++
++
++class DeviceCodegen:
++    @staticmethod
++    def cpp_device_ptr():
++        return "CUdeviceptr"
++
++
++class Wrapper:
++    device_codegen = DeviceCodegen()
++
++    @staticmethod
++    def codegen_dtype(dtype):
++        return "aoti_torch_dtype_uint8"
++
++    @staticmethod
++    def codegen_device(device):
++        return "aoti_torch_device_type_cuda, device_idx_"
++
++
++class LazyScratchGridTests(unittest.TestCase):
++    @staticmethod
++    def generated():
++        deferred = DeferredTritonCallWrapper(
++            wrapper_name="call_kernel",
++            kernel_name="sample_kernel",
++            kernel_name_to_body={},
++            arg_types=[],
++        )
++        prefix = IndentedBuffer()
++        call_args = deferred._generate_lazy_scratch(prefix, Wrapper(), "base_arg")
++        return prefix.getvalue(), call_args
++
++    def test_global_scratch_scales_with_full_launch_grid(self):
++        code, _ = self.generated()
++        self.assertIn(
++            "sample_kernel_result.global_scratch * static_cast<int64_t>(grid_0) * grid_1 * grid_2",
++            code,
++        )
++
++    def test_profile_scratch_scales_with_full_launch_grid(self):
++        code, _ = self.generated()
++        self.assertIn(
++            "sample_kernel_result.profile_scratch * static_cast<int64_t>(grid_0) * grid_1 * grid_2",
++            code,
++        )
++
++    def test_scratch_pointers_remain_kernel_arguments(self):
++        _, call_args = self.generated()
++        self.assertEqual(
++            call_args,
++            "base_arg, &global_scratch_ptr, &profile_scratch_ptr",
++        )
++
++    def test_zero_scratch_guards_remain_present(self):
++        code, _ = self.generated()
++        self.assertIn("if (sample_kernel_result.global_scratch > 0)", code)
++        self.assertIn("if (sample_kernel_result.profile_scratch > 0)", code)
++
++
++if __name__ == "__main__":
++    unittest.main()

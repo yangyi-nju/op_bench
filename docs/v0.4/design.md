@@ -116,9 +116,9 @@ evaluate:
   "hosts": {
     "gpu-a100": {
       "user": "ubuntu",
-      "hostname": "10.0.0.42",
+      "hostname": "worker.example.invalid",
       "port": 22,
-      "identity_file": "~/.ssh/gpu_key",
+      "identity_file": "/tmp/example-key",
       "remote_workspace_root": "/data/op_bench"
     }
   }

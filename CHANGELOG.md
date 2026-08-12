@@ -4,6 +4,118 @@ This file records user-visible OpBench version milestones. Detailed design,
 implementation, and experiment evidence remain in the versioned documents
 under `docs/`.
 
+## v0.7 - Completed 2026-08-11 (50-task quality release)
+
+The 2026-07-28 25-task release below remains an immutable, reproducible
+historical freeze under `archives/v0.7-pre-quality/`. The final v0.7 release
+contains exactly 14 re-admitted historical tasks plus 21 new and
+15 replacement tasks. All 50 Tasks and all 36 new/replacement Runtime
+Admissions are verified; the cumulative/Boundary/Precision/Device views contain
+50/31/5/15 Tasks. The p9 release and 122-attempt validation contract are frozen.
+The fresh replay passed 50/50. The real Codex experiment completed 17/17 cohorts,
+122/122 valid logical Attempts, and 122/122 complete MCP traces: 42 resolved,
+52 F2P failed, and 28 invalid patches. Eight infrastructure-invalid retry
+records remain in the append-only audit history and do not enter the Agent
+failure denominator. The public report rebuilds byte-for-byte and the result is
+descriptive **non-leaderboard** evidence. Final repository regression passed
+1101/1101 tests. The authoritative contract is
+`docs/v0.7/quality_expansion.md`.
+
+Final Dataset hashes are cumulative
+`sha256:3695622dd2619a760d510ef49e0a9dbff637c98790ad3263c521bae8e99c9518`,
+Boundary `sha256:2890f5937a5b2c7f5a12c870fc9cc550f0f16ff065467245ecf65223b5976a01`,
+Precision `sha256:508ec6928d94c159499ae84bf4f37e594b2bdafdef89b04369f481deeddb2c8d`,
+and Device `sha256:b598fdfe94af9921132b147ab693477de8fb360dabe7e5f611792e5f38c0f138`.
+
+### Historical 25-task freeze (completed 2026-07-28)
+
+`opbench-v0.7.0` completed on 2026-07-28:
+
+- P1–P5 deliver the reusable Dataset Factory, matched-runtime recovery, six
+  verified Boundary Tasks covering B1–B5, content-addressed Dataset release,
+  real Codex validation, Dataset Card, and bilingual release surface.
+- The final Dataset hashes are cumulative
+  `sha256:4d7bde25e747bcc041aa5105ce5ce881a3f1e9fe2a7545667cdbc2c14d85064a`,
+  Boundary
+  `sha256:810a9cc85c576f44edd2672197ab83b7dfee7f674e597c76c78050bd119d606a`,
+  and Precision
+  `sha256:65818466a02e99466386cb8e038dc4da59d91dcb3bea7b83c8901d31a96aa8eb`.
+- The accepted validation cohort is 18/18 valid, 14 resolved, 3 F2P failed,
+  1 no patch, and 0 accepted-cohort retries. It is descriptive
+  **non-leaderboard**, non-causal Task/platform evidence.
+- Exact-source hardening includes the source-build timeout correction and
+  separate CPU/CUDA build commands, preventing CPU profiles from inheriting
+  CUDA-only build arguments.
+- The final release gate rebuilt P3 screening, P4 Freeze, all three Dataset
+  releases, the validation contract, and the public report byte-for-byte.
+  Verification passed 868/868 tests plus four verified Dataset validations,
+  compileall, all tracked JSON, links, public-safety scans, and diff checks.
+
+P4 Dataset Freeze and Validation Cohort completed on 2026-07-28:
+
+- Froze content-addressed 25-task cumulative, 6-task Boundary, and 8-task Precision Datasets. Their generated Dataset hashes are `sha256:4d7bde25e747bcc041aa5105ce5ce881a3f1e9fe2a7545667cdbc2c14d85064a`, `sha256:810a9cc85c576f44edd2672197ab83b7dfee7f674e597c76c78050bd119d606a`, and `sha256:65818466a02e99466386cb8e038dc4da59d91dcb3bea7b83c8901d31a96aa8eb`.
+- Added deterministic Release Composition, manifest-aware slice summaries, five exact Boundary Runtime Profiles, and evaluator-side current-source preparation before registered tests.
+- Ran the six new Boundary Tasks three times through `codex_mcp_canonical`, `gpt-5.6-sol`, and `codex-cli 0.146.0-alpha.3.1`: 18/18 Attempts are valid, with 14 resolved, 3 F2P failed, and 1 no patch; Agent terminals are 17 finished and 1 timeout.
+- Verified 18/18 complete Adapter traces with zero MCP protocol errors. Every accepted root passed fresh 14/14 Integrity checks, exact runtime resource ownership, and cleanup; all accepted logical Attempts came from retry index 1.
+- Audited floor/ceiling Tasks without changing Admission or tests. Five Tasks resolved 3/3; rank-zero `cummin` resolved 2/3 with one no-patch result; the Triton Y-grid Task failed F2P 3/3 because of Agent patch regressions, not infrastructure.
+- Fixed remote transport attribution discovered during pre-acceptance source-cohort audit. Pre-execution SSH failures are bounded retries; a remote-start sentinel prevents replay after possible command execution. Polluted pre-acceptance roots are excluded, and the uniformly rerun source cohort resolved 6/6 without transport evidence.
+- Published a deterministic three-file public report plus `docs/v0.7/validation_report.md`. The cohort is descriptive platform/Task evidence and explicitly non-leaderboard and non-causal.
+- P4 verification passed 68 focused tests and 865/865 full repository tests in 1183.222 seconds, plus byte-for-byte Freeze/Release/report rebuilds, compileall, all tracked JSON parsing, 17/25/6/8 verified Dataset validation, and diff checks.
+
+P4 documents:
+
+- `docs/v0.7/validation_report.md`
+- `runs/v0.7_validation_report/experiment_report.md`
+
+P3 Boundary Tasks completed on 2026-07-27:
+
+- Froze a deterministic funnel of ten real PyTorch candidates: six accepted, two deferred, and two rejected. Human review additionally rejected #147433 because its landed fix was reverted upstream; #127448 remains deferred.
+- Added six verified Boundary tasks covering B1–B5: empty `addmv`, zero-dimensional index copy, rank-zero cumulative lowering, checked storage-offset overflow, the default weight-norm `dim` endpoint, and a non-divisible Triton Y-grid mask.
+- Added four digest-pinned official-wheel runtimes and an exact-source CPU build runtime. #143792 and #147352 use full-source builds; the other tasks use matched Python overlays.
+- Every task passed 6/6 compatibility checks, Baseline F2P 0/1 with P2P 1/1, Gold F2P 1/1 with P2P 1/1, replay-hash verification, human review, and an immutable eight-stage Factory Admission chain ending in `verified`.
+- Kept B3 and B5 memory-bounded: B3 exercises checked arithmetic with a small tensor and extreme integer, while B5 calls the production mask predicate through a reviewed low-memory surrogate.
+- Hardened exact-source loading, resumable remote source synchronization, source-build timeout selection, Python 3.9 probe compatibility, registry-aware Factory promotion, canonical Admission duration conversion, and draft-versus-restored promotion notes.
+- Kept failed runtime probes and full private build/Admission logs under ignored run directories; committed evidence contains only bounded public identities, summaries, hashes, reviews, and chains.
+- Focused verification passed 90 core/evidence tests and 53 final Factory/P3 tests; full repository verification passed 818/818 tests in 1174.098 seconds, plus all six Task/Compatibility/Admission/Factory validations and the existing verified 17-task v0.5 Dataset. Formal v0.7 Dataset Freeze and the real Codex Validation Cohort remain P4 work.
+
+P3 document:
+
+- `docs/v0.7/boundary_tasks.md`
+
+P2 Matched Runtime completed on 2026-07-27:
+
+- Added a strict, canonical matched-runtime compatibility contract and JSON Schema, six-check live probe, validation CLI, and fail-closed task promotion bound to compatibility evidence, Admission evidence, and replay hashes.
+- Added two reproducible official-wheel environments with observed immutable local image IDs: torch 2.4.0+cu124 for #129154 and torch 2.7.0+cpu plus torchvision 0.22.0+cpu for #144073.
+- Hardened live probing to use the CUDA Runtime C ABI, isolate runtime imports from unbuilt workspace packages, and apply frozen hidden tests before selector collection.
+- Restored #129154 and #144073 from deprecated to verified. Each passed 6/6 compatibility checks, Baseline F2P 0/1 with P2P 1/1, and Gold F2P 1/1 with P2P 1/1.
+- Restored 2/2 tasks in the P2 scope; seven historical deprecated tasks remain outside this milestone.
+- Kept #144073's Agent Patch Scope to the single target linalg module, declared one exact Base-Commit Inductor test-support overlay, and curated its Gold Patch to the same enforced scope.
+- Both tasks passed with matched wheels; source-built wheel and full-source fallbacks were not executed. Formal Precision/Cumulative Dataset inclusion remains a P4 Freeze action.
+- Full private runtime logs remain under ignored run directories; committed task evidence contains only canonical public summaries and hashes.
+- Verification passed 47 matched-runtime focused tests, 793 full repository tests, compileall, all tracked JSON parsing, the verified 17-task v0.5 Dataset, affected Task/Compatibility validation, replay-hash comparison, and diff checks.
+
+P2 documents:
+
+- `docs/v0.7/setup_matched_runtime.md`
+- `docs/superpowers/specs/2026-07-26-v0.7-p2-matched-runtime-design.md`
+- `docs/superpowers/plans/2026-07-26-v0.7-p2-matched-runtime.md`
+
+P1 Dataset Factory foundation completed on 2026-07-26:
+
+- Added strict, content-addressed Candidate, Decision, Factory Admission, and Dataset Freeze contracts with four Draft 2020-12 JSON Schemas.
+- Added the frozen B1–B5 Boundary taxonomy, literal keyword packs, optional strict Task taxonomy fields, and compatibility for historical Precision manifests that predate `failure_contract`.
+- Added deterministic automatic screening with stable reason codes, immutable Decision history, evidence-gated Admission transitions, and cross-stage source/runtime/selector identity checks.
+- Added a descriptor-relative immutable Factory Artifact Store plus validation, screening, and synthetic Freeze CLIs.
+- Added nine fully synthetic offline candidate captures covering B1–B5 and accepted/rejected/deferred behavior. The frozen result is 5 accepted, 2 deferred, and 2 rejected; repeated runs are byte-identical. Automatic acceptance is not human review or verified Admission.
+- P1 verification passed 73 Factory tests, 45 compatibility tests, 741 full repository tests, all four Factory Schema parses, compileall/diff checks, and the existing 17-task verified v0.5 Dataset validation.
+- P1 used no live network, real Agent, Docker, SSH, CUDA, or remote Runtime workload and did not publish a formal v0.7 Dataset. Matched Runtime, real Boundary Task Admission, formal Dataset Freeze, and the Codex Validation Cohort remain P2–P4 work.
+
+P1 documents:
+
+- `docs/v0.7/candidate_search.md`
+- `docs/superpowers/specs/2026-07-26-v0.7-p1-factory-contract-design.md`
+- `docs/superpowers/plans/2026-07-26-v0.7-p1-factory-contract.md`
+
 ## v0.6 - Completed
 
 Platform completed on 2026-07-19; the real MCP full experiment completed on

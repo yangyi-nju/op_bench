@@ -1,0 +1,49 @@
+diff --git a/torch/_inductor/index_propagation.py b/torch/_inductor/index_propagation.py
+index 9014dfa8cfef8..7ba3065a9224d 100644
+--- a/torch/_inductor/index_propagation.py
++++ b/torch/_inductor/index_propagation.py
+@@ -175,11 +175,15 @@ def remainder(x: TypedExpr, y: TypedExpr) -> TypedExpr | None:
+     @staticmethod
+     def minimum(x: TypedExpr, y: TypedExpr) -> TypedExpr:
+         result_type = torch.promote_types(x.dtype, y.dtype)
++        if result_type == torch.bool:
++            return NotImplemented
+         return TypedExpr(Min(x.expr, y.expr), result_type)
+ 
+     @staticmethod
+     def maximum(x: TypedExpr, y: TypedExpr) -> TypedExpr:
+         result_type = torch.promote_types(x.dtype, y.dtype)
++        if result_type == torch.bool:
++            return NotImplemented
+         return TypedExpr(Max(x.expr, y.expr), result_type)
+ 
+ 
+diff --git a/torch/utils/_sympy/value_ranges.py b/torch/utils/_sympy/value_ranges.py
+index 5e0569b9005f5..68c4b58e8c856 100644
+--- a/torch/utils/_sympy/value_ranges.py
++++ b/torch/utils/_sympy/value_ranges.py
+@@ -911,10 +911,24 @@ def log2(x):
+ 
+     @classmethod
+     def minimum(cls, a, b):
++        a, b = ValueRanges.wrap(a), ValueRanges.wrap(b)
++        if a.is_bool != b.is_bool:
++            raise AssertionError(
++                "operands must both be boolean ValueRanges or both non-boolean"
++            )
++        if a.is_bool:
++            return cls.and_(a, b)
+         return cls.min_or_max(a, b, sympy.Min)
+ 
+     @classmethod
+     def maximum(cls, a, b):
++        a, b = ValueRanges.wrap(a), ValueRanges.wrap(b)
++        if a.is_bool != b.is_bool:
++            raise AssertionError(
++                "operands must both be boolean ValueRanges or both non-boolean"
++            )
++        if a.is_bool:
++            return cls.or_(a, b)
+         return cls.min_or_max(a, b, sympy.Max)
+ 
+     @staticmethod

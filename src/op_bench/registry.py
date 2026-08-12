@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import json
+import re
 from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Generic, TypeVar
 
-from op_bench.task import TaskManifest
+from op_bench.task import TaskManifest, is_opaque_host_alias
 
 
 class RegistryError(ValueError):
@@ -68,6 +69,11 @@ class EnvironmentAsset:
     def source_loading_modes(self) -> list[str]:
         return [str(mode) for mode in self.data.get("source_loading_modes", [])]
 
+    @property
+    def runtime_artifact(self) -> dict[str, object]:
+        value = self.data.get("runtime_artifact")
+        return deepcopy(value) if isinstance(value, dict) else {}
+
     def task_environment_defaults(self) -> dict[str, Any]:
         docker = self.data["docker"]
         runtime = self.data.get("runtime", {})
@@ -94,6 +100,7 @@ class EnvironmentAsset:
         for field in (
             "python_version", "os", "build_mode", "hardware",
             "dependencies", "resource_requirements", "gpus", "host",
+            "remote_execution_config_hash",
         ):
             if field in self.data:
                 defaults[field] = deepcopy(self.data[field])
@@ -213,6 +220,68 @@ class EnvironmentRegistry(_Registry[EnvironmentAsset]):
             raise RegistryError(f"environment asset {asset_id}: docker.image is required")
         if not isinstance(item["preflight"], dict):
             raise RegistryError(f"environment asset {asset_id}: preflight must be an object")
+        host = item.get("host")
+        if host is not None and not is_opaque_host_alias(host):
+            raise RegistryError(
+                f"environment asset {asset_id}: host alias must be an "
+                "opaque lowercase identifier"
+            )
+        if item.get("backend") == "remote_docker":
+            remote_hash = item.get("remote_execution_config_hash")
+            if (
+                not isinstance(remote_hash, str)
+                or re.fullmatch(r"sha256:[0-9a-f]{64}", remote_hash)
+                is None
+            ):
+                raise RegistryError(
+                    f"environment asset {asset_id}: "
+                    "remote_execution_config_hash is required"
+                )
+        runtime_artifact = item.get("runtime_artifact")
+        if runtime_artifact is not None:
+            if not isinstance(runtime_artifact, dict):
+                raise RegistryError(
+                    f"environment asset {asset_id}: runtime_artifact must be an object"
+                )
+            for field in (
+                "strategy",
+                "artifact_kind",
+                "artifact_id",
+                "artifact_digest",
+                "artifact_digest_kind",
+                "torch_version",
+                "python_abi",
+            ):
+                if not runtime_artifact.get(field):
+                    raise RegistryError(
+                        f"environment asset {asset_id}: "
+                        f"runtime_artifact.{field} is required"
+                    )
+            companions = runtime_artifact.get("companion_artifacts", [])
+            if not isinstance(companions, list):
+                raise RegistryError(
+                    f"environment asset {asset_id}: "
+                    "runtime_artifact.companion_artifacts must be a list"
+                )
+            for index, companion in enumerate(companions):
+                if not isinstance(companion, dict):
+                    raise RegistryError(
+                        f"environment asset {asset_id}: "
+                        f"runtime_artifact.companion_artifacts[{index}] "
+                        "must be an object"
+                    )
+                for field in (
+                    "artifact_kind",
+                    "artifact_id",
+                    "artifact_digest",
+                    "artifact_digest_kind",
+                ):
+                    if not companion.get(field):
+                        raise RegistryError(
+                            f"environment asset {asset_id}: "
+                            "runtime_artifact.companion_artifacts"
+                            f"[{index}].{field} is required"
+                        )
 
 
 class SourceRegistry(_Registry[SourceAsset]):
@@ -240,7 +309,58 @@ def resolve_task_assets(
         if environment_registry is None:
             raise RegistryError(f"task {task.task_id}: environment_ref requires an environment registry")
         environment_asset = environment_registry.get(task.environment_ref)
-        data["environment"] = _deep_merge(environment_asset.task_environment_defaults(), data.get("environment", {}))
+        task_environment = data.get("environment", {})
+        environment_defaults = environment_asset.task_environment_defaults()
+        asset_backend = str(environment_defaults["backend"])
+        configured_backend = (
+            task_environment.get("backend")
+            if isinstance(task_environment, dict)
+            else None
+        )
+        if (
+            configured_backend is not None
+            and configured_backend != asset_backend
+        ):
+            raise RegistryError(
+                f"task {task.task_id}: cannot override registry backend "
+                f"{asset_backend} with {configured_backend}"
+            )
+        configured_remote_hash = (
+            task_environment.get("remote_execution_config_hash")
+            if isinstance(task_environment, dict)
+            else None
+        )
+        asset_remote_hash = environment_asset.data.get(
+            "remote_execution_config_hash"
+        )
+        if (
+            configured_remote_hash is not None
+            and configured_remote_hash != asset_remote_hash
+        ):
+            raise RegistryError(
+                f"task {task.task_id}: cannot override "
+                "remote_execution_config_hash"
+            )
+        configured_host = (
+            task_environment.get("host")
+            if isinstance(task_environment, dict)
+            else None
+        )
+        asset_host = environment_defaults.get("host")
+        if configured_host is not None and configured_host != asset_host:
+            raise RegistryError(
+                f"task {task.task_id}: cannot override registry host alias"
+            )
+        data["environment"] = _deep_merge(
+            environment_defaults,
+            data.get("environment", {}),
+        )
+        resolved_host = data["environment"].get("host")
+        if resolved_host is not None and not is_opaque_host_alias(resolved_host):
+            raise RegistryError(
+                f"task {task.task_id}: resolved host alias must be an "
+                "opaque lowercase identifier"
+            )
         data.setdefault("runtime_tier", environment_asset.runtime_tier)
     if task.source_ref:
         if source_registry is None:

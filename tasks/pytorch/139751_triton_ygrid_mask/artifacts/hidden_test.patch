@@ -1,0 +1,83 @@
+diff --git a/test/op_bench_boundary/test_triton_ygrid_mask.py b/test/op_bench_boundary/test_triton_ygrid_mask.py
+new file mode 100644
+--- /dev/null
++++ b/test/op_bench_boundary/test_triton_ygrid_mask.py
+@@ -0,0 +1,78 @@
++import unittest
++from types import SimpleNamespace
++
++from torch._inductor.codegen.triton import TritonKernel
++from torch._inductor.runtime.runtime_utils import get_max_y_grid
++from torch._inductor.virtualized import V
++
++
++class FakeSizeVars:
++    @staticmethod
++    def statically_known_equals(left, right):
++        return left == right
++
++    @staticmethod
++    def statically_known_leq(left, right):
++        return left <= right
++
++    @staticmethod
++    def statically_known_multiple_of(left, right):
++        return left % right == 0
++
++
++class FakeKernel:
++    optimize_mask = True
++    persistent_reduction = False
++    cooperative_reduction = False
++    no_x_dim = False
++
++    @staticmethod
++    def max_block(prefix):
++        return 16
++
++
++def range_tree(*, prefix, grid_dim, has_zdim, numel):
++    return SimpleNamespace(
++        is_reduction=False,
++        prefix=prefix,
++        grid_dim=grid_dim,
++        has_zdim=has_zdim,
++        numel=numel,
++    )
++
++
++def has_constant_mask(tree):
++    graph = SimpleNamespace(sizevars=FakeSizeVars())
++    with V.set_graph_handler(graph):
++        return TritonKernel._has_constant_mask(FakeKernel(), tree)
++
++
++class BoundaryGridMaskTests(unittest.TestCase):
++    def test_overflowing_y_grid_keeps_mask(self):
++        tree = range_tree(
++            prefix="y",
++            grid_dim=1,
++            has_zdim=False,
++            numel=get_max_y_grid() + 1,
++        )
++        self.assertFalse(has_constant_mask(tree))
++
++    def test_safe_grid_shapes_keep_existing_optimization(self):
++        cases = (
++            range_tree(
++                prefix="x", grid_dim=0, has_zdim=False, numel=65536
++            ),
++            range_tree(
++                prefix="y", grid_dim=1, has_zdim=False, numel=65520
++            ),
++            range_tree(
++                prefix="y", grid_dim=1, has_zdim=True, numel=65536
++            ),
++        )
++        for tree in cases:
++            with self.subTest(tree=tree):
++                self.assertTrue(has_constant_mask(tree))
++
++
++if __name__ == "__main__":
++    unittest.main()

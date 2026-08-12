@@ -8,6 +8,7 @@ import subprocess
 import sys
 import unittest
 
+import op_bench.runtime as runtime
 from op_bench.runtime.adapters import AdapterActionChannel, AdapterContext
 from op_bench.runtime.canonical import canonical_json
 from op_bench.runtime.process_group import ProcessGroupCleanupError, ProcessGroupResult
@@ -23,6 +24,8 @@ try:
     from op_bench.runtime.codex_mcp_adapter import CodexMcpCanonicalAdapter
 except ImportError:
     CodexMcpCanonicalAdapter = None
+
+render_mcp_prompt = getattr(runtime, "render_mcp_prompt", None)
 
 
 MODEL_ID = "gpt-5.6-sol"
@@ -70,6 +73,42 @@ def call_message(
 
 
 class CodexMcpCanonicalAdapterTests(unittest.TestCase):
+    def test_public_renderer_has_one_exact_canonical_prompt(self) -> None:
+        self.assertIsNotNone(render_mcp_prompt)
+        public_task = {
+            "contract_type": "agent_task_view",
+            "task": {
+                "identifier": "opbench-v07-t0001",
+            },
+        }
+        expected = (
+            "You are solving an OpBench task using only the attempt-scoped OpBench MCP "
+            "tools listed below. The target repository is inaccessible through ordinary "
+            "shell/filesystem access. Do not invoke Docker or SSH and do not search for "
+            "another repository.\n"
+            "- workspace_list: List bounded entries in the authoritative workspace.\n"
+            "- workspace_search: Search UTF-8 workspace files for an exact text query.\n"
+            "- workspace_read: Read a bounded file from the authoritative workspace.\n"
+            "- workspace_write: Write UTF-8 content to an allowed workspace path.\n"
+            "- workspace_apply_patch: Apply one canonical unified patch within allowed paths.\n"
+            "- command_run: Run one allowed argv-form command in the workspace runtime.\n"
+            "- test_run: Run one public registered test selector.\n"
+            "- vcs_diff: Return the canonical workspace patch without freezing it.\n"
+            "- session_finish: Freeze the canonical patch and finish the Agent session.\n"
+            "Read before editing, make the smallest justified change, run a registered "
+            "public test where possible, inspect vcs_diff, and call session_finish exactly "
+            "once. Treat a tool result with ok=false as feedback you may correct.\n\n"
+            "Public task view (canonical JSON):\n"
+            '{"contract_type":"agent_task_view","task":{"identifier":"opbench-v07-t0001"}}\n'
+        )
+
+        rendered = render_mcp_prompt(public_task)
+
+        self.assertEqual(rendered.encode("utf-8"), expected.encode("utf-8"))
+        self.assertNotIn("pytorch__", rendered)
+        self.assertNotIn("pr_number", rendered)
+        self.assertNotIn("patch_scope", rendered)
+
     def launch_input(self) -> AgentLaunchInput:
         view = project_agent_task_view(
             full_task_spec(),
@@ -286,6 +325,11 @@ class CodexMcpCanonicalAdapterTests(unittest.TestCase):
         self.assertNotEqual(captured["direct_returncode"], 0)
         self.assertIn("transport authentication failed", captured["direct_stderr"])
         prompt = str(captured["prompt"])
+        self.assertIsNotNone(render_mcp_prompt)
+        self.assertEqual(
+            prompt,
+            render_mcp_prompt(self.launch_input().task_view.to_dict()),
+        )
         self.assertIn("workspace_read", prompt)
         self.assertIn("session_finish", prompt)
         self.assertIn("MCP", prompt)

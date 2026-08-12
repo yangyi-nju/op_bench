@@ -119,6 +119,72 @@ class AuthoritativeWorkspaceTests(unittest.TestCase):
         for result in (read, write, added, deleted, test_binding, diff):
             self.assertEqual(result.workspace, self.workspace.identity)
 
+    def test_repository_root_write_delete_apply_and_candidate_freeze_are_broad(
+        self,
+    ) -> None:
+        workspace = AuthoritativeWorkspace.open(
+            self.root,
+            source=identity("source", "fixture@base", SHA_A),
+            policy=policy(
+                writable_paths=(".",),
+                patch_paths=("src/operator.py",),
+            ),
+        )
+        written = workspace.write("README.md", "public fixture\n")
+        deleted = workspace.delete("tests/test_operator.py")
+        applied = workspace.apply_patch(
+            b"diff --git a/src/helper.py b/src/helper.py\n"
+            b"--- a/src/helper.py\n"
+            b"+++ b/src/helper.py\n"
+            b"@@ -1,2 +1,2 @@\n"
+            b" def helper():\n"
+            b"-    return 1\n"
+            b"+    return 2\n"
+        )
+
+        patch_bytes = workspace.diff().patch_bytes
+        self.assertTrue(written.changed)
+        self.assertTrue(deleted.changed)
+        self.assertTrue(applied.changed)
+        self.assertIn(b"README.md", patch_bytes)
+        self.assertIn(b"tests/test_operator.py", patch_bytes)
+        self.assertIn(b"src/helper.py", patch_bytes)
+        frozen = workspace.freeze()
+        self.assertEqual(
+            frozen.changed_paths,
+            ("README.md", "src/helper.py", "tests/test_operator.py"),
+        )
+
+    def test_repository_root_capability_preserves_path_and_content_denials(
+        self,
+    ) -> None:
+        workspace = AuthoritativeWorkspace.open(
+            self.root,
+            source=identity("source", "fixture@base", SHA_A),
+            policy=policy(writable_paths=(".",)),
+        )
+        outside = Path(self.temporary.name) / "outside.py"
+        outside.write_text("private\n", encoding="utf-8")
+        os.symlink(outside, self.root / "linked.py")
+
+        invalid_paths = (
+            ".git/config",
+            str(outside),
+            "../outside.py",
+            "src/../../outside.py",
+            "./src/operator.py",
+            "src//operator.py",
+        )
+        for candidate in invalid_paths:
+            with self.subTest(candidate=candidate):
+                with self.assertRaises(WorkspacePolicyError):
+                    workspace.write(candidate, "changed\n")
+        with self.assertRaisesRegex(WorkspacePolicyError, "symlink"):
+            workspace.write("linked.py", "changed\n")
+        with self.assertRaisesRegex(WorkspacePolicyError, "binary"):
+            workspace.write("binary.py", b"before\x00after")
+        self.assertEqual(outside.read_text(encoding="utf-8"), "private\n")
+
     def test_repeated_identical_write_is_reported_unchanged(self) -> None:
         first = self.workspace.write("src/operator.py", b"VALUE = 2\n")
         second = self.workspace.write("src/operator.py", b"VALUE = 2\n")
@@ -322,6 +388,7 @@ class WorkspacePolicyValidationTests(unittest.TestCase):
         cases = (
             ({"writable_paths": ("../src",)}, "writable_paths"),
             ({"patch_paths": ("/src",)}, "patch_paths"),
+            ({"patch_paths": (".",)}, "patch_paths"),
             ({"patch_paths": (":(exclude)src/",)}, "patch_paths"),
             ({"patch_paths": ("src/*.py",)}, "patch_paths"),
             ({"allowed_modes": (0o644, 0o644)}, "allowed_modes"),

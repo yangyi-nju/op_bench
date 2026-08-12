@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -110,7 +111,7 @@ class DatasetManifest:
             entries = [entry for entry in entries if entry.admission_status == "verified"]
         environment_registry = self._environment_registry()
         source_registry = self._source_registry()
-        return [
+        loaded = [
             resolve_task_assets(
                 entry.load_task(),
                 environment_registry=environment_registry,
@@ -118,6 +119,16 @@ class DatasetManifest:
             )
             for entry in entries
         ]
+        if self.version == "v0.7":
+            return loaded
+        legacy: list[TaskManifest] = []
+        for task in loaded:
+            data = copy.deepcopy(task.data)
+            agent_visible = data.get("agent_visible")
+            if isinstance(agent_visible, dict):
+                agent_visible.pop("public_task_id", None)
+            legacy.append(TaskManifest(task_dir=task.task_dir, data=data))
+        return legacy
 
     def _environment_registry(self) -> EnvironmentRegistry | None:
         path = self._registry_path("environments")

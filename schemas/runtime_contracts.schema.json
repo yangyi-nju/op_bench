@@ -146,7 +146,7 @@
         "schema_version": {"const": "v1"},
         "profile_id": {"type": "string", "minLength": 1},
         "backend": {"enum": ["local", "docker", "remote_docker"]},
-        "runtime_tier": {"enum": ["local_fixture", "cpu_python_overlay", "cuda_python_overlay", "cuda_kernel_build"]},
+        "runtime_tier": {"enum": ["local_fixture", "cpu_python_overlay", "cpu_source_snapshot_fuller", "cuda_python_overlay", "cuda_kernel_build"]},
         "source_loading_mode": {"enum": ["none", "python_overlay", "inplace_build"]},
         "platform": {"type": "string", "minLength": 1},
         "image": {"$ref": "#/$defs/content_identity", "properties": {"identity_type": {"const": "image"}}},

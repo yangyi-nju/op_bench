@@ -1,0 +1,114 @@
+diff --git a/test/op_bench/test_semi_structured_cpu_conversion.py b/test/op_bench/test_semi_structured_cpu_conversion.py
+new file mode 100644
+--- /dev/null
++++ b/test/op_bench/test_semi_structured_cpu_conversion.py
+@@ -0,0 +1,109 @@
++import unittest
++
++import torch
++from torch.sparse._semi_structured_ops import no_dispatch
++from torch.sparse.semi_structured import SparseSemiStructuredTensor
++
++
++class SparseDouble:
++    def __init__(self, dense):
++        self._dense = dense
++
++    def to_dense(self):
++        return self._dense.clone()
++
++
++def dense_conversion(tensor, *args, **kwargs):
++    return tensor.to(*args, **kwargs)
++
++
++class SemiStructuredCpuConversionTests(unittest.TestCase):
++    def setUp(self):
++        self.dense = torch.arange(24, dtype=torch.float16).reshape(4, 6)
++        self.sparse_double = SparseDouble(self.dense)
++
++    def test_positional_cpu_conversion_returns_dense_values(self):
++        from torch.sparse._semi_structured_ops import semi_sparse_to
++
++        result = semi_sparse_to(
++            dense_conversion,
++            (),
++            (self.sparse_double, "cpu"),
++            {},
++        )
++        self.assertIsInstance(result, torch.Tensor)
++        self.assertEqual(result.device.type, "cpu")
++        self.assertEqual(result.dtype, torch.float16)
++        torch.testing.assert_close(result, self.dense)
++
++    def test_keyword_cpu_and_dtype_conversion_is_forwarded(self):
++        from torch.sparse._semi_structured_ops import semi_sparse_to
++
++        result = semi_sparse_to(
++            dense_conversion,
++            (),
++            (self.sparse_double,),
++            {"device": "cpu", "dtype": torch.float32, "copy": True},
++        )
++        self.assertEqual(result.device.type, "cpu")
++        self.assertEqual(result.dtype, torch.float32)
++        torch.testing.assert_close(result, self.dense.float())
++
++    def test_copy_overload_converts_after_densifying(self):
++        from torch.sparse._semi_structured_ops import semi_sparse_to_copy
++
++        result = semi_sparse_to_copy(
++            dense_conversion,
++            (),
++            (self.sparse_double,),
++            {"device": torch.device("cpu"), "dtype": torch.float64},
++        )
++        self.assertEqual(result.dtype, torch.float64)
++        torch.testing.assert_close(result, self.dense.double())
++
++    def test_non_cpu_requests_fail_explicitly(self):
++        from torch.sparse._semi_structured_ops import (
++            semi_sparse_to,
++            semi_sparse_to_copy,
++        )
++
++        with self.assertRaisesRegex(NotImplementedError, "Only `to\\('cpu'\\)`"):
++            semi_sparse_to(
++                dense_conversion,
++                (),
++                (self.sparse_double, torch.float32),
++                {},
++            )
++        with self.assertRaisesRegex(NotImplementedError, "Only converting to CPU"):
++            semi_sparse_to_copy(
++                dense_conversion,
++                (),
++                (self.sparse_double,),
++                {"device": "cuda"},
++            )
++
++    def test_dispatch_table_uses_conversion_specific_handlers(self):
++        from torch.sparse._semi_structured_ops import (
++            semi_sparse_to,
++            semi_sparse_to_copy,
++        )
++
++        original = getattr(SparseSemiStructuredTensor, "SPARSE_DISPATCH", None)
++        try:
++            SparseSemiStructuredTensor.SPARSE_DISPATCH = None
++            SparseSemiStructuredTensor._load_dispatch_table()
++            table = SparseSemiStructuredTensor.SPARSE_DISPATCH
++            self.assertIs(table[torch.ops.aten.to], semi_sparse_to)
++            self.assertIs(table[torch.ops.aten._to_copy], semi_sparse_to_copy)
++        finally:
++            SparseSemiStructuredTensor.SPARSE_DISPATCH = original
++
++    def test_dispatch_disabled_dense_behavior_remains_stable(self):
++        value = torch.tensor([1.0, 2.0, 3.0])
++        with no_dispatch():
++            result = torch.add(value, 2.0)
++        torch.testing.assert_close(result, torch.tensor([3.0, 4.0, 5.0]))
++
++
++if __name__ == "__main__":
++    unittest.main()

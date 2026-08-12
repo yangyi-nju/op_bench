@@ -1,0 +1,145 @@
+{
+  "admission": {
+    "compatibility_evidence": "compatibility/evidence.json",
+    "evidence": "admission/evidence.json",
+    "status": "verified",
+    "verified_at": "2026-07-27T03:30:00Z"
+  },
+  "agent_visible": {
+    "allowed_test_commands": [
+      "{python} test/op_bench_boundary/test_cummin_rank_zero.py {test}"
+    ],
+    "known_constraints": [
+      "CPU-only; CUDA is not required.",
+      "Compiled scalar and rank-one calls to both torch.cummin and torch.cummax must match eager behavior."
+    ],
+    "repo_setup_commands": [],
+    "public_task_id": "opbench-v07-t0004"
+  },
+  "artifacts": {
+    "gold_patch": "artifacts/gold.patch",
+    "hidden_test_patch": "artifacts/hidden_test.patch"
+  },
+  "compatibility": {
+    "evidence": "compatibility/evidence.json",
+    "minimal_operation": "import torch; import torch._inductor.lowering; torch.cummin(torch.tensor(1.0), 0)",
+    "selector_module": "test/op_bench_boundary/test_cummin_rank_zero.py",
+    "target_import": "torch._inductor.lowering",
+    "target_module": "torch/_inductor/lowering.py"
+  },
+  "environment": {
+    "build_mode": "prebuilt-wheel",
+    "source_loading": {
+      "installed_package": "torch",
+      "mode": "python_overlay",
+      "overlay_paths": [
+        "torch/_inductor/lowering.py"
+      ],
+      "runtime_site_packages": "/tmp/op_bench_runtime/site-packages",
+      "sync_before_tests": true
+    }
+  },
+  "environment_ref": "pytorch-matched-boundary-torch2.4.0-cpu",
+  "evaluation": {
+    "fail_to_pass": [
+      "BoundaryCumulativeTests.test_rank_zero_cummin_and_cummax"
+    ],
+    "pass_to_pass": [
+      "BoundaryCumulativeTests.test_rank_one_cummin_and_cummax"
+    ],
+    "setup_commands": [],
+    "test_command": "{python} test/op_bench_boundary/test_cummin_rank_zero.py {test}",
+    "timeout_sec": 900
+  },
+  "metadata": {
+    "admission_status": "verified",
+    "curation_status": "verified",
+    "deterministic": true,
+    "difficulty": "medium",
+    "estimated_runtime_min": 15,
+    "layer": "B",
+    "notes": "Verified by v0.7 matched-runtime compatibility and verified Admission; compatibility evidence sha256:ac9b42e88b1fc72a1e51a81b24fd1ba07b30b498c1101fe4d1399f673a3bf150.",
+    "source_loading_verified": true
+  },
+  "operator": {
+    "component": "torch._inductor.lowering.cummin",
+    "framework": "pytorch",
+    "operator_name": "torch.cummin and torch.cummax",
+    "problem_dimension": "boundary",
+    "problem_subclass": "B2",
+    "problem_type": "rank-zero-lowering",
+    "tags": [
+      "cummin",
+      "cummax",
+      "rank-zero",
+      "inductor",
+      "cpu"
+    ]
+  },
+  "patch_scope": {
+    "allowed_paths": [
+      "torch/_inductor/lowering.py"
+    ],
+    "mode": "enforced"
+  },
+  "runtime_tier": "cpu_python_overlay",
+  "source": {
+    "base_commit": "15ca562f863ffe69d76c0ccaf448b27d18ceb2e8",
+    "checkout_mode": "git",
+    "issue_number": null,
+    "issue_url": null,
+    "merge_commit": "2edaae436ac570949b3595f0c72f6808037555d2",
+    "pr_number": 126461,
+    "pr_url": "https://github.com/pytorch/pytorch/pull/126461",
+    "repo": "pytorch/pytorch",
+    "repo_url": "https://github.com/pytorch/pytorch.git"
+  },
+  "source_ref": "pytorch-15ca562-boundary-overlay",
+  "statement": {
+    "body": "Compiling torch.cummin or torch.cummax for a scalar tensor raises instead of returning the eager value-and-index pair. Both operations must match eager behavior for scalar inputs without regressing rank-one cumulative reductions.",
+    "labels": [
+      "module: inductor",
+      "boundary: rank-zero",
+      "operator: cumulative reduction"
+    ],
+    "title": "Compiled torch.cummin and torch.cummax fail for scalar inputs"
+  },
+  "task_id": "pytorch__126461__cummin_rank_zero",
+  "version": "v1",
+  "quality": {
+    "complexity_evidence": "quality/complexity.json",
+    "origin": "retained_historical",
+    "prompt_evidence": "quality/prompt.json",
+    "readmission_evidence": "quality/readmission.json"
+  },
+  "taxonomy": {
+    "component_tags": [
+      "inductor"
+    ],
+    "contract_detail_tags": [
+      "value",
+      "rank"
+    ],
+    "contract_family": "result",
+    "execution_context": {
+      "devices": [
+        "cpu"
+      ],
+      "distributed": false,
+      "modes": [
+        "compile"
+      ],
+      "phases": [
+        "forward"
+      ]
+    },
+    "failure_type": "unexpected_error",
+    "root_cause_tags": [
+      "incorrect_lowering"
+    ],
+    "taxonomy_version": "v2",
+    "trigger_tags": [
+      "scalar_or_low_rank"
+    ]
+  }
+}

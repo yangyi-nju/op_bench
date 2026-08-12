@@ -339,6 +339,9 @@ class ExactReplayObserver:
             runtime_profile=task.runtime,
             attempt_context=context,
             source_overlay_paths=self._bundle.source_overlay_paths_for(task),
+            source_loading_timeout_ms=(
+                self._bundle.source_loading_timeout_ms_for(task)
+            ),
         )
         frozen, patch_artifact = self._patch_inputs(case, task, source.revision)
         spec = EvaluationSpec(

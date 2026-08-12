@@ -1,0 +1,49 @@
+{
+  "admission": {
+    "decision": "verified",
+    "failure_classification": null,
+    "verified": true
+  },
+  "baseline": {
+    "duration_sec": 95.71103825001046,
+    "fail_to_pass_passed": 0,
+    "fail_to_pass_total": 2,
+    "mode": "baseline",
+    "pass_to_pass_passed": 2,
+    "pass_to_pass_total": 2,
+    "status": "baseline_reproduced",
+    "task_id": "pytorch__186993__large_guard_materialization"
+  },
+  "created_at": "2026-08-10T12:20:00Z",
+  "environment": {
+    "backend": "remote_docker",
+    "digest_kind": "local_image_id",
+    "id": "pytorch-nightly-20260612-torch2.14.0dev-cpu-py311",
+    "image": "op-bench/pytorch-nightly-cpu:2.14.0.dev20260612-py311",
+    "image_digest": "sha256:32df30b84320a2a274a73f4bec7248794e21a00875dbf92e12a67827eed7ee77",
+    "platform": "linux/amd64",
+    "runtime_tier": "cpu_python_overlay"
+  },
+  "evidence_id": "pytorch__186993__large_guard_materialization:2dc5035d0e76:2026-08-10T12:20:00Z",
+  "gold": {
+    "duration_sec": 93.23950808297377,
+    "fail_to_pass_passed": 2,
+    "fail_to_pass_total": 2,
+    "mode": "gold",
+    "pass_to_pass_passed": 2,
+    "pass_to_pass_total": 2,
+    "status": "resolved",
+    "task_id": "pytorch__186993__large_guard_materialization"
+  },
+  "schema_version": "v1",
+  "source": {
+    "base_commit": "a4097e577fe5d1e21dfe2fa8c36af3fdf8854e34",
+    "id": "pytorch-a4097e57-large-guard-overlay",
+    "repo_url": "https://github.com/pytorch/pytorch.git",
+    "snapshot_hash": null,
+    "snapshot_method": null
+  },
+  "task_id": "pytorch__186993__large_guard_materialization",
+  "task_manifest_hash": "sha256:2dc5035d0e769715e9272c2c81f1d3ae7512427422390a73d9a42c1ae052e1e3",
+  "task_manifest_hash_kind": "replay_spec_v1"
+}

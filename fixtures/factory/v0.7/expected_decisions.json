@@ -1,0 +1,200 @@
+{
+  "content_hash": "sha256:58f8885683b325b90f3fd2e920e8f81a52c174505f24e979dc60c9f7dc48bbd9",
+  "contract_type": "factory_screening_index",
+  "counts": {
+    "accepted": 5,
+    "deferred": 2,
+    "rejected": 2
+  },
+  "created_at": "2026-07-26T00:00:00Z",
+  "decisions": [
+    {
+      "candidate": {
+        "artifact_id": "candidate:v1:6437e9f3ef71b958720ba9c40f30d317decac137ec9cd767bad198b4275f4663",
+        "artifact_type": "factory_candidate",
+        "content_hash": "sha256:0e4575b99d6a7c73fd69b941989669d8924ec76dcca00fb9d71c99a1116dea0c",
+        "relative_path": "candidates/pr-170101.json"
+      },
+      "decision": {
+        "artifact_id": "decision:v1:ade489f3f373083d58f3fe37b1d2cd70b0c2d6314156f95d55096688cabf4997",
+        "artifact_type": "factory_decision",
+        "content_hash": "sha256:2ad0ea6eb1c8b4a6c9475713975d1fb92bd5aa6d1ddbdf915c114ad00c0a12ce",
+        "relative_path": "decisions/pr-170101.json"
+      },
+      "disposition": "accepted",
+      "finding_codes": [
+        "review.root_cause_required"
+      ],
+      "pr_number": 170101,
+      "target_subclass": "B1"
+    },
+    {
+      "candidate": {
+        "artifact_id": "candidate:v1:86315d15c4bdb1557b16e8283ea6f99fcd56a23eae5ec01cecdff5bbbfb4a029",
+        "artifact_type": "factory_candidate",
+        "content_hash": "sha256:5b9f78aba11f16d0c067d387af6dad9227e09d33762fc7e88f7c1fa9ab291900",
+        "relative_path": "candidates/pr-170102.json"
+      },
+      "decision": {
+        "artifact_id": "decision:v1:bf15e7b657c4880b31f081e9559c37b4779a9845987a38fedbbe66c7ce30562f",
+        "artifact_type": "factory_decision",
+        "content_hash": "sha256:1979e006b254e19c7c50f20a6566f340cca0841d3e28f7c2920b338ea3e6d75b",
+        "relative_path": "decisions/pr-170102.json"
+      },
+      "disposition": "accepted",
+      "finding_codes": [
+        "review.root_cause_required"
+      ],
+      "pr_number": 170102,
+      "target_subclass": "B2"
+    },
+    {
+      "candidate": {
+        "artifact_id": "candidate:v1:711af842ac62607cfdf159ce70282a6a465cb9aeca8e92cbc9a6d7eef66e510d",
+        "artifact_type": "factory_candidate",
+        "content_hash": "sha256:658e0239d2b7ef05c5728752d54c3f7ea630a20bb4794096b75d31ba5afb695a",
+        "relative_path": "candidates/pr-170103.json"
+      },
+      "decision": {
+        "artifact_id": "decision:v1:08d6cae279b1ee3f979611ea248017ef208ee52d7f7f1a9b5a76326d7c42ae81",
+        "artifact_type": "factory_decision",
+        "content_hash": "sha256:b7705e573576a4dd0d163134b7467048fbe2f71f3399b38f8deb91861bace3bd",
+        "relative_path": "decisions/pr-170103.json"
+      },
+      "disposition": "accepted",
+      "finding_codes": [
+        "review.root_cause_required"
+      ],
+      "pr_number": 170103,
+      "target_subclass": "B3"
+    },
+    {
+      "candidate": {
+        "artifact_id": "candidate:v1:d7a5284f363906ac23d5752e9f5d8fd15086ec05063bf05e83d58a7950643f88",
+        "artifact_type": "factory_candidate",
+        "content_hash": "sha256:054c36e0ec312d08ebc481835e1e72302b84793d0f3905e3df7c2ac174a6d63f",
+        "relative_path": "candidates/pr-170104.json"
+      },
+      "decision": {
+        "artifact_id": "decision:v1:7abc188a35b8e039985739c3a85c9edb7d1e7a37674b48e63ac78e21ec1060b1",
+        "artifact_type": "factory_decision",
+        "content_hash": "sha256:5519c9e6f319eb3cbf6892bf8eb229c3c8ff09c41a96447acfff174ad445291d",
+        "relative_path": "decisions/pr-170104.json"
+      },
+      "disposition": "accepted",
+      "finding_codes": [
+        "review.root_cause_required"
+      ],
+      "pr_number": 170104,
+      "target_subclass": "B4"
+    },
+    {
+      "candidate": {
+        "artifact_id": "candidate:v1:a47500201a3e6c33ff66280c36ec237653eac5c80ba3e4775272a70cb1bd9e8c",
+        "artifact_type": "factory_candidate",
+        "content_hash": "sha256:b749594d333077e6d2bc223853b169dcb7df9f1303ae1d5aeba70540469d25ac",
+        "relative_path": "candidates/pr-170105.json"
+      },
+      "decision": {
+        "artifact_id": "decision:v1:a928e170b714eb25c2375e5fa072e427e3ba82bce187920b6213d29aff74946b",
+        "artifact_type": "factory_decision",
+        "content_hash": "sha256:004ce7c59909ffe2986ed05e99eb9a82cfd3878d0d6f94dec4b5dd2eedae60e1",
+        "relative_path": "decisions/pr-170105.json"
+      },
+      "disposition": "accepted",
+      "finding_codes": [
+        "review.root_cause_required"
+      ],
+      "pr_number": 170105,
+      "target_subclass": "B5"
+    },
+    {
+      "candidate": {
+        "artifact_id": "candidate:v1:74825793c4efe4ebbd44240bf259a67e47fd59412328e9b85223be67983ebb28",
+        "artifact_type": "factory_candidate",
+        "content_hash": "sha256:d2f12d78c96a48bc9a9474ebecbb7ef3a7272eecf33230f1c4baced01cd48700",
+        "relative_path": "candidates/pr-170106.json"
+      },
+      "decision": {
+        "artifact_id": "decision:v1:0ef28d3b85b54f4a3e00309b178369e0aca66d3dee318a88743ead94bc2f555e",
+        "artifact_type": "factory_decision",
+        "content_hash": "sha256:cdb6de57e9c32214d4655e8802f85d405de932b7557070881c67c100a7518e35",
+        "relative_path": "decisions/pr-170106.json"
+      },
+      "disposition": "rejected",
+      "finding_codes": [
+        "change.non_bug_change",
+        "review.root_cause_required"
+      ],
+      "pr_number": 170106,
+      "target_subclass": "B1"
+    },
+    {
+      "candidate": {
+        "artifact_id": "candidate:v1:03ef548fcacf86254c5aed5cbc916a614543fca6afee509dad441ca3251803da",
+        "artifact_type": "factory_candidate",
+        "content_hash": "sha256:077f024a5cbdebc5663577316e275ffd552c55af4eddb90b010fa0eef5e7b292",
+        "relative_path": "candidates/pr-170107.json"
+      },
+      "decision": {
+        "artifact_id": "decision:v1:b53f05f873d237a05035744296551f3e7ffec2d9d2685260ecc509ec3cffb22f",
+        "artifact_type": "factory_decision",
+        "content_hash": "sha256:cc3dbf090af0f4503b3c73a22f99705d3c9c2b5f2ca5d5261f9157a093f49c85",
+        "relative_path": "decisions/pr-170107.json"
+      },
+      "disposition": "deferred",
+      "finding_codes": [
+        "change.large_diff_requires_review",
+        "review.root_cause_required"
+      ],
+      "pr_number": 170107,
+      "target_subclass": "B3"
+    },
+    {
+      "candidate": {
+        "artifact_id": "candidate:v1:85ba84b8cbf05d673d6921a669dfd39808beec14353c9d26f4aa6adcba76e53e",
+        "artifact_type": "factory_candidate",
+        "content_hash": "sha256:79e16963fb7f90c798455d9c43612222255b415548f53adeb5f819e8fbecd612",
+        "relative_path": "candidates/pr-170108.json"
+      },
+      "decision": {
+        "artifact_id": "decision:v1:84ab85fb2e32367c4d5a94a29b198eb467824ad45efb55e7ad357fda418e8bfa",
+        "artifact_type": "factory_decision",
+        "content_hash": "sha256:6ade1c0322118121ea6e03a4b70a7b0dea755b0de2dd609dce31e9b2333ea729",
+        "relative_path": "decisions/pr-170108.json"
+      },
+      "disposition": "deferred",
+      "finding_codes": [
+        "metadata.missing_date",
+        "source.missing_commit_identity",
+        "review.root_cause_required"
+      ],
+      "pr_number": 170108,
+      "target_subclass": "B4"
+    },
+    {
+      "candidate": {
+        "artifact_id": "candidate:v1:48e444c15a1c5a50ebd4b936d556cd5488d32b4d8158d00fbd37a02c4f713a64",
+        "artifact_type": "factory_candidate",
+        "content_hash": "sha256:9bf52b8b65b60a0851671ed42982ce17d3d41e47e3ba12877ceeb9ad88a24c9b",
+        "relative_path": "candidates/pr-170109.json"
+      },
+      "decision": {
+        "artifact_id": "decision:v1:638543fb71d9afac2ea98c72790925a7fbea31c043deae7231cd3acdc4454b33",
+        "artifact_type": "factory_decision",
+        "content_hash": "sha256:2196c636f8925309d50bf90effcfba03ddfadfad9a8be948ed3424f7e5e648a9",
+        "relative_path": "decisions/pr-170109.json"
+      },
+      "disposition": "rejected",
+      "finding_codes": [
+        "window.outside_stable",
+        "review.root_cause_required"
+      ],
+      "pr_number": 170109,
+      "target_subclass": "B5"
+    }
+  ],
+  "rule_set_hash": "sha256:074da20727e519d357273a7ea6d862e024a9c186bfdac5b408b7a6c57621d262",
+  "rule_set_id": "screening:v1:074da20727e519d357273a7ea6d862e024a9c186bfdac5b408b7a6c57621d262",
+  "schema_version": "v1"
+}

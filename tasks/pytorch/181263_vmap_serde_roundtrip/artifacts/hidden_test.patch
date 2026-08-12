@@ -1,0 +1,68 @@
+diff --git a/test/op_bench/test_vmap_serde_roundtrip.py b/test/op_bench/test_vmap_serde_roundtrip.py
+new file mode 100644
+index 00000000000..52d6615a8dd
+--- /dev/null
++++ b/test/op_bench/test_vmap_serde_roundtrip.py
+@@ -0,0 +1,62 @@
++import io
++import unittest
++
++import torch
++
++
++class VmapSerializationRoundTripTests(unittest.TestCase):
++    def test_vmap_roundtrip_preserves_tensor_value(self):
++        from torch.export._trace import _export
++
++        class VmapModule(torch.nn.Module):
++            def forward(self, x, y):
++                def mapped(a, b):
++                    return (a * b + 1).sum(dim=0)
++
++                return torch.vmap(mapped)(x, y).sum(dim=0)
++
++        inputs = (
++            torch.tensor([1.0, 2.0, 3.0]),
++            torch.tensor([0.1, 0.2, 0.3]),
++        )
++        exported = _export(
++            VmapModule(),
++            inputs,
++            pre_dispatch=True,
++        )
++        expected = exported.module()(*inputs)
++
++        buffer = io.BytesIO()
++        torch.export.save(exported, buffer)
++        buffer.seek(0)
++        loaded = torch.export.load(buffer)
++
++        torch.testing.assert_close(
++            loaded.module()(*inputs),
++            expected,
++        )
++
++    def test_ordinary_roundtrip_preserves_value_and_autograd(self):
++        class OrdinaryModule(torch.nn.Module):
++            def forward(self, x):
++                return torch.sin(x) * 2
++
++        inputs = (torch.randn(4, requires_grad=True),)
++        exported = torch.export.export(
++            OrdinaryModule(),
++            inputs,
++            strict=False,
++        )
++        expected = exported.module()(*inputs)
++
++        buffer = io.BytesIO()
++        torch.export.save(exported, buffer)
++        buffer.seek(0)
++        actual = torch.export.load(buffer).module()(*inputs)
++
++        torch.testing.assert_close(actual, expected)
++        self.assertEqual(actual.requires_grad, expected.requires_grad)
++
++
++if __name__ == "__main__":
++    unittest.main()

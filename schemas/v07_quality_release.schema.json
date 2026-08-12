@@ -1,0 +1,1178 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opbench.dev/schemas/v07_quality_release.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_type",
+    "schema_version",
+    "dataset_id",
+    "dataset_hash",
+    "created_at",
+    "task_count",
+    "k",
+    "required_candidate_count",
+    "records",
+    "content_hash"
+  ],
+  "properties": {
+    "contract_type": {"const": "historical_readmission_index"},
+    "schema_version": {"const": "v1"},
+    "dataset_id": {"type": "string", "minLength": 1},
+    "dataset_hash": {"$ref": "#/$defs/hash"},
+    "created_at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "task_count": {"const": 25},
+    "k": {"type": "integer", "minimum": 0, "maximum": 25},
+    "required_candidate_count": {
+      "type": "integer",
+      "minimum": 75,
+      "maximum": 150
+    },
+    "records": {
+      "type": "array",
+      "minItems": 25,
+      "maxItems": 25,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/record"}
+    },
+    "content_hash": {"$ref": "#/$defs/hash"}
+  },
+  "$defs": {
+    "hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_type",
+        "artifact_id",
+        "content_hash",
+        "relative_path"
+      ],
+      "properties": {
+        "artifact_type": {"type": "string", "minLength": 1},
+        "artifact_id": {"type": "string", "minLength": 1},
+        "content_hash": {"$ref": "#/$defs/hash"},
+        "relative_path": {
+          "type": "string",
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\\\)[^/]+(?:/[^/]+)*\\.json$"
+        }
+      }
+    },
+    "record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "task_id",
+        "public_task_id",
+        "origin",
+        "task_path",
+        "taxonomy_hash",
+        "prompt_evidence",
+        "complexity_evidence",
+        "admission_evidence",
+        "disposition"
+      ],
+      "properties": {
+        "task_id": {"type": "string", "minLength": 1},
+        "public_task_id": {
+          "type": "string",
+          "pattern": "^opbench-v07-t[0-9]{4}$"
+        },
+        "origin": {
+          "enum": ["retained_historical", "new", "replacement"]
+        },
+        "task_path": {
+          "type": "string",
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\\\)[^/]+(?:/[^/]+)*$"
+        },
+        "taxonomy_hash": {"$ref": "#/$defs/hash"},
+        "prompt_evidence": {"$ref": "#/$defs/reference"},
+        "complexity_evidence": {"$ref": "#/$defs/reference"},
+        "admission_evidence": {"$ref": "#/$defs/reference"},
+        "disposition": {"enum": ["retained", "deferred", "retired"]}
+      }
+    },
+    "quality_changed_file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "additions",
+        "deletions",
+        "change_type",
+        "is_test"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\\\)[^/]+(?:/[^/]+)*$"
+        },
+        "additions": {"type": "integer", "minimum": 0},
+        "deletions": {"type": "integer", "minimum": 0},
+        "change_type": {
+          "enum": ["ADDED", "COPIED", "DELETED", "MODIFIED", "RENAMED"]
+        },
+        "is_test": {"type": "boolean"}
+      }
+    },
+    "quality_linked_issue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["number", "url"],
+      "properties": {
+        "number": {"type": "integer", "minimum": 1},
+        "url": {
+          "type": "string",
+          "pattern": "^https://github\\.com/pytorch/pytorch/issues/[1-9][0-9]*$"
+        }
+      }
+    },
+    "quality_execution_hints": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["devices", "modes", "phases", "distributed"],
+      "properties": {
+        "devices": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"enum": ["cpu", "cuda"]}
+        },
+        "modes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"enum": ["eager", "compile"]}
+        },
+        "phases": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"enum": ["forward", "backward"]}
+        },
+        "distributed": {"type": "boolean"}
+      }
+    },
+    "quality_candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_type",
+        "schema_version",
+        "candidate_id",
+        "repository",
+        "pr_number",
+        "pr_url",
+        "base_commit",
+        "merge_commit",
+        "base_ref_name",
+        "head_ref_name",
+        "acquisition_receipt_hash",
+        "merged_at",
+        "title",
+        "description",
+        "linked_issues",
+        "changed_files",
+        "changed_file_count",
+        "behavioral_test_evidence",
+        "source_available",
+        "runtime_supported",
+        "required_hardware",
+        "execution_hints",
+        "proposed_contract_families",
+        "proposed_trigger_tags",
+        "candidate_status",
+        "created_at",
+        "content_hash"
+      ],
+      "properties": {
+        "contract_type": {"const": "quality_candidate"},
+        "schema_version": {"const": "v1"},
+        "candidate_id": {
+          "type": "string",
+          "pattern": "^quality-candidate:v1:[0-9a-f]{64}$"
+        },
+        "repository": {"const": "pytorch/pytorch"},
+        "pr_number": {"type": "integer", "minimum": 1},
+        "pr_url": {
+          "type": "string",
+          "pattern": "^https://github\\.com/pytorch/pytorch/pull/[1-9][0-9]*$"
+        },
+        "base_commit": {
+          "oneOf": [
+            {"type": "null"},
+            {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+          ]
+        },
+        "merge_commit": {
+          "oneOf": [
+            {"type": "null"},
+            {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+          ]
+        },
+        "base_ref_name": {"const": "main"},
+        "head_ref_name": {"type": "string", "minLength": 1},
+        "acquisition_receipt_hash": {"$ref": "#/$defs/hash"},
+        "merged_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "title": {"type": "string"},
+        "description": {"type": "string"},
+        "linked_issues": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/quality_linked_issue"}
+        },
+        "changed_files": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/quality_changed_file"}
+        },
+        "changed_file_count": {"type": "integer", "minimum": 1},
+        "behavioral_test_evidence": {"type": "boolean"},
+        "source_available": {"type": "boolean"},
+        "runtime_supported": {"type": "boolean"},
+        "required_hardware": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "execution_hints": {"$ref": "#/$defs/quality_execution_hints"},
+        "proposed_contract_families": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "result",
+              "tensor_metadata",
+              "mutation_state",
+              "gradient",
+              "api_behavior",
+              "efficiency_safety"
+            ]
+          }
+        },
+        "proposed_trigger_tags": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "empty_or_zero",
+              "scalar_or_low_rank",
+              "extreme_value_or_size",
+              "invalid_or_endpoint_parameter",
+              "noncontiguous_or_special_layout",
+              "mixed_dtype_or_precision_mode",
+              "dynamic_shape",
+              "mutation_or_alias",
+              "device_specific"
+            ]
+          }
+        },
+        "candidate_status": {
+          "enum": [
+            "accepted_for_build",
+            "deferred_for_review",
+            "hard_rejected"
+          ]
+        },
+        "created_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "content_hash": {"$ref": "#/$defs/hash"}
+      }
+    },
+    "quality_candidate_acquisition_receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_type",
+        "schema_version",
+        "repository",
+        "pr_number",
+        "pr_url",
+        "merged_at",
+        "merge_commit",
+        "base_commit",
+        "base_ref_name",
+        "head_ref_name",
+        "resolver_mode",
+        "main_history_head_oid",
+        "main_history_commit",
+        "main_history_first_parent",
+        "main_history_committed_at",
+        "resolved_marker",
+        "selected_commit_message",
+        "selected_commit_message_hash",
+        "main_history_exact_marker_hits",
+        "main_history_reversal_findings",
+        "files_total_count",
+        "files_captured_node_count",
+        "files_has_next_page",
+        "files_pagination_complete",
+        "changed_files_hash",
+        "capture_method",
+        "captured_at",
+        "content_hash"
+      ],
+      "properties": {
+        "contract_type": {
+          "const": "quality_candidate_acquisition_receipt"
+        },
+        "schema_version": {"const": "v1"},
+        "repository": {"const": "pytorch/pytorch"},
+        "pr_number": {"type": "integer", "minimum": 1},
+        "pr_url": {
+          "type": "string",
+          "pattern": "^https://github\\.com/pytorch/pytorch/pull/[1-9][0-9]*$"
+        },
+        "merged_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "merge_commit": {
+          "oneOf": [
+            {"type": "null"},
+            {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+          ]
+        },
+        "base_commit": {
+          "oneOf": [
+            {"type": "null"},
+            {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+          ]
+        },
+        "base_ref_name": {"const": "main"},
+        "head_ref_name": {"type": "string", "minLength": 1},
+        "resolver_mode": {
+          "const": "main_history_exact_resolved_marker"
+        },
+        "main_history_head_oid": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "main_history_commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "main_history_first_parent": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "main_history_committed_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "resolved_marker": {"type": "string", "minLength": 1},
+        "selected_commit_message": {"type": "string", "minLength": 1},
+        "selected_commit_message_hash": {"$ref": "#/$defs/hash"},
+        "main_history_exact_marker_hits": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "oid",
+              "first_parent_oid",
+              "committed_at",
+              "message_hash"
+            ],
+            "properties": {
+              "oid": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{40}$"
+              },
+              "first_parent_oid": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{40}$"
+              },
+              "committed_at": {
+                "type": "string",
+                "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+              },
+              "message_hash": {"$ref": "#/$defs/hash"}
+            }
+          }
+        },
+        "main_history_reversal_findings": {
+          "type": "array",
+          "maxItems": 0,
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "event_oid",
+              "committed_at",
+              "message_hash",
+              "kind",
+              "target_pr_number",
+              "target_commit_oid"
+            ],
+            "properties": {
+              "event_oid": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{40}$"
+              },
+              "committed_at": {
+                "type": "string",
+                "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+              },
+              "message_hash": {"$ref": "#/$defs/hash"},
+              "kind": {
+                "enum": [
+                  "revert_pr",
+                  "revert_commit",
+                  "reland_headline"
+                ]
+              },
+              "target_pr_number": {
+                "oneOf": [
+                  {"type": "null"},
+                  {"type": "integer", "minimum": 1}
+                ]
+              },
+              "target_commit_oid": {
+                "oneOf": [
+                  {"type": "null"},
+                  {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{40}$"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "files_total_count": {"type": "integer", "minimum": 1},
+        "files_captured_node_count": {"type": "integer", "minimum": 1},
+        "files_has_next_page": {"const": false},
+        "files_pagination_complete": {"const": true},
+        "changed_files_hash": {"$ref": "#/$defs/hash"},
+        "capture_method": {
+          "const": "authenticated_read_only_gh_api_graphql"
+        },
+        "captured_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "content_hash": {"$ref": "#/$defs/hash"}
+      }
+    },
+    "quality_candidate_acquisition_receipt_set": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_type",
+        "schema_version",
+        "repository",
+        "captured_at",
+        "capture_method",
+        "main_history_scan",
+        "receipts",
+        "content_hash"
+      ],
+      "properties": {
+        "contract_type": {
+          "const": "quality_candidate_acquisition_receipt_set"
+        },
+        "schema_version": {"const": "v1"},
+        "repository": {"const": "pytorch/pytorch"},
+        "captured_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "capture_method": {
+          "const": "authenticated_read_only_gh_api_graphql"
+        },
+        "main_history_scan": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "ref_name",
+            "head_oid",
+            "since",
+            "page_count",
+            "commit_count",
+            "final_has_next_page",
+            "scanned_commit_facts_hash",
+            "finding_rule_version"
+          ],
+          "properties": {
+            "ref_name": {"const": "main"},
+            "head_oid": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{40}$"
+            },
+            "since": {"const": "2026-03-01T00:00:00Z"},
+            "page_count": {"type": "integer", "minimum": 1},
+            "commit_count": {"type": "integer", "minimum": 1},
+            "final_has_next_page": {"const": false},
+            "scanned_commit_facts_hash": {"$ref": "#/$defs/hash"},
+            "finding_rule_version": {"const": "v1"}
+          }
+        },
+        "receipts": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/quality_candidate_acquisition_receipt"
+          }
+        },
+        "content_hash": {"$ref": "#/$defs/hash"}
+      }
+    },
+    "quality_candidate_exclusion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository",
+        "pr_number",
+        "kept_pr_number",
+        "base_commit",
+        "merge_commit",
+        "reason"
+      ],
+      "properties": {
+        "repository": {"const": "pytorch/pytorch"},
+        "pr_number": {"type": "integer", "minimum": 1},
+        "kept_pr_number": {"type": "integer", "minimum": 1},
+        "base_commit": {
+          "oneOf": [
+            {"type": "null"},
+            {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+          ]
+        },
+        "merge_commit": {
+          "oneOf": [
+            {"type": "null"},
+            {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+          ]
+        },
+        "reason": {"const": "duplicate.exact_provenance"}
+      }
+    },
+    "quality_candidate_decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_type",
+        "schema_version",
+        "decision_id",
+        "candidate_id",
+        "candidate_hash",
+        "disposition",
+        "hard_rejection_reasons",
+        "preliminary_review_reasons",
+        "created_at",
+        "content_hash"
+      ],
+      "properties": {
+        "contract_type": {"const": "quality_candidate_decision"},
+        "schema_version": {"const": "v1"},
+        "decision_id": {
+          "type": "string",
+          "pattern": "^quality-decision:v1:[0-9a-f]{64}$"
+        },
+        "candidate_id": {
+          "type": "string",
+          "pattern": "^quality-candidate:v1:[0-9a-f]{64}$"
+        },
+        "candidate_hash": {"$ref": "#/$defs/hash"},
+        "disposition": {
+          "enum": [
+            "accepted_for_build",
+            "deferred_for_review",
+            "hard_rejected"
+          ]
+        },
+        "hard_rejection_reasons": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "change.documentation_cleanup_refactor_only",
+              "duplicate.exact_provenance",
+              "runtime.hardware_outside_v07_scope",
+              "runtime.unsupported_cpu_cuda",
+              "source.missing_immutable_commits",
+              "source.unavailable",
+              "test.no_behavioral_evidence"
+            ]
+          }
+        },
+        "preliminary_review_reasons": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "created_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "content_hash": {"$ref": "#/$defs/hash"}
+      }
+    },
+    "quality_candidate_screening_index": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_type",
+        "schema_version",
+        "repository",
+        "created_at",
+        "historical_k",
+        "required_candidate_count",
+        "capture_set_hash",
+        "receipt_set_hash",
+        "historical_index_hash",
+        "acquisition_root_hash",
+        "capture_count",
+        "candidate_count",
+        "exclusion_count",
+        "eligible_candidate_count",
+        "disposition_counts",
+        "proposed_contract_families",
+        "proposed_trigger_tags",
+        "execution_context_summary",
+        "provenance",
+        "records",
+        "exclusions",
+        "content_hash"
+      ],
+      "properties": {
+        "contract_type": {"const": "quality_candidate_screening_index"},
+        "schema_version": {"const": "v1"},
+        "repository": {"const": "pytorch/pytorch"},
+        "created_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "historical_k": {"type": "integer", "minimum": 0, "maximum": 25},
+        "required_candidate_count": {
+          "type": "integer",
+          "minimum": 75,
+          "maximum": 150
+        },
+        "capture_set_hash": {"$ref": "#/$defs/hash"},
+        "receipt_set_hash": {"$ref": "#/$defs/hash"},
+        "historical_index_hash": {"$ref": "#/$defs/hash"},
+        "acquisition_root_hash": {"$ref": "#/$defs/hash"},
+        "capture_count": {"type": "integer", "minimum": 1},
+        "candidate_count": {"type": "integer", "minimum": 1},
+        "exclusion_count": {"type": "integer", "minimum": 0},
+        "eligible_candidate_count": {"type": "integer", "minimum": 0},
+        "disposition_counts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "accepted_for_build",
+            "deferred_for_review",
+            "hard_rejected"
+          ],
+          "properties": {
+            "accepted_for_build": {"type": "integer", "minimum": 0},
+            "deferred_for_review": {"type": "integer", "minimum": 0},
+            "hard_rejected": {"type": "integer", "minimum": 0}
+          }
+        },
+        "proposed_contract_families": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string"}
+        },
+        "proposed_trigger_tags": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string"}
+        },
+        "execution_context_summary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["devices", "modes", "phases", "candidate_counts"],
+          "properties": {
+            "devices": {"type": "array", "uniqueItems": true},
+            "modes": {"type": "array", "uniqueItems": true},
+            "phases": {"type": "array", "uniqueItems": true},
+            "candidate_counts": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "cpu",
+                "cuda",
+                "eager",
+                "compile",
+                "forward",
+                "backward"
+              ],
+              "properties": {
+                "cpu": {"type": "integer", "minimum": 0},
+                "cuda": {"type": "integer", "minimum": 0},
+                "eager": {"type": "integer", "minimum": 0},
+                "compile": {"type": "integer", "minimum": 0},
+                "forward": {"type": "integer", "minimum": 0},
+                "backward": {"type": "integer", "minimum": 0}
+              }
+            }
+          }
+        },
+        "provenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "connector_first",
+            "connector_queries",
+            "bulk_method",
+            "merge_commit_rule",
+            "base_commit_rule",
+            "changed_files_rule"
+          ],
+          "properties": {
+            "connector_first": {"const": true},
+            "connector_queries": {
+              "type": "array",
+              "minItems": 2,
+              "uniqueItems": true,
+              "items": {"type": "string", "minLength": 1}
+            },
+            "bulk_method": {
+              "const": "authenticated_read_only_gh_api_graphql"
+            },
+            "merge_commit_rule": {"type": "string", "minLength": 1},
+            "base_commit_rule": {"type": "string", "minLength": 1},
+            "changed_files_rule": {"type": "string", "minLength": 1}
+          }
+        },
+        "records": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "pr_number",
+              "candidate",
+              "decision",
+              "disposition"
+            ],
+            "properties": {
+              "pr_number": {"type": "integer", "minimum": 1},
+              "candidate": {"$ref": "#/$defs/reference"},
+              "decision": {"$ref": "#/$defs/reference"},
+              "disposition": {
+                "enum": [
+                  "accepted_for_build",
+                  "deferred_for_review",
+                  "hard_rejected"
+                ]
+              }
+            }
+          }
+        },
+        "exclusions": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/quality_candidate_exclusion"
+          }
+        },
+        "content_hash": {"$ref": "#/$defs/hash"}
+      }
+    },
+    "quality_candidate_reason_resolution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reason", "resolution", "evidence"],
+      "properties": {
+        "reason": {"type": "string", "minLength": 1},
+        "resolution": {
+          "enum": ["resolved", "confirmed_blocker"]
+        },
+        "evidence": {"type": "string", "minLength": 1}
+      }
+    },
+    "quality_candidate_reassessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_type",
+        "schema_version",
+        "pr_number",
+        "candidate_id",
+        "candidate_hash",
+        "decision_id",
+        "decision_hash",
+        "deferred_reasons",
+        "reason_resolutions",
+        "reviewer",
+        "reviewed_at",
+        "decision",
+        "rationale",
+        "content_hash"
+      ],
+      "properties": {
+        "contract_type": {
+          "const": "quality_candidate_reassessment"
+        },
+        "schema_version": {"const": "v1"},
+        "pr_number": {"type": "integer", "minimum": 1},
+        "candidate_id": {
+          "type": "string",
+          "pattern": "^quality-candidate:v1:[0-9a-f]{64}$"
+        },
+        "candidate_hash": {"$ref": "#/$defs/hash"},
+        "decision_id": {
+          "type": "string",
+          "pattern": "^quality-decision:v1:[0-9a-f]{64}$"
+        },
+        "decision_hash": {"$ref": "#/$defs/hash"},
+        "deferred_reasons": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "reason_resolutions": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/quality_candidate_reason_resolution"
+          }
+        },
+        "reviewer": {"type": "string", "minLength": 1},
+        "reviewed_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "decision": {
+          "enum": ["accepted_for_build", "rejected"]
+        },
+        "rationale": {"type": "string", "minLength": 1},
+        "content_hash": {"$ref": "#/$defs/hash"}
+      }
+    },
+    "quality_accepted_task_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "screening_record_index",
+        "pr_number",
+        "candidate_id",
+        "candidate_hash",
+        "decision_id",
+        "decision_hash",
+        "screening_disposition",
+        "reassessment",
+        "task_id",
+        "public_task_id",
+        "origin",
+        "task_path",
+        "task_manifest_hash",
+        "replay_spec_hash",
+        "prompt_source_hash"
+      ],
+      "properties": {
+        "screening_record_index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pr_number": {"type": "integer", "minimum": 1},
+        "candidate_id": {
+          "type": "string",
+          "pattern": "^quality-candidate:v1:[0-9a-f]{64}$"
+        },
+        "candidate_hash": {"$ref": "#/$defs/hash"},
+        "decision_id": {
+          "type": "string",
+          "pattern": "^quality-decision:v1:[0-9a-f]{64}$"
+        },
+        "decision_hash": {"$ref": "#/$defs/hash"},
+        "screening_disposition": {
+          "enum": [
+            "accepted_for_build",
+            "deferred_for_review",
+            "hard_rejected"
+          ]
+        },
+        "reassessment": {
+          "oneOf": [
+            {"type": "null"},
+            {"$ref": "#/$defs/reference"}
+          ]
+        },
+        "task_id": {"type": "string", "minLength": 1},
+        "public_task_id": {
+          "type": "string",
+          "pattern": "^opbench-v07-t[0-9]{4}$"
+        },
+        "origin": {"enum": ["new", "replacement"]},
+        "task_path": {
+          "type": "string",
+          "pattern": "^tasks/pytorch/[^/\\\\.][^/\\\\]*$"
+        },
+        "task_manifest_hash": {"$ref": "#/$defs/hash"},
+        "replay_spec_hash": {"$ref": "#/$defs/hash"},
+        "prompt_source_hash": {"$ref": "#/$defs/hash"}
+      }
+    },
+    "quality_accepted_task_index": {
+      "type": "object",
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {"status": {"const": "building"}},
+            "required": ["status"]
+          },
+          "then": {
+            "properties": {
+              "task_count": {"maximum": 35},
+              "tasks": {"maxItems": 35}
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {"status": {"const": "complete"}},
+            "required": ["status"]
+          },
+          "then": {
+            "properties": {
+              "task_count": {"const": 36},
+              "tasks": {"minItems": 36, "maxItems": 36}
+            }
+          }
+        }
+      ],
+      "required": [
+        "contract_type",
+        "schema_version",
+        "created_at",
+        "historical_index_path",
+        "historical_index_hash",
+        "retained_count",
+        "required_task_count",
+        "candidate_index_path",
+        "candidate_index_hash",
+        "status",
+        "task_count",
+        "tasks",
+        "content_hash"
+      ],
+      "properties": {
+        "contract_type": {"const": "quality_accepted_task_index"},
+        "schema_version": {"const": "v1"},
+        "created_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "historical_index_path": {
+          "type": "string",
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\\\)[^/]+(?:/[^/]+)*\\.json$"
+        },
+        "historical_index_hash": {"$ref": "#/$defs/hash"},
+        "retained_count": {
+          "type": "integer",
+          "const": 14
+        },
+        "required_task_count": {
+          "type": "integer",
+          "const": 36
+        },
+        "candidate_index_path": {
+          "type": "string",
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\\\)[^/]+(?:/[^/]+)*\\.json$"
+        },
+        "candidate_index_hash": {"$ref": "#/$defs/hash"},
+        "status": {"enum": ["building", "complete"]},
+        "task_count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 36
+        },
+        "tasks": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 36,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/quality_accepted_task_record"}
+        },
+        "content_hash": {"$ref": "#/$defs/hash"}
+      }
+    },
+    "quality_admission_result_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "screening_record_index",
+        "pr_number",
+        "task_id",
+        "public_task_id",
+        "origin",
+        "task_path",
+        "task_manifest_hash",
+        "replay_spec_hash",
+        "prompt_evidence_hash",
+        "prompt_errors",
+        "preflight_status",
+        "preflight_messages_hash",
+        "admission_decision",
+        "admission_verified",
+        "baseline_status",
+        "gold_status",
+        "admission_evidence_hash",
+        "admission_bundle_path",
+        "admission_bundle_hash",
+        "final_quality_errors",
+        "verified"
+      ],
+      "properties": {
+        "screening_record_index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pr_number": {"type": "integer", "minimum": 1},
+        "task_id": {"type": "string", "minLength": 1},
+        "public_task_id": {
+          "type": "string",
+          "pattern": "^opbench-v07-t[0-9]{4}$"
+        },
+        "origin": {"enum": ["new", "replacement"]},
+        "task_path": {
+          "type": "string",
+          "pattern": "^tasks/pytorch/[^/\\\\.][^/\\\\]*$"
+        },
+        "task_manifest_hash": {"$ref": "#/$defs/hash"},
+        "replay_spec_hash": {"$ref": "#/$defs/hash"},
+        "prompt_evidence_hash": {
+          "oneOf": [
+            {"type": "null"},
+            {"$ref": "#/$defs/hash"}
+          ]
+        },
+        "prompt_errors": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "preflight_status": {
+          "enum": ["not_run", "passed", "failed"]
+        },
+        "preflight_messages_hash": {"$ref": "#/$defs/hash"},
+        "admission_decision": {
+          "type": ["string", "null"],
+          "minLength": 1
+        },
+        "admission_verified": {"type": "boolean"},
+        "baseline_status": {
+          "type": ["string", "null"],
+          "minLength": 1
+        },
+        "gold_status": {
+          "type": ["string", "null"],
+          "minLength": 1
+        },
+        "admission_evidence_hash": {
+          "oneOf": [
+            {"type": "null"},
+            {"$ref": "#/$defs/hash"}
+          ]
+        },
+        "admission_bundle_path": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "type": "string",
+              "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\\\)[^/]+(?:/[^/]+)*$"
+            }
+          ]
+        },
+        "admission_bundle_hash": {
+          "oneOf": [
+            {"type": "null"},
+            {"$ref": "#/$defs/hash"}
+          ]
+        },
+        "final_quality_errors": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "verified": {"type": "boolean"}
+      }
+    },
+    "quality_admission_result_index": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_type",
+        "schema_version",
+        "created_at",
+        "accepted_index_path",
+        "accepted_index_hash",
+        "environment_registry_path",
+        "environment_registry_hash",
+        "source_registry_path",
+        "source_registry_hash",
+        "task_count",
+        "verified_count",
+        "results",
+        "content_hash"
+      ],
+      "properties": {
+        "contract_type": {
+          "const": "quality_admission_result_index"
+        },
+        "schema_version": {"const": "v1"},
+        "created_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "accepted_index_path": {
+          "type": "string",
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\\\)[^/]+(?:/[^/]+)*\\.json$"
+        },
+        "accepted_index_hash": {"$ref": "#/$defs/hash"},
+        "environment_registry_path": {
+          "type": "string",
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\\\)[^/]+(?:/[^/]+)*\\.json$"
+        },
+        "environment_registry_hash": {"$ref": "#/$defs/hash"},
+        "source_registry_path": {
+          "type": "string",
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*\\\\)[^/]+(?:/[^/]+)*\\.json$"
+        },
+        "source_registry_hash": {"$ref": "#/$defs/hash"},
+        "task_count": {"type": "integer", "minimum": 1},
+        "verified_count": {"type": "integer", "minimum": 0},
+        "results": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/quality_admission_result_record"
+          }
+        },
+        "content_hash": {"$ref": "#/$defs/hash"}
+      }
+    }
+  }
+}

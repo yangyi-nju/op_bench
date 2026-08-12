@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import replace
+import json
+from pathlib import Path
+import re
 import unittest
 
 from op_bench.runtime.contracts import FullTaskSpec
@@ -74,6 +77,27 @@ class AgentTaskViewProjectionTests(unittest.TestCase):
             "tier=cpu_python_overlay; platform=linux/amd64; gpu=no",
         )
         self.assertNotIn(task.runtime.image.identifier, view.runtime_hint)
+
+    def test_task_manifest_schema_accepts_only_opaque_v07_public_identity(
+        self,
+    ) -> None:
+        schema = json.loads(
+            (
+                Path(__file__).resolve().parents[1]
+                / "schemas"
+                / "task_manifest.schema.json"
+            ).read_text(encoding="utf-8")
+        )
+        public_id = schema["properties"]["agent_visible"]["properties"][
+            "public_task_id"
+        ]
+        pattern = public_id["pattern"]
+
+        self.assertEqual(public_id["type"], "string")
+        self.assertIsNotNone(re.fullmatch(pattern, "opbench-v07-t0001"))
+        self.assertIsNone(
+            re.fullmatch(pattern, "pytorch__149693__lazylinear_init")
+        )
 
     def test_projection_and_nested_public_contracts_validate_against_schema(self) -> None:
         view = self.project()

@@ -10,7 +10,9 @@
     "verified_at": "2026-07-10T11:18:41Z"
   },
   "patch_scope": {
-    "allowed_paths": ["torch/_inductor/fx_passes/mkldnn_fusion.py"],
+    "allowed_paths": [
+      "torch/_inductor/fx_passes/mkldnn_fusion.py"
+    ],
     "mode": "enforced"
   },
   "source": {
@@ -26,18 +28,29 @@
     "snapshot_path": "../../../.op_bench_cache/sources/pytorch/pytorch/5d8e23b49c5327590fb32b28309c41129e2b3f08/source"
   },
   "statement": {
-    "title": "Inductor linear_add_bias fusion wrongly folds fp32 bias when autocast selects bf16 weights",
-    "body": "Under `torch.autocast('cpu', dtype=torch.bfloat16)`, the `linear_add_bias` fusion pass in `mkldnn_fusion.py` assumes the bias already has the same dtype as the (autocasted) weight. When the bias is fp32 and the weight is bf16, the pass creates an invalid mixed-dtype fused graph; on the pinned runtime Inductor lowering fails instead of matching eager output. Fix: check that `bias_meta.dtype == weight_meta.dtype` before allowing the fusion.",
-    "labels": ["module: inductor", "module: mkldnn", "topic: numerical"]
+    "title": "Optimized Linear plus a higher-precision bias fails under CPU autocast",
+    "body": "Under CPU autocast, an optimized bias-free torch.nn.Linear followed by addition of a float32 bias raises instead of matching eager execution. The optimized result must preserve eager dtype and values for this mixed-precision case, while the ordinary float32 case must remain unchanged.",
+    "labels": [
+      "module: inductor",
+      "module: mkldnn",
+      "topic: numerical"
+    ]
   },
   "operator": {
     "framework": "pytorch",
     "component": "torch._inductor.fx_passes.mkldnn_fusion",
-    "operator_name": "torch.nn.Linear (autocast + bias fusion)",
+    "operator_name": "torch.nn.Linear under CPU autocast",
     "problem_type": "autocast-dtype-mismatch",
     "problem_dimension": "precision",
     "problem_subclass": "P3",
-    "tags": ["inductor", "autocast", "mkldnn", "linear", "bias-fold", "cpu"]
+    "tags": [
+      "inductor",
+      "autocast",
+      "mkldnn",
+      "linear",
+      "bias-fold",
+      "cpu"
+    ]
   },
   "environment": {
     "backend": "remote_docker",
@@ -55,8 +68,14 @@
     "os": "linux",
     "platform": "linux/amd64",
     "build_mode": "prebuilt-wheel",
-    "hardware": {"device": "cpu", "min_memory_gb": 8},
-    "resource_requirements": {"cpu": true, "gpu": false},
+    "hardware": {
+      "device": "cpu",
+      "min_memory_gb": 8
+    },
+    "resource_requirements": {
+      "cpu": true,
+      "gpu": false
+    },
     "dependencies": [
       "pytorch wheel with selected Python source overlay",
       "GCC/G++ toolchain and Python headers for torch.compile CPU code generation"
@@ -64,7 +83,9 @@
     "source_loading": {
       "mode": "python_overlay",
       "installed_package": "torch",
-      "overlay_paths": ["torch/_inductor/fx_passes/mkldnn_fusion.py"],
+      "overlay_paths": [
+        "torch/_inductor/fx_passes/mkldnn_fusion.py"
+      ],
       "runtime_site_packages": "/tmp/op_bench_runtime/site-packages",
       "sync_before_tests": true
     },
@@ -78,18 +99,23 @@
   "agent_visible": {
     "repo_setup_commands": [],
     "known_constraints": [
-      "CPU-only task; no CUDA required.",
-      "The bug is in torch/_inductor/fx_passes/mkldnn_fusion.py — is_linear_add_bias does not verify bias dtype matches weight dtype before fusing.",
-      "Modify only torch/_inductor/fx_passes/mkldnn_fusion.py."
+      "CPU-only; CUDA is not required.",
+      "The autocast case uses lower-precision weights with a float32 added bias.",
+      "The non-autocast float32 case must continue to match eager execution."
     ],
     "allowed_test_commands": [
       "{python} test/test_op_bench_linear_add_bias_autocast.py {test}"
-    ]
+    ],
+    "public_task_id": "opbench-v07-t0005"
   },
   "evaluation": {
     "setup_commands": [],
-    "fail_to_pass": ["TestLinearAddBiasAutocast.test_autocast_bf16_fp32_bias_matches_eager"],
-    "pass_to_pass": ["TestLinearAddBiasAutocast.test_no_autocast_matches_eager"],
+    "fail_to_pass": [
+      "TestLinearAddBiasAutocast.test_autocast_bf16_fp32_bias_matches_eager"
+    ],
+    "pass_to_pass": [
+      "TestLinearAddBiasAutocast.test_no_autocast_matches_eager"
+    ],
     "test_command": "{python} test/test_op_bench_linear_add_bias_autocast.py {test}",
     "timeout_sec": 900
   },
@@ -98,11 +124,49 @@
     "hidden_test_patch": "artifacts/hidden_test.patch"
   },
   "metadata": {
-    "difficulty": "easy",
+    "difficulty": "hard",
     "curation_status": "verified",
     "deterministic": true,
     "estimated_runtime_min": 10,
     "layer": "A",
-    "admission_status": "verified"
+    "admission_status": "verified",
+    "source_loading_verified": true
+  },
+  "quality": {
+    "complexity_evidence": "quality/complexity.json",
+    "origin": "retained_historical",
+    "prompt_evidence": "quality/prompt.json",
+    "readmission_evidence": "quality/readmission.json"
+  },
+  "taxonomy": {
+    "component_tags": [
+      "inductor"
+    ],
+    "contract_detail_tags": [
+      "numerical",
+      "dtype"
+    ],
+    "contract_family": "result",
+    "execution_context": {
+      "devices": [
+        "cpu"
+      ],
+      "distributed": false,
+      "modes": [
+        "eager",
+        "compile"
+      ],
+      "phases": [
+        "forward"
+      ]
+    },
+    "failure_type": "unexpected_error",
+    "root_cause_tags": [
+      "wrong_dispatch"
+    ],
+    "taxonomy_version": "v2",
+    "trigger_tags": [
+      "mixed_dtype_or_precision_mode"
+    ]
   }
 }

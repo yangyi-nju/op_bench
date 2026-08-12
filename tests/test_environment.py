@@ -119,6 +119,37 @@ class DockerEnvironmentTests(unittest.TestCase):
             self.assertEqual(preparation.evidence["runtime_tier"], "cpu_python_overlay")
             self.assertEqual(preparation.evidence["image_digest"], "sha256:image")
 
+    def test_remote_sync_uses_build_timeout_for_inplace_source(self) -> None:
+        task = TaskManifest(
+            task_dir=Path("/tmp/task"),
+            data={
+                "task_id": "source-build",
+                "environment": {
+                    "source_loading": {"mode": "inplace_build"},
+                },
+                "evaluation": {"timeout_sec": 300},
+            },
+        )
+
+        self.assertEqual(
+            EnvironmentManager().remote_sync_timeout(task),
+            task.build_timeout_sec,
+        )
+
+    def test_remote_sync_keeps_test_timeout_for_python_overlay(self) -> None:
+        task = TaskManifest(
+            task_dir=Path("/tmp/task"),
+            data={
+                "task_id": "overlay",
+                "environment": {
+                    "source_loading": {"mode": "python_overlay"},
+                },
+                "evaluation": {"timeout_sec": 300},
+            },
+        )
+
+        self.assertEqual(EnvironmentManager().remote_sync_timeout(task), 300)
+
     def _docker_task(self, root: Path, source: Path | None = None) -> TaskManifest:
         source = source or root
         task_dir = root / "task"

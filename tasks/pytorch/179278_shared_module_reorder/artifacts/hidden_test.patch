@@ -1,0 +1,60 @@
+diff --git a/test/op_bench/test_shared_module_reorder.py b/test/op_bench/test_shared_module_reorder.py
+new file mode 100644
+--- /dev/null
++++ b/test/op_bench/test_shared_module_reorder.py
+@@ -0,0 +1,55 @@
++import unittest
++
++import torch
++from torch.export.unflatten import _reorder_submodules
++
++
++class RepeatedChildReorderTests(unittest.TestCase):
++    @staticmethod
++    def repeated_parent():
++        parent = torch.nn.Module()
++        repeated = torch.nn.Linear(3, 3)
++        parent.add_module("node", repeated)
++        parent.add_module("node@1", repeated)
++        return parent, repeated
++
++    def test_alias_qualified_child_does_not_raise(self):
++        parent, _ = self.repeated_parent()
++        _reorder_submodules(parent, {"": 0, "node": 1})
++        self.assertEqual(list(parent._modules), ["node", "node@1"])
++
++    def test_shared_identity_survives_reordering(self):
++        parent, repeated = self.repeated_parent()
++        _reorder_submodules(parent, {"": 0, "node": 1})
++        self.assertIs(parent._modules["node"], repeated)
++        self.assertIs(parent._modules["node@1"], repeated)
++
++    def test_alias_uses_base_child_order(self):
++        parent = torch.nn.Module()
++        parent.add_module("late", torch.nn.ReLU())
++        repeated = torch.nn.Linear(2, 2)
++        parent.add_module("node@1", repeated)
++        parent.add_module("node", repeated)
++        _reorder_submodules(parent, {"": 0, "node": 1, "late": 2})
++        names = list(parent._modules)
++        self.assertLess(names.index("node@1"), names.index("late"))
++        self.assertLess(names.index("node"), names.index("late"))
++
++    def test_ordinary_children_follow_declared_order(self):
++        parent = torch.nn.Module()
++        parent.add_module("second", torch.nn.ReLU())
++        parent.add_module("first", torch.nn.Sigmoid())
++        _reorder_submodules(parent, {"": 0, "first": 1, "second": 2})
++        self.assertEqual(list(parent._modules), ["first", "second"])
++
++    def test_nested_ordinary_children_remain_available(self):
++        parent = torch.nn.Module()
++        child = torch.nn.Module()
++        child.add_module("leaf", torch.nn.ReLU())
++        parent.add_module("child", child)
++        _reorder_submodules(parent, {"": 0, "child": 1, "child.leaf": 2})
++        self.assertIsInstance(parent.child.leaf, torch.nn.ReLU)
++
++
++if __name__ == "__main__":
++    unittest.main()

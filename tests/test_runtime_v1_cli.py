@@ -9,6 +9,7 @@ import socket
 import stat
 import tempfile
 import unittest
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from op_bench.runtime.validation import ContractError
@@ -81,8 +82,31 @@ class RuntimeV1CliTests(unittest.TestCase):
             "--target-config",
             "--enable-external-canary",
             "--codex-model",
+            "--only-attempt-ids",
         ):
             self.assertIn(flag, help_text)
+
+    def test_v1_attempt_subset_is_exact_ordered_and_fail_closed(self) -> None:
+        manifest = SimpleNamespace(
+            expected_attempts=tuple(
+                SimpleNamespace(attempt_id=value)
+                for value in ("attempt-a", "attempt-b", "attempt-c")
+            )
+        )
+        self.assertEqual(
+            run_experiment._selected_v1_attempt_ids(
+                manifest,
+                ["attempt-c", "attempt-a"],
+            ),
+            ("attempt-a", "attempt-c"),
+        )
+        with self.assertRaisesRegex(ContractError, "unknown Attempt"):
+            run_experiment._selected_v1_attempt_ids(manifest, ["attempt-x"])
+        with self.assertRaisesRegex(ContractError, "duplicate Attempt"):
+            run_experiment._selected_v1_attempt_ids(
+                manifest,
+                ["attempt-a", "attempt-a"],
+            )
 
     def test_v1_rejects_missing_and_unknown_profile_before_output_creation(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

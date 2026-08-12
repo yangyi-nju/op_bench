@@ -37,6 +37,7 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from op_bench.registry import load_resolved_task  # noqa: E402
+from op_bench.factory.taxonomy import derived_slices  # noqa: E402
 
 
 def _apply_patch(workspace: Path, patch_path: Path) -> tuple[bool, str]:
@@ -134,16 +135,32 @@ for r in results:
     return results
 
 
-def preflight_task(task_dir: Path) -> tuple[bool, list[str]]:
+def preflight_task(
+    task_dir: Path,
+    *,
+    environment_registry_path: Path | None = None,
+    source_registry_path: Path | None = None,
+) -> tuple[bool, list[str]]:
     """Run all preflight checks on a task. Returns (ok, messages)."""
     messages: list[str] = []
+
+    selected_environment_registry = (
+        environment_registry_path
+        if environment_registry_path is not None
+        else ROOT / "environments" / "registry.json"
+    )
+    selected_source_registry = (
+        source_registry_path
+        if source_registry_path is not None
+        else ROOT / "sources" / "registry.json"
+    )
 
     # 1. Resolve task manifest with registries
     try:
         task = load_resolved_task(
             task_dir / "task.json",
-            environment_registry_path=ROOT / "environments" / "registry.json",
-            source_registry_path=ROOT / "sources" / "registry.json",
+            environment_registry_path=selected_environment_registry,
+            source_registry_path=selected_source_registry,
         )
     except Exception as exc:
         return False, [f"FAIL: cannot load task: {exc}"]
@@ -151,6 +168,20 @@ def preflight_task(task_dir: Path) -> tuple[bool, list[str]]:
     messages.append(f"task_id: {task.task_id}")
     messages.append(f"backend: {task.environment_backend}")
     messages.append(f"runtime_tier: {task.runtime_tier}")
+
+    taxonomy = task.taxonomy_v2
+    if taxonomy:
+        messages.append(f"taxonomy.contract_family: {taxonomy.contract_family}")
+        messages.append(
+            "taxonomy.execution_context: "
+            f"devices={','.join(taxonomy.execution_context.devices)} "
+            f"modes={','.join(taxonomy.execution_context.modes)} "
+            f"phases={','.join(taxonomy.execution_context.phases)} "
+            f"distributed={taxonomy.execution_context.distributed}"
+        )
+        messages.append(
+            "taxonomy.derived_slices: " + ", ".join(derived_slices(taxonomy))
+        )
 
     # v0.5+: verified tasks must declare problem_dimension. Historical tasks
     # (v0.3/v0.4 CPU) may skip this and appear in aggregate reports under the
@@ -243,9 +274,27 @@ def _task_dirs_from_dataset(dataset_path: Path) -> list[Path]:
     ]
 
 
+def _task_dirs_from_accepted_index(index_path: Path) -> list[Path]:
+    data = json.loads(index_path.read_text(encoding="utf-8"))
+    return [
+        (ROOT / item["task_path"]).resolve()
+        for item in data.get("tasks", [])
+    ]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("task_dir", nargs="?", help="Path to a task directory")
+    parser.add_argument(
+        "--environment-registry",
+        type=Path,
+        default=ROOT / "environments" / "registry.json",
+    )
+    parser.add_argument(
+        "--source-registry",
+        type=Path,
+        default=ROOT / "sources" / "registry.json",
+    )
     group = parser.add_mutually_exclusive_group()
     group.add_argument(
         "--all",
@@ -253,6 +302,10 @@ def main() -> int:
         help="Run every task in the latest official dataset (pytorch_v0.5)",
     )
     group.add_argument("--dataset", help="Run every task in this dataset manifest")
+    group.add_argument(
+        "--accepted-index",
+        help="Run every task in a v0.7 quality accepted-task index",
+    )
     args = parser.parse_args()
 
     if args.all:
@@ -261,6 +314,10 @@ def main() -> int:
         )
     elif args.dataset:
         task_dirs = _task_dirs_from_dataset(Path(args.dataset).resolve())
+    elif args.accepted_index:
+        task_dirs = _task_dirs_from_accepted_index(
+            Path(args.accepted_index).resolve()
+        )
     elif args.task_dir:
         task_dirs = [Path(args.task_dir).resolve()]
     else:
@@ -272,7 +329,11 @@ def main() -> int:
     for i, td in enumerate(task_dirs, 1):
         print(f"\n[{i}/{total}] {td.name}")
         print("-" * 60)
-        ok, msgs = preflight_task(td)
+        ok, msgs = preflight_task(
+            td,
+            environment_registry_path=args.environment_registry.resolve(),
+            source_registry_path=args.source_registry.resolve(),
+        )
         for m in msgs:
             print(f"  {m}")
         if ok:

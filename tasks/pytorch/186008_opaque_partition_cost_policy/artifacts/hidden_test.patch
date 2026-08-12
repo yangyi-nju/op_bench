@@ -1,0 +1,83 @@
+diff --git a/test/op_bench/test_opaque_partition_cost_policy.py b/test/op_bench/test_opaque_partition_cost_policy.py
+new file mode 100644
+--- /dev/null
++++ b/test/op_bench/test_opaque_partition_cost_policy.py
+@@ -0,0 +1,78 @@
++import unittest
++
++import torch
++import torch._functorch.config as functorch_config
++from torch._functorch.partitioners import _size_of
++from torch._library.fake_class_registry import FakeScriptObject
++
++
++def opaque_node():
++    graph = torch.fx.Graph()
++    node = graph.call_function(torch.ops.aten.abs.default, args=())
++    node.meta["val"] = FakeScriptObject(None, "opaque_test_class", None)
++    return node
++
++
++class OpaquePartitionCostPolicyTests(unittest.TestCase):
++    def test_default_policy_refuses_an_unsound_size_guess(self):
++        self.assertFalse(
++            functorch_config.unsafe_treat_script_objects_as_zero_size
++        )
++        with self.assertRaisesRegex(
++            RuntimeError,
++            "may hold tensors internally",
++        ):
++            _size_of(opaque_node())
++
++    def test_explicit_opt_in_allows_zero_cost_estimation(self):
++        with functorch_config.patch(
++            unsafe_treat_script_objects_as_zero_size=True,
++        ):
++            self.assertEqual(_size_of(opaque_node()), 0)
++
++    def test_opt_in_is_scoped_and_restores_safe_default(self):
++        self.assertFalse(
++            functorch_config.unsafe_treat_script_objects_as_zero_size
++        )
++        with functorch_config.patch(
++            unsafe_treat_script_objects_as_zero_size=True,
++        ):
++            self.assertTrue(
++                functorch_config.unsafe_treat_script_objects_as_zero_size
++            )
++        self.assertFalse(
++            functorch_config.unsafe_treat_script_objects_as_zero_size
++        )
++        with self.assertRaisesRegex(RuntimeError, "Cannot compute the size"):
++            _size_of(opaque_node())
++
++    def test_tensor_cost_estimation_remains_exact(self):
++        graph = torch.fx.Graph()
++        node = graph.call_function(torch.ops.aten.abs.default, args=())
++        value = torch.empty(3, 5, dtype=torch.float64)
++        node.meta["val"] = value
++        self.assertEqual(_size_of(node), value.numel() * value.element_size())
++
++    def test_tensor_collection_cost_estimation_remains_additive(self):
++        graph = torch.fx.Graph()
++        node = graph.call_function(torch.ops.aten.abs.default, args=())
++        first = torch.empty(2, 7, dtype=torch.float32)
++        second = torch.empty(4, dtype=torch.int64)
++        node.meta["val"] = [first, second]
++        expected = (
++            first.numel() * first.element_size()
++            + second.numel() * second.element_size()
++        )
++        self.assertEqual(_size_of(node), expected)
++
++    def test_void_returning_operation_remains_zero_cost(self):
++        graph = torch.fx.Graph()
++        node = graph.call_function(
++            torch.ops.aten._assert_async.default,
++            args=(),
++        )
++        self.assertEqual(_size_of(node), 0)
++
++
++if __name__ == "__main__":
++    unittest.main()

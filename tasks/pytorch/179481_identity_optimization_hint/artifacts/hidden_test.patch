@@ -1,0 +1,75 @@
+diff --git a/test/op_bench/test_identity_optimization_hint.py b/test/op_bench/test_identity_optimization_hint.py
+new file mode 100644
+--- /dev/null
++++ b/test/op_bench/test_identity_optimization_hint.py
+@@ -0,0 +1,70 @@
++import unittest
++
++import sympy
++
++from torch._inductor.sizevars import SizeVarAllocator
++from torch.utils._sympy.functions import Identity
++
++
++class IdentityOptimizationHintTests(unittest.TestCase):
++    @staticmethod
++    def unbacked_symbol(allocator):
++        return allocator.shape_env.create_unbacked_symint().node.expr
++
++    def test_wrapped_unit_affine_expression_resolves(self):
++        allocator = SizeVarAllocator()
++        runtime_extent = self.unbacked_symbol(allocator)
++        expression = -runtime_extent * (
++            -Identity(sympy.Integer(1)) + Identity(sympy.Integer(0))
++        )
++
++        self.assertEqual(
++            allocator.optimization_hint(expression, fallback=42),
++            42,
++        )
++
++    def test_wrapped_scaled_affine_expression_resolves(self):
++        allocator = SizeVarAllocator()
++        runtime_extent = self.unbacked_symbol(allocator)
++        expression = -runtime_extent * (
++            -Identity(sympy.Integer(3)) + Identity(sympy.Integer(0))
++        )
++
++        self.assertEqual(
++            allocator.optimization_hint(expression, fallback=7),
++            21,
++        )
++
++    def test_two_runtime_extents_share_one_consistent_hint(self):
++        allocator = SizeVarAllocator()
++        first = self.unbacked_symbol(allocator)
++        second = self.unbacked_symbol(allocator)
++        wrapped_one = Identity(sympy.Integer(1)) - Identity(sympy.Integer(0))
++        expression = (first + second) * wrapped_one
++
++        self.assertEqual(
++            allocator.optimization_hint(expression, fallback=5),
++            10,
++        )
++
++    def test_plain_symbolic_affine_expression_remains_stable(self):
++        allocator = SizeVarAllocator()
++        first = self.unbacked_symbol(allocator)
++        second = self.unbacked_symbol(allocator)
++        expression = 2 * first + second + 4
++
++        self.assertEqual(
++            allocator.optimization_hint(expression, fallback=6),
++            22,
++        )
++
++    def test_concrete_integer_hint_remains_stable(self):
++        allocator = SizeVarAllocator()
++        self.assertEqual(
++            allocator.optimization_hint(sympy.Integer(17), fallback=3),
++            17,
++        )
++
++
++if __name__ == "__main__":
++    unittest.main()

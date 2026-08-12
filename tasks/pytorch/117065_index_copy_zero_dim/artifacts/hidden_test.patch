@@ -1,0 +1,43 @@
+diff --git a/test/op_bench_boundary/test_index_copy_zero_dim.py b/test/op_bench_boundary/test_index_copy_zero_dim.py
+new file mode 100644
+--- /dev/null
++++ b/test/op_bench_boundary/test_index_copy_zero_dim.py
+@@ -0,0 +1,38 @@
++import unittest
++
++import torch
++
++
++class BoundaryIndexCopyTests(unittest.TestCase):
++    def test_zero_dimensional_index(self):
++        destination = torch.ones((2, 4))
++        source = torch.zeros((1, 4))
++        index = torch.tensor(0)
++
++        actual = torch._decomp.decompositions.index_copy(
++            destination, 0, index, source
++        )
++        expected = destination.clone()
++        expected[0] = source[0]
++
++        torch.testing.assert_close(actual, expected)
++        torch.testing.assert_close(
++            actual,
++            torch.index_copy(destination, 0, index, source),
++        )
++
++    def test_one_dimensional_index(self):
++        destination = torch.arange(8.0).reshape(2, 4)
++        source = torch.full((1, 4), -3.0)
++        index = torch.tensor([1])
++
++        actual = torch._decomp.decompositions.index_copy(
++            destination, 0, index, source
++        )
++        expected = torch.index_copy(destination, 0, index, source)
++
++        torch.testing.assert_close(actual, expected)
++
++
++if __name__ == "__main__":
++    unittest.main()

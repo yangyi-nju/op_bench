@@ -68,6 +68,7 @@ RUNTIME_BACKENDS = ("local", "docker", "remote_docker")
 RUNTIME_TIERS = (
     "local_fixture",
     "cpu_python_overlay",
+    "cpu_source_snapshot_fuller",
     "cuda_python_overlay",
     "cuda_kernel_build",
 )

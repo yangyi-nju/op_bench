@@ -1,0 +1,109 @@
+diff --git a/test/op_bench/test_aoti_minimal_arrayref_while_loop.py b/test/op_bench/test_aoti_minimal_arrayref_while_loop.py
+new file mode 100644
+index 00000000000..c8a710bbd75
+--- /dev/null
++++ b/test/op_bench/test_aoti_minimal_arrayref_while_loop.py
+@@ -0,0 +1,103 @@
++import pathlib
++import sys
++import unittest
++
++sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
++
++import torch
++from torch._inductor import config
++
++
++class ParameterLoop(torch.nn.Module):
++    class LinearLoopBody(torch.nn.Module):
++        def __init__(self):
++            super().__init__()
++            self.layer1 = torch.nn.Linear(4, 6, dtype=torch.float64)
++            self.layer2 = torch.nn.Linear(6, 4, dtype=torch.float64)
++
++        def forward(self, counter, value):
++            return (
++                counter - 1,
++                self.layer2(self.layer1(value - 2)) * 3.14,
++            )
++
++    def __init__(self):
++        super().__init__()
++        self.body_fn = self.LinearLoopBody()
++        self.cond_fn = lambda counter, value: counter > 0
++
++    def forward(self, counter, value):
++        return torch._higher_order_ops.while_loop(
++            self.cond_fn,
++            self.body_fn,
++            (counter, value),
++        )
++
++
++class DynamicLoop(torch.nn.Module):
++    def forward(self, counter, left, right):
++        offset = left.sum().to(torch.int64).item()
++        count = torch.nonzero(right).size(0)
++
++        def cond_fn(index, current_left, current_right):
++            return index > offset + count + current_left.shape[0] - current_right.shape[0]
++
++        def body_fn(index, current_left, current_right):
++            return index - 1, current_left + count, current_right + offset
++
++        return torch._higher_order_ops.while_loop(
++            cond_fn,
++            body_fn,
++            (counter, left, right),
++        )
++
++
++class AotiMinimalArrayrefWhileLoopTests(unittest.TestCase):
++    def _assert_aoti_matches_eager(
++        self, model, inputs, *, minimal, dynamic_shapes=None
++    ):
++        from inductor.test_aot_inductor_utils import AOTIRunnerUtil
++
++        expected = model(*inputs)
++        with config.patch(
++            {
++                "aot_inductor.allow_stack_allocation": True,
++                "aot_inductor.use_minimal_arrayref_interface": minimal,
++            }
++        ):
++            actual = AOTIRunnerUtil.run(
++                model,
++                inputs,
++                dynamic_shapes=dynamic_shapes,
++            )
++        torch.testing.assert_close(actual, expected)
++
++    def test_minimal_arrayref_while_loops_match_eager(self):
++        self._assert_aoti_matches_eager(
++            ParameterLoop(),
++            (torch.tensor(2), torch.randn((3, 4), dtype=torch.float64)),
++            minimal=True,
++        )
++        batch = torch.export.Dim("batch", min=2, max=8)
++        dynamic_shapes = {
++            "counter": {},
++            "left": {0: batch, 1: None},
++            "right": {0: batch, 1: None},
++        }
++        right = torch.zeros((4, 3))
++        right[0, 0] = 1
++        self._assert_aoti_matches_eager(
++            DynamicLoop(),
++            (torch.tensor(3), torch.zeros((4, 3)), right),
++            minimal=True,
++            dynamic_shapes=dynamic_shapes,
++        )
++
++    def test_ordinary_abi_parameter_graph_preserved(self):
++        model = torch.nn.Linear(4, 3).eval()
++        inputs = (torch.arange(8.0).reshape(2, 4),)
++        self._assert_aoti_matches_eager(model, inputs, minimal=False)
++
++
++if __name__ == "__main__":
++    unittest.main()

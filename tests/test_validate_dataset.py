@@ -12,7 +12,20 @@ from op_bench.task import TaskManifest
 from scripts.validate_dataset import validate_dataset
 
 
+ROOT = Path(__file__).resolve().parents[1]
+
+
 class ValidateDatasetTests(unittest.TestCase):
+    def test_legacy_replay_hash_remains_compatible_without_matched_runtime(self) -> None:
+        task_path = ROOT / "tasks/pytorch/149693_lazylinear_init/task.json"
+        evidence_path = task_path.parent / "admission/evidence.json"
+        evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(
+            replay_spec_hash(TaskManifest.load(task_path)),
+            evidence["task_manifest_hash"],
+        )
+
     def test_verified_task_requires_admission_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             dataset, dataset_dir = self._verified_dataset(Path(tmp))

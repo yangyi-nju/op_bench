@@ -12,6 +12,7 @@ from op_bench.runtime.canonical import canonical_json
 from op_bench.runtime.integrity import load_run_manifest_artifact
 from op_bench.runtime.legacy import agent_spec_for_v1_adapter
 from op_bench.runtime.orchestrator import V06RunRequest
+from op_bench.runtime.validation import ContractError
 from tests.runtime_orchestrator_fixture import (
     StepClock,
     build_orchestrator_fixture,
@@ -27,6 +28,7 @@ try:
         McpExperimentCohortContract,
         McpExperimentContract,
         build_mcp_experiment_report,
+        load_mcp_experiment_contract,
     )
     from scripts.summarize_mcp_experiment import main as summarize_main
 except ImportError:
@@ -34,6 +36,7 @@ except ImportError:
     McpExperimentCohortContract = None
     McpExperimentContract = None
     FORMAL_MCP_EXPERIMENT_CONTRACT = None
+    load_mcp_experiment_contract = None
     summarize_main = None
 
 
@@ -61,6 +64,48 @@ def file_hashes(root: Path) -> dict[str, str]:
 
 
 class McpExperimentReportTests(unittest.TestCase):
+    def test_variable_cohort_contract_round_trip(self) -> None:
+        cohorts = tuple(
+            McpExperimentCohortContract(
+                profile_id=f"profile-{index}",
+                task_repeats=((f"task-{index}", (1, 2, 3)),),
+            )
+            for index in range(1, 6)
+        )
+        contract = McpExperimentContract(
+            dataset_identifier="pytorch_v0.7_boundary",
+            dataset_digest="sha256:" + "7" * 64,
+            platform_version="opbench-v0.7.0",
+            cohorts=cohorts,
+        )
+
+        encoded = contract.to_dict()
+        rebuilt = McpExperimentContract.from_dict(encoded)
+
+        self.assertEqual(rebuilt, contract)
+        self.assertEqual(rebuilt.expected_attempt_count, 15)
+        self.assertEqual(
+            encoded,
+            {
+                "schema_version": "v1",
+                "dataset_identifier": "pytorch_v0.7_boundary",
+                "dataset_digest": "sha256:" + "7" * 64,
+                "platform_version": "opbench-v0.7.0",
+                "cohorts": [
+                    {
+                        "profile_id": f"profile-{index}",
+                        "task_repeats": [
+                            {
+                                "task_id": f"task-{index}",
+                                "repeats": [1, 2, 3],
+                            }
+                        ],
+                    }
+                    for index in range(1, 6)
+                ],
+            },
+        )
+
     def test_formal_contract_freezes_exact_17_task_51_attempt_partition(self) -> None:
         contract = FORMAL_MCP_EXPERIMENT_CONTRACT
         self.assertIsNotNone(contract)
@@ -182,6 +227,133 @@ class McpExperimentReportTests(unittest.TestCase):
             expected_codex_cli_version=CLI_VERSION,
             experiment_contract=self.contract,
         )
+
+    def test_builder_accepts_non_four_cohort_partition(self) -> None:
+        contract = replace(
+            self.contract,
+            cohorts=(self.contract.cohorts[0],),
+        )
+
+        index, summary = build_mcp_experiment_report(
+            (self.roots[0],),
+            expected_adapter_id="codex_mcp_canonical",
+            expected_model_id=MODEL_ID,
+            expected_codex_cli_version=CLI_VERSION,
+            experiment_contract=contract,
+        )
+
+        self.assertEqual(len(index["cohorts"]), 1)
+        self.assertEqual(len(index["attempts"]), 36)
+        self.assertEqual(summary["totals"]["cohorts"], 1)
+        self.assertEqual(summary["totals"]["attempts"], 36)
+
+    def test_builder_projects_frozen_public_task_aliases(self) -> None:
+        aliases = {
+            task_id: f"opbench-public-{index:04d}"
+            for index, task_id in enumerate(
+                (
+                    task_id
+                    for cohort in self.contract.cohorts
+                    for task_id in cohort.task_ids
+                ),
+                start=1,
+            )
+        }
+        public_contract = replace(
+            self.contract,
+            cohorts=tuple(
+                replace(
+                    cohort,
+                    task_repeats=tuple(
+                        (aliases[task_id], repeats)
+                        for task_id, repeats in cohort.task_repeats
+                    ),
+                )
+                for cohort in self.contract.cohorts
+            ),
+        )
+
+        index, summary = build_mcp_experiment_report(
+            self.roots,
+            expected_adapter_id="codex_mcp_canonical",
+            expected_model_id=MODEL_ID,
+            expected_codex_cli_version=CLI_VERSION,
+            experiment_contract=public_contract,
+            task_id_aliases=aliases,
+        )
+
+        observed = {row["task_id"] for row in index["attempts"]}
+        self.assertEqual(observed, set(aliases.values()))
+        self.assertTrue(set(aliases).isdisjoint(observed))
+        self.assertEqual(summary["totals"]["attempts"], 51)
+        with self.assertRaisesRegex(ContractError, "missing canonical identity"):
+            build_mcp_experiment_report(
+                self.roots,
+                expected_adapter_id="codex_mcp_canonical",
+                expected_model_id=MODEL_ID,
+                expected_codex_cli_version=CLI_VERSION,
+                experiment_contract=public_contract,
+                task_id_aliases={
+                    key: value
+                    for index, (key, value) in enumerate(aliases.items())
+                    if index
+                },
+            )
+
+    def test_contract_loader_and_cli_accept_explicit_canonical_contract(self) -> None:
+        contract = replace(
+            self.contract,
+            cohorts=(self.contract.cohorts[0],),
+        )
+        self.assertIsNotNone(load_mcp_experiment_contract)
+        self.assertIsNotNone(summarize_main)
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            contract_path = root / "contract.json"
+            contract_path.write_text(
+                canonical_json(contract.to_dict()) + "\n",
+                encoding="utf-8",
+            )
+
+            self.assertEqual(
+                load_mcp_experiment_contract(contract_path),
+                contract,
+            )
+            self.assertEqual(
+                summarize_main(
+                    [
+                        "--run-root",
+                        str(self.roots[0]),
+                        "--output-dir",
+                        str(root / "report"),
+                        "--expected-model",
+                        MODEL_ID,
+                        "--expected-cli-version",
+                        CLI_VERSION,
+                        "--contract",
+                        str(contract_path),
+                    ]
+                ),
+                0,
+            )
+            self.assertIn(
+                "pytorch_v0.5",
+                (root / "report" / "experiment_report.md").read_text(
+                    encoding="utf-8"
+                ).splitlines()[0],
+            )
+
+            noncanonical = root / "noncanonical.json"
+            noncanonical.write_text(
+                json.dumps(contract.to_dict(), indent=2) + "\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(Exception, "canonical"):
+                load_mcp_experiment_contract(noncanonical)
+            symlink = root / "contract-link.json"
+            symlink.symlink_to(contract_path)
+            with self.assertRaisesRegex(Exception, "symlink"):
+                load_mcp_experiment_contract(symlink)
 
     def test_builder_rejects_dataset_platform_profile_task_and_repeat_drift(self) -> None:
         mutations = (
@@ -367,6 +539,30 @@ class McpExperimentReportTests(unittest.TestCase):
             roots = (self.roots[0], mutated, self.roots[2], self.roots[3])
             with self.assertRaisesRegex(Exception, "Integrity|resource|failed"):
                 self.builder(roots)
+
+
+class McpExperimentContractUnitTests(unittest.TestCase):
+    def test_contract_rejects_mixed_repeat_types_as_contract_error(self) -> None:
+        encoded = {
+            "schema_version": "v1",
+            "dataset_identifier": "fixture",
+            "dataset_digest": "sha256:" + "1" * 64,
+            "platform_version": "opbench-v0.7.0",
+            "cohorts": [
+                {
+                    "profile_id": "profile",
+                    "task_repeats": [
+                        {
+                            "task_id": "task",
+                            "repeats": [1, "2"],
+                        }
+                    ],
+                }
+            ],
+        }
+
+        with self.assertRaisesRegex(ContractError, "repeats\\[1\\]: expected integer"):
+            McpExperimentContract.from_dict(encoded)
 
 
 if __name__ == "__main__":

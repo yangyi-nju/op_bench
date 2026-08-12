@@ -81,13 +81,15 @@ class SelectorTimeoutBackend(RecordingLocalBackend):
 class SourceLoadingCommandBackend:
     def __init__(self) -> None:
         self.commands: list[tuple[str, ...]] = []
+        self.timeouts_ms: list[int] = []
 
     def prepare(self, *args, **kwargs):
         raise AssertionError("prepare is not used by source-loading command tests")
 
     def run(self, lease, command, cwd, timeout_ms):
-        del lease, timeout_ms
+        del lease
         self.commands.append(command)
+        self.timeouts_ms.append(timeout_ms)
         return RuntimeCommandResult(
             command=command,
             cwd=cwd,
@@ -300,11 +302,12 @@ class RuntimeFreshEvaluationBackendTests(unittest.TestCase):
                 ],
             )
 
-    def test_inplace_build_freezes_legacy_cuda_build_environment(self) -> None:
+    def test_inplace_build_freezes_boundary_cpu_build_environment(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             fixture = RuntimeEvaluationFixture(Path(temporary))
             profile = replace(
                 fixture.profile,
+                runtime_tier="cpu_source_snapshot_fuller",
                 source_loading_mode="inplace_build",
             )
             runtime = SourceLoadingCommandBackend()
@@ -327,10 +330,114 @@ class RuntimeFreshEvaluationBackendTests(unittest.TestCase):
             self.assertEqual(len(runtime.commands), 1)
             command = runtime.commands[0]
             self.assertEqual(command[:2], ("bash", "-lc"))
+            self.assertIn("unset PYTHONPATH;", command[2])
+            self.assertIn(
+                "mkdir -p -- third_party/nccl;",
+                command[2],
+            )
             self.assertIn("export BUILD_TEST=0;", command[2])
+            self.assertIn("export CC=gcc;", command[2])
+            self.assertIn("export CXX=g++;", command[2])
+            self.assertIn("export CCACHE_BASEDIR=/workspace;", command[2])
+            self.assertIn("export CCACHE_DIR=/workspace/.ccache;", command[2])
+            self.assertIn("export CCACHE_NOHASHDIR=true;", command[2])
+            self.assertIn("export CMAKE_BUILD_TYPE=Release;", command[2])
+            self.assertIn(
+                "export CMAKE_CXX_COMPILER_LAUNCHER=ccache;",
+                command[2],
+            )
+            self.assertIn(
+                "export CMAKE_C_COMPILER_LAUNCHER=ccache;",
+                command[2],
+            )
+            self.assertIn("export MAX_JOBS=8;", command[2])
             self.assertIn("export TORCH_CUDA_ARCH_LIST=7.0;", command[2])
+            for feature in (
+                "CUDA",
+                "DISTRIBUTED",
+                "FBGEMM",
+                "FLASH_ATTENTION",
+                "GLOO",
+                "KINETO",
+                "KLEIDIAI",
+                "MEM_EFF_ATTENTION",
+                "MKLDNN",
+                "NCCL",
+                "NNPACK",
+                "QNNPACK",
+                "ROCM",
+                "TENSORPIPE",
+                "XNNPACK",
+            ):
+                self.assertIn(f"export USE_{feature}=0;", command[2])
             self.assertIn("setup.py build_ext --inplace", command[2])
             self.assertNotIn("setup.py develop", command[2])
+
+    def test_cuda_inplace_build_keeps_cuda_build_environment(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            fixture = RuntimeEvaluationFixture(Path(temporary))
+            profile = replace(
+                fixture.profile,
+                runtime_tier="cuda_kernel_build",
+                source_loading_mode="inplace_build",
+                requires_gpu=True,
+                resource_policy=replace(
+                    fixture.profile.resource_policy,
+                    gpu_count=1,
+                ),
+            )
+            runtime = SourceLoadingCommandBackend()
+            backend = RuntimeFreshEvaluationBackend(
+                source=LocalGitSource(
+                    identity=fixture.source,
+                    repository=fixture.git.repository,
+                    revision=fixture.git.revision,
+                ),
+                hidden_asset=fixture.hidden_asset,
+                python_executable="python",
+                runtime_backend=runtime,
+                runtime_profile=fixture.profile,
+                attempt_context=fixture.context,
+            )
+            backend.runtime_profile = profile
+
+            backend._prepare_source_loading(object(), 30_000)
+
+            command = runtime.commands[0][2]
+            self.assertIn("unset PYTHONPATH;", command)
+            self.assertIn("export BUILD_TEST=0;", command)
+            self.assertIn("export TORCH_CUDA_ARCH_LIST=7.0;", command)
+            self.assertIn("export MAX_JOBS=${MAX_JOBS:-8};", command)
+            self.assertNotIn("export USE_CUDA=0;", command)
+            self.assertNotIn("mkdir -p -- third_party/nccl;", command)
+
+    def test_source_loading_uses_its_dedicated_build_timeout(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            fixture = RuntimeEvaluationFixture(Path(temporary))
+            profile = replace(
+                fixture.profile,
+                runtime_tier="cpu_source_snapshot_fuller",
+                source_loading_mode="inplace_build",
+            )
+            runtime = SourceLoadingCommandBackend()
+            backend = RuntimeFreshEvaluationBackend(
+                source=LocalGitSource(
+                    identity=fixture.source,
+                    repository=fixture.git.repository,
+                    revision=fixture.git.revision,
+                ),
+                hidden_asset=fixture.hidden_asset,
+                python_executable="python",
+                runtime_backend=runtime,
+                runtime_profile=fixture.profile,
+                attempt_context=fixture.context,
+                source_loading_timeout_ms=21_600_000,
+            )
+            backend.runtime_profile = profile
+
+            backend._prepare_source_loading(object(), 900_000)
+
+            self.assertEqual(runtime.timeouts_ms, [21_600_000])
 
     def test_overlay_script_runner_preserves_direct_python_script_path(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

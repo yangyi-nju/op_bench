@@ -1,0 +1,71 @@
+diff --git a/torch/_inductor/kernel/bmm.py b/torch/_inductor/kernel/bmm.py
+index 5afac7ce232..55e6bcf8281 100644
+--- a/torch/_inductor/kernel/bmm.py
++++ b/torch/_inductor/kernel/bmm.py
+@@ -10,6 +10,7 @@ from torch._inductor.kernel.mm_common import load_kernel_template
+ from .. import config as inductor_config, ir, lowering as L
+ from ..kernel_inputs import MMKernelInputs
+ from ..lowering import lowerings, make_pointwise, make_reduction, transform_args
++from ..runtime.runtime_utils import get_max_y_grid
+ from ..select_algorithm import (
+     autotune_select_algorithm,
+     ExternKernelChoice,
+@@ -43,8 +44,14 @@ aten = torch.ops.aten
+ 
+ 
+ @SymbolicGridFn
+-def bmm_grid(b, m, n, meta, *, cdiv):
+-    return (cdiv(m, meta["BLOCK_M"]) * cdiv(n, meta["BLOCK_N"]), b, 1)
++def bmm_grid(b, m, n, meta, *, cdiv, max):
++    tiles = cdiv(m, meta["BLOCK_M"]) * cdiv(n, meta["BLOCK_N"])
++    # Split batch across grid_y and grid_z to avoid exceeding CUDA grid_y limit.
++    # When b <= max_y_grid, grid_z = 1 and behavior is identical to the original.
++    max_y_grid = get_max_y_grid()
++    grid_z = max(cdiv(b, max_y_grid), 1)
++    grid_y = cdiv(b, grid_z)
++    return (tiles, grid_y, grid_z)
+ 
+ 
+ # We define each template kernel in a separate file which is the name of the input to load_kernel_template
+diff --git a/torch/_inductor/kernel/templates/triton_bmm.py.jinja b/torch/_inductor/kernel/templates/triton_bmm.py.jinja
+index c05aa9c7abd..e3ece1713a1 100644
+--- a/torch/_inductor/kernel/templates/triton_bmm.py.jinja
++++ b/torch/_inductor/kernel/templates/triton_bmm.py.jinja
+@@ -2,6 +2,7 @@
+     M = {{size("A", -2)}}
+     N = {{size("B", -1)}}
+     K = {{size("A", -1)}}
++    BATCH = {{size("A", 0)}}
+ 
+     stride_aq = {{stride("A", 0)}}
+     stride_am = {{stride("A", 1)}}
+@@ -38,9 +39,13 @@
+ 
+     rk = tl.arange(0, BLOCK_K).to(INDEX_DTYPE)
+ 
+-    idx_q = tl.program_id(1).to(INDEX_DTYPE)  # batch dimension for BMM
+-    A = A + (ram[:, None] * stride_am + rk[None, :] * stride_ak + idx_q*stride_aq)
+-    B = B + (rk[:, None] * stride_bk + rbn[None, :] * stride_bn + idx_q*stride_bq)
++    # Reconstruct batch index from grid_y/grid_z split (handles batch > 65535)
++    idx_q = (tl.program_id(1) + tl.program_id(2) * tl.num_programs(1)).to(INDEX_DTYPE)
++    # Clamp to valid range for safe pointer arithmetic; out-of-bounds CTAs are
++    # masked off at the store below.
++    idx_q_clamped = tl.minimum(idx_q, BATCH - 1)
++    A = A + (ram[:, None] * stride_am + rk[None, :] * stride_ak + idx_q_clamped*stride_aq)
++    B = B + (rk[:, None] * stride_bk + rbn[None, :] * stride_bn + idx_q_clamped*stride_bq)
+ 
+     acc = tl.zeros((BLOCK_M, BLOCK_N), dtype=ACC_TYPE)
+     for k in range(K, 0, -BLOCK_K):
+@@ -57,10 +62,10 @@
+     # rematerialize rm and rn to save registers
+     rm = pid_m * BLOCK_M + tl.arange(0, BLOCK_M).to(INDEX_DTYPE)
+     rn = pid_n * BLOCK_N + tl.arange(0, BLOCK_N).to(INDEX_DTYPE)
+-    idx_q = tl.program_id(1).to(INDEX_DTYPE)  # batch dimension for BMM
++    idx_q = (tl.program_id(1) + tl.program_id(2) * tl.num_programs(1)).to(INDEX_DTYPE)
+     idx_m = rm[:, None]
+     idx_n = rn[None, :]
+-    mask = (idx_m < M) & (idx_n < N)
++    mask = (idx_m < M) & (idx_n < N) & (idx_q < BATCH)
+ 
+     # cast accumulator to output dtype
+     acc = acc.to(OUT_DTYPE)

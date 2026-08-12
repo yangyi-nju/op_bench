@@ -82,18 +82,20 @@ Artifacts are under `runs/v0.6_m6_legacy_replay/replay/`. The manifest freezes e
 
 The exact-target replay path is implemented and tested through `RuntimeFreshEvaluationBackend`; a connection-level target failure is cached so the controller does not repeat the same unavailable operation 85 times. This offline invocation freezes the complete inventory without pretending that evaluation ran.
 
-The four historical result roots remained byte-identical before and after replay:
+The four historical result roots remained byte-identical before and after replay.
+The published copies were value-redacted during the v0.7 privacy audit; the
+hashes below bind those path-independent published bytes:
 
 | Historical file | SHA-256 |
 | --- | --- |
-| `runs/v0.5_codex_legacy_cpu/results.jsonl` | `66a91ce646e18f12be065aaac070bb6600f6ffc62ef221534210b8e00a74734d` |
-| `runs/v0.5_codex_legacy_cpu/summary.json` | `d4a64795d92179c3636b35530afcd81a5e0ae33e70953c53e7d984625031a535` |
-| `runs/v0.5_codex_legacy_cuda/results.jsonl` | `5b0beecd22e0d89dac5c64cc9836704e8edec191f103d93f7a5db9db447b6774` |
-| `runs/v0.5_codex_legacy_cuda/summary.json` | `6e552d05bdc07576d6777dc0352059ec9dcdeb00d362dc6798f0a9ed1e43a8e6` |
-| `runs/v0.5_precision_codex_cpu/results.jsonl` | `83ef408948d84835235c7f4898bb3015d52d1e20730285e5b215c35c2c03aaf3` |
-| `runs/v0.5_precision_codex_cpu/summary.json` | `c1668a30af14ddd4a26d638f095ef31ac68150fba13e8ac12728b6466881bace` |
-| `runs/v0.5_precision_codex_gpu/results.jsonl` | `89916e1e929e8d9f15f8edecada53add35c9676f2ba6a6345b2bffd5d2339b0f` |
-| `runs/v0.5_precision_codex_gpu/summary.json` | `60ac9b157bc537eacee13fece0ff8aa97d8e557845e097d1a60b82bab343e729` |
+| `runs/v0.5_codex_legacy_cpu/results.jsonl` | `61197a9d736fad3cd4e956d416eafee984d52199c5645a3a4c4d7db2cf425def` |
+| `runs/v0.5_codex_legacy_cpu/summary.json` | `1d4f6492adf64b9ea609e930a1253c9b1add0f96f5fd7a4f86eb4fa03048a460` |
+| `runs/v0.5_codex_legacy_cuda/results.jsonl` | `7e0ae03b3a38a1a1da96f88f8935cd14e0924893048a3faff641738e81b6fcb5` |
+| `runs/v0.5_codex_legacy_cuda/summary.json` | `8b84e38c53011df178938431bc16e4c6f919097fe23b7d6bbff29b17a22eb373` |
+| `runs/v0.5_precision_codex_cpu/results.jsonl` | `7c10b8f22703cc7f01e45bc4b47bbf7a80359c640ed469b0a8bba34502c1c369` |
+| `runs/v0.5_precision_codex_cpu/summary.json` | `c36903ace998241cd397bee5e84fe7d1450223f4a7eab1ef7ebe6096979cfb86` |
+| `runs/v0.5_precision_codex_gpu/results.jsonl` | `16e240934c3a6a32bc7f285ba23a48625520a824c051c9550ab24cbdf1c205b2` |
+| `runs/v0.5_precision_codex_gpu/summary.json` | `bec60872907b238e7fa552bb523419297f09057a3b04d05ffd9f9ed8afd0cd18` |
 
 ## 4. Real Codex standard Adapter
 

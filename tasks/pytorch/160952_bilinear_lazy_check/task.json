@@ -28,8 +28,8 @@
     "snapshot_path": "../../../.op_bench_cache/sources/pytorch/pytorch/df6073641079c781e66a905e4f15ee49ac257eb2/source"
   },
   "statement": {
-    "title": "`Bilinear` module can't be made lazy due to new checks introduced in `__init__`",
-    "body": "`nn.Bilinear` rejects zero input feature values in `__init__`, preventing lazy bilinear module construction.",
+    "title": "Bilinear cannot serve as the base of a lazy module with unknown input widths",
+    "body": "Constructing a lazy Bilinear subclass with zero placeholders for its two unknown input widths raises before the subclass can initialize parameters. Lazy construction must be possible until the first inputs establish both widths, while an ordinary torch.nn.Bilinear must still validate initialization and produce its expected output shape.",
     "labels": [
       "module: nn",
       "triaged"
@@ -89,13 +89,13 @@
   "agent_visible": {
     "repo_setup_commands": [],
     "known_constraints": [
-      "Full PyTorch source checkout task.",
-      "Do not assume CUDA availability.",
-      "Keep the fix focused on Bilinear lazy initialization semantics."
+      "CPU-only; CUDA is not required.",
+      "A lazy subclass must initialize from its first two inputs, and ordinary Bilinear behavior must remain valid."
     ],
     "allowed_test_commands": [
       "{python} test/nn/test_bilinear_lazy_op_bench.py {test}"
-    ]
+    ],
+    "public_task_id": "opbench-v07-t0021"
   },
   "evaluation": {
     "setup_commands": [],
@@ -113,7 +113,7 @@
     "test_patch": "artifacts/test.patch"
   },
   "metadata": {
-    "difficulty": "medium",
+    "difficulty": "hard",
     "curation_status": "verified",
     "deterministic": true,
     "estimated_runtime_min": 15,
@@ -121,5 +121,40 @@
     "admission_status": "verified",
     "source_loading_verified": true,
     "notes": "Verified Layer A task using python_overlay source loading. Stable v0.2 admission evidence is admission/evidence.json."
+  },
+  "quality": {
+    "complexity_evidence": "quality/complexity.json",
+    "origin": "retained_historical",
+    "prompt_evidence": "quality/prompt.json",
+    "readmission_evidence": "quality/readmission.json"
+  },
+  "taxonomy": {
+    "component_tags": [],
+    "contract_detail_tags": [
+      "shape",
+      "state",
+      "exception"
+    ],
+    "contract_family": "api_behavior",
+    "execution_context": {
+      "devices": [
+        "cpu"
+      ],
+      "distributed": false,
+      "modes": [
+        "eager"
+      ],
+      "phases": [
+        "forward"
+      ]
+    },
+    "failure_type": "unexpected_error",
+    "root_cause_tags": [
+      "incorrect_validation"
+    ],
+    "taxonomy_version": "v2",
+    "trigger_tags": [
+      "dynamic_shape"
+    ]
   }
 }

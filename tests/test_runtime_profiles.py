@@ -5,9 +5,11 @@ import importlib
 import importlib.util
 import json
 from pathlib import Path
+import re
 import tempfile
 import unittest
 
+from op_bench.dataset import DatasetManifest
 from op_bench.runtime.canonical import canonical_json
 from op_bench.runtime.schema import load_runtime_schema, validate_schema_instance
 from op_bench.runtime.validation import ContractError
@@ -15,15 +17,66 @@ from op_bench.runtime.validation import ContractError
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 REGISTRY_PATH = REPO_ROOT / "configs" / "runtime_profiles.v1.json"
+ENVIRONMENT_REGISTRY_PATH = REPO_ROOT / "environments" / "registry.json"
+BOUNDARY_DATASET_PATH = (
+    REPO_ROOT
+    / "archives"
+    / "v0.7-pre-quality"
+    / "datasets"
+    / "pytorch_v0.7_boundary"
+    / "dataset.json"
+)
 REGISTRY_SCHEMA_PATH = REPO_ROOT / "schemas" / "runtime_profile_registry.schema.json"
 RUNTIME_SCHEMA_PATH = REPO_ROOT / "schemas" / "runtime_contracts.schema.json"
 EXPECTED_PROFILE_IDS = (
     "local-cpu-process-v1",
+    "remote-cpu-boundary-torch2.2-py311-v1",
+    "remote-cpu-boundary-torch2.3-py311-v1",
+    "remote-cpu-boundary-torch2.4-py311-v1",
     "remote-cpu-compile-pytorch-2.6-py311-v1",
+    "remote-cpu-expansion-nightly-torch2.12.0dev20260407-py311-v1",
+    "remote-cpu-expansion-nightly-torch2.13.0dev20260423-py311-v1",
+    "remote-cpu-expansion-nightly-torch2.14.0dev20260612-py311-v1",
+    "remote-cpu-expansion-nightly-torch2.14.0dev20260707-py311-v1",
+    "remote-cpu-expansion-nightly-torch2.14.0dev20260710-py311-v1",
+    "remote-cpu-matched-torch2.7-py311-v1",
     "remote-cpu-pytorch-2.6-py311-v1",
+    "remote-cpu-source-boundary-cmake3-py311-v1",
+    "remote-cpu-source-boundary-py311-v1",
+    "remote-cuda-boundary-torch2.6-cu124-v1",
+    "remote-cuda-expansion-nightly-torch2.12.0dev20260407-cu126-py311-v1",
+    "remote-cuda-expansion-nightly-torch2.13.0dev20260417-cu126-devel-py311-v1",
+    "remote-cuda-expansion-nightly-torch2.14.0dev20260612-cu126-devel-py311-v1",
+    "remote-cuda-expansion-nightly-torch2.14.0dev20260612-cu126-py311-v1",
+    "remote-cuda-expansion-nightly-torch2.14.0dev20260707-cu126-devel-py311-v1",
+    "remote-cuda-expansion-nightly-torch2.14.0dev20260710-cu126-devel-py311-v1",
+    "remote-cuda-expansion-nightly-torch2.14.0dev20260710-cu126-py311-v1",
     "remote-cuda-kernel-pytorch-2.6-cu124-v1",
+    "remote-cuda-matched-torch2.4-cu124-py311-v1",
     "remote-cuda-overlay-pytorch-2.6-cu124-v1",
 )
+BOUNDARY_PROFILE_BY_ENVIRONMENT = {
+    "pytorch-boundary-cpu-source-build-py311": (
+        "remote-cpu-source-boundary-py311-v1",
+        900_000,
+    ),
+    "pytorch-matched-boundary-torch2.2.0-cpu": (
+        "remote-cpu-boundary-torch2.2-py311-v1",
+        300_000,
+    ),
+    "pytorch-matched-boundary-torch2.3.0-cpu": (
+        "remote-cpu-boundary-torch2.3-py311-v1",
+        300_000,
+    ),
+    "pytorch-matched-boundary-torch2.4.0-cpu": (
+        "remote-cpu-boundary-torch2.4-py311-v1",
+        900_000,
+    ),
+    "pytorch-matched-boundary-torch2.6.0-cu124": (
+        "remote-cuda-boundary-torch2.6-cu124-v1",
+        300_000,
+    ),
+}
 
 
 class RuntimeProfileRegistryTests(unittest.TestCase):
@@ -32,7 +85,7 @@ class RuntimeProfileRegistryTests(unittest.TestCase):
         self.assertTrue(REGISTRY_PATH.is_file())
         self.assertTrue(REGISTRY_SCHEMA_PATH.is_file())
 
-    def test_loads_five_sorted_complete_profiles_deterministically(self) -> None:
+    def test_loads_sorted_complete_profiles_deterministically(self) -> None:
         profiles_module = importlib.import_module("op_bench.runtime.profiles")
 
         first = profiles_module.load_runtime_profile_registry(REGISTRY_PATH)
@@ -46,7 +99,7 @@ class RuntimeProfileRegistryTests(unittest.TestCase):
             first.canonical_bytes,
             (canonical_json(first.to_dict()) + "\n").encode("utf-8"),
         )
-        self.assertEqual(len({item.content_hash for item in first.profiles}), 5)
+        self.assertEqual(len({item.content_hash for item in first.profiles}), 25)
         for profile in first.profiles:
             with self.subTest(profile=profile.profile_id):
                 self.assertEqual(profile.hardware.identity_type, "hardware")
@@ -87,6 +140,43 @@ class RuntimeProfileRegistryTests(unittest.TestCase):
             with self.subTest(forbidden=forbidden):
                 self.assertNotIn(forbidden, flattened)
 
+    def test_controller_environment_registry_keeps_remote_targets_private(
+        self,
+    ) -> None:
+        payload = json.loads(
+            ENVIRONMENT_REGISTRY_PATH.read_text(encoding="utf-8")
+        )
+        flattened = canonical_json(payload)
+
+        for forbidden in (
+            "hostname",
+            "identity_file",
+            "remote_user",
+            "/Users/",
+            "/home/",
+            "~/.ssh",
+            "root@",
+        ):
+            with self.subTest(forbidden=forbidden):
+                self.assertNotIn(forbidden, flattened)
+        self.assertIsNone(
+            re.search(
+                r"(?<![0-9])(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?![0-9])",
+                flattened,
+            )
+        )
+        for environment in payload["environments"]:
+            alias = environment.get("host")
+            if alias is None:
+                continue
+            with self.subTest(environment=environment["id"]):
+                self.assertIsNotNone(
+                    re.fullmatch(
+                        r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?",
+                        alias,
+                    )
+                )
+
     def test_gpu_profiles_and_resource_counts_are_consistent(self) -> None:
         profiles_module = importlib.import_module("op_bench.runtime.profiles")
         registry = profiles_module.load_runtime_profile_registry(REGISTRY_PATH)
@@ -99,6 +189,86 @@ class RuntimeProfileRegistryTests(unittest.TestCase):
                 else:
                     self.assertFalse(profile.requires_gpu)
                     self.assertEqual(profile.resource_policy.gpu_count, 0)
+
+    def test_boundary_profiles_bind_public_environment_and_task_contracts(
+        self,
+    ) -> None:
+        profiles_module = importlib.import_module("op_bench.runtime.profiles")
+        registry = profiles_module.load_runtime_profile_registry(REGISTRY_PATH)
+        profiles = {profile.profile_id: profile for profile in registry.profiles}
+        environments = {
+            item["id"]: item
+            for item in json.loads(
+                (REPO_ROOT / "environments" / "registry.json").read_text(
+                    encoding="utf-8"
+                )
+            )["environments"]
+        }
+
+        for environment_id, (
+            profile_id,
+            timeout_ms,
+        ) in BOUNDARY_PROFILE_BY_ENVIRONMENT.items():
+            with self.subTest(environment=environment_id):
+                environment = environments[environment_id]
+                profile = profiles[profile_id]
+                self.assertEqual(profile.backend, environment["backend"])
+                self.assertEqual(profile.runtime_tier, environment["runtime_tier"])
+                self.assertIn(
+                    profile.source_loading_mode,
+                    environment["source_loading_modes"],
+                )
+                self.assertEqual(
+                    profile.image.identifier,
+                    environment["docker"]["image"],
+                )
+                self.assertEqual(
+                    profile.image.digest,
+                    environment["docker"]["digest"],
+                )
+                self.assertEqual(profile.image.digest_kind, "image_id")
+                self.assertEqual(
+                    profile.platform,
+                    environment["docker"]["platform"],
+                )
+                self.assertEqual(
+                    profile.requires_gpu,
+                    environment["hardware"]["requires_gpu"],
+                )
+                self.assertEqual(
+                    profile.resource_policy.gpu_count,
+                    1 if profile.requires_gpu else 0,
+                )
+                self.assertGreaterEqual(
+                    profile.resource_policy.memory_bytes,
+                    environment["hardware"]["min_memory_gb"] * 1024**3,
+                )
+                self.assertEqual(profile.timeout_ms, timeout_ms)
+
+        matched_tasks = 0
+        boundary_tasks = DatasetManifest.load(
+            BOUNDARY_DATASET_PATH
+        ).load_tasks(verified_only=True)
+        for task_manifest in boundary_tasks:
+            task = task_manifest.data
+            environment_id = task.get("environment_ref")
+            self.assertIn(environment_id, BOUNDARY_PROFILE_BY_ENVIRONMENT)
+            matched_tasks += 1
+            profile_id, timeout_ms = BOUNDARY_PROFILE_BY_ENVIRONMENT[
+                environment_id
+            ]
+            profile = profiles[profile_id]
+            with self.subTest(task=task["task_id"]):
+                self.assertEqual(profile.runtime_tier, task["runtime_tier"])
+                self.assertEqual(
+                    profile.requires_gpu,
+                    environments[environment_id]["hardware"]["requires_gpu"],
+                )
+                self.assertEqual(
+                    timeout_ms,
+                    task["evaluation"]["timeout_sec"] * 1_000,
+                )
+        self.assertEqual(matched_tasks, 6)
 
     def test_loader_rejects_unsorted_duplicate_unknown_and_symlinked_input(self) -> None:
         profiles_module = importlib.import_module("op_bench.runtime.profiles")

@@ -1,11 +1,34 @@
 from __future__ import annotations
 
 import json
+import re
 import shlex
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from op_bench.factory.taxonomy import TaskTaxonomyV2
+
+
+PUBLIC_TASK_ID_PATTERN = r"^opbench-v07-t[0-9]{4}$"
+OPAQUE_HOST_ALIAS_PATTERN = r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?"
+
+
+class InvalidPublicTaskId(ValueError):
+    """Raised when an agent-visible Task ID is not an exact opaque v0.7 ID."""
+
+
+class InvalidEnvironmentHostAlias(ValueError):
+    """Raised when a task exposes a connection-like host value."""
+
+
+def is_opaque_host_alias(value: object) -> bool:
+    return (
+        isinstance(value, str)
+        and re.fullmatch(OPAQUE_HOST_ALIAS_PATTERN, value) is not None
+    )
 
 
 @dataclass(frozen=True)
@@ -23,6 +46,18 @@ class TaskManifest:
     @property
     def task_id(self) -> str:
         return str(self.data["task_id"])
+
+    @property
+    def public_task_id(self) -> str | None:
+        agent_visible = self.data.get("agent_visible")
+        if not isinstance(agent_visible, dict) or "public_task_id" not in agent_visible:
+            return None
+        value = agent_visible["public_task_id"]
+        if type(value) is not str or re.fullmatch(PUBLIC_TASK_ID_PATTERN, value) is None:
+            raise InvalidPublicTaskId(
+                "agent_visible.public_task_id: expected exact opaque v0.7 Task ID"
+            )
+        return value
 
     @property
     def task_json_path(self) -> Path:
@@ -167,6 +202,19 @@ class TaskManifest:
     @property
     def environment_host(self) -> str | None:
         value = self.data["environment"].get("host")
+        if value is None:
+            return None
+        if not is_opaque_host_alias(value):
+            raise InvalidEnvironmentHostAlias(
+                "environment.host: expected opaque lowercase host alias"
+            )
+        return value
+
+    @property
+    def environment_remote_execution_config_hash(self) -> str | None:
+        value = self.data["environment"].get(
+            "remote_execution_config_hash"
+        )
         return str(value) if value else None
 
     @property
@@ -291,6 +339,13 @@ class TaskManifest:
     def operator_metadata(self) -> dict[str, Any]:
         value = self.data.get("operator")
         return dict(value) if isinstance(value, dict) else {}
+
+    @property
+    def taxonomy_v2(self) -> TaskTaxonomyV2 | None:
+        from op_bench.factory.taxonomy import parse_taxonomy_v2
+
+        value = self.data.get("taxonomy")
+        return None if value is None else parse_taxonomy_v2(value)
 
     @property
     def problem_dimension(self) -> str | None:

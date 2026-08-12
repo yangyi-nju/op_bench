@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import base64
 import hashlib
-import json
 from pathlib import Path
 from pathlib import PurePosixPath
 import shlex
@@ -32,7 +31,8 @@ from op_bench.runtime.local_evaluation import (
     structured_unittest_summary,
 )
 from op_bench.runtime.source_materialization import _git_environment
-from op_bench.runtime.validation import ContractError, require_str
+from op_bench.runtime.source_loading import build_runtime_source_preparation
+from op_bench.runtime.validation import ContractError, require_int, require_str
 from op_bench.runtime.workspace import FrozenPatch
 
 
@@ -46,38 +46,6 @@ _READ_BYTES_PROGRAM = (
     "import pathlib,sys;"
     "sys.stdout.buffer.write(pathlib.Path(sys.argv[1]).read_bytes())"
 )
-_PYTHON_OVERLAY_PROGRAM = r"""
-import importlib
-import json
-import os
-import pathlib
-import shutil
-import sys
-
-cfg = json.loads(sys.argv[1])
-workspace = pathlib.Path(".").resolve()
-runtime_site = pathlib.Path("/tmp/op_bench_runtime/site-packages")
-package = cfg["package"]
-paths = cfg["paths"]
-runtime_site.mkdir(parents=True, exist_ok=True)
-os.chdir("/tmp")
-installed = pathlib.Path(importlib.import_module(package).__file__).resolve().parent
-destination_package = runtime_site / package
-if not destination_package.exists():
-    shutil.copytree(installed, destination_package, symlinks=True)
-libs = installed.parent / f"{package}.libs"
-if libs.exists() and not (runtime_site / libs.name).exists():
-    shutil.copytree(libs, runtime_site / libs.name, symlinks=True)
-for relative in paths:
-    pure = pathlib.PurePosixPath(relative)
-    if pure.is_absolute() or ".." in pure.parts or not pure.parts or pure.parts[0] != package:
-        raise ValueError("invalid overlay path")
-    source = workspace.joinpath(*pure.parts)
-    target = runtime_site.joinpath(*pure.parts)
-    target.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(source, target)
-print(json.dumps({"mode": "python_overlay", "overlay_count": len(paths)}, sort_keys=True))
-""".strip()
 _RUN_SCRIPT_WITH_PATH_PROGRAM = (
     "import pathlib,runpy,sys;"
     "overlay=sys.argv[1];script=sys.argv[2];"
@@ -86,16 +54,6 @@ _RUN_SCRIPT_WITH_PATH_PROGRAM = (
     "sys.argv=sys.argv[2:];"
     "runpy.run_path(script,run_name='__main__')"
 )
-_INPLACE_BUILD_COMMAND = (
-    "set -o pipefail; "
-    "test -f setup.py || { echo 'setup.py missing' >&2; exit 2; }; "
-    "export BUILD_TEST=0; "
-    "export TORCH_CUDA_ARCH_LIST=7.0; "
-    "export MAX_JOBS=${MAX_JOBS:-8}; "
-    "{python} setup.py build_ext --inplace"
-)
-
-
 class RuntimeFreshEvaluationBackend:
     """Fresh evaluator that executes only through an exact runtime lease."""
 
@@ -109,6 +67,7 @@ class RuntimeFreshEvaluationBackend:
         runtime_profile: RuntimeProfile,
         attempt_context: RuntimeAttemptContext,
         source_overlay_paths: tuple[str, ...] = (),
+        source_loading_timeout_ms: int | None = None,
     ) -> None:
         if not isinstance(source, LocalGitSource):
             raise ContractError("source: expected LocalGitSource")
@@ -144,6 +103,15 @@ class RuntimeFreshEvaluationBackend:
                 )
             normalized_paths.append(str(pure))
         self.source_overlay_paths = tuple(normalized_paths)
+        self.source_loading_timeout_ms = (
+            None
+            if source_loading_timeout_ms is None
+            else require_int(
+                source_loading_timeout_ms,
+                "source_loading_timeout_ms",
+                minimum=1,
+            )
+        )
         if (
             runtime_profile.source_loading_mode == "python_overlay"
             and not self.source_overlay_paths
@@ -504,39 +472,31 @@ class RuntimeFreshEvaluationBackend:
         )
 
     def _prepare_source_loading(self, lease, timeout_ms: int) -> None:
-        mode = self.runtime_profile.source_loading_mode
-        if mode == "none":
-            return
-        if mode == "python_overlay":
-            top_levels = {PurePosixPath(path).parts[0] for path in self.source_overlay_paths}
-            if len(top_levels) != 1:
-                raise EvaluationInfrastructureError("source_overlay_package_ambiguous")
-            command = (
+        try:
+            preparation = build_runtime_source_preparation(
+                self.runtime_profile,
                 self.python_executable,
-                "-I",
-                "-c",
-                _PYTHON_OVERLAY_PROGRAM,
-                json.dumps(
-                    {
-                        "package": next(iter(top_levels)),
-                        "paths": list(self.source_overlay_paths),
-                    },
-                    separators=(",", ":"),
-                    sort_keys=True,
-                ),
+                self.source_overlay_paths,
             )
-        elif mode == "inplace_build":
-            command = (
-                "bash",
-                "-lc",
-                _INPLACE_BUILD_COMMAND.replace(
-                    "{python}",
-                    shlex.quote(self.python_executable),
-                ),
+        except ContractError as exc:
+            reason = (
+                "source_overlay_package_ambiguous"
+                if str(exc) == "source_overlay_package_ambiguous"
+                else "source_loading_mode_unsupported"
             )
-        else:
-            raise EvaluationInfrastructureError("source_loading_mode_unsupported")
-        result = self.runtime_backend.run(lease, command, ".", timeout_ms)
+            raise EvaluationInfrastructureError(reason) from exc
+        if preparation is None:
+            return
+        result = self.runtime_backend.run(
+            lease,
+            preparation.command,
+            preparation.cwd,
+            (
+                timeout_ms
+                if self.source_loading_timeout_ms is None
+                else self.source_loading_timeout_ms
+            ),
+        )
         if result.timed_out:
             raise EvaluationInfrastructureError("evaluation_timeout")
         if result.exit_code != 0:

@@ -672,6 +672,16 @@ class AttemptResourceLedger:
     def cleanup_failed(self, resource_id: str) -> RuntimeResourceRecord:
         return self._transition(resource_id, "cleanup_failed", None)
 
+    def recover_released(self, resource_id: str) -> RuntimeResourceRecord:
+        """Append proof that an exact resource was released after cleanup failed."""
+
+        return self._transition(
+            resource_id,
+            "released",
+            None,
+            recover_cleanup=True,
+        )
+
     def close(self) -> None:
         with self._lock:
             if self._closed:
@@ -685,6 +695,8 @@ class AttemptResourceLedger:
         resource_id: str,
         transition: str,
         raw_handle_hash: str | None,
+        *,
+        recover_cleanup: bool = False,
     ) -> RuntimeResourceRecord:
         identifier = require_str(resource_id, "resource_id", pattern=RESOURCE_ID_PATTERN)
         if raw_handle_hash is not None:
@@ -699,9 +711,21 @@ class AttemptResourceLedger:
             if not history:
                 raise ContractError("resource_id: unknown resource_id")
             last = history[-1]
-            if last.transition in {"released", "cleanup_failed", "create_failed"}:
+            recovery = (
+                recover_cleanup
+                and transition == "released"
+                and last.transition == "cleanup_failed"
+            )
+            if (
+                last.transition in {"released", "cleanup_failed", "create_failed"}
+                and not recovery
+            ):
                 raise ContractError("resource_id: terminal transition already exists")
-            if transition in {"released", "cleanup_failed"} and last.transition != "created":
+            if (
+                transition in {"released", "cleanup_failed"}
+                and last.transition != "created"
+                and not recovery
+            ):
                 raise ContractError(f"resource transition: expected created before {transition}")
             if transition in {"created", "create_failed"} and last.transition != "declared":
                 raise ContractError(
@@ -1224,7 +1248,8 @@ def _verify_runtime_resource_records(
             elif record.raw_handle_hash is not None:
                 raise ContractError("create_failed resource cannot have raw_handle_hash")
         else:
-            if prior != "created":
+            recovery = record.transition == "released" and prior == "cleanup_failed"
+            if prior != "created" and not recovery:
                 if prior in {"released", "cleanup_failed", "create_failed"}:
                     raise ContractError("resource_id: terminal transition already exists")
                 raise ContractError(

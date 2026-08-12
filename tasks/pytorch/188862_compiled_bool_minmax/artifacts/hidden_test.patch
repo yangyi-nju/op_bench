@@ -1,0 +1,72 @@
+diff --git a/test/op_bench/test_compiled_bool_minmax.py b/test/op_bench/test_compiled_bool_minmax.py
+new file mode 100644
+index 00000000000..5f76b159fb5
+--- /dev/null
++++ b/test/op_bench/test_compiled_bool_minmax.py
+@@ -0,0 +1,66 @@
++import unittest
++
++import torch
++
++
++class CompiledBoolMinMaxTests(unittest.TestCase):
++    def _assert_compiled_matches_eager(self, fn, *inputs):
++        expected = fn(*inputs)
++        compiled = torch.compile(fn, fullgraph=True)
++        actual = compiled(*inputs)
++        self.assertEqual(len(actual), len(expected))
++        for observed, reference in zip(actual, expected):
++            torch.testing.assert_close(observed, reference, rtol=0, atol=0)
++            self.assertEqual(observed.shape, reference.shape)
++            self.assertEqual(observed.dtype, reference.dtype)
++
++    def test_boolean_minimum_maximum_match_eager(self):
++        def fn(value, left, right):
++            thresholded = torch.nn.functional.threshold(
++                value, 6.08522335982976, -0.05932757
++            )
++            predicate = torch.eq(thresholded, value)
++            temporary = torch.empty_like(predicate)
++            return (
++                torch.minimum(temporary, temporary),
++                torch.maximum(temporary, temporary),
++                torch.minimum(left, right),
++                torch.maximum(left, right),
++            )
++
++        value = torch.tensor([-8.0, 0.5, 7.0, 12.0], dtype=torch.float64)
++        left = torch.tensor([False, False, True, True])
++        right = torch.tensor([False, True, False, True])
++        compiled = torch.compile(fn, fullgraph=True)
++        empty_minimum, empty_maximum, minimum, maximum = compiled(
++            value, left, right
++        )
++        self.assertEqual(empty_minimum.shape, value.shape)
++        self.assertEqual(empty_maximum.shape, value.shape)
++        self.assertEqual(empty_minimum.dtype, torch.bool)
++        self.assertEqual(empty_maximum.dtype, torch.bool)
++        torch.testing.assert_close(
++            minimum, torch.minimum(left, right), rtol=0, atol=0
++        )
++        torch.testing.assert_close(
++            maximum, torch.maximum(left, right), rtol=0, atol=0
++        )
++        self.assertEqual(minimum.shape, left.shape)
++        self.assertEqual(maximum.shape, left.shape)
++        self.assertEqual(minimum.dtype, torch.bool)
++        self.assertEqual(maximum.dtype, torch.bool)
++
++    def test_floating_minimum_maximum_match_eager(self):
++        def fn(left, right):
++            return (
++                torch.minimum(left, right),
++                torch.maximum(left, right),
++            )
++
++        left = torch.tensor([-3.5, 2.0, 9.0], dtype=torch.float64)
++        right = torch.tensor([-4.0, 4.0, 1.5], dtype=torch.float64)
++        self._assert_compiled_matches_eager(fn, left, right)
++
++
++if __name__ == "__main__":
++    unittest.main()

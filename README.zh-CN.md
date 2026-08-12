@@ -6,7 +6,9 @@ OpBench 是一个面向算子问题的 benchmark，用于评测 coding agent 解
 
 v0.1 建立隔离 replay/evaluation 闭环，v0.2 加入资产 registry 和正式 admission，v0.3 扩展到 10 条 verified task 并加入 3-repeat，v0.4 加入 CUDA tier 和 remote Docker。v0.5 现已完成：verified 累计数据集包含 17 条 task，其中 precision slice 为 6 条；51-attempt Codex 全量实验达到 **72.5% resolved**（37/51），并落地 8 维指标与实验完整性硬校验。
 
-v0.6 平台现已 **Completed**：M1～M7 的严格版本化合同、唯一 Authoritative Workspace 与不可变 Patch、服务端权威 CLI/MCP Action Service、确定性的 Attempt/Trajectory/Evaluation/Artifact 语义、版本化 Runtime Profile、精确 Attempt-owned Local/Docker/Remote 资源、Conformance 与 Legacy Replay、支持 Resume/Integrity 的进程隔离 Canonical Codex Adapter，以及可执行的公开 Demo 和文档入口均已落地。已恢复的精确目标通过代表性 Remote CPU、CUDA Overlay 与 CUDA Kernel canary；完整冻结回放的 17 条 baseline、17 条 gold 和 51 条历史 final patch 共 85/85 全部通过。随后完成的[真实 MCP 全量实验](docs/v0.6/experiment_report.md)得到 51/51 个有效 Attempt，其中 35 个 resolved、15 个 F2P failed、1 个 P2P regression，基础设施无效和重试均为 0；该结果用于平台验证，不构成与 v0.5 的因果对比。下一阶段进入 v0.7 Boundary Task 扩充。详见[全局项目方案](docs/project_plan.md)、[当前项目状态](docs/project_state.md)和[v0.6 发布说明](docs/v0.6/release_notes.md)。
+v0.6 平台现已 **Completed**：M1～M7 的严格版本化合同、唯一 Authoritative Workspace 与不可变 Patch、服务端权威 CLI/MCP Action Service、确定性的 Attempt/Trajectory/Evaluation/Artifact 语义、版本化 Runtime Profile、精确 Attempt-owned Local/Docker/Remote 资源、Conformance 与 Legacy Replay、支持 Resume/Integrity 的进程隔离 Canonical Codex Adapter，以及可执行的公开 Demo 和文档入口均已落地。已恢复的精确目标通过代表性 Remote CPU、CUDA Overlay 与 CUDA Kernel canary；完整冻结回放的 17 条 baseline、17 条 gold 和 51 条历史 final patch 共 85/85 全部通过。随后完成的[真实 MCP 全量实验](docs/v0.6/experiment_report.md)得到 51/51 个有效 Attempt，其中 35 个 resolved、15 个 F2P failed、1 个 P2P regression，基础设施无效和重试均为 0；该结果用于平台验证，不构成与 v0.5 的因果对比。详见 [v0.6 发布说明](docs/v0.6/release_notes.md)。
+
+`opbench-v0.7.0` 已完成。正式版本冻结 [50-task cumulative 数据集](datasets/pytorch_v0.7/dataset.json)，由 14 条保留历史任务、21 条新增任务和 15 条替换任务组成；可重叠的派生视图包含 [31-task Boundary 切片](datasets/pytorch_v0.7_boundary/dataset.json)、[5-task Precision 切片](datasets/pytorch_v0.7_precision/dataset.json)和 [15-task Device 切片](datasets/pytorch_v0.7_device/dataset.json)。50 条 Task 全部 verified，其中 46 条 hard、4 条经 blind pilot 与第二 reviewer 确认的 medium，没有 easy Task。冻结后的 fresh replay 为 50/50；真实 Codex 实验完成 17/17 cohorts、122/122 valid logical Attempts 和 122/122 完整 MCP traces，结果为 42 resolved、52 F2P failed、28 invalid patch。结果具有严格 **non-leaderboard** 边界，不是正式多 Agent 排名或因果结论。旧 25/6/8 发布和 18-attempt cohort 已在 `archives/v0.7-pre-quality/` 保持原字节历史证据。详见[质量合同](docs/v0.7/quality_expansion.md)、[Dataset Card](docs/v0.7/dataset_card.md)、[验证报告](docs/v0.7/validation_report.md)、[全局项目方案](docs/project_plan.md)和[当前项目状态](docs/project_state.md)。
 
 ## 当前代码包含什么
 
@@ -52,6 +54,9 @@ v0.6 平台现已 **Completed**：M1～M7 的严格版本化合同、唯一 Auth
 | `docs/v0.6/` | v0.6 规范 Agent 评测平台设计、实施计划和验收矩阵。 |
 | `docs/v0.6/experiment_report.md` | v0.6 真实 MCP 全量实验：51 个有效 Attempt、结果、Trace 与完整性证据。 |
 | `docs/v0.7/design.md` | v0.7 Dataset Factory、Boundary Slice 与 matched-runtime 恢复设计。 |
+| `docs/v0.7/quality_expansion.md` | 当前 50-task 质量、分类、Admission 与 122-attempt 发布合同。 |
+| `docs/v0.7/dataset_card.md` | v0.7 发布身份、数据集来源、分类、验证范围和限制。 |
+| `docs/v0.7/validation_report.md` | v0.7 冻结的 122-Attempt 真实 Codex 验证和完整性证据。 |
 | `docs/v0.5/design.md` | v0.5 问题维度分类和扩展评测指标。 |
 | `docs/v0.5/experiment_report.md` | v0.5 全量 17-task、51-attempt Codex 评测和 precision 拆解。 |
 | `docs/v0.4/design.md` | v0.4 CUDA tier、远程 GPU Docker SSH 执行器、`inplace_build` 源码加载。 |
@@ -62,8 +67,8 @@ v0.6 平台现已 **Completed**：M1～M7 的严格版本化合同、唯一 Auth
 
 ## 快速开始
 
-OpBench v0.6 没有第三方 Python 依赖。先创建干净环境，运行全量测试并校验冻结的
-v0.5 Dataset：
+OpBench 没有第三方 Python 依赖。先创建干净环境，运行全量测试并校验四份冻结的
+v0.7 Dataset 视图：
 
 ```bash
 python3 -m venv .venv
@@ -72,8 +77,17 @@ PATH=.venv/bin:$PATH python --version
 PATH=.venv/bin:$PATH PYTHONPATH=src python -m unittest discover \
   -s tests -p 'test_*.py'
 
+PATH=.venv/bin:$PATH PYTHONPATH=src python \
+  scripts/check_public_tree_privacy.py
+
 PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/validate_dataset.py \
-  datasets/pytorch_v0.5/dataset.json --require-verified
+  datasets/pytorch_v0.7/dataset.json --require-verified
+PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/validate_dataset.py \
+  datasets/pytorch_v0.7_boundary/dataset.json --require-verified
+PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/validate_dataset.py \
+  datasets/pytorch_v0.7_precision/dataset.json --require-verified
+PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/validate_dataset.py \
+  datasets/pytorch_v0.7_device/dataset.json --require-verified
 ```
 
 离线构建并校验 v0.6 RunManifest；这不会启动 Agent 或连接 Runtime：
@@ -171,7 +185,21 @@ Runtime 支持状态、Artifact layout、失败归因、Comparability Key、Resu
 
 ## 当前数据集
 
-正式 [pytorch_v0.5 manifest](datasets/pytorch_v0.5/dataset.json) 已 verified：v0.4 的 13 条全部保留，另加入 4 条新 precision task；deprecated 的 #129154 和 #144073 不进入清单。全量结果为 **37/51（72.5%）**，可复用的 [precision slice](datasets/pytorch_v0.5_precision/dataset.json) 为 **13/18（72.2%）**：
+`opbench-v0.7.0` 在同一组 Task bundle 上冻结四种可重叠的 verified 视图：
+
+- [50-task cumulative](datasets/pytorch_v0.7/dataset.json)：14 条保留历史、21 条新增、15 条替换 Task。
+- [31-task Boundary](datasets/pytorch_v0.7_boundary/dataset.json)：由明确的边界触发证据派生。
+- [5-task Precision](datasets/pytorch_v0.7_precision/dataset.json)：由数值与 dtype 证据派生。
+- [15-task Device](datasets/pytorch_v0.7_device/dataset.json)：全部依赖 CUDA 行为的 Task。
+
+[Dataset Card](docs/v0.7/dataset_card.md) 冻结成员、哈希、来源、Admission、污染风险和限制；
+[验证报告](docs/v0.7/validation_report.md)记录冻结的 122-Attempt 合同及执行状态，
+明确属于 non-leaderboard 证据。历史 25/6/8 视图与 18-Attempt 结果单独归档，不进入
+当前分母。
+
+### v0.5 历史结果
+
+正式 [pytorch_v0.5 manifest](datasets/pytorch_v0.5/dataset.json) 已 verified：v0.4 的 13 条全部保留，另加入 4 条新 precision task；deprecated 的 #129154 和 #144073 不进入清单。其历史全量结果为 **37/51（72.5%）**，可复用的 [precision slice](datasets/pytorch_v0.5_precision/dataset.json) 为 **13/18（72.2%）**：
 
 | Task | PR | 子类 | Tier | 通过率 |
 | --- | ---: | :---: | --- | ---: |
@@ -207,7 +235,7 @@ Agent 身份、模型调用和控制逻辑运行在 host 侧。每次修复 atte
 
 ## 继续扩展
 
-平台开发按 [v0.6 设计](docs/v0.6/design.md)、[实施计划](docs/v0.6/implementation_plan.md)和[验收矩阵](docs/v0.6/acceptance_matrix.md)推进。数据扩充继续遵循下列 Admission 流程和 [v0.7 设计](docs/v0.7/design.md)：
+平台开发基于稳定的 [v0.6 设计](docs/v0.6/design.md)、[实施计划](docs/v0.6/implementation_plan.md)和[验收矩阵](docs/v0.6/acceptance_matrix.md)。数据扩充继续遵循下列 Admission 流程和 [v0.7 设计](docs/v0.7/design.md)：
 
 1. 在 `tasks/<framework>/` 下新增或整理 task bundle。
 2. 在 `environments/registry.json` 和 `sources/registry.json` 中登记可复用环境和源码资产。
@@ -229,6 +257,9 @@ Agent 身份、模型调用和控制逻辑运行在 host 侧。每次修复 atte
 - [v0.6 真实 MCP Agent 实验手册](docs/v0.6/mcp_agent_experiment.md)
 - [v0.6 真实 MCP Agent 实验验证](docs/v0.6/mcp_agent_experiment_verification.md)
 - [v0.7 Dataset Factory 与 Boundary 设计](docs/v0.7/design.md)
+- [v0.7 50-task 质量扩展合同](docs/v0.7/quality_expansion.md)
+- [v0.7 Dataset Card](docs/v0.7/dataset_card.md)
+- [v0.7 验证报告](docs/v0.7/validation_report.md)
 - [v0.5 设计方案](docs/v0.5/design.md)
 - [v0.5 实验报告](docs/v0.5/experiment_report.md)
 - [v0.4 设计方案](docs/v0.4/design.md)

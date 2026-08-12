@@ -77,6 +77,21 @@ class _FakeRemoteEnvironmentManager:
 
 
 class EvaluatorTests(unittest.TestCase):
+    def test_hidden_test_patch_can_be_applied_for_compatibility_collection(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            task = TaskManifest.load(self._fixable_task(root) / "task.json")
+            workspace = root / "workspace"
+            evaluator = Evaluator()
+            self.assertIsNone(evaluator.prepare_workspace(task, workspace))
+            self.assertFalse((workspace / "test_special.py").exists())
+
+            result = evaluator.apply_hidden_test_patch(task, workspace)
+
+            self.assertIsNotNone(result)
+            self.assertEqual(result.exit_code, 0)
+            self.assertTrue((workspace / "test_special.py").is_file())
+
     def test_invalid_cxx_compiler_is_environment_error(self) -> None:
         result = CommandResult(
             command=["python", "test.py"],
@@ -100,6 +115,26 @@ class EvaluatorTests(unittest.TestCase):
         )
 
         self.assertTrue(Evaluator()._has_environment_error([result]))
+
+    def test_missing_target_symbol_can_be_a_fail_to_pass_behavior(self) -> None:
+        result = CommandResult(
+            command=["python", "test.py"],
+            cwd="",
+            exit_code=1,
+            stdout="",
+            stderr=(
+                "ImportError: cannot import name 'new_operator' "
+                "from 'torch.target'"
+            ),
+            duration_sec=0,
+        )
+
+        self.assertTrue(Evaluator()._has_environment_error([result]))
+        self.assertFalse(
+            Evaluator()._has_environment_error(
+                [result], allow_target_import_failure=True
+            )
+        )
 
     def test_fully_skipped_test_is_runner_error(self) -> None:
         result = CommandResult(

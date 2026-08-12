@@ -400,9 +400,16 @@ class _ReadOnlyRun:
 
 
 class _IntegrityState:
-    def __init__(self, reader: _ReadOnlyRun, manifest: RunManifest) -> None:
+    def __init__(
+        self,
+        reader: _ReadOnlyRun,
+        manifest: RunManifest,
+        *,
+        allow_incomplete: bool,
+    ) -> None:
         self.reader = reader
         self.manifest = manifest
+        self.allow_incomplete = allow_incomplete
         self.expected = {
             item.attempt_id: item for item in manifest.expected_attempts
         }
@@ -590,9 +597,13 @@ def load_run_manifest_artifact(run_root: Path) -> RunManifest:
 def verify_run_artifacts(
     run_root: Path,
     expected_manifest: RunManifest,
+    *,
+    allow_incomplete: bool = False,
 ) -> IntegrityReport:
     if not isinstance(expected_manifest, RunManifest):
         raise ContractError("expected_manifest: expected RunManifest")
+    if not isinstance(allow_incomplete, bool):
+        raise ContractError("allow_incomplete: expected bool")
     try:
         reader = _ReadOnlyRun(run_root)
     except Exception:  # noqa: BLE001 - artifact failures become stable checks.
@@ -603,7 +614,11 @@ def verify_run_artifacts(
             checks=checks,
         )
     try:
-        state = _IntegrityState(reader, expected_manifest)
+        state = _IntegrityState(
+            reader,
+            expected_manifest,
+            allow_incomplete=allow_incomplete,
+        )
         functions: tuple[tuple[str, Callable[[], _CheckEvidence]], ...] = (
             ("manifest_identity", lambda: _check_manifest(state)),
             ("expected_observed_matrix", lambda: _check_matrix(state)),
@@ -646,6 +661,8 @@ def persist_integrity_reports(
     run_root: Path,
     manifest: RunManifest,
     report: IntegrityReport,
+    *,
+    attempt_ids: tuple[str, ...] | None = None,
 ) -> None:
     from op_bench.runtime.run_artifacts import AttemptArtifactStore
 
@@ -657,6 +674,20 @@ def persist_integrity_reports(
         raise ContractError("report: run_id does not match manifest")
     if report.status != "passed":
         raise ContractError("report: only passed integrity reports may be persisted")
+    expected_order = tuple(item.attempt_id for item in manifest.expected_attempts)
+    if attempt_ids is None:
+        selected_attempt_ids = expected_order
+    else:
+        if not isinstance(attempt_ids, tuple):
+            raise ContractError("attempt_ids: expected tuple")
+        selected = set(attempt_ids)
+        if len(selected) != len(attempt_ids):
+            raise ContractError("attempt_ids: duplicate Attempt")
+        selected_attempt_ids = tuple(
+            attempt_id for attempt_id in expected_order if attempt_id in selected
+        )
+        if selected_attempt_ids != attempt_ids:
+            raise ContractError("attempt_ids: invalid frozen Manifest subset")
     attempt_checks = tuple(
         check for check in report.checks if check.check_id in _ATTEMPT_CHECK_IDS
     )
@@ -671,8 +702,8 @@ def persist_integrity_reports(
     )
     store = AttemptArtifactStore(run_root, manifest)
     try:
-        for expected in manifest.expected_attempts:
-            store.write_integrity(expected.attempt_id, attempt_report)
+        for attempt_id in selected_attempt_ids:
+            store.write_integrity(attempt_id, attempt_report)
         store.write_run_integrity(report)
     finally:
         store.close()
@@ -694,25 +725,38 @@ def _check_manifest(state: _IntegrityState) -> _CheckEvidence:
 def _check_matrix(state: _IntegrityState) -> _CheckEvidence:
     expected = set(state.expected)
     observed = set(state.reader.attempt_ids())
-    if observed != expected:
+    if not observed.issubset(expected):
         raise ContractError("attempt directory matrix differs from manifest")
-    return _CheckEvidence("expected and observed attempt matrix matches")
+    if not state.allow_incomplete and observed != expected:
+        raise ContractError("attempt directory matrix differs from manifest")
+    return _CheckEvidence(
+        "observed attempt matrix is an exact frozen Manifest subset"
+        if state.allow_incomplete
+        else "expected and observed attempt matrix matches"
+    )
 
 
 def _check_retry_audit(state: _IntegrityState) -> _CheckEvidence:
     records = state.ledger_records()
     expected = set(state.expected)
     observed = {record.attempt_id for record in records}
-    if observed != expected:
+    directories = set(state.reader.attempt_ids())
+    if not observed.issubset(expected) or observed != directories:
+        raise ContractError("attempt ledger matrix differs from manifest")
+    if not state.allow_incomplete and observed != expected:
         raise ContractError("attempt ledger matrix differs from manifest")
     by_attempt: dict[str, list[int]] = {}
     for record in records:
         by_attempt.setdefault(record.attempt_id, []).append(record.retry_index)
-    for attempt_id in expected:
+    for attempt_id in observed:
         if state.reader.retry_indices(attempt_id) != tuple(by_attempt[attempt_id]):
             raise ContractError("retry artifact matrix differs from ledger")
     _selected_attempts_from_records(records, state.manifest)
-    return _CheckEvidence("retry audit is append-only and complete")
+    return _CheckEvidence(
+        "retry audit is append-only and complete for the observed subset"
+        if state.allow_incomplete
+        else "retry audit is append-only and complete"
+    )
 
 
 def _check_task_views(state: _IntegrityState) -> _CheckEvidence:

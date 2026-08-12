@@ -30,6 +30,12 @@ class EnvironmentPreparation:
         return [command.to_dict() for command in self.commands]
 
 
+def source_sync_timeout(task: TaskManifest) -> int:
+    if task.source_loading_mode == "inplace_build":
+        return task.build_timeout_sec
+    return task.timeout_sec
+
+
 class EnvironmentManager:
     def __init__(
         self,
@@ -95,6 +101,9 @@ class EnvironmentManager:
     def cleanup(self, preparation: EnvironmentPreparation) -> CommandResult | None:
         return preparation.executor.close()
 
+    def remote_sync_timeout(self, task: TaskManifest) -> int:
+        return source_sync_timeout(task)
+
     def _prepare_docker(self, task: TaskManifest, workspace: Path) -> EnvironmentPreparation:
         commands: list[CommandResult] = []
         if shutil.which("docker") is None:
@@ -157,6 +166,7 @@ class EnvironmentManager:
             task.environment_image,
             task.environment_workspace_dir,
             container_name=self._container_name(task),
+            gpus=task.environment_gpus,
             labels={
                 "op-bench.managed": "true",
                 "op-bench.task-id": task.task_id,
@@ -252,7 +262,10 @@ class EnvironmentManager:
 
         # Sync workspace to remote
         self.progress(f"sync workspace to remote: {host.ssh_target()}:{executor.remote_workspace}")
-        sync_result = executor.sync_to_remote(workspace, timeout_sec=task.timeout_sec)
+        sync_result = executor.sync_to_remote(
+            workspace,
+            timeout_sec=self.remote_sync_timeout(task),
+        )
         commands.append(sync_result)
         if sync_result.exit_code != 0:
             return self._unavailable_remote(task, commands, f"rsync to remote failed: {sync_result.stderr.strip()[:200]}")

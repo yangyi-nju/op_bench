@@ -1,0 +1,49 @@
+{
+  "admission": {
+    "decision": "verified",
+    "failure_classification": null,
+    "verified": true
+  },
+  "baseline": {
+    "duration_sec": 105.01368624996394,
+    "fail_to_pass_passed": 0,
+    "fail_to_pass_total": 2,
+    "mode": "baseline",
+    "pass_to_pass_passed": 3,
+    "pass_to_pass_total": 3,
+    "status": "baseline_reproduced",
+    "task_id": "pytorch__188485__undefined_tensor_boxing"
+  },
+  "created_at": "2026-08-10T09:12:00Z",
+  "environment": {
+    "backend": "remote_docker",
+    "digest_kind": "local_image_id",
+    "id": "pytorch-nightly-20260707-torch2.14.0dev-cpu-py311",
+    "image": "op-bench/pytorch-nightly-cpu:2.14.0.dev20260707-py311",
+    "image_digest": "sha256:dbc620efdd3258493bef9c245f7f8db2df45334a96d01ea32146ce62f97701cb",
+    "platform": "linux/amd64",
+    "runtime_tier": "cpu_python_overlay"
+  },
+  "evidence_id": "pytorch__188485__undefined_tensor_boxing:e75e7c5a936c:2026-08-10T09:12:00Z",
+  "gold": {
+    "duration_sec": 95.50860829197336,
+    "fail_to_pass_passed": 2,
+    "fail_to_pass_total": 2,
+    "mode": "gold",
+    "pass_to_pass_passed": 3,
+    "pass_to_pass_total": 3,
+    "status": "resolved",
+    "task_id": "pytorch__188485__undefined_tensor_boxing"
+  },
+  "schema_version": "v1",
+  "source": {
+    "base_commit": "57f6c965b61451ceb498678f3035084fe8cb4e38",
+    "id": "pytorch-57f6c965-undefined-tensor-boxing-overlay",
+    "repo_url": "https://github.com/pytorch/pytorch.git",
+    "snapshot_hash": null,
+    "snapshot_method": null
+  },
+  "task_id": "pytorch__188485__undefined_tensor_boxing",
+  "task_manifest_hash": "sha256:e75e7c5a936cc2c0be84534f87002b69272e1ed58de8d4fe821d8d39bd46a5ba",
+  "task_manifest_hash_kind": "replay_spec_v1"
+}

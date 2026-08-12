@@ -1,20 +1,26 @@
 from __future__ import annotations
 
 from collections import Counter
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 import json
 import os
 from pathlib import Path
 import stat
 
-from op_bench.runtime.canonical import canonical_json
+from op_bench.runtime.canonical import canonical_json, canonical_sha256
 from op_bench.runtime.contracts import EventRecord, IntegrityReport
 from op_bench.runtime.integrity import load_run_manifest_artifact, verify_run_artifacts
 from op_bench.runtime.mcp import McpAdapterTrace
 from op_bench.runtime.resume import parse_attempt_ledger
-from op_bench.runtime.task_view import assert_public_artifact_safe
-from op_bench.runtime.validation import ContractError, require_str
+from op_bench.runtime.task_view import assert_public_artifact_safe, project_agent_task_view
+from op_bench.runtime.validation import (
+    ContractError,
+    require_exact_fields,
+    require_int,
+    require_list,
+    require_str,
+)
 from op_bench.runtime.workspace import _patch_paths_from_bytes
 
 
@@ -27,9 +33,203 @@ _REPORT_FILES = (
 
 
 @dataclass(frozen=True)
+class McpExperimentCohortBinding:
+    """Content identities that make one Agent cohort comparable."""
+
+    run_manifest_digest: str
+    runtime_profile_digest: str
+    capability_policy_digest: str
+    budget_policy_digest: str
+    task_view_digests: tuple[tuple[str, str], ...]
+
+    def __post_init__(self) -> None:
+        for name, value in (
+            ("run_manifest_digest", self.run_manifest_digest),
+            ("runtime_profile_digest", self.runtime_profile_digest),
+            ("capability_policy_digest", self.capability_policy_digest),
+            ("budget_policy_digest", self.budget_policy_digest),
+        ):
+            require_str(value, name, pattern=r"sha256:[0-9a-f]{64}")
+        if not isinstance(self.task_view_digests, tuple) or not self.task_view_digests:
+            raise ContractError("task_view_digests: expected non-empty tuple")
+        task_ids: list[str] = []
+        for task_id, digest in self.task_view_digests:
+            task_ids.append(require_str(task_id, "task_view_digests.task_id"))
+            require_str(
+                digest,
+                "task_view_digests.digest",
+                pattern=r"sha256:[0-9a-f]{64}",
+            )
+        if tuple(sorted(set(task_ids))) != tuple(sorted(task_ids)):
+            raise ContractError("task_view_digests: duplicate task ID")
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "run_manifest_digest": self.run_manifest_digest,
+            "runtime_profile_digest": self.runtime_profile_digest,
+            "capability_policy_digest": self.capability_policy_digest,
+            "budget_policy_digest": self.budget_policy_digest,
+            "task_view_digests": [
+                {"task_id": task_id, "digest": digest}
+                for task_id, digest in self.task_view_digests
+            ],
+        }
+
+    @classmethod
+    def from_dict(
+        cls,
+        value: object,
+        *,
+        path: str = "cohort.binding",
+    ) -> "McpExperimentCohortBinding":
+        data = require_exact_fields(
+            value,
+            path,
+            (
+                "run_manifest_digest",
+                "runtime_profile_digest",
+                "capability_policy_digest",
+                "budget_policy_digest",
+                "task_view_digests",
+            ),
+        )
+        task_views: list[tuple[str, str]] = []
+        for index, item in enumerate(
+            require_list(data["task_view_digests"], f"{path}.task_view_digests")
+        ):
+            selected = require_exact_fields(
+                item,
+                f"{path}.task_view_digests[{index}]",
+                ("task_id", "digest"),
+            )
+            task_views.append(
+                (
+                    require_str(
+                        selected["task_id"],
+                        f"{path}.task_view_digests[{index}].task_id",
+                    ),
+                    require_str(
+                        selected["digest"],
+                        f"{path}.task_view_digests[{index}].digest",
+                        pattern=r"sha256:[0-9a-f]{64}",
+                    ),
+                )
+            )
+        return cls(
+            run_manifest_digest=require_str(
+                data["run_manifest_digest"],
+                f"{path}.run_manifest_digest",
+            ),
+            runtime_profile_digest=require_str(
+                data["runtime_profile_digest"],
+                f"{path}.runtime_profile_digest",
+            ),
+            capability_policy_digest=require_str(
+                data["capability_policy_digest"],
+                f"{path}.capability_policy_digest",
+            ),
+            budget_policy_digest=require_str(
+                data["budget_policy_digest"],
+                f"{path}.budget_policy_digest",
+            ),
+            task_view_digests=tuple(task_views),
+        )
+
+
+@dataclass(frozen=True)
+class McpExperimentFrozenConfig:
+    """Global identities shared by every cohort in a frozen experiment."""
+
+    release_digest: str
+    adapter_id: str
+    model_id: str
+    codex_cli_version: str
+    agent_spec_digest: str
+    system_prompt_digest: str
+    task_prompt_digest: str
+    prompt_renderer_digest: str
+    action_protocol: str
+    evaluation_protocol: str
+    scoring_protocol: str
+    evaluation_digest: str
+    retry_policy_digest: str
+    termination_policy_digest: str
+    scoring_digest: str
+
+    def __post_init__(self) -> None:
+        require_str(self.adapter_id, "adapter_id")
+        require_str(self.model_id, "model_id")
+        require_str(self.codex_cli_version, "codex_cli_version")
+        require_str(self.action_protocol, "action_protocol")
+        require_str(self.evaluation_protocol, "evaluation_protocol")
+        require_str(self.scoring_protocol, "scoring_protocol")
+        for name in (
+            "release_digest",
+            "agent_spec_digest",
+            "system_prompt_digest",
+            "task_prompt_digest",
+            "prompt_renderer_digest",
+            "evaluation_digest",
+            "retry_policy_digest",
+            "termination_policy_digest",
+            "scoring_digest",
+        ):
+            require_str(
+                getattr(self, name),
+                name,
+                pattern=r"sha256:[0-9a-f]{64}",
+            )
+
+    def to_dict(self) -> dict[str, str]:
+        return {
+            name: getattr(self, name)
+            for name in (
+                "release_digest",
+                "adapter_id",
+                "model_id",
+                "codex_cli_version",
+                "agent_spec_digest",
+                "system_prompt_digest",
+                "task_prompt_digest",
+                "prompt_renderer_digest",
+                "action_protocol",
+                "evaluation_protocol",
+                "scoring_protocol",
+                "evaluation_digest",
+                "retry_policy_digest",
+                "termination_policy_digest",
+                "scoring_digest",
+            )
+        }
+
+    @classmethod
+    def from_dict(cls, value: object) -> "McpExperimentFrozenConfig":
+        fields = (
+            "release_digest",
+            "adapter_id",
+            "model_id",
+            "codex_cli_version",
+            "agent_spec_digest",
+            "system_prompt_digest",
+            "task_prompt_digest",
+            "prompt_renderer_digest",
+            "action_protocol",
+            "evaluation_protocol",
+            "scoring_protocol",
+            "evaluation_digest",
+            "retry_policy_digest",
+            "termination_policy_digest",
+            "scoring_digest",
+        )
+        data = require_exact_fields(value, "frozen_config", fields)
+        return cls(**{name: require_str(data[name], f"frozen_config.{name}") for name in fields})
+
+
+@dataclass(frozen=True)
 class McpExperimentCohortContract:
     profile_id: str
     task_repeats: tuple[tuple[str, tuple[int, ...]], ...]
+    binding: McpExperimentCohortBinding | None = None
 
     def __post_init__(self) -> None:
         require_str(self.profile_id, "profile_id")
@@ -48,6 +248,11 @@ class McpExperimentCohortContract:
             task_ids.append(selected_task)
         if tuple(sorted(set(task_ids))) != tuple(sorted(task_ids)):
             raise ContractError("task_repeats: duplicate task ID")
+        if self.binding is not None:
+            if not isinstance(self.binding, McpExperimentCohortBinding):
+                raise ContractError("binding: expected MCP experiment cohort binding")
+            if {task_id for task_id, _ in self.binding.task_view_digests} != set(task_ids):
+                raise ContractError("binding: TaskView identities must match cohort Tasks")
 
     @property
     def task_ids(self) -> tuple[str, ...]:
@@ -61,6 +266,77 @@ class McpExperimentCohortContract:
             for repeat in repeats
         )
 
+    def to_dict(self) -> dict[str, object]:
+        payload: dict[str, object] = {
+            "profile_id": self.profile_id,
+            "task_repeats": [
+                {
+                    "task_id": task_id,
+                    "repeats": list(repeats),
+                }
+                for task_id, repeats in self.task_repeats
+            ],
+        }
+        if self.binding is not None:
+            payload["binding"] = self.binding.to_dict()
+        return payload
+
+    @classmethod
+    def from_dict(
+        cls,
+        value: object,
+        *,
+        path: str = "cohort",
+    ) -> "McpExperimentCohortContract":
+        if not isinstance(value, Mapping):
+            raise ContractError(f"{path}: expected object")
+        fields = (
+            ("profile_id", "task_repeats", "binding")
+            if "binding" in value
+            else ("profile_id", "task_repeats")
+        )
+        data = require_exact_fields(value, path, fields)
+        task_repeats: list[tuple[str, tuple[int, ...]]] = []
+        for index, item in enumerate(
+            require_list(data["task_repeats"], f"{path}.task_repeats")
+        ):
+            selected = require_exact_fields(
+                item,
+                f"{path}.task_repeats[{index}]",
+                ("task_id", "repeats"),
+            )
+            repeats = require_list(
+                selected["repeats"],
+                f"{path}.task_repeats[{index}].repeats",
+            )
+            task_repeats.append(
+                (
+                    require_str(
+                        selected["task_id"],
+                        f"{path}.task_repeats[{index}].task_id",
+                    ),
+                    tuple(
+                        require_int(
+                            repeat,
+                            f"{path}.task_repeats[{index}].repeats[{repeat_index}]",
+                            minimum=1,
+                        )
+                        for repeat_index, repeat in enumerate(repeats)
+                    ),
+                )
+            )
+        return cls(
+            profile_id=require_str(data["profile_id"], f"{path}.profile_id"),
+            task_repeats=tuple(task_repeats),
+            binding=(
+                McpExperimentCohortBinding.from_dict(
+                    data["binding"], path=f"{path}.binding"
+                )
+                if "binding" in data
+                else None
+            ),
+        )
+
 
 @dataclass(frozen=True)
 class McpExperimentContract:
@@ -68,6 +344,7 @@ class McpExperimentContract:
     dataset_digest: str
     platform_version: str
     cohorts: tuple[McpExperimentCohortContract, ...]
+    frozen_config: McpExperimentFrozenConfig | None = None
 
     def __post_init__(self) -> None:
         require_str(self.dataset_identifier, "dataset_identifier")
@@ -77,17 +354,97 @@ class McpExperimentContract:
             pattern=r"sha256:[0-9a-f]{64}",
         )
         require_str(self.platform_version, "platform_version")
-        if not isinstance(self.cohorts, tuple) or len(self.cohorts) != 4:
-            raise ContractError("cohorts: expected exactly four cohort contracts")
+        if not isinstance(self.cohorts, tuple) or not self.cohorts:
+            raise ContractError("cohorts: expected non-empty cohort contracts")
         if not all(isinstance(item, McpExperimentCohortContract) for item in self.cohorts):
             raise ContractError("cohorts: expected MCP cohort contracts")
         all_tasks = [task_id for cohort in self.cohorts for task_id in cohort.task_ids]
         if len(all_tasks) != len(set(all_tasks)):
             raise ContractError("cohorts: task IDs must be partitioned exactly once")
+        bound = tuple(item.binding is not None for item in self.cohorts)
+        if self.frozen_config is None:
+            if any(bound):
+                raise ContractError("frozen_config: required for bound cohorts")
+        else:
+            if not isinstance(self.frozen_config, McpExperimentFrozenConfig):
+                raise ContractError("frozen_config: expected frozen MCP configuration")
+            if not all(bound):
+                raise ContractError("cohorts: every frozen cohort requires a binding")
 
     @property
     def expected_attempt_count(self) -> int:
         return sum(len(item.expected_attempts) for item in self.cohorts)
+
+    def to_dict(self) -> dict[str, object]:
+        payload: dict[str, object] = {
+            "schema_version": "v2" if self.frozen_config is not None else "v1",
+            "dataset_identifier": self.dataset_identifier,
+            "dataset_digest": self.dataset_digest,
+            "platform_version": self.platform_version,
+            "cohorts": [cohort.to_dict() for cohort in self.cohorts],
+        }
+        if self.frozen_config is not None:
+            payload["frozen_config"] = self.frozen_config.to_dict()
+        return payload
+
+    @classmethod
+    def from_dict(cls, value: object) -> "McpExperimentContract":
+        if not isinstance(value, Mapping):
+            raise ContractError("mcp_experiment_contract: expected object")
+        schema_version = value.get("schema_version")
+        if schema_version not in {"v1", "v2"}:
+            raise ContractError("schema_version: expected 'v1' or 'v2'")
+        fields = (
+            (
+                "schema_version",
+                "dataset_identifier",
+                "dataset_digest",
+                "platform_version",
+                "cohorts",
+                "frozen_config",
+            )
+            if schema_version == "v2"
+            else (
+                "schema_version",
+                "dataset_identifier",
+                "dataset_digest",
+                "platform_version",
+                "cohorts",
+            )
+        )
+        data = require_exact_fields(
+            value,
+            "mcp_experiment_contract",
+            fields,
+        )
+        return cls(
+            dataset_identifier=require_str(
+                data["dataset_identifier"],
+                "dataset_identifier",
+            ),
+            dataset_digest=require_str(
+                data["dataset_digest"],
+                "dataset_digest",
+            ),
+            platform_version=require_str(
+                data["platform_version"],
+                "platform_version",
+            ),
+            cohorts=tuple(
+                McpExperimentCohortContract.from_dict(
+                    item,
+                    path=f"cohorts[{index}]",
+                )
+                for index, item in enumerate(
+                    require_list(data["cohorts"], "cohorts")
+                )
+            ),
+            frozen_config=(
+                McpExperimentFrozenConfig.from_dict(data["frozen_config"])
+                if schema_version == "v2"
+                else None
+            ),
+        )
 
 
 FORMAL_MCP_EXPERIMENT_CONTRACT = McpExperimentContract(
@@ -246,6 +603,129 @@ def _canonical_object(raw: bytes, label: str) -> dict[str, object]:
     return value
 
 
+def load_mcp_experiment_contract(path: Path | str) -> McpExperimentContract:
+    contract_path = Path(path)
+    if contract_path.is_symlink():
+        raise ContractError("contract_path: symlink is denied")
+    try:
+        descriptor = os.open(
+            contract_path,
+            os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0),
+        )
+    except OSError as exc:
+        raise ContractError("contract_path: cannot open regular file") from exc
+    try:
+        metadata = os.fstat(descriptor)
+        if not stat.S_ISREG(metadata.st_mode):
+            raise ContractError("contract_path: expected regular file")
+        if metadata.st_size > _MAX_ARTIFACT_BYTES:
+            raise ContractError("contract_path: file exceeds size limit")
+        chunks: list[bytes] = []
+        remaining = _MAX_ARTIFACT_BYTES + 1
+        while remaining:
+            chunk = os.read(descriptor, min(65_536, remaining))
+            if not chunk:
+                break
+            chunks.append(chunk)
+            remaining -= len(chunk)
+        raw = b"".join(chunks)
+        if len(raw) > _MAX_ARTIFACT_BYTES:
+            raise ContractError("contract_path: file exceeds size limit")
+    finally:
+        os.close(descriptor)
+    return McpExperimentContract.from_dict(
+        _canonical_object(raw, "MCP experiment contract")
+    )
+
+
+def load_public_task_id_aliases(path: Path | str) -> dict[str, str]:
+    """Load the frozen canonical-to-public Task identity projection."""
+
+    mapping_path = Path(path)
+    if mapping_path.is_symlink():
+        raise ContractError("public_task_id_mapping: symlink is denied")
+    try:
+        descriptor = os.open(
+            mapping_path,
+            os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0),
+        )
+    except OSError as exc:
+        raise ContractError(
+            "public_task_id_mapping: cannot open regular file"
+        ) from exc
+    try:
+        metadata = os.fstat(descriptor)
+        if not stat.S_ISREG(metadata.st_mode):
+            raise ContractError("public_task_id_mapping: expected regular file")
+        if metadata.st_size > _MAX_ARTIFACT_BYTES:
+            raise ContractError("public_task_id_mapping: file exceeds size limit")
+        chunks: list[bytes] = []
+        remaining = _MAX_ARTIFACT_BYTES + 1
+        while remaining:
+            chunk = os.read(descriptor, min(65_536, remaining))
+            if not chunk:
+                break
+            chunks.append(chunk)
+            remaining -= len(chunk)
+        raw = b"".join(chunks)
+        if len(raw) > _MAX_ARTIFACT_BYTES:
+            raise ContractError("public_task_id_mapping: file exceeds size limit")
+    finally:
+        os.close(descriptor)
+    try:
+        value = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, ValueError):
+        raise ContractError("public_task_id_mapping: invalid JSON") from None
+    if not isinstance(value, dict):
+        raise ContractError("public_task_id_mapping: expected object")
+    if raw != (canonical_json(value) + "\n").encode("utf-8"):
+        raise ContractError("public_task_id_mapping: expected canonical JSON")
+    data = require_exact_fields(
+        value,
+        "public_task_id_mapping",
+        ("contract_type", "schema_version", "tasks"),
+    )
+    if (
+        data["contract_type"] != "public_task_id_mapping"
+        or data["schema_version"] != "v1"
+    ):
+        raise ContractError("public_task_id_mapping: unsupported contract")
+    pairs: list[tuple[str, str]] = []
+    for index, item in enumerate(
+        require_list(data["tasks"], "public_task_id_mapping.tasks")
+    ):
+        entry = require_exact_fields(
+            item,
+            f"public_task_id_mapping.tasks[{index}]",
+            ("public_task_id", "task_id"),
+        )
+        pairs.append(
+            (
+                require_str(
+                    entry["task_id"],
+                    f"public_task_id_mapping.tasks[{index}].task_id",
+                ),
+                require_str(
+                    entry["public_task_id"],
+                    f"public_task_id_mapping.tasks[{index}].public_task_id",
+                ),
+            )
+        )
+    if not pairs:
+        raise ContractError("public_task_id_mapping.tasks: expected non-empty array")
+    canonical_ids = tuple(task_id for task_id, _ in pairs)
+    public_ids = tuple(public_task_id for _, public_task_id in pairs)
+    if canonical_ids != tuple(sorted(set(canonical_ids))):
+        raise ContractError(
+            "public_task_id_mapping.tasks: canonical IDs must be sorted and unique"
+        )
+    if len(public_ids) != len(set(public_ids)):
+        raise ContractError(
+            "public_task_id_mapping.tasks: public IDs must be unique"
+        )
+    return dict(pairs)
+
+
 def _canonical_lines(raw: bytes, label: str) -> list[dict[str, object]]:
     if raw and not raw.endswith(b"\n"):
         raise ContractError(f"{label}: missing final newline")
@@ -289,6 +769,195 @@ def _distribution(values: Sequence[int]) -> dict[str, object]:
     }
 
 
+def _quality_category_summary(
+    attempt_rows: Sequence[Mapping[str, object]],
+    task_metadata: Mapping[str, Mapping[str, object]],
+    memberships: Mapping[str, Sequence[str]],
+) -> dict[str, object]:
+    result: dict[str, object] = {}
+    for category in sorted(memberships):
+        task_ids = frozenset(memberships[category])
+        rows = [row for row in attempt_rows if row.get("task_id") in task_ids]
+        outcomes = Counter(str(row["evaluation_outcome"]) for row in rows)
+        resolved = outcomes["resolved"]
+        eligible = len(task_ids) >= 3
+        result[category] = {
+            "task_count": len(task_ids),
+            "attempt_count": len(rows),
+            "outcomes": dict(sorted(outcomes.items())),
+            "standalone_score_eligible": eligible,
+            "resolved_rate": (
+                {"numerator": resolved, "denominator": len(rows)}
+                if eligible
+                else None
+            ),
+        }
+    return result
+
+
+def add_quality_experiment_metadata(
+    index: dict[str, object],
+    summary: dict[str, object],
+    task_metadata: Mapping[str, Mapping[str, object]],
+) -> tuple[dict[str, object], dict[str, object]]:
+    """Join public v0.7 taxonomy metadata and publish aggregate-only views."""
+
+    raw_attempts = index.get("attempts")
+    if not isinstance(raw_attempts, list) or not raw_attempts:
+        raise ContractError("quality report: expected non-empty Attempt rows")
+    attempts: list[Mapping[str, object]] = []
+    task_ids: set[str] = set()
+    for row in raw_attempts:
+        if not isinstance(row, Mapping) or not isinstance(row.get("task_id"), str):
+            raise ContractError("quality report: invalid Attempt row")
+        attempts.append(row)
+        task_ids.add(str(row["task_id"]))
+    if set(task_metadata) != task_ids:
+        raise ContractError("quality report: Task metadata partition mismatch")
+
+    public_tasks: list[dict[str, object]] = []
+    origin_groups: dict[str, list[str]] = {}
+    difficulty_groups: dict[str, list[str]] = {}
+    family_groups: dict[str, list[str]] = {}
+    failure_groups: dict[str, list[str]] = {}
+    device_groups: dict[str, list[str]] = {}
+    mode_groups: dict[str, list[str]] = {}
+    phase_groups: dict[str, list[str]] = {}
+    slice_groups: dict[str, list[str]] = {}
+
+    def add(groups: dict[str, list[str]], category: str, task_id: str) -> None:
+        groups.setdefault(category, []).append(task_id)
+
+    for task_id in sorted(task_metadata):
+        metadata = task_metadata[task_id]
+        origin = require_str(metadata.get("origin"), f"task_metadata[{task_id}].origin")
+        origin_group = "retained_historical" if origin == "retained_historical" else "new_or_replacement"
+        difficulty = require_str(
+            metadata.get("difficulty"), f"task_metadata[{task_id}].difficulty"
+        )
+        taxonomy = metadata.get("taxonomy")
+        if not isinstance(taxonomy, Mapping):
+            raise ContractError("quality report: invalid taxonomy metadata")
+        family = require_str(
+            taxonomy.get("contract_family"),
+            f"task_metadata[{task_id}].taxonomy.contract_family",
+        )
+        failure_type = require_str(
+            taxonomy.get("failure_type"),
+            f"task_metadata[{task_id}].taxonomy.failure_type",
+        )
+        dimensions: dict[str, tuple[str, ...]] = {}
+        for name in ("devices", "modes", "phases"):
+            raw_values = taxonomy.get(name)
+            if not isinstance(raw_values, list) or not raw_values:
+                raise ContractError(f"quality report: invalid {name} metadata")
+            values = tuple(require_str(value, f"task_metadata[{task_id}].{name}") for value in raw_values)
+            dimensions[name] = values
+        raw_slices = metadata.get("slices")
+        if not isinstance(raw_slices, list) or "cumulative" not in raw_slices:
+            raise ContractError("quality report: invalid derived Slice metadata")
+        slices = tuple(
+            require_str(value, f"task_metadata[{task_id}].slices")
+            for value in raw_slices
+            if value != "cumulative"
+        )
+        public_tasks.append(
+            {
+                "task_id": task_id,
+                "origin": origin_group,
+                "difficulty": difficulty,
+                "contract_family": family,
+                "failure_type": failure_type,
+                "devices": list(dimensions["devices"]),
+                "modes": list(dimensions["modes"]),
+                "phases": list(dimensions["phases"]),
+                "derived_slices": list(slices),
+            }
+        )
+        add(origin_groups, origin_group, task_id)
+        add(difficulty_groups, difficulty, task_id)
+        add(family_groups, family, task_id)
+        add(failure_groups, failure_type, task_id)
+        for value in dimensions["devices"]:
+            add(device_groups, value, task_id)
+        for value in dimensions["modes"]:
+            add(mode_groups, value, task_id)
+        for value in dimensions["phases"]:
+            add(phase_groups, value, task_id)
+        for value in slices:
+            add(slice_groups, value, task_id)
+
+    if set(slice_groups) != {"boundary", "device", "precision"}:
+        raise ContractError("quality report: final derived Slice coverage mismatch")
+    outcomes_by_task: dict[str, Counter[str]] = {task_id: Counter() for task_id in task_ids}
+    for row in attempts:
+        outcomes_by_task[str(row["task_id"])][str(row["evaluation_outcome"])] += 1
+    all_resolved = sorted(
+        task_id
+        for task_id, task_outcomes in outcomes_by_task.items()
+        if task_outcomes["resolved"] == sum(task_outcomes.values())
+    )
+    zero_resolved = sorted(
+        task_id for task_id, task_outcomes in outcomes_by_task.items() if not task_outcomes["resolved"]
+    )
+    totals = summary.get("totals")
+    attribution = summary.get("attribution")
+    if not isinstance(totals, dict) or not isinstance(attribution, dict):
+        raise ContractError("quality report: base summary is invalid")
+    total_attempts = require_int(totals.get("attempts"), "totals.attempts", minimum=1)
+    resolved_attempts = sum(
+        1 for row in attempts if row.get("evaluation_outcome") == "resolved"
+    )
+    infrastructure_retries = sum(
+        int(attribution.get(name, 0)) for name in ("provider", "mcp", "runtime")
+    )
+    totals["accepted_invalid"] = 0
+    quality = {
+        "task_count": len(task_ids),
+        "attempt_count": total_attempts,
+        "origin": _quality_category_summary(attempts, task_metadata, origin_groups),
+        "difficulty": _quality_category_summary(attempts, task_metadata, difficulty_groups),
+        "contract_family": _quality_category_summary(attempts, task_metadata, family_groups),
+        "failure_type": _quality_category_summary(attempts, task_metadata, failure_groups),
+        "devices": _quality_category_summary(attempts, task_metadata, device_groups),
+        "modes": _quality_category_summary(attempts, task_metadata, mode_groups),
+        "phases": _quality_category_summary(attempts, task_metadata, phase_groups),
+        "derived_slices": _quality_category_summary(attempts, task_metadata, slice_groups),
+        "failure_attribution": {
+            "task": 0,
+            "agent": total_attempts - resolved_attempts,
+            "evaluator": 0,
+            "runtime": int(attribution.get("runtime", 0)),
+            "infrastructure_retries": infrastructure_retries,
+        },
+        "ceiling_floor_observations": {
+            "all_resolved_task_ids": all_resolved,
+            "zero_resolved_task_ids": zero_resolved,
+            "interpretation": "descriptive_current_configuration_only",
+        },
+    }
+    quality_index = dict(index)
+    quality_summary = dict(summary)
+    quality_index["quality_tasks"] = public_tasks
+    quality_summary["quality"] = quality
+    for field in (
+        "origin",
+        "difficulty",
+        "contract_family",
+        "failure_type",
+        "devices",
+        "modes",
+        "phases",
+        "derived_slices",
+        "failure_attribution",
+        "ceiling_floor_observations",
+    ):
+        quality_summary[field] = quality[field]
+    assert_public_artifact_safe(quality_index)
+    assert_public_artifact_safe(quality_summary)
+    return quality_index, quality_summary
+
+
 def build_mcp_experiment_report(
     run_roots: Sequence[Path],
     *,
@@ -296,12 +965,12 @@ def build_mcp_experiment_report(
     expected_model_id: str,
     expected_codex_cli_version: str,
     experiment_contract: McpExperimentContract,
+    task_id_aliases: Mapping[str, str] | None = None,
+    task_metadata: Mapping[str, Mapping[str, object]] | None = None,
 ) -> tuple[dict[str, object], dict[str, object]]:
     if isinstance(run_roots, (str, bytes)) or not isinstance(run_roots, Sequence):
-        raise ContractError("run_roots: expected a sequence of four Paths")
+        raise ContractError("run_roots: expected a sequence of Paths")
     roots = tuple(run_roots)
-    if len(roots) != 4:
-        raise ContractError("run_roots: expected exactly four roots")
     adapter_id = require_str(expected_adapter_id, "expected_adapter_id")
     model_id = require_str(expected_model_id, "expected_model_id")
     cli_version = require_str(
@@ -312,6 +981,39 @@ def build_mcp_experiment_report(
         raise ContractError("expected_adapter_id: expected codex_mcp_canonical")
     if not isinstance(experiment_contract, McpExperimentContract):
         raise ContractError("experiment_contract: expected McpExperimentContract")
+    frozen_config = experiment_contract.frozen_config
+    if frozen_config is not None and (
+        frozen_config.adapter_id != adapter_id
+        or frozen_config.model_id != model_id
+        or frozen_config.codex_cli_version != cli_version
+    ):
+        raise ContractError("frozen Agent configuration does not match report inputs")
+    if len(roots) != len(experiment_contract.cohorts):
+        raise ContractError("run_roots: count does not match cohort contract")
+    if task_id_aliases is None:
+        aliases: dict[str, str] | None = None
+    else:
+        if not isinstance(task_id_aliases, Mapping):
+            raise ContractError("task_id_aliases: expected mapping")
+        aliases = {}
+        for canonical_id, public_id in task_id_aliases.items():
+            canonical = require_str(canonical_id, "task_id_aliases key")
+            public = require_str(public_id, f"task_id_aliases[{canonical!r}]")
+            aliases[canonical] = public
+        if len(aliases) != len(task_id_aliases):
+            raise ContractError("task_id_aliases: duplicate canonical identity")
+        if len(set(aliases.values())) != len(aliases):
+            raise ContractError("task_id_aliases: duplicate public identity")
+
+    def report_task_id(canonical_id: str) -> str:
+        if aliases is None:
+            return canonical_id
+        try:
+            return aliases[canonical_id]
+        except KeyError as exc:
+            raise ContractError(
+                f"task_id_aliases: missing canonical identity {canonical_id!r}"
+            ) from exc
 
     cohort_rows: list[dict[str, object]] = []
     attempt_rows: list[dict[str, object]] = []
@@ -353,7 +1055,9 @@ def build_mcp_experiment_report(
         profile_ids = tuple(profile.profile_id for profile in manifest.runtime_profiles)
         if len(profile_ids) != 1:
             raise ContractError("each experiment root must use exactly one Runtime Profile")
-        task_ids = frozenset(task.task.identifier for task in manifest.tasks)
+        task_ids = frozenset(
+            report_task_id(task.task.identifier) for task in manifest.tasks
+        )
         candidates = [
             (index, cohort)
             for index, cohort in enumerate(experiment_contract.cohorts)
@@ -367,11 +1071,55 @@ def build_mcp_experiment_report(
             raise ContractError("duplicate experiment cohort contract")
         matched_contracts.add(contract_index)
         observed_attempts = frozenset(
-            (item.task.identifier, item.repeat)
+            (report_task_id(item.task.identifier), item.repeat)
             for item in manifest.expected_attempts
         )
         if observed_attempts != cohort_contract.expected_attempts:
             raise ContractError("cohort repeat matrix does not match contract")
+        if cohort_contract.binding is not None:
+            binding = cohort_contract.binding
+            observed_views = tuple(
+                project_agent_task_view(
+                    task,
+                    manifest.capability_policy,
+                    manifest.budget_policy,
+                )
+                for task in manifest.tasks
+            )
+            observed_task_views = {
+                report_task_id(view.task.identifier): view.content_hash
+                for view in observed_views
+            }
+            if (
+                canonical_sha256(manifest.to_dict()) != binding.run_manifest_digest
+                or canonical_sha256(manifest.runtime_profiles[0].to_dict())
+                != binding.runtime_profile_digest
+                or canonical_sha256(manifest.capability_policy.to_dict())
+                != binding.capability_policy_digest
+                or canonical_sha256(manifest.budget_policy.to_dict())
+                != binding.budget_policy_digest
+                or observed_task_views != dict(binding.task_view_digests)
+            ):
+                raise ContractError("cohort frozen binding does not match run artifacts")
+        if frozen_config is not None:
+            if (
+                manifest.action_protocol != frozen_config.action_protocol
+                or manifest.evaluation_protocol != frozen_config.evaluation_protocol
+                or manifest.scoring_protocol != frozen_config.scoring_protocol
+                or manifest.evaluation.digest != frozen_config.evaluation_digest
+                or manifest.retry_policy.digest != frozen_config.retry_policy_digest
+                or manifest.termination_policy.digest
+                != frozen_config.termination_policy_digest
+                or manifest.scoring.digest != frozen_config.scoring_digest
+                or len(manifest.agents) != 1
+                or canonical_sha256(manifest.agents[0].to_dict())
+                != frozen_config.agent_spec_digest
+                or manifest.agents[0].system_prompt.digest
+                != frozen_config.system_prompt_digest
+                or manifest.agents[0].task_prompt.digest
+                != frozen_config.task_prompt_digest
+            ):
+                raise ContractError("global frozen configuration does not match run artifacts")
         fresh_integrity = verify_run_artifacts(root, manifest)
         if fresh_integrity.status != "passed" or any(
             check.status != "passed" for check in fresh_integrity.checks
@@ -590,7 +1338,7 @@ def build_mcp_experiment_report(
                         "cohort_id": manifest.cohort_id,
                         "comparability_key": manifest.comparability_key,
                         "runtime_profile_id": task.runtime.profile_id,
-                        "task_id": expected.task.identifier,
+                        "task_id": report_task_id(expected.task.identifier),
                         "repeat": expected.repeat,
                         "attempt_id": attempt_id,
                         "retry_index": selected.retry_index,
@@ -616,7 +1364,7 @@ def build_mcp_experiment_report(
         sorted(len(item.expected_attempts) for item in experiment_contract.cohorts)
     )
     if tuple(sorted(selected_counts)) != expected_counts:
-        raise ContractError("four cohort selected counts do not match contract")
+        raise ContractError("cohort selected counts do not match contract")
     if matched_contracts != set(range(len(experiment_contract.cohorts))):
         raise ContractError("experiment cohort contract is incomplete")
     attempt_rows.sort(
@@ -630,7 +1378,7 @@ def build_mcp_experiment_report(
     cohort_rows.sort(key=lambda item: item["cohort_id"])
     total = len(attempt_rows)
     if total != experiment_contract.expected_attempt_count:
-        raise ContractError("four cohort report has the wrong selected Attempt count")
+        raise ContractError("cohort report has the wrong selected Attempt count")
     identities = {
         "adapter_id": adapter_id,
         "model_id": model_id,
@@ -697,6 +1445,8 @@ def build_mcp_experiment_report(
     }
     assert_public_artifact_safe(index)
     assert_public_artifact_safe(summary)
+    if task_metadata is not None:
+        return add_quality_experiment_metadata(index, summary, task_metadata)
     return index, summary
 
 
@@ -706,7 +1456,10 @@ def render_mcp_experiment_markdown(
 ) -> str:
     totals = summary["totals"]
     lines = [
-        "# OpBench v0.6 MCP Agent Experiment",
+        (
+            f"# OpBench {index['dataset_identifier']} MCP Validation "
+            f"({index['platform_version']})"
+        ),
         "",
         f"- Adapter: `{summary['adapter_id']}`",
         f"- Model: `{summary['model_id']}`",
@@ -728,6 +1481,51 @@ def render_mcp_experiment_markdown(
             f"- `{cohort['cohort_id']}`: {cohort['selected_attempts']} Attempts; "
             f"profiles {profiles}"
         )
+    quality = summary.get("quality")
+    if isinstance(quality, dict):
+        lines.extend(("", "## Quality-axis coverage", ""))
+        for axis in (
+            "origin",
+            "difficulty",
+            "contract_family",
+            "failure_type",
+            "devices",
+            "modes",
+            "phases",
+            "derived_slices",
+        ):
+            categories = quality.get(axis)
+            if not isinstance(categories, dict):
+                continue
+            rendered = ", ".join(
+                f"`{name}` {value['task_count']} Tasks/{value['attempt_count']} Attempts"
+                for name, value in categories.items()
+            )
+            lines.append(f"- {axis}: {rendered}")
+        attribution = quality.get("failure_attribution")
+        if isinstance(attribution, dict):
+            lines.extend(("", "## Failure attribution", ""))
+            for name, count in attribution.items():
+                lines.append(f"- `{name}`: {count}")
+            lines.append(
+                "- Agent counts describe selected valid outcomes; Runtime and "
+                "infrastructure-retry counts describe prior invalid retry history "
+                "and are not additive with the Agent denominator."
+            )
+        observations = quality.get("ceiling_floor_observations")
+        if isinstance(observations, dict):
+            all_resolved = observations.get("all_resolved_task_ids", [])
+            zero_resolved = observations.get("zero_resolved_task_ids", [])
+            lines.extend(
+                (
+                    "",
+                    "## Ceiling/floor observations",
+                    "",
+                    f"- All observed Attempts resolved: {len(all_resolved)} Tasks",
+                    f"- No observed Attempt resolved: {len(zero_resolved)} Tasks",
+                    "- These are descriptive observations for the frozen current configuration, not leaderboard claims.",
+                )
+            )
     return "\n".join(lines) + "\n"
 
 
@@ -776,9 +1574,14 @@ def write_mcp_experiment_report(
 
 __all__ = [
     "FORMAL_MCP_EXPERIMENT_CONTRACT",
+    "McpExperimentCohortBinding",
     "McpExperimentCohortContract",
     "McpExperimentContract",
+    "McpExperimentFrozenConfig",
+    "add_quality_experiment_metadata",
     "build_mcp_experiment_report",
+    "load_mcp_experiment_contract",
+    "load_public_task_id_aliases",
     "render_mcp_experiment_markdown",
     "write_mcp_experiment_report",
 ]

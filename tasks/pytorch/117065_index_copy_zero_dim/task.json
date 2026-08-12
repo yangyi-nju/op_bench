@@ -1,0 +1,145 @@
+{
+  "admission": {
+    "compatibility_evidence": "compatibility/evidence.json",
+    "evidence": "admission/evidence.json",
+    "status": "verified",
+    "verified_at": "2026-07-27T03:30:00Z"
+  },
+  "agent_visible": {
+    "allowed_test_commands": [
+      "{python} test/op_bench_boundary/test_index_copy_zero_dim.py {test}"
+    ],
+    "known_constraints": [
+      "CPU-only; CUDA is not required.",
+      "Scalar and one-dimensional index tensors are both valid inputs."
+    ],
+    "repo_setup_commands": [],
+    "public_task_id": "opbench-v07-t0001"
+  },
+  "artifacts": {
+    "gold_patch": "artifacts/gold.patch",
+    "hidden_test_patch": "artifacts/hidden_test.patch"
+  },
+  "compatibility": {
+    "evidence": "compatibility/evidence.json",
+    "minimal_operation": "import torch; import torch._decomp.decompositions; torch.index_copy(torch.ones(2), 0, torch.tensor([0]), torch.zeros(1))",
+    "selector_module": "test/op_bench_boundary/test_index_copy_zero_dim.py",
+    "target_import": "torch._decomp.decompositions",
+    "target_module": "torch/_decomp/decompositions.py"
+  },
+  "environment": {
+    "build_mode": "prebuilt-wheel",
+    "source_loading": {
+      "installed_package": "torch",
+      "mode": "python_overlay",
+      "overlay_paths": [
+        "torch/_decomp/decompositions.py"
+      ],
+      "runtime_site_packages": "/tmp/op_bench_runtime/site-packages",
+      "sync_before_tests": true
+    }
+  },
+  "environment_ref": "pytorch-matched-boundary-torch2.2.0-cpu",
+  "evaluation": {
+    "fail_to_pass": [
+      "BoundaryIndexCopyTests.test_zero_dimensional_index"
+    ],
+    "pass_to_pass": [
+      "BoundaryIndexCopyTests.test_one_dimensional_index"
+    ],
+    "setup_commands": [],
+    "test_command": "{python} test/op_bench_boundary/test_index_copy_zero_dim.py {test}",
+    "timeout_sec": 300
+  },
+  "metadata": {
+    "admission_status": "verified",
+    "curation_status": "verified",
+    "deterministic": true,
+    "difficulty": "easy",
+    "estimated_runtime_min": 5,
+    "layer": "B",
+    "notes": "Verified by v0.7 matched-runtime compatibility and verified Admission; compatibility evidence sha256:62068576febc5f471f8c8248e3ad0a093de3cf0a3086b2b4c2655fa2514a204b.",
+    "source_loading_verified": true
+  },
+  "operator": {
+    "component": "torch._decomp.decompositions.index_copy",
+    "framework": "pytorch",
+    "operator_name": "torch.index_copy",
+    "problem_dimension": "boundary",
+    "problem_subclass": "B2",
+    "problem_type": "scalar-index-normalization",
+    "tags": [
+      "index-copy",
+      "rank-zero",
+      "decomposition",
+      "indexing",
+      "cpu"
+    ]
+  },
+  "patch_scope": {
+    "allowed_paths": [
+      "torch/_decomp/decompositions.py"
+    ],
+    "mode": "enforced"
+  },
+  "runtime_tier": "cpu_python_overlay",
+  "source": {
+    "base_commit": "b9293e74a2b476534fa2aee5a0708e3fca255d8e",
+    "checkout_mode": "git",
+    "issue_number": null,
+    "issue_url": null,
+    "merge_commit": "d6540038c0fb279fc7040e5a317a98b4999e9fa8",
+    "pr_number": 117065,
+    "pr_url": "https://github.com/pytorch/pytorch/pull/117065",
+    "repo": "pytorch/pytorch",
+    "repo_url": "https://github.com/pytorch/pytorch.git"
+  },
+  "source_ref": "pytorch-b9293e7-boundary-overlay",
+  "statement": {
+    "body": "For a scalar index accepted by eager torch.index_copy, the supplied alternate execution path raises instead of treating it as a one-element index. The repaired result must match eager behavior for the scalar case and preserve one-dimensional index behavior.",
+    "labels": [
+      "module: decomposition",
+      "boundary: rank-zero",
+      "operator: index_copy"
+    ],
+    "title": "torch.index_copy rejects a scalar index in an alternate execution path"
+  },
+  "task_id": "pytorch__117065__index_copy_zero_dim",
+  "version": "v1",
+  "quality": {
+    "complexity_evidence": "quality/complexity.json",
+    "origin": "retained_historical",
+    "prompt_evidence": "quality/prompt.json",
+    "readmission_evidence": "quality/readmission.json"
+  },
+  "taxonomy": {
+    "component_tags": [
+      "aten"
+    ],
+    "contract_detail_tags": [
+      "value",
+      "rank"
+    ],
+    "contract_family": "result",
+    "execution_context": {
+      "devices": [
+        "cpu"
+      ],
+      "distributed": false,
+      "modes": [
+        "eager"
+      ],
+      "phases": [
+        "forward"
+      ]
+    },
+    "failure_type": "unexpected_error",
+    "root_cause_tags": [
+      "incorrect_lowering"
+    ],
+    "taxonomy_version": "v2",
+    "trigger_tags": [
+      "scalar_or_low_rank"
+    ]
+  }
+}

@@ -2,9 +2,10 @@
 
 > 状态：已批准的项目方向，本地文档重写稿
 >
-> 更新日期：2026-07-17
+> 更新日期：2026-08-11
 >
-> 当前工程基线：v0.5，17 条 verified task，51 次真实 Codex attempt
+> 当前稳定发布：v0.7 50-task 质量版已完成，旧 25-task 版本已不可变归档；
+> 当前路线：v0.7 结果分析；正式多 Agent 与反馈消融留在后续版本
 >
 > 适用范围：v0.6 至 v1.0，并为 v2.0 预留演进边界
 
@@ -36,7 +37,9 @@ v0.1–v0.5 已经形成真实 Codex 评测闭环：
 
 这些能力证明 OpBench 已经是可运行的评测集 Demo，但平台能力仍分散在 Agent Bridge、Runner、Workspace、Evaluator、RemoteDocker、Resume 和 Reporter 中。不同模块之间缺少统一的版本化协议、Attempt 生命周期、能力语义、轨迹合同和可重建产物边界。
 
-因此当前最重要的工作不是继续增加 Task 数，而是先把已有真实评测闭环升级为规范平台，再在稳定协议上扩充数据和执行正式研究实验。
+因此平台建设阶段首先完成了规范评测闭环；该前置条件现已由 v0.6 和 v0.7
+历史冻结证明。当前最重要的工作是在稳定协议上按质量合同扩充数据并执行完整
+Agent 实验，而不是仅增加未经 Admission 的 Task 数。
 
 ## 3. 目标地平线
 
@@ -191,9 +194,9 @@ v0.5 的 51 次 Attempt 永久标记为 Legacy Baseline，不重命名为 v0.6 P
 | 版本 | 目标窗口 | 核心目标 | 退出条件 |
 | --- | --- | --- | --- |
 | v0.5 | 已完成 | 17 task、51 次真实 Codex Attempt | Legacy Evidence 冻结 |
-| v0.6 | 2026-07-17 至 09-15 | Demo → 规范 Agent 评测平台 | 协议、Runtime、MCP、轨迹、Fresh Eval、Replay、真实 Codex 通过 |
-| v0.7 | 2026-09-16 至 10-31 | Dataset Factory 与 Boundary Slice | 4–6 条高质量 Boundary Task、完整 Admission |
-| v0.8 | 2026-11-01 至 12-20 | Compatibility 与 Evaluation/Scoring RC | Operator Core 分层、Compatibility Slice、Spec RC |
+| v0.6 | 已完成 | Demo → 规范 Agent 评测平台 | 协议、Runtime、MCP、轨迹、Fresh Eval、Replay、真实 Codex 通过 |
+| v0.7 | 已完成 | 50-task 质量版、统一 taxonomy 与 Agent 实验 | 50/50 fresh replay、122/122 valid Attempts 与全量发布审计通过 |
+| v0.8 | 已合并 | 原 Device/API 数据扩充并入 v0.7 | 不再作为独立当前交付 |
 | v0.9 | 2026-12-21 至 2027-02-14 | 正式多 Agent 实验与反馈消融 | Cohort 冻结、重复完整、统计和轨迹分析完成 |
 | Contingency | 2027-02-15 至 02-28 | P0/P1 修复与必要重跑 | 不新增研究范围 |
 | v1.0 | 2027-03-01 至 04-15 | 论文级研究发布 | 稳定协议、文档、复现、演示和发布 Artifact 完整 |
@@ -215,7 +218,7 @@ v0.6 不扩数据集。它把 v0.5 的真实 Codex Action Bridge Demo 标准化�
 
 七月底可以形成用于简历和演示的中间纵向闭环；它属于 v0.6 的内部工程进度，版本完成标准以 `docs/v0.6/acceptance_matrix.md` 为准。
 
-### 8.2 v0.7：Dataset Factory 与 Boundary
+### 8.2 v0.7：Dataset Factory、历史冻结与 50-task 质量扩展
 
 在 v0.6 冻结协议上：
 
@@ -225,12 +228,33 @@ v0.6 不扩数据集。它把 v0.5 的真实 Codex Action Bridge Demo 标准化�
 - 审计现有 Operator Core 构念；
 - 标记可用于 v0.9 Feedback Ablation 的 Task。
 
-### 8.3 v0.8：Compatibility 与 Spec RC
+`opbench-v0.7.0` 在 2026-07-28 的历史发布冻结了 25-task cumulative、6-task
+Boundary、8-task Precision，Dataset hash 分别为
+`sha256:4d7bde25e747bcc041aa5105ce5ce881a3f1e9fe2a7545667cdbc2c14d85064a`、
+`sha256:810a9cc85c576f44edd2672197ab83b7dfee7f674e597c76c78050bd119d606a`
+和
+`sha256:65818466a02e99466386cb8e038dc4da59d91dcb3bea7b83c8901d31a96aa8eb`。
+真实 Codex 验证为 18/18 valid、14 resolved、3 F2P failed、1 no patch、
+0 accepted-cohort retries；最终 release gate 为 868/868 tests，所有生成物
+逐字节重建。exact-source 路径包含 source-build timeout correction 和分离的
+CPU/CUDA build commands。该证据严格为 **non-leaderboard**、非反馈因果的
+Task/平台验证。
 
-- 增加 4–6 条 Device/API Compatibility Task；
-- 冻结 Evaluation/Scoring Specification RC；
-- 明确 Operator Core 与 Legacy Regression；
-- 固定正式实验的 Budget、Retry、Aggregation 和排除规则。
+最终质量版已完成重新准入和真实 Runtime Admission，并冻结为 14 条历史保留、
+21 条新增、15 条替换，共 50 条 verified Tasks；46 条 hard、4 条 medium，没有
+easy Task。累计/Boundary/Precision/Device 视图为 50/31/5/15。旧 Hash 与结果
+原样归档但不作为新完成条件。fresh replay 为 50/50；最终实验完成 17/17 cohorts、
+122/122 valid logical Attempts 与 122/122 完整 MCP traces，结果为 42 resolved、
+52 F2P failed、28 invalid patch。确定性报告、Integrity、资源、隐私和发布审计均
+通过。完整合同见
+`docs/v0.7/quality_expansion.md`。
+
+### 8.3 原 v0.8 范围：已并入 v0.7
+
+- Device/API、精度、边界和其他算子契约不再各自限定少量顶层数据桶；
+- 相关数据扩充使用 v0.7 的多轴 Taxonomy 和同一质量/Admission 标准；
+- Budget、Retry、Aggregation 和排除规则随 50-task Agent 实验共同冻结；
+- v0.8 不再是当前独立开发版本，避免人为拆分同一轮数据质量工作。
 
 ### 8.4 v0.9：正式实验
 
@@ -304,7 +328,7 @@ v0.6 不扩数据集。它把 v0.5 的真实 Codex Action Bridge Demo 标准化�
 | Agent/Infra 失败混淆 | 三轴结果和稳定 failure taxonomy |
 | RemoteDocker 清理风险 | 只管理本 Attempt 创建并持有标识的容器/进程，不做宿主广域扫描或 kill |
 | 结果不可比较 | Comparability Key 和 Cohort Freeze |
-| 数据扩充返工 | v0.7 等待 v0.6 Protocol 稳定后 Admission |
+| 数据扩充返工 | v0.7 已在稳定 v0.6 Protocol 上完成重新准入、扩充与 fresh replay |
 | 样本量过小 | 报告置信区间、per-task 结果和限制，不夸大总体结论 |
 | Benchmark 污染 | 冻结来源、时间、Agent 可见输入和 Known Contamination Notes |
 
@@ -323,10 +347,6 @@ v0.6 不扩数据集。它把 v0.5 的真实 Codex Action Bridge Demo 标准化�
 
 ## 14. 当前执行顺序
 
-1. 完成本全局方案、v0.6 设计、实施计划和验收矩阵；
-2. 将 Boundary 设计作为 v0.7 当前设计；
-3. 更新项目状态、README、文档索引和 CHANGELOG；
-4. 审阅本地未提交文档；
-5. 从 v0.6 M1 开始产品实现；
-6. 每个里程碑通过测试和 Artifact 验证后更新状态；
-7. v0.6 完成后再开始 v0.7 正式 Admission。
+1. 保留 v0.6 平台、v0.7 历史 25-task Freeze 和最终 50-task release 的不可变证据；
+2. 使用冻结报告分析 v0.7 Agent 失败与 taxonomy 覆盖，不追溯改写结果；
+3. 后续版本再冻结正式多 Agent 与 Feedback Ablation cohort。

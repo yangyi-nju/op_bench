@@ -91,6 +91,24 @@ def _parse_gitmodules_paths(gitmodules_path: Path) -> list[str]:
     return paths
 
 
+def _gitlink_paths(repo_path: Path) -> set[str]:
+    """Return paths that the repository index currently records as gitlinks.
+
+    A committed ``.gitmodules`` file can retain historical entries after the
+    corresponding path stopped being a submodule. Treating those entries as
+    live dependencies makes kernel snapshot repair loop forever.
+    """
+    result = _run(["git", "ls-files", "--stage"], repo_path)
+    if result.returncode != 0:
+        return set()
+    paths: set[str] = set()
+    for line in result.stdout.splitlines():
+        metadata, separator, path = line.partition("\t")
+        if separator and metadata.split(maxsplit=1)[0] == "160000":
+            paths.add(path)
+    return paths
+
+
 def _find_uninitialized_submodules(local_path: Path) -> list[str]:
     """Return top-level submodule paths that need (re-)initialization.
 
@@ -102,7 +120,12 @@ def _find_uninitialized_submodules(local_path: Path) -> list[str]:
     We only return the *top-level* path — `git submodule update --init
     --recursive -- <path>` fixes both cases.
     """
-    submodule_paths = _parse_gitmodules_paths(local_path / ".gitmodules")
+    top_level_gitlinks = _gitlink_paths(local_path)
+    submodule_paths = [
+        path
+        for path in _parse_gitmodules_paths(local_path / ".gitmodules")
+        if path in top_level_gitlinks
+    ]
     missing = []
     for sub in submodule_paths:
         if sub in KERNEL_BUILD_SUBMODULE_EXCLUDES:
@@ -114,7 +137,10 @@ def _find_uninitialized_submodules(local_path: Path) -> list[str]:
         # Check nested submodules if this one has its own .gitmodules
         nested_gitmodules = sub_dir / ".gitmodules"
         if nested_gitmodules.exists():
+            nested_gitlinks = _gitlink_paths(sub_dir)
             for nested_sub in _parse_gitmodules_paths(nested_gitmodules):
+                if nested_sub not in nested_gitlinks:
+                    continue
                 nested_dir = sub_dir / nested_sub
                 if not nested_dir.exists() or not any(nested_dir.iterdir()):
                     missing.append(sub)  # top-level parent

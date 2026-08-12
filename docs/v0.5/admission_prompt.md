@@ -26,9 +26,9 @@ cat > configs/remote_hosts.json << 'EOF'
   "hosts": {
     "gpu-a10": {
       "user": "<your-username>",
-      "hostname": "<server-ip-or-hostname>",
+      "hostname": "worker.example.invalid",
       "port": 22,
-      "identity_file": "~/.ssh/<your_key>",
+      "identity_file": "/tmp/example-key",
       "remote_workspace_root": "/data/op_bench_workspaces"
     }
   }
@@ -164,9 +164,9 @@ PYTHONPATH=src python3 scripts/run_admission.py \
   "hosts": {
     "gpu-a10": {
       "user": "ubuntu",
-      "hostname": "10.0.0.X",
+      "hostname": "worker.example.invalid",
       "port": 22,
-      "identity_file": "~/.ssh/KeyPair-02-openssh",
+      "identity_file": "/tmp/example-key",
       "remote_workspace_root": "/data/op_bench_workspaces"
     }
   }

@@ -1,0 +1,154 @@
+{
+  "admission": {
+    "compatibility_evidence": "compatibility/evidence.json",
+    "evidence": "admission/evidence.json",
+    "status": "verified",
+    "verified_at": "2026-07-27T03:30:00Z"
+  },
+  "agent_visible": {
+    "allowed_test_commands": [
+      "{python} test/op_bench_boundary/test_triton_ygrid_mask.py {test}"
+    ],
+    "known_constraints": [
+      "CUDA is required for the large boolean-tensor reproduction.",
+      "Preserve correct compiled addition for smaller broadcasted inputs and for equal-shape inputs."
+    ],
+    "repo_setup_commands": [],
+    "public_task_id": "opbench-v07-t0010"
+  },
+  "artifacts": {
+    "gold_patch": "artifacts/gold.patch",
+    "hidden_test_patch": "artifacts/hidden_test.patch"
+  },
+  "compatibility": {
+    "evidence": "compatibility/evidence.json",
+    "minimal_operation": "import torch; from torch._inductor.codegen.triton import TritonKernel; assert callable(TritonKernel._has_constant_mask)",
+    "selector_module": "test/op_bench_boundary/test_triton_ygrid_mask.py",
+    "target_import": "torch._inductor.codegen.triton",
+    "target_module": "torch/_inductor/codegen/triton.py"
+  },
+  "environment": {
+    "build_mode": "prebuilt-wheel",
+    "source_loading": {
+      "installed_package": "torch",
+      "mode": "python_overlay",
+      "overlay_paths": [
+        "torch/_inductor/codegen/triton.py"
+      ],
+      "runtime_site_packages": "/tmp/op_bench_runtime/site-packages",
+      "sync_before_tests": true
+    }
+  },
+  "environment_ref": "pytorch-matched-boundary-torch2.6.0-cu124",
+  "evaluation": {
+    "fail_to_pass": [
+      "BoundaryGridMaskTests.test_overflowing_y_grid_keeps_mask"
+    ],
+    "pass_to_pass": [
+      "BoundaryGridMaskTests.test_safe_grid_shapes_keep_existing_optimization"
+    ],
+    "setup_commands": [],
+    "test_command": "{python} test/op_bench_boundary/test_triton_ygrid_mask.py {test}",
+    "timeout_sec": 300
+  },
+  "factory_review_requirements": {
+    "gold_path": "torch/_inductor/codegen/triton.py",
+    "predicate": "block_multiple and grid_dim == 1 and not has_zdim and numel > get_max_y_grid()",
+    "production_method": "TritonKernel._has_constant_mask",
+    "surrogate_confirmation_required": true
+  },
+  "metadata": {
+    "admission_status": "verified",
+    "curation_status": "verified",
+    "deterministic": true,
+    "difficulty": "medium",
+    "estimated_runtime_min": 10,
+    "layer": "B",
+    "notes": "Verified by v0.7 matched-runtime compatibility and verified Admission; compatibility evidence sha256:28b417e755f73b1fec78f316a3d7a55667192182edb55ce452731472ade02c23.",
+    "source_loading_verified": true
+  },
+  "operator": {
+    "component": "torch._inductor.codegen.triton.TritonKernel",
+    "framework": "pytorch",
+    "operator_name": "torch.compile with Triton",
+    "problem_dimension": "boundary",
+    "problem_subclass": "B5",
+    "problem_type": "wrong-result",
+    "tags": [
+      "triton",
+      "y-grid",
+      "constant-mask",
+      "launch-bounds",
+      "low-memory-surrogate"
+    ]
+  },
+  "patch_scope": {
+    "allowed_paths": [
+      "torch/_inductor/codegen/triton.py"
+    ],
+    "mode": "enforced"
+  },
+  "runtime_tier": "cuda_python_overlay",
+  "source": {
+    "base_commit": "cc98a1b59909e6f3ce929380e02f0345c862e31d",
+    "checkout_mode": "git",
+    "issue_number": null,
+    "issue_url": null,
+    "merge_commit": "f0b33658f83c9f76a7fe886e4b38af7fa29e54e9",
+    "pr_number": 139751,
+    "pr_url": "https://github.com/pytorch/pytorch/pull/139751",
+    "repo": "pytorch/pytorch",
+    "repo_url": "https://github.com/pytorch/pytorch.git"
+  },
+  "source_ref": "pytorch-cc98a1b-boundary-overlay",
+  "statement": {
+    "body": "On CUDA, torch.compile(torch.add) can return values that disagree with eager torch.add for boolean tensors with shapes (66,560, 4,096) and (66,560, 1). The compiled result must match eager addition at every element, while smaller broadcasted shapes and equal-shape addition remain unchanged.",
+    "labels": [
+      "module: inductor",
+      "module: triton",
+      "boundary: launch grid"
+    ],
+    "title": "Compiled torch.add can disagree with eager output for a large broadcasted CUDA shape"
+  },
+  "task_id": "pytorch__139751__triton_ygrid_mask",
+  "version": "v1",
+  "quality": {
+    "complexity_evidence": "quality/complexity.json",
+    "origin": "retained_historical",
+    "prompt_evidence": "quality/prompt.json",
+    "readmission_evidence": "quality/readmission.json"
+  },
+  "taxonomy": {
+    "component_tags": [
+      "inductor",
+      "triton"
+    ],
+    "contract_detail_tags": [
+      "value",
+      "shape"
+    ],
+    "contract_family": "result",
+    "execution_context": {
+      "devices": [
+        "cuda"
+      ],
+      "distributed": false,
+      "modes": [
+        "compile"
+      ],
+      "phases": [
+        "forward"
+      ]
+    },
+    "failure_type": "wrong_result",
+    "root_cause_tags": [
+      "incorrect_lowering"
+    ],
+    "taxonomy_version": "v2",
+    "trigger_tags": [
+      "extreme_value_or_size",
+      "dynamic_shape",
+      "device_specific"
+    ]
+  }
+}

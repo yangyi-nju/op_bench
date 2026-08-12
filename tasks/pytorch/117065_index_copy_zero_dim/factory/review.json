@@ -1,0 +1,11 @@
+{
+  "schema_version": "v1",
+  "task_id": "pytorch__117065__index_copy_zero_dim",
+  "decision": "approved",
+  "root_cause_confirmed": true,
+  "scope_confirmed": true,
+  "tests_confirmed": true,
+  "surrogate_confirmed": null,
+  "reviewer": "op-bench-v0.7-human-review",
+  "reviewed_at": "2026-07-27T04:00:00Z"
+}

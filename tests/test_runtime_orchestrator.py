@@ -28,6 +28,7 @@ from op_bench.runtime.resources import (
     verify_runtime_cleanup,
     verify_runtime_resource_ownership,
 )
+from op_bench.runtime.validation import ContractError
 from tests.runtime_git_fixture import git, initialize_evaluation_git_fixture
 from tests.runtime_orchestrator_fixture import (
     PatchAdapter,
@@ -107,6 +108,43 @@ class ScriptedPatchAdapter:
             raise AssertionError("action mismatch")
         if not observation["ok"]:
             raise AssertionError(observation)
+
+
+class OutOfScopePatchAdapter:
+    def run(self, context) -> CodexAdapterResult:
+        actions = (
+            (
+                "workspace_write",
+                {
+                    "path": "test_public.py",
+                    "content": (
+                        "import unittest\n\n"
+                        "class ChangedOutsidePrivateScope(unittest.TestCase):\n"
+                        "    pass\n"
+                    ),
+                },
+            ),
+            ("session_finish", {}),
+        )
+        for sequence, (name, arguments) in enumerate(actions, start=1):
+            request = ActionRequest(
+                session_id=context.session_id,
+                action_id=f"out-of-scope-action-{sequence}",
+                action_name=name,
+                arguments=arguments,
+                client_sequence=sequence,
+                deadline_ms=context.deadline_ms,
+            )
+            observation = context.action_client.execute(request.to_dict())
+            if not observation["ok"]:
+                raise AssertionError(observation)
+        return CodexAdapterResult(
+            status="completed",
+            terminal_reason="agent_finished",
+            exit_code=0,
+            observation_count=len(actions),
+            finish_count=1,
+        )
 
 
 class McpScenarioAdapter:
@@ -205,6 +243,127 @@ class V06OrchestratorTests(unittest.TestCase):
             V1_ADAPTER_IDS,
             ("scripted_canonical", "codex_canonical", "codex_mcp_canonical"),
         )
+
+    def test_selected_attempt_ids_are_an_exact_ordered_manifest_subset(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            fixture = build_orchestrator_fixture(
+                Path(temporary),
+                repeat_count=2,
+            )
+            first, second = (
+                item.attempt_id for item in fixture.manifest.expected_attempts
+            )
+
+            request_for(fixture, selected_attempt_ids=(first,))
+            request_for(fixture, selected_attempt_ids=(first, second))
+            invalid = (
+                ((second, first), "frozen Manifest order"),
+                ((first, first), "duplicate Attempt"),
+                (("attempt-outside-manifest",), "outside the frozen Manifest"),
+            )
+            for attempt_ids, message in invalid:
+                with self.subTest(attempt_ids=attempt_ids):
+                    with self.assertRaisesRegex(ContractError, message):
+                        request_for(
+                            fixture,
+                            selected_attempt_ids=attempt_ids,
+                        )
+
+    def test_partial_run_preserves_manifest_and_full_run_resumes_remaining_attempts(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            fixture = build_orchestrator_fixture(
+                Path(temporary),
+                repeat_count=2,
+            )
+            first, second = (
+                item.attempt_id for item in fixture.manifest.expected_attempts
+            )
+            adapter = PatchAdapter()
+            orchestrator = orchestrator_for(
+                fixture,
+                backend_factory=lambda profile, target, phase: LocalProcessBackend(),
+                adapter=adapter,
+            )
+
+            partial = orchestrator.run(
+                request_for(fixture, selected_attempt_ids=(first,))
+            )
+
+            self.assertEqual(partial.ran_attempt_ids, (first,))
+            self.assertEqual(partial.skipped_attempt_ids, ())
+            self.assertEqual(partial.integrity.status, "passed")
+            self.assertEqual(adapter.run_count, 1)
+            summary = json.loads(
+                (fixture.output_root / "summary.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(summary["expected_attempts"], 2)
+            self.assertEqual(summary["observed_attempts"], 1)
+            self.assertEqual(summary["missing_attempts"], 1)
+            self.assertEqual(
+                {path.name for path in (fixture.output_root / "attempts").iterdir()},
+                {first},
+            )
+            self.assertEqual(
+                verify_run_artifacts(
+                    fixture.output_root,
+                    fixture.manifest,
+                    allow_incomplete=True,
+                ).status,
+                "passed",
+            )
+            self.assertEqual(
+                verify_run_artifacts(
+                    fixture.output_root,
+                    fixture.manifest,
+                ).status,
+                "failed",
+            )
+
+            completed = orchestrator.run(
+                request_for(fixture, selected_attempt_ids=(first, second))
+            )
+
+            self.assertEqual(completed.ran_attempt_ids, (second,))
+            self.assertEqual(completed.skipped_attempt_ids, (first,))
+            self.assertEqual(completed.integrity.status, "passed")
+            self.assertEqual(adapter.run_count, 2)
+            summary = json.loads(
+                (fixture.output_root / "summary.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(summary["observed_attempts"], 2)
+            self.assertEqual(summary["missing_attempts"], 0)
+
+    def test_patch_outside_private_task_scope_is_a_valid_logical_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            fixture = build_orchestrator_fixture(
+                Path(temporary),
+                writable_paths=(".",),
+            )
+            backend_phases: list[str] = []
+
+            def backend_factory(profile, target, phase):
+                backend_phases.append(phase)
+                return LocalProcessBackend()
+
+            orchestrator = orchestrator_for(
+                fixture,
+                backend_factory=backend_factory,
+                adapter=OutOfScopePatchAdapter(),
+            )
+
+            result = orchestrator.run(request_for(fixture))
+
+            self.assertEqual(result.integrity.status, "passed")
+            record = json.loads(
+                (fixture.output_root / "results.jsonl").read_text(encoding="utf-8")
+            )
+            self.assertEqual(record["attempt_validity"], "valid")
+            self.assertEqual(record["agent_terminal"], "finished")
+            self.assertEqual(record["evaluation_outcome"], "invalid_patch")
+            self.assertEqual(record["invalid_reason"], None)
+            self.assertEqual(backend_phases, ["agent"])
 
     def test_session_deadline_stays_absolute_after_the_run_clock_exceeds_the_budget(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OpBench Complexity Evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_type",
+    "schema_version",
+    "task_id",
+    "localization",
+    "diagnosis",
+    "repair_regression",
+    "dimension_evidence",
+    "hard_rejections",
+    "risk_signals",
+    "duplicate_fingerprint",
+    "duplicate_decision",
+    "blind_pilot",
+    "second_review",
+    "reviewer",
+    "reviewed_at",
+    "total",
+    "difficulty",
+    "decision",
+    "content_hash"
+  ],
+  "properties": {
+    "contract_type": {"const": "complexity_evidence"},
+    "schema_version": {"const": "v1"},
+    "task_id": {"type": "string", "minLength": 1},
+    "localization": {"type": "integer", "minimum": 0, "maximum": 2},
+    "diagnosis": {"type": "integer", "minimum": 0, "maximum": 2},
+    "repair_regression": {"type": "integer", "minimum": 0, "maximum": 2},
+    "dimension_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["localization", "diagnosis", "repair_regression"],
+      "properties": {
+        "localization": {"type": "string", "minLength": 1},
+        "diagnosis": {"type": "string", "minLength": 1},
+        "repair_regression": {"type": "string", "minLength": 1}
+      }
+    },
+    "hard_rejections": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": [
+          "mechanical_after_sanitization",
+          "no_public_contract_impact",
+          "non_behavioral_change",
+          "semantic_duplicate",
+          "standard_admission_failure"
+        ]
+      }
+    },
+    "risk_signals": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": [
+          "gold_patch_lte_4_lines",
+          "gold_patch_single_file",
+          "single_hidden_f2p",
+          "reference_agent_all_resolved",
+          "short_repair_time",
+          "low_tool_or_read_count"
+        ]
+      }
+    },
+    "duplicate_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "duplicate_decision": {"type": "string", "enum": ["distinct", "duplicate"]},
+    "blind_pilot": {
+      "oneOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "required": ["decision", "counts_toward_final"],
+          "properties": {
+            "decision": {"type": "string", "enum": ["accepted", "deferred", "rejected"]},
+            "counts_toward_final": {"type": "boolean"}
+          }
+        }
+      ]
+    },
+    "second_review": {"type": "boolean"},
+    "reviewer": {"type": "string", "minLength": 1},
+    "reviewed_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
+    "total": {"type": "integer", "minimum": 0, "maximum": 6},
+    "difficulty": {"type": ["string", "null"], "enum": ["medium", "hard", null]},
+    "decision": {"type": "string", "enum": ["accepted", "deferred", "rejected"]},
+    "content_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}

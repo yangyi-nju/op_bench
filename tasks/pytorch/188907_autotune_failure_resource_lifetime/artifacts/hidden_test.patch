@@ -1,0 +1,147 @@
+diff --git a/test/op_bench/test_autotune_failure_resource_lifetime.py b/test/op_bench/test_autotune_failure_resource_lifetime.py
+new file mode 100644
+--- /dev/null
++++ b/test/op_bench/test_autotune_failure_resource_lifetime.py
+@@ -0,0 +1,142 @@
++import contextlib
++import gc
++import types
++import unittest
++import weakref
++from unittest.mock import patch
++
++import torch
++from torch._inductor.runtime.triton_heuristics import CachingAutotuner
++
++
++class CandidateRecord:
++    def __init__(self, *, stages=1):
++        self.config = types.SimpleNamespace(num_stages=stages, kwargs={})
++
++
++class Sentinel:
++    pass
++
++
++class AutotuneFailureResourceTests(unittest.TestCase):
++    def make_subject(self, results, make_launcher, *, fallback_callback=None):
++        return types.SimpleNamespace(
++            launchers=[],
++            compile_results=results,
++            triton_meta={"device": 0},
++            inductor_meta={},
++            get_device_interface=lambda: None,
++            _make_launcher=make_launcher,
++            compile_by_disabling_pipelining=(
++                fallback_callback
++                if fallback_callback is not None
++                else lambda config: None
++            ),
++        )
++
++    def call_selection(self, subject):
++        with patch(
++            "torch._dynamo.device_interface.DeviceGuard",
++            lambda *args, **kwargs: contextlib.nullcontext(),
++        ):
++            CachingAutotuner._make_launchers(subject)
++
++    def test_mixed_candidates_release_caller_resource(self):
++        results = [CandidateRecord(), CandidateRecord()]
++        successful_launcher = object()
++
++        def make_launcher(result):
++            if result is results[0]:
++                return successful_launcher, None
++            try:
++                raise RuntimeError("late candidate failed")
++            except RuntimeError as error:
++                return None, error
++
++        subject = self.make_subject(results, make_launcher)
++
++        def invoke_from_owner_frame():
++            benchmark_buffer = Sentinel()
++            reference = weakref.ref(benchmark_buffer)
++            self.call_selection(subject)
++            return reference
++
++        gc.disable()
++        try:
++            reference = invoke_from_owner_frame()
++            retained = reference() is not None
++        finally:
++            gc.enable()
++            gc.collect()
++
++        self.assertFalse(retained)
++        self.assertEqual(subject.launchers, [successful_launcher])
++
++    def test_all_failed_candidates_release_caller_resource(self):
++        results = [CandidateRecord(), CandidateRecord()]
++
++        def make_launcher(result):
++            try:
++                raise RuntimeError("candidate build failed")
++            except RuntimeError as error:
++                return None, error
++
++        subject = self.make_subject(results, make_launcher)
++
++        def invoke_from_owner_frame():
++            benchmark_buffer = Sentinel()
++            reference = weakref.ref(benchmark_buffer)
++            with self.assertRaisesRegex(RuntimeError, "No valid triton configs"):
++                self.call_selection(subject)
++            return reference
++
++        gc.disable()
++        try:
++            reference = invoke_from_owner_frame()
++            retained = reference() is not None
++        finally:
++            gc.enable()
++            gc.collect()
++
++        self.assertFalse(retained)
++        self.assertEqual(subject.launchers, [])
++
++    def test_all_successful_candidates_preserve_launchers(self):
++        results = [CandidateRecord(), CandidateRecord()]
++        launchers = [object(), object()]
++
++        def make_launcher(result):
++            return launchers[results.index(result)], None
++
++        subject = self.make_subject(results, make_launcher)
++        self.call_selection(subject)
++
++        self.assertEqual(subject.launchers, launchers)
++
++    def test_low_stage_retry_behavior_is_preserved(self):
++        result = CandidateRecord(stages=2)
++        fallback_launcher = object()
++        retry_calls = []
++        failure = torch.cuda.OutOfMemoryError("synthetic pressure")
++
++        def make_launcher(candidate):
++            self.assertIs(candidate, result)
++            return None, failure
++
++        def lower_stage_callback(config):
++            retry_calls.append(config)
++            return fallback_launcher
++
++        subject = self.make_subject(
++            [result],
++            make_launcher,
++            fallback_callback=lower_stage_callback,
++        )
++        self.call_selection(subject)
++
++        self.assertEqual(subject.launchers, [fallback_launcher])
++        self.assertEqual(retry_calls, [result.config])
++
++
++if __name__ == "__main__":
++    unittest.main()

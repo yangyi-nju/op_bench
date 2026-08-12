@@ -13,6 +13,7 @@ from op_bench.integrity import replay_spec_hash
 from op_bench.runtime.canonical import canonical_sha256
 from op_bench.runtime.contracts import (
     ACTION_NAMES,
+    AgentTaskView,
     AgentSpec,
     BudgetPolicy,
     CapabilityPolicy,
@@ -33,8 +34,13 @@ from op_bench.runtime.mcp import (
 )
 from op_bench.runtime.profiles import load_runtime_profile_registry
 from op_bench.runtime.source_materialization import _git_environment
+from op_bench.runtime.task_view import (
+    TaskViewPolicy,
+    assert_public_artifact_safe,
+    public_runtime_hint,
+)
 from op_bench.runtime.validation import ContractError, require_bool, require_int, require_str
-from op_bench.task import TaskManifest
+from op_bench.task import InvalidPublicTaskId, TaskManifest
 
 
 @dataclass(frozen=True)
@@ -108,6 +114,7 @@ class LegacyV05PrivateTaskBinding:
     source: LocalGitSource
     hidden_asset: EvaluationOnlyTestAsset
     source_overlay_paths: tuple[str, ...]
+    source_loading_timeout_ms: int
 
     def __post_init__(self) -> None:
         require_str(self.task_id, "task_id")
@@ -117,6 +124,11 @@ class LegacyV05PrivateTaskBinding:
             raise ContractError("hidden_asset: expected EvaluationOnlyTestAsset")
         if not isinstance(self.source_overlay_paths, tuple):
             raise ContractError("source_overlay_paths: expected tuple")
+        require_int(
+            self.source_loading_timeout_ms,
+            "source_loading_timeout_ms",
+            minimum=1,
+        )
         if len(set(self.source_overlay_paths)) != len(self.source_overlay_paths):
             raise ContractError("source_overlay_paths: duplicate path")
         for index, value in enumerate(self.source_overlay_paths):
@@ -132,6 +144,7 @@ class LegacyV05PrivateTaskBinding:
 class LegacyV05RuntimeBundle:
     manifest: RunManifest
     private_tasks: tuple[LegacyV05PrivateTaskBinding, ...]
+    public_task_ids_by_canonical: tuple[tuple[str, str], ...]
 
     def __post_init__(self) -> None:
         if not isinstance(self.manifest, RunManifest):
@@ -140,8 +153,44 @@ class LegacyV05RuntimeBundle:
             raise ContractError("private_tasks: expected non-empty tuple")
         manifest_ids = tuple(task.task.identifier for task in self.manifest.tasks)
         private_ids = tuple(binding.task_id for binding in self.private_tasks)
-        if private_ids != manifest_ids:
-            raise ContractError("private_tasks: must match Manifest Task order")
+        if (
+            not isinstance(self.public_task_ids_by_canonical, tuple)
+            or len(self.public_task_ids_by_canonical) != len(private_ids)
+        ):
+            raise ContractError(
+                "public_task_ids_by_canonical: must match private Task order"
+            )
+        canonical_ids: list[str] = []
+        public_ids: list[str] = []
+        for index, item in enumerate(self.public_task_ids_by_canonical):
+            if not isinstance(item, tuple) or len(item) != 2:
+                raise ContractError(
+                    f"public_task_ids_by_canonical[{index}]: expected pair"
+                )
+            canonical_ids.append(
+                require_str(
+                    item[0],
+                    f"public_task_ids_by_canonical[{index}].canonical_task_id",
+                )
+            )
+            public_ids.append(
+                require_str(
+                    item[1],
+                    f"public_task_ids_by_canonical[{index}].public_task_id",
+                )
+            )
+        if tuple(canonical_ids) != private_ids:
+            raise ContractError(
+                "public_task_ids_by_canonical: canonical IDs must match private Task order"
+            )
+        if tuple(public_ids) != manifest_ids:
+            raise ContractError(
+                "public_task_ids_by_canonical: public IDs must match Manifest Task order"
+            )
+        if len(set(canonical_ids)) != len(canonical_ids) or len(set(public_ids)) != len(
+            public_ids
+        ):
+            raise ContractError("public_task_ids_by_canonical: duplicate Task ID")
 
     def source_for(self, task: FullTaskSpec) -> LocalGitSource:
         return self._binding_for(task).source
@@ -152,41 +201,154 @@ class LegacyV05RuntimeBundle:
     def source_overlay_paths_for(self, task: FullTaskSpec) -> tuple[str, ...]:
         return self._binding_for(task).source_overlay_paths
 
+    def source_loading_timeout_ms_for(self, task: FullTaskSpec) -> int:
+        return self._binding_for(task).source_loading_timeout_ms
+
     def _binding_for(self, task: FullTaskSpec) -> LegacyV05PrivateTaskBinding:
         if not isinstance(task, FullTaskSpec):
             raise ContractError("task: expected FullTaskSpec")
+        canonical_task_id = next(
+            (
+                canonical
+                for canonical, public in self.public_task_ids_by_canonical
+                if public == task.task.identifier
+            ),
+            None,
+        )
+        if canonical_task_id is None:
+            raise ContractError("task: not present in private runtime bundle")
         for binding in self.private_tasks:
-            if binding.task_id == task.task.identifier:
+            if binding.task_id == canonical_task_id:
                 return binding
         raise ContractError("task: not present in private runtime bundle")
 
 
-def full_task_spec_from_v05(task: TaskManifest) -> FullTaskSpec:
+@dataclass(frozen=True)
+class _LegacyV05Projection:
+    task: ContentIdentity
+    runtime: RuntimeProfile
+    statement_title: str
+    statement_body: str
+    framework: str
+    operator_name: str
+    public_tests: tuple[TestSelector, ...]
+    hidden_tests: tuple[TestSelector, ...]
+
+
+def _legacy_v05_projection(task: TaskManifest) -> _LegacyV05Projection:
+    """Build the exact Task projection without touching private artifacts."""
+
     _require_v05_task_shape(task)
-    source = _source_identity(task)
+    public_task_id = _public_task_id(task)
     runtime = _runtime_profile(task)
-    image = runtime.image
-    environment = _environment_identity(task, image, runtime)
     public_tests, hidden_tests = _test_selectors(task)
     statement = _mapping(task.data.get("statement"))
     operator = _mapping(task.data.get("operator"))
-
-    return FullTaskSpec(
-        task=ContentIdentity(
+    statement_title = str(statement.get("title", task.task_id))
+    statement_body = str(
+        statement.get("body", "Legacy v0.5 operator repair task.")
+    )
+    framework = str(operator.get("framework", "unknown"))
+    operator_name = str(
+        operator.get("operator_name", operator.get("component", "unknown"))
+    )
+    task_identity = (
+        ContentIdentity(
+            identity_type="task",
+            identifier=public_task_id,
+            digest=canonical_sha256(
+                {
+                    "identity_version": "public-task-v1",
+                    "identifier": public_task_id,
+                    "statement_title": statement_title,
+                    "statement_body": statement_body,
+                    "framework": framework,
+                    "operator_name": operator_name,
+                    "runtime_hint": public_runtime_hint(runtime),
+                    "public_tests": [
+                        selector.to_dict() for selector in public_tests
+                    ],
+                }
+            ),
+            digest_kind="canonical_config",
+        )
+        if public_task_id is not None
+        else ContentIdentity(
             identity_type="task",
             identifier=task.task_id,
             digest=replay_spec_hash(task),
             digest_kind="replay_spec_v1",
-        ),
+        )
+    )
+    return _LegacyV05Projection(
+        task=task_identity,
+        runtime=runtime,
+        statement_title=statement_title,
+        statement_body=statement_body,
+        framework=framework,
+        operator_name=operator_name,
+        public_tests=public_tests,
+        hidden_tests=hidden_tests,
+    )
+
+
+def agent_task_view_from_v05(
+    task: TaskManifest,
+    capability_policy: CapabilityPolicy,
+    budget_policy: BudgetPolicy,
+    *,
+    policy: TaskViewPolicy | None = None,
+) -> AgentTaskView:
+    """Project a legacy Task without requiring private Admission artifacts."""
+
+    projection = _legacy_v05_projection(task)
+    selected_policy = policy if policy is not None else TaskViewPolicy()
+    if not isinstance(selected_policy, TaskViewPolicy):
+        raise ContractError("policy: expected TaskViewPolicy")
+    view = AgentTaskView(
+        task=projection.task,
+        statement_title=projection.statement_title,
+        statement_body=projection.statement_body,
+        framework=projection.framework,
+        operator_name=projection.operator_name,
+        runtime_hint=public_runtime_hint(projection.runtime),
+        public_tests=projection.public_tests,
+        capability_policy=capability_policy,
+        budget_policy=budget_policy,
+        termination_notes=selected_policy.termination_notes,
+        attachments=selected_policy.attachments,
+    )
+    assert_public_artifact_safe(view.to_dict())
+    return view
+
+
+def test_selectors_from_v05(
+    task: TaskManifest,
+) -> tuple[tuple[TestSelector, ...], tuple[TestSelector, ...]]:
+    """Return validated public/private selectors without reading artifacts."""
+
+    projection = _legacy_v05_projection(task)
+    return projection.public_tests, projection.hidden_tests
+
+
+def full_task_spec_from_v05(task: TaskManifest) -> FullTaskSpec:
+    projection = _legacy_v05_projection(task)
+    source = _source_identity(task)
+    runtime = projection.runtime
+    image = runtime.image
+    environment = _environment_identity(task, image, runtime)
+
+    return FullTaskSpec(
+        task=projection.task,
         source=source,
         environment=environment,
         runtime=runtime,
-        statement_title=str(statement.get("title", task.task_id)),
-        statement_body=str(statement.get("body", "Legacy v0.5 operator repair task.")),
-        framework=str(operator.get("framework", "unknown")),
-        operator_name=str(operator.get("operator_name", operator.get("component", "unknown"))),
-        public_tests=public_tests,
-        hidden_tests=hidden_tests,
+        statement_title=projection.statement_title,
+        statement_body=projection.statement_body,
+        framework=projection.framework,
+        operator_name=projection.operator_name,
+        public_tests=projection.public_tests,
+        hidden_tests=projection.hidden_tests,
         fail_to_pass=tuple(str(value) for value in task.fail_to_pass_tests),
         pass_to_pass=tuple(str(value) for value in task.pass_to_pass_tests),
         patch_scope=tuple(str(value) for value in task.patch_scope_paths),
@@ -233,11 +395,28 @@ def run_manifest_from_v05_dataset(
     dataset = DatasetManifest.load(dataset_path)
     _require_verified_dataset(dataset)
     legacy_tasks = _select_v05_tasks(dataset, selected_task_ids)
+    public_task_ids = tuple(_public_task_id(task) for task in legacy_tasks)
+    if any(public_task_id is not None for public_task_id in public_task_ids) and not all(
+        public_task_id is not None for public_task_id in public_task_ids
+    ):
+        raise ContractError(
+            "public_task_id: selected Tasks must either all expose opaque IDs or all omit them"
+        )
     tasks = tuple(full_task_spec_from_v05(task) for task in legacy_tasks)
+    quality_manifest = all(public_task_id is not None for public_task_id in public_task_ids)
     capability = replace(
         selected_defaults.capability_policy,
-        writable_paths=tuple(
-            sorted({path for task in tasks for path in task.patch_scope})
+        policy_id=(
+            "opbench-v0.7-repository-root-v1"
+            if quality_manifest
+            else selected_defaults.capability_policy.policy_id
+        ),
+        writable_paths=(
+            (".",)
+            if quality_manifest
+            else tuple(
+                sorted({path for task in tasks for path in task.patch_scope})
+            )
         ),
         registered_tests=tuple(
             sorted(
@@ -290,11 +469,16 @@ def runtime_bundle_from_v05_dataset(
         defaults=defaults,
         selected_task_ids=tuple(task.task_id for task in legacy_tasks),
     )
-    specs = {task.task.identifier: task for task in manifest.tasks}
+    task_ids_by_public = {
+        _public_task_id(task) or task.task_id: task.task_id
+        for task in legacy_tasks
+    }
     legacy_by_id = {task.task_id: task for task in legacy_tasks}
     bindings: list[LegacyV05PrivateTaskBinding] = []
+    task_id_mapping: list[tuple[str, str]] = []
     for spec in manifest.tasks:
-        legacy_task = legacy_by_id[spec.task.identifier]
+        canonical_task_id = task_ids_by_public[spec.task.identifier]
+        legacy_task = legacy_by_id[canonical_task_id]
         source_path = legacy_task.source_snapshot_path
         if source_path is None:
             raise ContractError("source snapshot is required for v1 runtime")
@@ -309,7 +493,7 @@ def runtime_bundle_from_v05_dataset(
             raise ContractError("hidden_test: cannot read exact file") from exc
         bindings.append(
             LegacyV05PrivateTaskBinding(
-                task_id=legacy_task.task_id,
+                task_id=canonical_task_id,
                 source=LocalGitSource(
                     identity=spec.source,
                     repository=source_path,
@@ -326,12 +510,22 @@ def runtime_bundle_from_v05_dataset(
                 source_overlay_paths=tuple(
                     legacy_task.source_loading_overlay_paths
                 ),
+                source_loading_timeout_ms=legacy_task.build_timeout_sec * 1_000,
             )
         )
+        task_id_mapping.append((canonical_task_id, spec.task.identifier))
     return LegacyV05RuntimeBundle(
         manifest=manifest,
         private_tasks=tuple(bindings),
+        public_task_ids_by_canonical=tuple(task_id_mapping),
     )
+
+
+def _public_task_id(task: TaskManifest) -> str | None:
+    try:
+        return task.public_task_id
+    except InvalidPublicTaskId as exc:
+        raise ContractError(str(exc)) from exc
 
 
 def _executable_source_revision(repository: Path, logical_revision: str) -> str:
@@ -547,8 +741,18 @@ def _runtime_profile(task: TaskManifest) -> RuntimeProfile:
             f"runtime_tier: task {task.runtime_tier!r} does not match Profile "
             f"{profile.runtime_tier!r}"
         )
-    if profile.requires_gpu != task.requires_gpu:
+    task_hardware = _mapping(
+        _mapping(task.data.get("environment")).get("hardware", {})
+    )
+    if (
+        "requires_gpu" in task_hardware
+        and profile.requires_gpu != task.requires_gpu
+    ):
         raise ContractError("requires_gpu: task does not match Runtime Profile")
+    if profile.source_loading_mode != (task.source_loading_mode or "none"):
+        raise ContractError(
+            "source_loading_mode: task does not match Runtime Profile"
+        )
     if profile.timeout_ms != task.timeout_sec * 1000:
         raise ContractError("timeout_ms: task does not match Runtime Profile")
     return profile
@@ -556,10 +760,30 @@ def _runtime_profile(task: TaskManifest) -> RuntimeProfile:
 
 _PROFILE_BY_ENVIRONMENT = {
     "opbench-local-cpu-process-v1": "local-cpu-process-v1",
+    "pytorch-boundary-cpu-source-build-cmake3-py311": "remote-cpu-source-boundary-cmake3-py311-v1",
+    "pytorch-boundary-cpu-source-build-py311": "remote-cpu-source-boundary-py311-v1",
     "pytorch-cpu-torch2.6.0-py311": "remote-cpu-pytorch-2.6-py311-v1",
     "pytorch-cpu-compile-torch2.6.0-py311": "remote-cpu-compile-pytorch-2.6-py311-v1",
     "pytorch-cuda-torch2.6.0-py311-cu124": "remote-cuda-overlay-pytorch-2.6-cu124-v1",
     "pytorch-cuda-devel-torch2.6.0-py311-cu124": "remote-cuda-kernel-pytorch-2.6-cu124-v1",
+    "pytorch-matched-boundary-torch2.2.0-cpu": "remote-cpu-boundary-torch2.2-py311-v1",
+    "pytorch-matched-boundary-torch2.3.0-cpu": "remote-cpu-boundary-torch2.3-py311-v1",
+    "pytorch-matched-boundary-torch2.4.0-cpu": "remote-cpu-boundary-torch2.4-py311-v1",
+    "pytorch-matched-boundary-torch2.6.0-cu124": "remote-cuda-boundary-torch2.6-cu124-v1",
+    "pytorch-matched-ff89ebc-torch2.4.0-py311-cu124": "remote-cuda-matched-torch2.4-cu124-py311-v1",
+    "pytorch-matched-06e9dea-torch2.7.0-py311-cpu": "remote-cpu-matched-torch2.7-py311-v1",
+    "pytorch-nightly-20260407-torch2.12.0dev-cpu-py311": "remote-cpu-expansion-nightly-torch2.12.0dev20260407-py311-v1",
+    "pytorch-nightly-20260407-torch2.12.0dev-cu126-py311": "remote-cuda-expansion-nightly-torch2.12.0dev20260407-cu126-py311-v1",
+    "pytorch-nightly-20260417-torch2.13.0dev-cu126-devel-py311": "remote-cuda-expansion-nightly-torch2.13.0dev20260417-cu126-devel-py311-v1",
+    "pytorch-nightly-20260423-torch2.13.0dev-cpu-py311": "remote-cpu-expansion-nightly-torch2.13.0dev20260423-py311-v1",
+    "pytorch-nightly-20260612-torch2.14.0dev-cpu-py311": "remote-cpu-expansion-nightly-torch2.14.0dev20260612-py311-v1",
+    "pytorch-nightly-20260612-torch2.14.0dev-cu126-devel-py311": "remote-cuda-expansion-nightly-torch2.14.0dev20260612-cu126-devel-py311-v1",
+    "pytorch-nightly-20260612-torch2.14.0dev-cu126-py311": "remote-cuda-expansion-nightly-torch2.14.0dev20260612-cu126-py311-v1",
+    "pytorch-nightly-20260707-torch2.14.0dev-cpu-py311": "remote-cpu-expansion-nightly-torch2.14.0dev20260707-py311-v1",
+    "pytorch-nightly-20260707-torch2.14.0dev-cu126-devel-py311": "remote-cuda-expansion-nightly-torch2.14.0dev20260707-cu126-devel-py311-v1",
+    "pytorch-nightly-20260710-torch2.14.0dev-cpu-py311": "remote-cpu-expansion-nightly-torch2.14.0dev20260710-py311-v1",
+    "pytorch-nightly-20260710-torch2.14.0dev-cu126-devel-py311": "remote-cuda-expansion-nightly-torch2.14.0dev20260710-cu126-devel-py311-v1",
+    "pytorch-nightly-20260710-torch2.14.0dev-cu126-py311": "remote-cuda-expansion-nightly-torch2.14.0dev20260710-cu126-py311-v1",
 }
 
 
@@ -733,7 +957,10 @@ def _require_v05_task_shape(task: TaskManifest) -> None:
 
     environment = _require_object(data.get("environment"), "environment")
     require_str(environment.get("backend", "local"), "environment.backend")
-    require_str(environment.get("image"), "environment.image")
+    if environment.get("image") is not None:
+        require_str(environment.get("image"), "environment.image")
+    elif data.get("environment_ref") not in _PROFILE_BY_ENVIRONMENT:
+        raise ContractError("environment.image: expected string")
     for name in ("platform", "image_digest", "digest_kind", "python_version", "os", "build_mode"):
         if environment.get(name) is not None:
             require_str(environment[name], f"environment.{name}")

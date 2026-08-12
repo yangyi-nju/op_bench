@@ -41,27 +41,66 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     run_root = Path(args.run_root)
+    roots = (
+        (run_root,)
+        if (run_root / "run_manifest.json").is_file()
+        else tuple(
+            path
+            for path in sorted(run_root.glob("cohort-*"))
+            if path.is_dir() and not path.is_symlink()
+            and (path / "run_manifest.json").is_file()
+        )
+    )
+    if not roots:
+        print("invalid run root: no completed run artifacts", file=sys.stderr)
+        return 2
+    reports = []
     try:
-        manifest = load_run_manifest_artifact(run_root)
+        for selected_root in roots:
+            manifest = load_run_manifest_artifact(selected_root)
+            reports.append(verify_run_artifacts(selected_root, manifest))
     except (ContractError, OSError) as exc:
         print(f"invalid run root: {exc}", file=sys.stderr)
         return 2
-
-    report = verify_run_artifacts(run_root, manifest)
-    by_id = {check.check_id: check for check in report.checks}
-    statuses = {
-        check_id: by_id[check_id].status
-        for check_id in RESOURCE_CHECK_IDS
-    }
-    passed = all(status == "passed" for status in statuses.values())
-    print(
-        canonical_json(
-            {
-                "run_id": report.run_id,
-                "status": "passed" if passed else "failed",
-                "checks": statuses,
+    if len(reports) == 1:
+        report = reports[0]
+        by_id = {check.check_id: check for check in report.checks}
+        statuses = {
+            check_id: by_id[check_id].status
+            for check_id in RESOURCE_CHECK_IDS
+        }
+        passed = all(status == "passed" for status in statuses.values())
+        payload = {
+            "run_id": report.run_id,
+            "status": "passed" if passed else "failed",
+            "checks": statuses,
+        }
+    else:
+        counts = {
+            check_id: {
+                "passed": sum(
+                    next(
+                        check.status
+                        for check in report.checks
+                        if check.check_id == check_id
+                    )
+                    == "passed"
+                    for report in reports
+                ),
+                "total": len(reports),
             }
+            for check_id in RESOURCE_CHECK_IDS
+        }
+        passed = all(
+            value["passed"] == value["total"] for value in counts.values()
         )
+        payload = {
+            "run_count": len(reports),
+            "status": "passed" if passed else "failed",
+            "checks": counts,
+        }
+    print(
+        canonical_json(payload)
     )
     return 0 if passed else 1
 

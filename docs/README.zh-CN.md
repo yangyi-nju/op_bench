@@ -4,39 +4,47 @@
 
 文档按版本归档。根目录只保留索引，新增版本时使用 `docs/vX.Y/` 目录，文件名保持小写 snake_case，例如 `design.md`、`developer_guide.md`、`experiment_report.md`、`implementation_plan.md`。
 
+`opbench-v0.7.0` 已完成并冻结 [50-task cumulative](../datasets/pytorch_v0.7/dataset.json)、[31-task Boundary](../datasets/pytorch_v0.7_boundary/dataset.json)、[5-task Precision](../datasets/pytorch_v0.7_precision/dataset.json)和 [15-task Device](../datasets/pytorch_v0.7_device/dataset.json)视图。[质量验证](v0.7/validation_report.md)通过 50/50 fresh replay 与 122/122 valid Agent Attempts，结果仍是描述性的 **non-leaderboard** 证据。旧 25/6/8 发布保存在 `archives/v0.7-pre-quality/`，历史 [v0.6 实验报告](v0.6/experiment_report.md)继续保留。
+
 建议按以下顺序阅读：
 
 1. [全局项目方案](project_plan.md)：使命、研究问题、原则、路线图、发布门和 v1.0 目标。
 2. [当前项目状态](project_state.md)：事实基线、当前版本、已确认决策、开放项和下一动作。
-3. [v0.6 平台设计](v0.6/design.md)：统一的 Demo→Platform 架构和完成定义。
-4. [v0.6 实施计划](v0.6/implementation_plan.md)：M1–M7 依赖、实现范围和验证策略。
-5. [v0.6 开发者指南](v0.6/developer_guide.md)：协议选择、Runtime 支持、身份、Artifact、Resume、失败归因和已知限制。
-6. [v0.6 验收矩阵](v0.6/acceptance_matrix.md)：可度量的发布要求和证据状态。
-7. [v0.6 发布说明](v0.6/release_notes.md)：已完成的平台范围、迁移合同、关闭门、冻结证据和明确不作出的结论。
-8. [v0.6 实验报告](v0.6/experiment_report.md)：面向读者的 51-Attempt 真实 MCP 结果、分析、证据与边界。
-9. [v0.6 真实 MCP Agent 实验手册](v0.6/mcp_agent_experiment.md)：冻结的四组执行流程、Resume 规则与发布边界。
-10. [v0.6 真实 MCP 实验验证](v0.6/mcp_agent_experiment_verification.md)：Integrity、Trace、Cleanup、确定性报告与隐私门禁。
-11. [v0.6 M6 验证记录](v0.6/m6_verification.md)：Runtime Conformance、Replay 清单、真实 Codex canary、精确 Remote 原始阻塞及 85/85 关闭附录。
-12. [v0.6 M7 验证记录](v0.6/m7_verification.md)：可执行 Demo、文档、干净环境验证和最终发布判定。
-13. [v0.7 Dataset Factory 与 Boundary 设计](v0.7/design.md)：Boundary 分类、Admission Factory、matched-runtime 恢复和数据集合同。
-14. [v0.5 实验报告](v0.5/experiment_report.md)：verified 17-task 数据集、51-attempt 全量结果、precision 拆解和 8 维指标。
-15. [v0.5 设计方案](v0.5/design.md)：问题维度分类、precision 子类、候选策略和扩展指标。
-16. [v0.5 候选检索](v0.5/candidate_search.md)：兼容 ghstack 的 PyTorch PR 检索和 precision 筛选规则。
-17. [v0.5 远程 agent 配置](v0.5/setup_remote_agent.md)：远程镜像、主机配置和 admission 执行方法。
-18. [v0.5 admission prompt](v0.5/admission_prompt.md)：precision task 批量 admission 说明。
-19. [v0.4 设计方案](v0.4/design.md)：CUDA runtime tier、远程 GPU Docker SSH 执行器、`inplace_build` 源码加载和 public test ablation 设计。
-20. [v0.4 实验报告](v0.4/experiment_report.md)：13-task 3-repeat Codex CLI 评测，84.6% resolved rate，按 tier 拆解。
-21. [v0.4 CUDA 候选 task](v0.4/candidate_tasks_cuda.md)：CUDA task 筛选标准和 PR 候选池。
-22. [v0.3 设计方案](v0.3/design.md)：10-task PyTorch 数据扩展、public/hidden test 分层、multi-file overlay 和 CUDA 试点方案。
-23. [v0.3 实验报告](v0.3/experiment_report.md)：10-task 评测结果，76.7% resolved rate，稳定性分析。
-24. [v0.2 设计文档](v0.2/design.md)：环境管理与数据准入版本的需求和架构。
-25. [v0.2 开发者指南](v0.2/developer_guide.md)：registry、admission、curation、资产检查和容器管理流程。
-26. [v0.2 实验报告](v0.2/experiment_report.md)：3-task verified 数据集、admission、gold 闭环和真实 Codex action bridge 评测结果。
-27. [v0.2 实施计划](v0.2/implementation_plan.md)：开发里程碑和验证命令。
-28. [v0.1 开发者指南](v0.1/developer_guide.md)：v0.1 架构、模块职责、实验流程和扩展规则。
-29. [v0.1 手动验证流程](v0.1/manual_validation.md)：v0.1 将 task 从 `draft` 晋升为 `verified` 的操作命令。
-30. [v0.1 实验报告](v0.1/experiment_report.md)：第一次真实 Codex action bridge 实验的证据和分析。
-31. [v0.1 数据构建流程](v0.1/builder_workflow.md)：如何从 GitHub PR 初始化 draft task。
-32. [v0.1 PRD](v0.1/product_requirements.md)：v0.1 规划阶段的产品需求记录。
+3. [v0.7 Dataset Factory 与 Boundary 设计](v0.7/design.md)：Boundary 分类、Admission Factory、matched-runtime 恢复和数据集合同。
+4. [v0.7 50-task 质量扩展](v0.7/quality_expansion.md)：当前质量门、多轴分类、Admission 和 122-attempt 合同。
+5. [v0.7 候选检索](v0.7/candidate_search.md)：来源窗口、自动候选漏斗和人工复核结论。
+6. [v0.7 matched-runtime 配置](v0.7/setup_matched_runtime.md)：可复现 source 与 wheel Runtime 准备。
+7. [v0.7 Boundary Task 报告](v0.7/boundary_tasks.md)：已准入 Task 证据和 B1–B5 覆盖。
+8. [v0.7 Dataset Card](v0.7/dataset_card.md)：发布身份、数据集哈希、来源、分类、污染风险和限制。
+9. [v0.7 验证报告](v0.7/validation_report.md)：冻结的 122-Attempt 真实 Codex 验证和完整性证据。
+9. [v0.6 平台设计](v0.6/design.md)：统一的 Demo→Platform 架构和完成定义。
+10. [v0.6 实施计划](v0.6/implementation_plan.md)：M1–M7 依赖、实现范围和验证策略。
+11. [v0.6 开发者指南](v0.6/developer_guide.md)：协议选择、Runtime 支持、身份、Artifact、Resume、失败归因和已知限制。
+12. [v0.6 验收矩阵](v0.6/acceptance_matrix.md)：可度量的发布要求和证据状态。
+13. [v0.6 发布说明](v0.6/release_notes.md)：已完成的平台范围、迁移合同、关闭门、冻结证据和明确不作出的结论。
+14. [v0.6 实验报告](v0.6/experiment_report.md)：面向读者的 51-Attempt 真实 MCP 结果、分析、证据与边界。
+15. [v0.6 真实 MCP Agent 实验手册](v0.6/mcp_agent_experiment.md)：冻结的四组执行流程、Resume 规则与发布边界。
+16. [v0.6 真实 MCP 实验验证](v0.6/mcp_agent_experiment_verification.md)：Integrity、Trace、Cleanup、确定性报告与隐私门禁。
+17. [v0.6 M6 验证记录](v0.6/m6_verification.md)：Runtime Conformance、Replay 清单、真实 Codex canary、精确 Remote 原始阻塞及 85/85 关闭附录。
+18. [v0.6 M7 验证记录](v0.6/m7_verification.md)：可执行 Demo、文档、干净环境验证和最终发布判定。
+19. [v0.5 实验报告](v0.5/experiment_report.md)：verified 17-task 数据集、51-attempt 全量结果、precision 拆解和 8 维指标。
+20. [v0.5 设计方案](v0.5/design.md)：问题维度分类、precision 子类、候选策略和扩展指标。
+21. [v0.5 候选检索](v0.5/candidate_search.md)：兼容 ghstack 的 PyTorch PR 检索和 precision 筛选规则。
+22. [v0.5 远程 agent 配置](v0.5/setup_remote_agent.md)：远程镜像、主机配置和 admission 执行方法。
+23. [v0.5 admission prompt](v0.5/admission_prompt.md)：precision task 批量 admission 说明。
+24. [v0.4 设计方案](v0.4/design.md)：CUDA runtime tier、远程 GPU Docker SSH 执行器、`inplace_build` 源码加载和 public test ablation 设计。
+25. [v0.4 实验报告](v0.4/experiment_report.md)：13-task 3-repeat Codex CLI 评测，84.6% resolved rate，按 tier 拆解。
+26. [v0.4 CUDA 候选 task](v0.4/candidate_tasks_cuda.md)：CUDA task 筛选标准和 PR 候选池。
+27. [v0.3 设计方案](v0.3/design.md)：10-task PyTorch 数据扩展、public/hidden test 分层、multi-file overlay 和 CUDA 试点方案。
+28. [v0.3 实验报告](v0.3/experiment_report.md)：10-task 评测结果，76.7% resolved rate，稳定性分析。
+29. [v0.2 设计文档](v0.2/design.md)：环境管理与数据准入版本的需求和架构。
+30. [v0.2 开发者指南](v0.2/developer_guide.md)：registry、admission、curation、资产检查和容器管理流程。
+31. [v0.2 实验报告](v0.2/experiment_report.md)：3-task verified 数据集、admission、gold 闭环和真实 Codex action bridge 评测结果。
+32. [v0.2 实施计划](v0.2/implementation_plan.md)：开发里程碑和验证命令。
+33. [v0.1 开发者指南](v0.1/developer_guide.md)：v0.1 架构、模块职责、实验流程和扩展规则。
+34. [v0.1 手动验证流程](v0.1/manual_validation.md)：v0.1 将 task 从 `draft` 晋升为 `verified` 的操作命令。
+35. [v0.1 实验报告](v0.1/experiment_report.md)：第一次真实 Codex action bridge 实验的证据和分析。
+36. [v0.1 数据构建流程](v0.1/builder_workflow.md)：如何从 GitHub PR 初始化 draft task。
+37. [v0.1 PRD](v0.1/product_requirements.md)：v0.1 规划阶段的产品需求记录。
 
 版本迭代记录见仓库根目录的 `CHANGELOG.md`。

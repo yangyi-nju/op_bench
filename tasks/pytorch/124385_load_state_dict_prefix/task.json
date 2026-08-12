@@ -28,8 +28,8 @@
     "snapshot_path": "../../../.op_bench_cache/sources/pytorch/pytorch/afa78ad08cc748c25e7e82cec02cec4c97c7d3af/source"
   },
   "statement": {
-    "title": "load_state_dict silently accepts unexpected keys whose prefix matches a valid key",
-    "body": "When loading a state_dict with strict=True, unexpected keys whose name starts with a prefix that matches a valid parameter key are incorrectly treated as valid, allowing corrupt state dicts to load without error.",
+    "title": "Module.load_state_dict accepts an unrecognized state entry extending a parameter name",
+    "body": "A state_dict entry formed from a valid parameter name plus an extra suffix is not reported as unrecognized. With strict=True, torch.nn.Module.load_state_dict must raise for that entry; with strict=False, it must report the entry without regressing valid nested state names.",
     "labels": [
       "module: nn",
       "bug"
@@ -68,12 +68,13 @@
   "agent_visible": {
     "repo_setup_commands": [],
     "known_constraints": [
-      "Full PyTorch source checkout task.",
-      "Do not assume CUDA availability."
+      "CPU-only; CUDA is not required.",
+      "Strict and non-strict loading behavior are both part of the public contract."
     ],
     "allowed_test_commands": [
       "{python} test/nn/test_load_state_dict.py -k {test}"
-    ]
+    ],
+    "public_task_id": "opbench-v07-t0003"
   },
   "evaluation": {
     "setup_commands": [],
@@ -96,6 +97,42 @@
     "deterministic": true,
     "estimated_runtime_min": 15,
     "layer": "A",
-    "admission_status": "verified"
+    "admission_status": "verified",
+    "source_loading_verified": true
+  },
+  "quality": {
+    "complexity_evidence": "quality/complexity.json",
+    "origin": "retained_historical",
+    "prompt_evidence": "quality/prompt.json",
+    "readmission_evidence": "quality/readmission.json"
+  },
+  "taxonomy": {
+    "component_tags": [],
+    "contract_detail_tags": [
+      "state",
+      "serialization",
+      "exception"
+    ],
+    "contract_family": "api_behavior",
+    "execution_context": {
+      "devices": [
+        "cpu"
+      ],
+      "distributed": false,
+      "modes": [
+        "eager"
+      ],
+      "phases": [
+        "forward"
+      ]
+    },
+    "failure_type": "missing_error",
+    "root_cause_tags": [
+      "incorrect_validation"
+    ],
+    "taxonomy_version": "v2",
+    "trigger_tags": [
+      "mutation_or_alias"
+    ]
   }
 }

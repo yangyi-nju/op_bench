@@ -24,7 +24,7 @@
     "platform": null,
     "runtime_tier": "cuda_python_overlay"
   },
-  "evidence_id": "pytorch__132835__njt_sdpa_autocast:125527547c60:2026-07-06T09:44:26Z",
+  "evidence_id": "pytorch__132835__njt_sdpa_autocast:7630dfa7cf20:2026-07-06T09:44:26Z",
   "gold": {
     "duration_sec": 89.356257042,
     "fail_to_pass_passed": 1,

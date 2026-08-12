@@ -10,6 +10,10 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from op_bench.factory.taxonomy import parse_taxonomy_v2, validate_problem_taxonomy
+from op_bench.runtime.validation import ContractError
+from op_bench.task import is_opaque_host_alias
+
 
 REQUIRED_PATHS = [
     ("task_id",),
@@ -109,6 +113,25 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
             errors.append(f"empty required field: {'.'.join(path)}")
 
     source = data.get("source", {})
+    if isinstance(source, dict):
+        issue_url = source.get("issue_url")
+        issue_number = source.get("issue_number")
+        if (issue_url is None) != (issue_number is None):
+            errors.append(
+                "source.issue_url and source.issue_number must both be null "
+                "or both be present"
+            )
+    operator = data.get("operator", {})
+    if isinstance(operator, dict):
+        errors.extend(validate_problem_taxonomy(operator))
+    else:
+        errors.append("operator must be an object")
+    if "taxonomy" in data:
+        try:
+            parse_taxonomy_v2(data["taxonomy"])
+        except ContractError as exc:
+            errors.append(str(exc))
+
     for reference in ("environment_ref", "source_ref"):
         value = data.get(reference)
         if value is not None and (not isinstance(value, str) or not value):
@@ -164,6 +187,13 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
         environment = data.get("environment", {})
         if not environment.get("host") and not data.get("environment_ref"):
             errors.append("environment.host is required when environment.backend is 'remote_docker' (or set via environment_ref)")
+    environment_host = data.get("environment", {}).get("host")
+    if environment_host is not None and not is_opaque_host_alias(
+        environment_host
+    ):
+        errors.append(
+            "environment.host must be an opaque lowercase host alias"
+        )
 
     source_loading = data.get("environment", {}).get("source_loading")
     if source_loading is not None:
@@ -240,8 +270,68 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
                     errors.append("admission.evidence is required when admission.status is 'verified'")
                 if not admission.get("verified_at"):
                     errors.append("admission.verified_at is required when admission.status is 'verified'")
+                compatibility = data.get("compatibility")
+                if isinstance(compatibility, dict):
+                    compatibility_evidence = admission.get("compatibility_evidence")
+                    if not compatibility_evidence:
+                        errors.append(
+                            "admission.compatibility_evidence is required for a "
+                            "verified matched-runtime task"
+                        )
+                    elif compatibility_evidence != compatibility.get("evidence"):
+                        errors.append(
+                            "admission.compatibility_evidence must match "
+                            "compatibility.evidence"
+                        )
             if admission_status is not None and formal_status != admission_status:
                 errors.append("admission.status must match metadata.admission_status when both are provided")
+
+    compatibility = data.get("compatibility")
+    if compatibility is not None:
+        if not isinstance(compatibility, dict):
+            errors.append("compatibility must be an object")
+        else:
+            required_compatibility_fields = (
+                "target_module",
+                "target_import",
+                "selector_module",
+                "minimal_operation",
+                "evidence",
+            )
+            for field in required_compatibility_fields:
+                if not isinstance(compatibility.get(field), str) or not compatibility.get(field):
+                    errors.append(f"compatibility.{field} must be a non-empty string")
+            for field in ("target_module", "selector_module", "evidence"):
+                value = compatibility.get(field)
+                if isinstance(value, str):
+                    relative = Path(value)
+                    if (
+                        relative.is_absolute()
+                        or ".." in relative.parts
+                        or "\\" in value
+                    ):
+                        errors.append(
+                            f"compatibility.{field} must be a task-relative path "
+                            "without '..'"
+                        )
+            target_import = compatibility.get("target_import")
+            if isinstance(target_import, str) and re.fullmatch(
+                r"[A-Za-z_][A-Za-z0-9_.]*",
+                target_import,
+            ) is None:
+                errors.append(
+                    "compatibility.target_import must be a dotted Python module"
+                )
+            minimal_operation = compatibility.get("minimal_operation")
+            if isinstance(minimal_operation, str) and not minimal_operation.startswith(
+                "import torch;"
+            ):
+                errors.append(
+                    "compatibility.minimal_operation must begin with 'import torch;'"
+                )
+            evidence_path = compatibility.get("evidence")
+            if isinstance(evidence_path, str) and Path(evidence_path).suffix != ".json":
+                errors.append("compatibility.evidence must be a JSON path")
 
     try:
         fail_to_pass = lookup(data, ("evaluation", "fail_to_pass"))
@@ -321,6 +411,24 @@ def validate_source_loading(source_loading: Any) -> list[str]:
                         "environment.source_loading.overlay_paths entries must be workspace-relative paths "
                         f"without '..': {path!r}"
                     )
+        overlay_tree = source_loading.get("overlay_tree")
+        if overlay_tree is not None:
+            tree_path = Path(str(overlay_tree))
+            package_root = str(source_loading.get("installed_package", "")).split(
+                ".", 1
+            )[0]
+            if (
+                not isinstance(overlay_tree, str)
+                or not overlay_tree
+                or tree_path.is_absolute()
+                or ".." in tree_path.parts
+                or not tree_path.parts
+                or tree_path.parts[0] != package_root
+            ):
+                errors.append(
+                    "environment.source_loading.overlay_tree must be a "
+                    "workspace-relative installed-package tree"
+                )
         if not isinstance(source_loading.get("sync_before_tests"), bool):
             errors.append("environment.source_loading.sync_before_tests must be a boolean for python_overlay")
     if mode == "inplace_build":
