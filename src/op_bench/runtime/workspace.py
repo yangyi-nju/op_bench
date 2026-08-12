@@ -898,17 +898,23 @@ class AuthoritativeWorkspace:
         if not self.policy.allow_binary and b"GIT binary patch" in patch_bytes:
             raise WorkspacePolicyError("binary patch is denied")
 
+        base_snapshots = _commit_path_snapshots(
+            self._root_fd,
+            self.base_commit,
+            self.policy,
+            changed_paths,
+        )
         for path in changed_paths:
-            if not _path_in_scopes(path, self.policy.patch_paths):
-                raise WorkspacePolicyError(f"path {path!r}: outside patch scope")
-            self._validate_frozen_path(path)
+            if not _path_in_scopes(path, self.policy.writable_paths):
+                raise WorkspacePolicyError(f"path {path!r}: outside writable scope")
+            self._validate_frozen_path(path, base_snapshots)
 
         parsed_paths = _patch_paths_from_bytes(patch_bytes)
         if parsed_paths != changed_paths:
             raise WorkspacePolicyError(
                 "canonical patch paths do not match authoritative Git status"
             )
-        self._verify_strict_clean_apply(patch_bytes)
+        self._verify_strict_clean_apply(patch_bytes, base_snapshots)
         patch_identity = raw_patch_identity(
             patch_bytes,
             identifier=f"{self.identity.identifier}:final.patch",
@@ -923,19 +929,27 @@ class AuthoritativeWorkspace:
             empty=not patch_bytes,
         )
 
-    def _validate_frozen_path(self, path: str) -> None:
+    def _validate_frozen_path(
+        self,
+        path: str,
+        base_snapshots: Mapping[str, _FileSnapshot],
+    ) -> None:
         current = self._snapshot(path)
-        if current is None and path not in self._base_snapshots:
+        if current is None and path not in base_snapshots:
             raise WorkspacePolicyError(f"deleted path {path!r}: missing from base")
 
-    def _verify_strict_clean_apply(self, patch_bytes: bytes) -> None:
+    def _verify_strict_clean_apply(
+        self,
+        patch_bytes: bytes,
+        base_snapshots: Mapping[str, _FileSnapshot],
+    ) -> None:
         if not patch_bytes:
             return
         with tempfile.TemporaryDirectory(prefix="opbench-clean-apply-") as temporary:
             temporary_root = Path(temporary)
             clean_root = temporary_root / "source"
             clean_root.mkdir()
-            _materialize_snapshots(clean_root, self._base_snapshots)
+            _materialize_snapshots(clean_root, base_snapshots)
             _git(clean_root, "init", "--quiet")
             _git(clean_root, "add", "--all")
             patch_path = temporary_root / "candidate.patch"
@@ -1279,6 +1293,21 @@ def _path_in_scopes(path: str, scopes: tuple[str, ...]) -> bool:
         elif path == scope:
             return True
     return False
+
+
+def paths_within_scopes(
+    paths: tuple[str, ...],
+    scopes: tuple[str, ...],
+) -> bool:
+    """Check canonical paths against a validated private scope boundary."""
+
+    if not isinstance(paths, tuple):
+        raise WorkspacePolicyError("paths: expected tuple")
+    _validate_scopes(scopes, "scopes", allow_root=True)
+    normalized = tuple(_normalize_relative_path(path) for path in paths)
+    if normalized != paths or len(set(normalized)) != len(normalized):
+        raise WorkspacePolicyError("paths: expected canonical unique paths")
+    return all(_path_in_scopes(path, scopes) for path in paths)
 
 
 def _same_inode(left: os.stat_result, right: os.stat_result) -> bool:
@@ -1756,5 +1785,6 @@ __all__ = [
     "assert_patch_identity_handoff",
     "build_patch_artifact",
     "patch_paths_from_bytes",
+    "paths_within_scopes",
     "raw_patch_identity",
 ]

@@ -1,0 +1,85 @@
+diff --git a/test/op_bench/test_aoti_shared_dynamic_slice.py b/test/op_bench/test_aoti_shared_dynamic_slice.py
+new file mode 100644
+--- /dev/null
++++ b/test/op_bench/test_aoti_shared_dynamic_slice.py
+@@ -0,0 +1,80 @@
++import pathlib
++import sys
++import unittest
++
++sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
++
++import torch
++from torch.export import Dim
++
++
++class _DataDependentSlice(torch.nn.Module):
++    def __init__(self):
++        super().__init__()
++        self.linear = torch.nn.Linear(4, 4)
++
++    def forward(self, x, first, second, mask):
++        offset = torch.nonzero(mask).shape[0]
++        return self.linear(x[offset:]) + first[offset:] + second[offset:]
++
++
++class _FixedOffsetSlice(torch.nn.Module):
++    def __init__(self):
++        super().__init__()
++        self.linear = torch.nn.Linear(4, 4)
++
++    def forward(self, x, first, second, mask):
++        del mask
++        return self.linear(x[2:]) + first[2:] + second[2:]
++
++
++class AotiSharedDynamicSliceTests(unittest.TestCase):
++    def setUp(self):
++        if not torch.cuda.is_available():
++            self.skipTest("CUDA is required")
++        torch.manual_seed(0)
++
++    def _inputs(self):
++        return (
++            torch.randn(8, 4, device="cuda"),
++            torch.randn(8, 4, device="cuda"),
++            torch.randn(8, 4, device="cuda"),
++            torch.tensor(
++                [True, True, False, True, False, False, True, True],
++                device="cuda",
++            ),
++        )
++
++    def _assert_package_matches_eager(self, model):
++        from inductor.test_aot_inductor_utils import AOTIRunnerUtil
++
++        model = model.cuda().eval()
++        inputs = self._inputs()
++        shared_batch = Dim("shared_batch", min=5, max=1024)
++        dynamic_shapes = {
++            "x": {0: shared_batch},
++            "first": {0: shared_batch},
++            "second": {0: shared_batch},
++            "mask": {0: shared_batch},
++        }
++        with torch.no_grad():
++            expected = model(*inputs)
++            actual = AOTIRunnerUtil.run(
++                model,
++                inputs,
++                dynamic_shapes=dynamic_shapes,
++            )
++        self.assertEqual(actual.shape, expected.shape)
++        self.assertEqual(actual.dtype, expected.dtype)
++        self.assertEqual(actual.device, expected.device)
++        torch.testing.assert_close(actual, expected)
++
++    def test_data_dependent_slice_matches_eager(self):
++        self._assert_package_matches_eager(_DataDependentSlice())
++
++    def test_fixed_offset_slice_matches_eager(self):
++        self._assert_package_matches_eager(_FixedOffsetSlice())
++
++
++if __name__ == "__main__":
++    unittest.main()

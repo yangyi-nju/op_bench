@@ -16,6 +16,22 @@ SUMMARY_PATHS = {
     "precision": (
         REPO_ROOT / "datasets" / "pytorch_v0.7_precision" / "summary.json"
     ),
+    "device": REPO_ROOT / "datasets" / "pytorch_v0.7_device" / "summary.json",
+}
+ARCHIVE_SUMMARY_PATHS = {
+    role: (
+        REPO_ROOT
+        / "archives"
+        / "v0.7-pre-quality"
+        / "datasets"
+        / dataset_id
+        / "summary.json"
+    )
+    for role, dataset_id in {
+        "cumulative": "pytorch_v0.7",
+        "boundary": "pytorch_v0.7_boundary",
+        "precision": "pytorch_v0.7_precision",
+    }.items()
 }
 ENTRYPOINTS = (
     REPO_ROOT / "README.md",
@@ -32,24 +48,23 @@ COMPLETION_RECORDS = (
 
 
 class V07ReleaseDocsTests(unittest.TestCase):
-    def test_dataset_card_matches_frozen_release(self) -> None:
-        self.assertTrue(
-            DATASET_CARD.is_file(),
-            f"missing v0.7 Dataset Card: {DATASET_CARD}",
-        )
+    def test_dataset_card_matches_quality_release_candidate(self) -> None:
+        self.assertTrue(DATASET_CARD.is_file())
         card = DATASET_CARD.read_text(encoding="utf-8")
         for required in (
             "opbench-v0.7.0",
-            "25 verified",
-            "6 verified Boundary",
-            "8 verified Precision",
-            "B1",
-            "B5",
-            "P1",
-            "P5",
-            "10",
-            "6 accepted",
-            "2 deferred",
+            "50 verified Tasks",
+            "14 retained historical",
+            "21 new",
+            "15 replacement",
+            "31",
+            "5",
+            "15",
+            "46",
+            "hard",
+            "medium",
+            "AgentTaskView",
+            "122 fresh logical Attempts",
             "non-leaderboard",
         ):
             with self.subTest(required=required):
@@ -61,7 +76,7 @@ class V07ReleaseDocsTests(unittest.TestCase):
         }
         self.assertEqual(
             {role: summary["task_count"] for role, summary in summaries.items()},
-            {"cumulative": 25, "boundary": 6, "precision": 8},
+            {"cumulative": 50, "boundary": 31, "precision": 5, "device": 15},
         )
         for role, summary in summaries.items():
             with self.subTest(role=role):
@@ -75,19 +90,47 @@ class V07ReleaseDocsTests(unittest.TestCase):
                     summary["task_count"],
                 )
 
+        cumulative = summaries["cumulative"]
         self.assertEqual(
-            summaries["boundary"]["problem_subclass"],
-            {"B1": 1, "B2": 2, "B3": 1, "B4": 1, "B5": 1},
+            cumulative["origin"],
+            {"new": 21, "replacement": 15, "retained_historical": 14},
         )
+        self.assertEqual(cumulative["difficulty"], {"hard": 46, "medium": 4})
+        self.assertEqual(cumulative["devices"], {"cpu": 35, "cuda": 15})
+        self.assertEqual(summaries["device"]["devices"], {"cuda": 15})
         self.assertEqual(
-            summaries["precision"]["problem_subclass"],
-            {"P1": 1, "P2": 1, "P3": 2, "P4": 2, "P5": 2},
-        )
-        self.assertEqual(
+            {role: summary["dataset_hash"] for role, summary in summaries.items()},
             {
-                role: summary["dataset_hash"]
-                for role, summary in summaries.items()
+                "cumulative": (
+                    "sha256:"
+                    "3695622dd2619a760d510ef49e0a9dbff637c98790ad3263c521bae8e99c9518"
+                ),
+                "boundary": (
+                    "sha256:"
+                    "2890f5937a5b2c7f5a12c870fc9cc550f0f16ff065467245ecf65223b5976a01"
+                ),
+                "precision": (
+                    "sha256:"
+                    "508ec6928d94c159499ae84bf4f37e594b2bdafdef89b04369f481deeddb2c8d"
+                ),
+                "device": (
+                    "sha256:"
+                    "b598fdfe94af9921132b147ab693477de8fb360dabe7e5f611792e5f38c0f138"
+                ),
             },
+        )
+
+    def test_historical_freeze_is_preserved_outside_current_paths(self) -> None:
+        summaries = {
+            role: json.loads(path.read_text(encoding="utf-8"))
+            for role, path in ARCHIVE_SUMMARY_PATHS.items()
+        }
+        self.assertEqual(
+            {role: summary["task_count"] for role, summary in summaries.items()},
+            {"cumulative": 25, "boundary": 6, "precision": 8},
+        )
+        self.assertEqual(
+            {role: summary["dataset_hash"] for role, summary in summaries.items()},
             {
                 "cumulative": (
                     "sha256:"
@@ -104,48 +147,19 @@ class V07ReleaseDocsTests(unittest.TestCase):
             },
         )
 
-        screening = json.loads(
-            (
-                REPO_ROOT
-                / "factory"
-                / "v0.7"
-                / "p3"
-                / "screening"
-                / "screening_index.json"
-            ).read_text(encoding="utf-8")
-        )
-        self.assertEqual(
-            screening["counts"],
-            {"accepted": 6, "deferred": 2, "rejected": 2},
-        )
-        self.assertEqual(len(screening["decisions"]), 10)
-
-        validation = json.loads(
-            (
-                REPO_ROOT
-                / "runs"
-                / "v0.7_validation_report"
-                / "experiment_summary.json"
-            ).read_text(encoding="utf-8")
-        )
-        self.assertEqual(validation["totals"]["attempts"], 18)
-        self.assertEqual(validation["totals"]["retries"], 0)
-        self.assertEqual(
-            validation["evaluation_outcomes"],
-            {"f2p_failed": 3, "no_patch": 1, "resolved": 14},
-        )
-
-    def test_bilingual_entrypoints_publish_the_same_v07_release(self) -> None:
+    def test_bilingual_entrypoints_publish_the_same_quality_release(self) -> None:
         for path in ENTRYPOINTS:
             text = path.read_text(encoding="utf-8")
             for required in (
                 "opbench-v0.7.0",
-                "25-task cumulative",
-                "6-task Boundary",
-                "8-task Precision",
+                "50-task cumulative",
+                "31-task Boundary",
+                "5-task Precision",
+                "15-task Device",
                 "datasets/pytorch_v0.7/dataset.json",
                 "datasets/pytorch_v0.7_boundary/dataset.json",
                 "datasets/pytorch_v0.7_precision/dataset.json",
+                "datasets/pytorch_v0.7_device/dataset.json",
                 "v0.7/dataset_card.md",
                 "v0.7/validation_report.md",
                 "v0.6/experiment_report.md",
@@ -161,25 +175,28 @@ class V07ReleaseDocsTests(unittest.TestCase):
                 with self.subTest(path=path.name, forbidden=forbidden):
                     self.assertNotIn(forbidden, text)
 
-    def test_v07_records_preserve_freeze_and_mark_expansion_in_progress(self) -> None:
+    def test_v07_records_match_the_current_execution_stage(self) -> None:
         records = {
-            path: path.read_text(encoding="utf-8")
-            for path in COMPLETION_RECORDS
+            path: path.read_text(encoding="utf-8") for path in COMPLETION_RECORDS
         }
         expansion = QUALITY_EXPANSION.read_text(encoding="utf-8")
-        self.assertIn("50-task 质量扩展正在开发", records[COMPLETION_RECORDS[0]])
         self.assertIn(
-            "当前开发版本 | v0.7 50-task 质量扩展（In Progress）",
+            "50-task 质量版及最终验证均已完成",
+            records[COMPLETION_RECORDS[0]],
+        )
+        self.assertIn(
+            "v0.7 50-task 质量扩展（Completed）",
             records[COMPLETION_RECORDS[1]],
         )
-        self.assertIn("| v0.7 | 正在开发 |", records[COMPLETION_RECORDS[2]])
+        self.assertIn("| v0.7 | 已完成 |", records[COMPLETION_RECORDS[2]])
         self.assertIn(
-            "## v0.7 - In development (50-task quality expansion)",
+            "## v0.7 - Completed 2026-08-11 (50-task quality release)",
             records[COMPLETION_RECORDS[3]],
         )
         for required in (
             "14 retained historical tasks",
             "36 new or replacement tasks",
+            "36/36 verified",
             "122",
             "AgentTaskView",
             "medium",
@@ -192,19 +209,24 @@ class V07ReleaseDocsTests(unittest.TestCase):
         for path, text in records.items():
             for required in (
                 "opbench-v0.7.0",
-                "sha256:4d7bde25e747bcc041aa5105ce5ce881a3f1e9fe2a7545667cdbc2c14d85064a",
-                "sha256:810a9cc85c576f44edd2672197ab83b7dfee7f674e597c76c78050bd119d606a",
-                "sha256:65818466a02e99466386cb8e038dc4da59d91dcb3bea7b83c8901d31a96aa8eb",
-                "18/18",
-                "14 resolved",
-                "3 F2P",
-                "1 no patch",
-                "0 accepted-cohort retr",
-                "868/868",
+                "50-task",
+                "122",
                 "non-leaderboard",
             ):
                 with self.subTest(path=path.name, required=required):
                     self.assertIn(required, text)
+        for required in (
+            "50/50",
+            "122/122",
+            "42 resolved",
+            "52 F2P failed",
+            "28 invalid patch",
+        ):
+            with self.subTest(completion_required=required):
+                self.assertTrue(
+                    any(required in text for text in records.values()),
+                    required,
+                )
 
 
 if __name__ == "__main__":

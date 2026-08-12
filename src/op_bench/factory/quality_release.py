@@ -52,8 +52,11 @@ from op_bench.registry import (
 )
 from op_bench.runtime.canonical import canonical_json, canonical_sha256
 from op_bench.runtime.codex_mcp_adapter import render_mcp_prompt
-from op_bench.runtime.legacy import LegacyV05Defaults, full_task_spec_from_v05
-from op_bench.runtime.task_view import project_agent_task_view
+from op_bench.runtime.legacy import (
+    LegacyV05Defaults,
+    agent_task_view_from_v05,
+    test_selectors_from_v05,
+)
 from op_bench.runtime.validation import ContractError
 from op_bench.task import InvalidPublicTaskId, TaskManifest
 
@@ -2026,6 +2029,8 @@ def validate_quality_task(
     task: TaskManifest,
     *,
     require_verified: bool,
+    environment_registry_path: Path | None = None,
+    source_registry_path: Path | None = None,
 ) -> tuple[str, ...]:
     """Return deterministic formal-quality errors for one Task."""
 
@@ -2071,10 +2076,14 @@ def validate_quality_task(
             admission_task = resolve_task_assets(
                 task,
                 environment_registry=EnvironmentRegistry.load(
-                    root / "environments/registry.json"
+                    environment_registry_path
+                    if environment_registry_path is not None
+                    else root / "environments/registry.json"
                 ),
                 source_registry=SourceRegistry.load(
-                    root / "sources/registry.json"
+                    source_registry_path
+                    if source_registry_path is not None
+                    else root / "sources/registry.json"
                 ),
             )
         except RegistryError as exc:
@@ -2256,15 +2265,32 @@ def validate_historical_index(
     ):
         errors.append("historical_index.content_hash: payload hash mismatch")
 
-    dataset_path = root / "datasets/pytorch_v0.7/dataset.json"
-    try:
-        dataset_payload = json.loads(
-            load_regular_file_bytes(dataset_path).decode("utf-8")
+    dataset_candidates = (
+        root / "datasets/pytorch_v0.7/dataset.json",
+        root
+        / "archives/v0.7-pre-quality/datasets/pytorch_v0.7/dataset.json",
+    )
+    dataset_path: Path | None = None
+    dataset_payload: Mapping[str, object] | None = None
+    for candidate_path in dataset_candidates:
+        try:
+            candidate_payload = json.loads(
+                load_regular_file_bytes(candidate_path).decode("utf-8")
+            )
+        except (ContractError, UnicodeDecodeError, json.JSONDecodeError):
+            continue
+        if (
+            isinstance(candidate_payload, Mapping)
+            and canonical_sha256(candidate_payload) == value["dataset_hash"]
+        ):
+            dataset_path = candidate_path
+            dataset_payload = candidate_payload
+            break
+    if dataset_path is None or dataset_payload is None:
+        return (
+            *errors,
+            "historical_index.dataset: matching immutable Dataset is unavailable",
         )
-    except (ContractError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-        return (*errors, f"historical_index.dataset: {exc}")
-    if not isinstance(dataset_payload, Mapping):
-        return (*errors, "historical_index.dataset: expected object")
     if value["dataset_id"] != dataset_payload.get("dataset_id"):
         errors.append("historical_index.dataset_id: mismatch")
     if value["dataset_hash"] != canonical_sha256(dataset_payload):
@@ -3819,6 +3845,16 @@ def _build_historical_audit(
         raise ContractError("created_at: expected UTC RFC3339 seconds")
     _assert_no_symlink_ancestors(review_root, "review root")
 
+    current_release_path = root / "datasets/pytorch_v0.7/dataset.json"
+    historical_archive_path = (
+        root / "archives/v0.7-pre-quality/datasets/pytorch_v0.7/dataset.json"
+    )
+    if (
+        dataset_path.resolve() == current_release_path.resolve()
+        and historical_archive_path.is_file()
+    ):
+        dataset_path = historical_archive_path
+
     dataset_bytes = load_regular_file_bytes(dataset_path)
     try:
         dataset_payload = json.loads(dataset_bytes.decode("utf-8"))
@@ -4236,18 +4272,18 @@ def _build_historical_audit(
 
 
 def _quality_agent_task_view(task: TaskManifest) -> dict[str, object]:
-    spec = full_task_spec_from_v05(task)
     defaults = LegacyV05Defaults.standard()
+    public_tests, _ = test_selectors_from_v05(task)
     capability = replace(
         defaults.capability_policy,
         policy_id="opbench-v0.7-repository-root-v1",
         writable_paths=(".",),
         registered_tests=tuple(
-            sorted(selector.selector_id for selector in spec.public_tests)
+            sorted(selector.selector_id for selector in public_tests)
         ),
     )
-    return project_agent_task_view(
-        spec,
+    return agent_task_view_from_v05(
+        task,
         capability,
         defaults.budget_policy,
     ).to_dict()
@@ -4311,7 +4347,7 @@ def _private_answer_index(
         hidden_value,
         "artifacts.hidden_test_patch",
     )
-    spec = full_task_spec_from_v05(task)
+    _, hidden_tests = test_selectors_from_v05(task)
     public_identifiers: tuple[str, ...] = ()
     public_literals: tuple[str, ...] = ()
     if scanner_version == "prompt-overlap-v2":
@@ -4324,7 +4360,7 @@ def _private_answer_index(
         hidden_test_patch=load_regular_file_bytes(hidden_path).decode("utf-8"),
         patch_scope=tuple(task.patch_scope_paths),
         hidden_selectors=tuple(
-            selector.selector_id for selector in spec.hidden_tests
+            selector.selector_id for selector in hidden_tests
         ),
         scanner_version=scanner_version,
         public_identifiers=public_identifiers,
@@ -4352,7 +4388,11 @@ def quality_prompt_source_inputs(
     )
 
 
-def quality_prompt_source_hash(task: TaskManifest) -> str:
+def quality_prompt_source_hash(
+    task: TaskManifest,
+    *,
+    scanner_version: str | None = None,
+) -> str:
     """Hash every exact public and private input used for Prompt review."""
 
     if not isinstance(task, TaskManifest):
@@ -4372,8 +4412,17 @@ def quality_prompt_source_hash(task: TaskManifest) -> str:
         ),
         "artifacts.hidden_test_patch",
     )
+    selected_scanner_version = (
+        _prompt_scanner_version(task)
+        if scanner_version is None
+        else scanner_version
+    )
+    agent_task_view, _ = quality_prompt_source_inputs(
+        task,
+        scanner_version=selected_scanner_version,
+    )
     payload: dict[str, object] = {
-        "agent_task_view": _quality_agent_task_view(task),
+        "agent_task_view": agent_task_view,
         "gold_patch_bytes_hash": quality_bytes_hash(
             load_regular_file_bytes(gold_path)
         ),
@@ -4384,11 +4433,10 @@ def quality_prompt_source_hash(task: TaskManifest) -> str:
         "fail_to_pass": evaluation.get("fail_to_pass"),
         "pass_to_pass": evaluation.get("pass_to_pass"),
     }
-    scanner_version = _prompt_scanner_version(task)
-    if scanner_version == "prompt-overlap-v2":
+    if selected_scanner_version == "prompt-overlap-v2":
         identifiers, literals = _task_public_scanner_vocabulary(task)
         payload["scanner"] = {
-            "version": scanner_version,
+            "version": selected_scanner_version,
             "public_identifiers": list(identifiers),
             "public_literals": list(literals),
         }

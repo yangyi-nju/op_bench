@@ -411,6 +411,24 @@ def validate_source_loading(source_loading: Any) -> list[str]:
                         "environment.source_loading.overlay_paths entries must be workspace-relative paths "
                         f"without '..': {path!r}"
                     )
+        overlay_tree = source_loading.get("overlay_tree")
+        if overlay_tree is not None:
+            tree_path = Path(str(overlay_tree))
+            package_root = str(source_loading.get("installed_package", "")).split(
+                ".", 1
+            )[0]
+            if (
+                not isinstance(overlay_tree, str)
+                or not overlay_tree
+                or tree_path.is_absolute()
+                or ".." in tree_path.parts
+                or not tree_path.parts
+                or tree_path.parts[0] != package_root
+            ):
+                errors.append(
+                    "environment.source_loading.overlay_tree must be a "
+                    "workspace-relative installed-package tree"
+                )
         if not isinstance(source_loading.get("sync_before_tests"), bool):
             errors.append("environment.source_loading.sync_before_tests must be a boolean for python_overlay")
     if mode == "inplace_build":

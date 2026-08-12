@@ -9,6 +9,7 @@ import re
 import tempfile
 import unittest
 
+from op_bench.dataset import DatasetManifest
 from op_bench.runtime.canonical import canonical_json
 from op_bench.runtime.schema import load_runtime_schema, validate_schema_instance
 from op_bench.runtime.validation import ContractError
@@ -17,6 +18,14 @@ from op_bench.runtime.validation import ContractError
 REPO_ROOT = Path(__file__).resolve().parents[1]
 REGISTRY_PATH = REPO_ROOT / "configs" / "runtime_profiles.v1.json"
 ENVIRONMENT_REGISTRY_PATH = REPO_ROOT / "environments" / "registry.json"
+BOUNDARY_DATASET_PATH = (
+    REPO_ROOT
+    / "archives"
+    / "v0.7-pre-quality"
+    / "datasets"
+    / "pytorch_v0.7_boundary"
+    / "dataset.json"
+)
 REGISTRY_SCHEMA_PATH = REPO_ROOT / "schemas" / "runtime_profile_registry.schema.json"
 RUNTIME_SCHEMA_PATH = REPO_ROOT / "schemas" / "runtime_contracts.schema.json"
 EXPECTED_PROFILE_IDS = (
@@ -26,11 +35,22 @@ EXPECTED_PROFILE_IDS = (
     "remote-cpu-boundary-torch2.4-py311-v1",
     "remote-cpu-compile-pytorch-2.6-py311-v1",
     "remote-cpu-expansion-nightly-torch2.12.0dev20260407-py311-v1",
+    "remote-cpu-expansion-nightly-torch2.13.0dev20260423-py311-v1",
+    "remote-cpu-expansion-nightly-torch2.14.0dev20260612-py311-v1",
+    "remote-cpu-expansion-nightly-torch2.14.0dev20260707-py311-v1",
+    "remote-cpu-expansion-nightly-torch2.14.0dev20260710-py311-v1",
     "remote-cpu-matched-torch2.7-py311-v1",
     "remote-cpu-pytorch-2.6-py311-v1",
+    "remote-cpu-source-boundary-cmake3-py311-v1",
     "remote-cpu-source-boundary-py311-v1",
     "remote-cuda-boundary-torch2.6-cu124-v1",
     "remote-cuda-expansion-nightly-torch2.12.0dev20260407-cu126-py311-v1",
+    "remote-cuda-expansion-nightly-torch2.13.0dev20260417-cu126-devel-py311-v1",
+    "remote-cuda-expansion-nightly-torch2.14.0dev20260612-cu126-devel-py311-v1",
+    "remote-cuda-expansion-nightly-torch2.14.0dev20260612-cu126-py311-v1",
+    "remote-cuda-expansion-nightly-torch2.14.0dev20260707-cu126-devel-py311-v1",
+    "remote-cuda-expansion-nightly-torch2.14.0dev20260710-cu126-devel-py311-v1",
+    "remote-cuda-expansion-nightly-torch2.14.0dev20260710-cu126-py311-v1",
     "remote-cuda-kernel-pytorch-2.6-cu124-v1",
     "remote-cuda-matched-torch2.4-cu124-py311-v1",
     "remote-cuda-overlay-pytorch-2.6-cu124-v1",
@@ -79,7 +99,7 @@ class RuntimeProfileRegistryTests(unittest.TestCase):
             first.canonical_bytes,
             (canonical_json(first.to_dict()) + "\n").encode("utf-8"),
         )
-        self.assertEqual(len({item.content_hash for item in first.profiles}), 14)
+        self.assertEqual(len({item.content_hash for item in first.profiles}), 25)
         for profile in first.profiles:
             with self.subTest(profile=profile.profile_id):
                 self.assertEqual(profile.hardware.identity_type, "hardware")
@@ -226,13 +246,13 @@ class RuntimeProfileRegistryTests(unittest.TestCase):
                 self.assertEqual(profile.timeout_ms, timeout_ms)
 
         matched_tasks = 0
-        for task_path in sorted(
-            (REPO_ROOT / "tasks" / "pytorch").glob("*/task.json")
-        ):
-            task = json.loads(task_path.read_text(encoding="utf-8"))
+        boundary_tasks = DatasetManifest.load(
+            BOUNDARY_DATASET_PATH
+        ).load_tasks(verified_only=True)
+        for task_manifest in boundary_tasks:
+            task = task_manifest.data
             environment_id = task.get("environment_ref")
-            if environment_id not in BOUNDARY_PROFILE_BY_ENVIRONMENT:
-                continue
+            self.assertIn(environment_id, BOUNDARY_PROFILE_BY_ENVIRONMENT)
             matched_tasks += 1
             profile_id, timeout_ms = BOUNDARY_PROFILE_BY_ENVIRONMENT[
                 environment_id

@@ -2,10 +2,10 @@
 
 > 状态：已批准的项目方向，本地文档重写稿
 >
-> 更新日期：2026-08-03
+> 更新日期：2026-08-11
 >
-> 当前稳定基线：2026-07-28 的 v0.7 25-task 历史冻结；
-> 当前路线：v0.7 50-task 质量扩展、Admission 与 122-attempt Agent 实验
+> 当前稳定发布：v0.7 50-task 质量版已完成，旧 25-task 版本已不可变归档；
+> 当前路线：v0.7 结果分析；正式多 Agent 与反馈消融留在后续版本
 >
 > 适用范围：v0.6 至 v1.0，并为 v2.0 预留演进边界
 
@@ -195,7 +195,7 @@ v0.5 的 51 次 Attempt 永久标记为 Legacy Baseline，不重命名为 v0.6 P
 | --- | --- | --- | --- |
 | v0.5 | 已完成 | 17 task、51 次真实 Codex Attempt | Legacy Evidence 冻结 |
 | v0.6 | 已完成 | Demo → 规范 Agent 评测平台 | 协议、Runtime、MCP、轨迹、Fresh Eval、Replay、真实 Codex 通过 |
-| v0.7 | 正在开发 | 50-task 质量扩展、Admission 与 Agent 实验 | 14 retained + 36 new/replacement、122 Attempts、全量发布审计 |
+| v0.7 | 已完成 | 50-task 质量版、统一 taxonomy 与 Agent 实验 | 50/50 fresh replay、122/122 valid Attempts 与全量发布审计通过 |
 | v0.8 | 已合并 | 原 Device/API 数据扩充并入 v0.7 | 不再作为独立当前交付 |
 | v0.9 | 2026-12-21 至 2027-02-14 | 正式多 Agent 实验与反馈消融 | Cohort 冻结、重复完整、统计和轨迹分析完成 |
 | Contingency | 2027-02-15 至 02-28 | P0/P1 修复与必要重跑 | 不新增研究范围 |
@@ -240,11 +240,14 @@ Boundary、8-task Precision，Dataset hash 分别为
 CPU/CUDA build commands。该证据严格为 **non-leaderboard**、非反馈因果的
 Task/平台验证。
 
-当前 v0.7 继续在该基线上执行质量扩展，旧 Hash 与结果不被改写，但也不能作为
-新完成条件。最终累计 Dataset 必须恰好是 14 条重新准入的历史任务加 36 条
-新增或替换任务；新增任务只接受 medium/hard、行为型 Prompt、精确源码和真实
-Baseline/Gold Admission。最终实验矩阵为 122 个 fresh logical Attempts。
-完整合同见 `docs/v0.7/quality_expansion.md`。
+最终质量版已完成重新准入和真实 Runtime Admission，并冻结为 14 条历史保留、
+21 条新增、15 条替换，共 50 条 verified Tasks；46 条 hard、4 条 medium，没有
+easy Task。累计/Boundary/Precision/Device 视图为 50/31/5/15。旧 Hash 与结果
+原样归档但不作为新完成条件。fresh replay 为 50/50；最终实验完成 17/17 cohorts、
+122/122 valid logical Attempts 与 122/122 完整 MCP traces，结果为 42 resolved、
+52 F2P failed、28 invalid patch。确定性报告、Integrity、资源、隐私和发布审计均
+通过。完整合同见
+`docs/v0.7/quality_expansion.md`。
 
 ### 8.3 原 v0.8 范围：已并入 v0.7
 
@@ -325,7 +328,7 @@ Baseline/Gold Admission。最终实验矩阵为 122 个 fresh logical Attempts�
 | Agent/Infra 失败混淆 | 三轴结果和稳定 failure taxonomy |
 | RemoteDocker 清理风险 | 只管理本 Attempt 创建并持有标识的容器/进程，不做宿主广域扫描或 kill |
 | 结果不可比较 | Comparability Key 和 Cohort Freeze |
-| 数据扩充返工 | v0.7 等待 v0.6 Protocol 稳定后 Admission |
+| 数据扩充返工 | v0.7 已在稳定 v0.6 Protocol 上完成重新准入、扩充与 fresh replay |
 | 样本量过小 | 报告置信区间、per-task 结果和限制，不夸大总体结论 |
 | Benchmark 污染 | 冻结来源、时间、Agent 可见输入和 Known Contamination Notes |
 
@@ -344,9 +347,6 @@ Baseline/Gold Admission。最终实验矩阵为 122 个 fresh logical Attempts�
 
 ## 14. 当前执行顺序
 
-1. 保留 v0.6 平台与 v0.7 历史 25-task Freeze 的不可变证据；
-2. 当前完成 v0.7 剩余新增/替换候选、质量复核与真实 Admission；
-3. 冻结恰好 50 条的累计 Dataset；
-4. 执行并重建 122-attempt fresh Agent 实验；
-5. 通过全量 replay、Integrity、隐私、测试、文档与发布 Hash 审计；
-6. 后续版本再冻结正式多 Agent 与 Feedback Ablation cohort。
+1. 保留 v0.6 平台、v0.7 历史 25-task Freeze 和最终 50-task release 的不可变证据；
+2. 使用冻结报告分析 v0.7 Agent 失败与 taxonomy 覆盖，不追溯改写结果；
+3. 后续版本再冻结正式多 Agent 与 Feedback Ablation cohort。

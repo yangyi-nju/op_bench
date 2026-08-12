@@ -4,7 +4,7 @@ Language: English | [中文](README.zh-CN.md)
 
 Documents are archived by version. The docs root keeps only indexes; new versions should use a `docs/vX.Y/` directory with lower snake_case filenames such as `design.md`, `developer_guide.md`, `experiment_report.md`, and `implementation_plan.md`.
 
-The current stable historical freeze is `opbench-v0.7.0`: [25-task cumulative](../datasets/pytorch_v0.7/dataset.json), [6-task Boundary](../datasets/pytorch_v0.7_boundary/dataset.json), and [8-task Precision](../datasets/pytorch_v0.7_precision/dataset.json). Its validation evidence is descriptive and **non-leaderboard**. The active [v0.7 50-task quality expansion](v0.7/quality_expansion.md) remains in development. The historical [v0.6 experiment report](v0.6/experiment_report.md) remains available.
+`opbench-v0.7.0` is complete with [50-task cumulative](../datasets/pytorch_v0.7/dataset.json), [31-task Boundary](../datasets/pytorch_v0.7_boundary/dataset.json), [5-task Precision](../datasets/pytorch_v0.7_precision/dataset.json), and [15-task Device](../datasets/pytorch_v0.7_device/dataset.json) views. Its [quality validation](v0.7/validation_report.md) passed 50/50 fresh replay and 122/122 valid Agent Attempts; results remain descriptive **non-leaderboard** evidence. The former 25/6/8 release is preserved under `archives/v0.7-pre-quality/`, and the historical [v0.6 experiment report](v0.6/experiment_report.md) remains available.
 
 Use these documents in this order:
 
@@ -16,7 +16,7 @@ Use these documents in this order:
 6. [v0.7 matched-runtime setup](v0.7/setup_matched_runtime.md): reproducible source and wheel Runtime preparation.
 7. [v0.7 Boundary task report](v0.7/boundary_tasks.md): admitted Task evidence and B1–B5 coverage.
 8. [v0.7 Dataset Card](v0.7/dataset_card.md): release identity, Dataset hashes, provenance, taxonomy, contamination risks, and limitations.
-9. [v0.7 validation report](v0.7/validation_report.md): the 18-Attempt real Codex validation cohort and integrity evidence.
+9. [v0.7 validation report](v0.7/validation_report.md): the frozen 122-Attempt real Codex validation and integrity evidence.
 9. [v0.6 platform design](v0.6/design.md): the unified Demo-to-Platform architecture and completion definition.
 10. [v0.6 implementation plan](v0.6/implementation_plan.md): M1–M7 dependencies, implementation scope, and verification strategy.
 11. [v0.6 developer guide](v0.6/developer_guide.md): protocol selection, Runtime support, identity, artifacts, resume, failure attribution, and known limits.

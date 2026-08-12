@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import copy
+from contextlib import redirect_stdout
 import hashlib
+import io
 import json
 import os
 from dataclasses import replace
@@ -32,6 +34,7 @@ from op_bench.runtime.codex_mcp_adapter import render_mcp_prompt
 from op_bench.runtime.legacy import LegacyV05Defaults, full_task_spec_from_v05
 from op_bench.runtime.task_view import project_agent_task_view
 from op_bench.task import TaskManifest
+from scripts import validate_v07_quality as validator_cli
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -333,6 +336,39 @@ def _rewrite_admission(
 
 
 class V07QualityValidatorTests(unittest.TestCase):
+    def test_release_cli_can_validate_final_agent_execution_index(self) -> None:
+        output = io.StringIO()
+        with (
+            patch.object(validator_cli, "build_release_outputs", return_value={}),
+            patch.object(
+                validator_cli,
+                "validate_quality_replay_index",
+                return_value=[],
+            ),
+            patch.object(
+                validator_cli,
+                "validate_quality_validation_index",
+                return_value=[],
+            ) as validate_agent,
+            redirect_stdout(output),
+        ):
+            status = validator_cli.main(
+                [
+                    "--release",
+                    "factory/v0.7/p9/release_manifest.json",
+                    "--replay-index",
+                    "runs/v0.7_quality_replay/index.json",
+                    "--validation-contract",
+                    "factory/v0.7/p9/validation_contract.json",
+                    "--run-root",
+                    "runs/v0.7_quality_validation",
+                ]
+            )
+
+        self.assertEqual(status, 0)
+        self.assertIn("122/122 Agent Attempts passed validation", output.getvalue())
+        validate_agent.assert_called_once()
+
     def test_historical_index_revalidates_exact_dispositions_and_retained_gates(
         self,
     ) -> None:

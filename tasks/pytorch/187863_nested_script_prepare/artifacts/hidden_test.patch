@@ -1,0 +1,75 @@
+diff --git a/test/op_bench/test_nested_script_prepare.py b/test/op_bench/test_nested_script_prepare.py
+new file mode 100644
+--- /dev/null
++++ b/test/op_bench/test_nested_script_prepare.py
+@@ -0,0 +1,70 @@
++import unittest
++
++import torch
++
++
++class IgnoredLeaf(torch.nn.Module):
++    __jit_ignored_attributes__ = ["sub"]
++
++    def __init__(self):
++        super().__init__()
++        self.sub = torch.nn.Linear(4, 4)
++
++    def forward(self, value):
++        if torch.jit.is_scripting():
++            return torch.zeros_like(value)
++        return self._real(value)
++
++    @torch.jit.ignore
++    def _real(self, value):
++        return self.sub(value)
++
++
++class Wrapper(torch.nn.Module):
++    def __init__(self, inner):
++        super().__init__()
++        self.inner = inner
++
++    def forward(self, value):
++        return self.inner.forward(value)
++
++
++class PairWrapper(torch.nn.Module):
++    def __init__(self, left, right):
++        super().__init__()
++        self.left = left
++        self.right = right
++
++    def forward(self, value):
++        return self.left.forward(value) + self.right.forward(value)
++
++
++class AlreadyScriptedPrepareTests(unittest.TestCase):
++    def test_scripted_child_with_ignored_leaf_can_be_nested(self):
++        inner = torch.jit.script(IgnoredLeaf())
++        self.assertIn("sub", dict(inner.named_children()))
++        outer = torch.jit.script(Wrapper(inner))
++        value = torch.randn(2, 4)
++        torch.testing.assert_close(outer(value), torch.zeros_like(value))
++
++    def test_two_scripted_children_with_ignored_leaves_can_be_nested(self):
++        left = torch.jit.script(IgnoredLeaf())
++        right = torch.jit.script(IgnoredLeaf())
++        outer = torch.jit.script(PairWrapper(left, right))
++        value = torch.randn(3, 4)
++        torch.testing.assert_close(outer(value), torch.zeros_like(value))
++
++    def test_plain_scripted_child_can_still_be_nested(self):
++        inner = torch.jit.script(torch.nn.ReLU())
++        outer = torch.jit.script(Wrapper(inner))
++        value = torch.tensor([[-1.0, 2.0]])
++        torch.testing.assert_close(outer(value), torch.relu(value))
++
++    def test_unscripted_child_is_prepared_normally(self):
++        outer = torch.jit.script(Wrapper(torch.nn.ReLU()))
++        value = torch.tensor([[-2.0, 4.0]])
++        torch.testing.assert_close(outer(value), torch.relu(value))
++
++
++if __name__ == "__main__":
++    unittest.main()

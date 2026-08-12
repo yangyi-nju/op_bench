@@ -1,23 +1,25 @@
 # OpBench Project State
 
-更新时间：2026-08-03（Asia/Shanghai）
+更新时间：2026-08-11（Asia/Shanghai）
 
 ## Current baseline
 
 | 项目 | 当前值 |
 | --- | --- |
-| 当前稳定基线 | v0.7 历史 25-task 冻结（Completed，Hash 与实验结果保持有效） |
-| 当前开发版本 | v0.7 50-task 质量扩展（In Progress） |
-| 数据集目标 | 恰好 50 条：14 retained historical + 36 new/replacement；p8 当前正式接纳 6/36，因此正式进度为 20/50 |
+| 当前稳定基线 | `opbench-v0.7.0` 50-task 质量版已完成；历史 25-task 冻结仍可复现 |
+| 当前开发版本 | v0.7 50-task 质量扩展（Completed） |
+| 数据集目标 | 已冻结恰好 50 条：14 retained historical + 21 new + 15 replacement；50/50 Admission verified |
 | 实验目标 | 36 条新增/替换各 3 次、14 条 retained 各 1 次，共 122 个 fresh logical Attempts；旧 18-attempt Boundary Validation 仅作历史证据 |
-| 当前目标 | 完成质量优先数据扩充、真实 Admission、Agent 实验和最终发布审计；原 v0.8 Device/API 扩充已合并回本版本 |
-| 当前阶段 | p7 历史重新准入已保留 14 条；p8 新任务正式 verified 6/36，剩余任务继续构建与 Admission |
+| 当前目标 | v0.7 已完成质量优先数据扩充、真实 Admission、Agent 实验和最终发布审计；原 v0.8 Device/API 扩充已合并回本版本 |
+| 当前阶段 | p7 重新准入、p8 36/36 Admission、Prompt 双重审查、p9 freeze、50/50 fresh replay、17/17 cohorts 与 122/122 valid Agent Attempts 均已完成；报告三件套可确定性重建 |
+| 50-task 最终组成 | CPU 35 / CUDA 15；hard 46 / medium 4；contract family 为 API behavior 27、efficiency/safety 6、result 6、tensor metadata 4、gradient 2、mutation/state 5；Boundary/Precision/Device 派生切片为 31/5/15 |
+| 当前本地验证 | p9 release、四份 Dataset、50/50 replay、122-attempt contract/runner/report validator、确定性报告重建、compile/JSON/diff 和公开树隐私扫描均通过；最终全量回归 1101/1101 通过（1260.411 秒） |
 | v0.7 P1 产品代码 | Candidate/Decision/FactoryAdmission/DatasetFreeze 合同、B1–B5 taxonomy、确定性筛选、证据门状态机、不可变 Artifact Store、Validator/Freeze/Screening CLI 与 synthetic fixtures 已实现 |
 | v0.7 P2 产品代码 | Matched-runtime Compatibility 合同/Schema、真实 probe/validation CLI、fail-closed promotion、两个 digest-pinned wheel 镜像和 task-local compatibility/Admission evidence 已实现；#129154/#144073 均恢复为 verified |
 | v0.7 P3 数据资产 | 10 条真实候选的确定性漏斗、6 条覆盖 B1–B5 的 verified Boundary Task、6 份 Compatibility/Admission/review 和 6 条完整 8 阶段 Factory chain 已冻结 |
 | v0.7 P4 数据与验证 | 25-task cumulative、6-task Boundary、8-task Precision Dataset 已内容寻址冻结；真实 Codex 18/18 valid，14 resolved、3 F2P failed、1 no patch，18 trace/Integrity/Cleanup 全部通过；报告为 non-leaderboard |
 | v0.7 P5 发布 | Dataset Card、双语 README/docs index、设计/路线图/状态/CHANGELOG 已同步；generated Artifact 全部逐字节重建；868/868 tests、compileall、JSON、Dataset、link、安全文本与 diff gates 通过 |
-| v0.7 Dataset hashes | cumulative `sha256:4d7bde25e747bcc041aa5105ce5ce881a3f1e9fe2a7545667cdbc2c14d85064a`；Boundary `sha256:810a9cc85c576f44edd2672197ab83b7dfee7f674e597c76c78050bd119d606a`；Precision `sha256:65818466a02e99466386cb8e038dc4da59d91dcb3bea7b83c8901d31a96aa8eb` |
+| v0.7 Dataset hashes | cumulative `sha256:3695622dd2619a760d510ef49e0a9dbff637c98790ad3263c521bae8e99c9518`；Boundary `sha256:2890f5937a5b2c7f5a12c870fc9cc550f0f16ff065467245ecf65223b5976a01`；Precision `sha256:508ec6928d94c159499ae84bf4f37e594b2bdafdef89b04369f481deeddb2c8d`；Device `sha256:b598fdfe94af9921132b147ab693477de8fb360dabe7e5f611792e5f38c0f138` |
 | v0.6 产品代码 | 合同、TaskView/Workspace/Action/Session/Evaluation/Artifact、版本化 Runtime Profile、Attempt-owned Local/Docker/Remote Backend、Conformance、Legacy Replay、标准 Codex 进程 Adapter、v1 Orchestrator、公开 Demo 与开发/发布文档均已实现 |
 | v0.6 MCP 实验 | 真实全量实验已完成，报告见 `docs/v0.6/experiment_report.md` |
 
@@ -61,17 +63,17 @@
 | V07-P5 | Passed | Dataset Card、双语入口、完成记录与可复现发布门 | `opbench-v0.7.0` 的三份 Dataset hash、18/18 cohort 与 non-leaderboard 边界已冻结；全部 generated Artifact 逐字节重建；最终 868/868 tests 及 compile/JSON/Dataset/link/safety/diff gates 通过 |
 | V07-LEGACY-RELEASE | Passed | 2026-07-28 历史 v0.7 freeze | P1–P5 全部 Passed；25/6/8 verified Dataset、B1–B5、P1–P5、真实 Codex Validation 和公开文档合同一致 |
 | V07-QX-READMISSION | Passed | 旧 25 条任务质量重新准入 | 14 retained、10 retired、1 deferred，证据见 `factory/v0.7/p7/historical_readmission.json` |
-| V07-QX-BUILD | In Progress | 36 条新增/替换任务质量构建与 Admission | `factory/v0.7/p8/accepted_tasks.json` 达到 36/36，且每条 Prompt、复杂度、源码、Runtime、F2P/P2P 和 Admission 证据有效 |
-| V07-QX-EXPERIMENT | Pending | 50-task fresh Agent 实验 | 122/122 logical Attempts 有效并可由 ledger/summary 重建 |
-| V07-QX-RELEASE | Pending | 50-task v0.7 最终发布 | Dataset 恰好 50 条；全量 replay、Integrity、隐私、测试、文档和最终 Hash 审计通过 |
+| V07-QX-BUILD | Passed | 36 条新增/替换任务质量构建与 Admission | `factory/v0.7/p8/accepted_tasks.json` 为 36/36 verified；29 条 staging Task 的真实 Runtime F2P/P2P、Prompt evidence、Admission 和 Registry binding 已原子提升并完成审计 |
+| V07-QX-FREEZE | Passed | 50-task 质量版与四个 Dataset view 冻结 | 14 retained + 21 new + 15 replacement；50/50 verified；累计/Boundary/Precision/Device 为 50/31/5/15，p9 release 可确定性重建 |
+| V07-QX-REPLAY | Passed | 50-task fresh replay | 50/50 verified；bundle/registry/release identity 全部重建一致 |
+| V07-QX-EXPERIMENT | Passed | 50-task fresh Agent 实验 | 17/17 cohorts、122/122 valid logical Attempts、122/122 完整 MCP traces；42 resolved、52 F2P failed、28 invalid patch；8 条无效 retry 历史保留且不进入 Agent 分母 |
+| V07-QX-RELEASE | Passed | 50-task v0.7 最终发布 | replay、122 Attempts、Integrity、资源、隐私、确定性报告、文档与最终 Hash 审计通过；1101/1101 全量测试通过；结果为 non-leaderboard |
 
 ## Next actions
 
-1. 完成剩余新增/替换候选的行为型 Prompt、F2P/P2P、精确源码和复杂度复核；
-2. 在冻结 Runtime 上完成每条真实 Baseline/Gold Admission，达到 36/36；
-3. 冻结 50-task Dataset 并执行 122-attempt fresh Agent 实验；
-4. 重建报告并通过全量 replay、Integrity、隐私、JSON、文档和测试门禁；
-5. 正式跨 Agent 与 Feedback Ablation 继续留在后续研究版本。
+1. 基于冻结的 v0.7 报告分析 Agent 失败模式与 taxonomy 覆盖；
+2. 保持 Dataset/Prompt/Runtime/Evaluator/Scoring 身份不可变，变更时创建新实验；
+3. 正式跨 Agent 与 Feedback Ablation 继续留在后续研究版本。
 
 ## Status rules
 

@@ -8,7 +8,7 @@ eligible through an independently reviewed, source-bound reassessment.
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 import json
 from pathlib import Path, PurePosixPath
@@ -23,6 +23,7 @@ from op_bench.factory.artifacts import (
     load_regular_file_bytes,
 )
 from op_bench.factory.contracts import FactoryArtifactReference
+from op_bench.factory.complexity import ComplexityEvidence
 from op_bench.factory.quality_release import (
     QualityCandidateDecision,
     QualityCandidateRecord,
@@ -38,6 +39,7 @@ from op_bench.factory.prompt_quality import (
     validate_prompt_quality_evidence,
 )
 from op_bench.integrity import REPLAY_SPEC_HASH_KIND, replay_spec_hash
+from op_bench.progress import Progress
 from op_bench.registry import load_resolved_task
 from op_bench.remote import remote_execution_config_hash
 from op_bench.runtime.canonical import canonical_json, canonical_sha256
@@ -2065,7 +2067,91 @@ def _rebind_readmission(
         relative,
         "quality_admission.task.quality.readmission_evidence",
     )
-    payload = dict(load_canonical_json_artifact(path))
+    stable = require_mapping(
+        json.loads(load_regular_file_bytes(admission_evidence_path)),
+        "quality_admission.task.admission_evidence",
+    )
+    admission = require_mapping(
+        stable.get("admission"),
+        "quality_admission.task.admission_evidence.admission",
+    )
+    retained = (
+        admission.get("decision") == "verified"
+        and admission.get("verified") is True
+    )
+    prompt_relative = _relative_posix_path(
+        quality.get("prompt_evidence"),
+        "quality_admission.task.quality.prompt_evidence",
+        suffix=".json",
+    )
+    complexity_relative = _relative_posix_path(
+        quality.get("complexity_evidence"),
+        "quality_admission.task.quality.complexity_evidence",
+        suffix=".json",
+    )
+    prompt = load_factory_contract(
+        _root_path(
+            task.task_dir,
+            prompt_relative,
+            "quality_admission.task.quality.prompt_evidence",
+        )
+    )
+    complexity = load_factory_contract(
+        _root_path(
+            task.task_dir,
+            complexity_relative,
+            "quality_admission.task.quality.complexity_evidence",
+        )
+    )
+    if not isinstance(prompt, PromptQualityEvidence):
+        raise ContractError(
+            "quality_admission.task.quality.prompt_evidence: "
+            "expected prompt_quality"
+        )
+    if not isinstance(complexity, ComplexityEvidence):
+        raise ContractError(
+            "quality_admission.task.quality.complexity_evidence: "
+            "expected complexity_evidence"
+        )
+    taxonomy = require_mapping(
+        task.data.get("taxonomy"),
+        "quality_admission.task.taxonomy",
+    )
+    created_at = require_str(
+        stable.get("created_at"),
+        "quality_admission.task.admission_evidence.created_at",
+        pattern=_UTC_SECONDS_PATTERN,
+    )
+    payload = (
+        dict(load_canonical_json_artifact(path)) if path.exists() else {}
+    )
+    payload.update(
+        {
+            "contract_type": "quality_readmission",
+            "schema_version": "v1",
+            "task_id": task.task_id,
+            "public_task_id": task.public_task_id,
+            "origin": quality.get("origin"),
+            "disposition": "retained" if retained else "deferred",
+            "taxonomy_hash": canonical_sha256(taxonomy),
+            "prompt_evidence": FactoryArtifactReference(
+                artifact_type=prompt.contract_type,
+                artifact_id=task.task_id,
+                content_hash=prompt.content_hash,
+                relative_path=prompt_relative,
+            ).to_dict(),
+            "complexity_evidence": FactoryArtifactReference(
+                artifact_type=complexity.contract_type,
+                artifact_id=task.task_id,
+                content_hash=complexity.content_hash,
+                relative_path=complexity_relative,
+            ).to_dict(),
+            "admission_evidence_hash": quality_bytes_hash(
+                load_regular_file_bytes(admission_evidence_path)
+            ),
+            "created_at": created_at,
+        }
+    )
     payload["admission_evidence_hash"] = quality_bytes_hash(
         load_regular_file_bytes(admission_evidence_path)
     )
@@ -2077,6 +2163,38 @@ def _rebind_readmission(
         }
     )
     _write_canonical_file(path, payload, root=task.task_dir)
+
+
+def _promote_task_admission(
+    task: TaskManifest,
+    *,
+    verified_at: str,
+) -> TaskManifest:
+    """Promote only after real Admission has produced verified evidence."""
+
+    _utc_seconds(verified_at, "quality_admission.task.verified_at")
+    manifest = dict(load_canonical_json_artifact(task.task_json_path))
+    admission = dict(
+        require_mapping(
+            manifest.get("admission"),
+            "quality_admission.task.admission",
+        )
+    )
+    admission["status"] = "verified"
+    admission["verified_at"] = verified_at
+    manifest["admission"] = admission
+    metadata = dict(
+        require_mapping(
+            manifest.get("metadata"),
+            "quality_admission.task.metadata",
+        )
+    )
+    metadata["admission_status"] = "verified"
+    metadata["curation_status"] = "verified"
+    metadata["source_loading_verified"] = True
+    manifest["metadata"] = metadata
+    _write_canonical_file(task.task_json_path, manifest, root=task.task_dir)
+    return TaskManifest.load(task.task_json_path)
 
 
 def _load_json_mapping(path: Path, label: str) -> Mapping[str, object]:
@@ -2765,6 +2883,7 @@ def run_quality_admission(
     created_at: str,
     preflight: Callable[[Path], tuple[bool, list[str]]] | None = None,
     admission_runner: AdmissionRunner | None = None,
+    progress: Progress | None = None,
 ) -> QualityAdmissionResultIndex:
     """Run the existing gates for every Task path in the accepted index."""
 
@@ -2869,17 +2988,25 @@ def run_quality_admission(
     if preflight is None:
         from scripts.preflight_task import preflight_task
 
-        preflight = preflight_task
+        def preflight(task_dir: Path) -> tuple[bool, list[str]]:
+            return preflight_task(
+                task_dir,
+                environment_registry_path=environment_registry_path,
+                source_registry_path=source_registry_path,
+            )
     if admission_runner is None:
         parsed = datetime.fromisoformat(
             created_at.removesuffix("Z") + "+00:00"
         )
         admission_runner = AdmissionRunner(
-            now=lambda: parsed.astimezone(timezone.utc)
+            now=lambda: parsed.astimezone(timezone.utc),
+            progress=progress,
         )
 
     results: list[QualityAdmissionResultRecord] = []
-    for accepted_record in accepted.tasks:
+    accepted_tasks = list(accepted.tasks)
+    for accepted_position, accepted_record in enumerate(accepted.tasks):
+        current_record = accepted_record
         task_dir = _root_path(
             root,
             accepted_record.task_path,
@@ -2983,9 +3110,44 @@ def run_quality_admission(
                     load_regular_file_bytes(stable_path)
                 )
                 _rebind_readmission(task, stable_path)
+                if evidence.verified:
+                    _promote_task_admission(
+                        task,
+                        verified_at=evidence.created_at,
+                    )
+                    task = load_resolved_task(
+                        task_dir / "task.json",
+                        environment_registry_path=environment_registry_path,
+                        source_registry_path=source_registry_path,
+                    )
+                    manifest = load_canonical_json_artifact(
+                        task_dir / "task.json"
+                    )
+                    current_record = replace(
+                        accepted_record,
+                        task_manifest_hash=canonical_sha256(manifest),
+                        replay_spec_hash=replay_spec_hash(task),
+                        prompt_source_hash=quality_prompt_source_hash(task),
+                    )
+                    accepted_tasks[accepted_position] = current_record
+                    accepted = replace(
+                        accepted,
+                        tasks=tuple(accepted_tasks),
+                    )
+                    _write_canonical_file(
+                        accepted_index_path,
+                        accepted.to_dict(),
+                        root=root,
+                    )
                 final_errors = tuple(
                     validate_quality_task(
-                        root, task, require_verified=True
+                        root,
+                        task,
+                        require_verified=True,
+                        environment_registry_path=(
+                            environment_registry_path
+                        ),
+                        source_registry_path=source_registry_path,
                     )
                 )
             except (
@@ -3025,15 +3187,15 @@ def run_quality_admission(
         results.append(
             QualityAdmissionResultRecord(
                 screening_record_index=(
-                    accepted_record.screening_record_index
+                    current_record.screening_record_index
                 ),
-                pr_number=accepted_record.pr_number,
-                task_id=accepted_record.task_id,
-                public_task_id=accepted_record.public_task_id,
-                origin=accepted_record.origin,
-                task_path=accepted_record.task_path,
-                task_manifest_hash=accepted_record.task_manifest_hash,
-                replay_spec_hash=accepted_record.replay_spec_hash,
+                pr_number=current_record.pr_number,
+                task_id=current_record.task_id,
+                public_task_id=current_record.public_task_id,
+                origin=current_record.origin,
+                task_path=current_record.task_path,
+                task_manifest_hash=current_record.task_manifest_hash,
+                replay_spec_hash=current_record.replay_spec_hash,
                 prompt_evidence_hash=prompt_hash,
                 prompt_errors=prompt_errors,
                 preflight_status=preflight_status,
@@ -3336,6 +3498,8 @@ def load_quality_admission_result_index(
                 root,
                 task,
                 require_verified=True,
+                environment_registry_path=environment_registry_path,
+                source_registry_path=source_registry_path,
             )
             if formal_errors:
                 raise ContractError(
@@ -3344,3 +3508,142 @@ def load_quality_admission_result_index(
                     + "; ".join(formal_errors)
                 )
     return result
+
+
+def revalidate_quality_admission_result_index(
+    root: Path,
+    result_path: Path,
+    accepted_index_path: Path,
+) -> QualityAdmissionResultIndex:
+    """Re-run only the deterministic post-Admission quality gate.
+
+    The Runtime outcome, stable evidence, and controller-private bundle are
+    first rebound by the strict result loader.  Verified Runtime outcomes also
+    finish an interrupted candidate-to-verified lifecycle and rebind the
+    accepted index.  This function never executes a Task and never changes any
+    Runtime field; it is intended for correcting local quality-artifact or
+    validator defects without pretending that a new Admission run occurred.
+    """
+
+    result = load_quality_admission_result_index(
+        root,
+        result_path,
+        accepted_index_path,
+        require_private_bundles=True,
+    )
+    environment_registry_path = _root_path(
+        root,
+        result.environment_registry_path,
+        "admission_results.environment_registry_path",
+    )
+    source_registry_path = _root_path(
+        root,
+        result.source_registry_path,
+        "admission_results.source_registry_path",
+    )
+    accepted = load_quality_accepted_task_index(
+        root,
+        accepted_index_path,
+        require_complete=False,
+    )
+    accepted_records = list(accepted.tasks)
+    records: list[QualityAdmissionResultRecord] = []
+    for position, outcome in enumerate(result.results):
+        if (
+            outcome.prompt_evidence_hash is None
+            or outcome.prompt_errors
+            or outcome.preflight_status != "passed"
+            or outcome.admission_decision is None
+        ):
+            records.append(outcome)
+            continue
+        current_outcome = outcome
+        task_dir = _root_path(
+            root,
+            outcome.task_path,
+            "admission_results.result.task_path",
+        )
+        try:
+            task = load_resolved_task(
+                task_dir / "task.json",
+                environment_registry_path=environment_registry_path,
+                source_registry_path=source_registry_path,
+            )
+            if outcome.admission_verified:
+                stable_path = task_dir / "admission/evidence.json"
+                stable = _load_json_mapping(
+                    stable_path,
+                    "quality_admission.task.admission_evidence",
+                )
+                verified_at = _utc_seconds(
+                    stable.get("created_at"),
+                    "quality_admission.task.admission_evidence.created_at",
+                )
+                _rebind_readmission(task, stable_path)
+                _promote_task_admission(task, verified_at=verified_at)
+                task = load_resolved_task(
+                    task_dir / "task.json",
+                    environment_registry_path=environment_registry_path,
+                    source_registry_path=source_registry_path,
+                )
+                manifest = load_canonical_json_artifact(
+                    task_dir / "task.json"
+                )
+                authorized = replace(
+                    accepted_records[position],
+                    task_manifest_hash=canonical_sha256(manifest),
+                    replay_spec_hash=replay_spec_hash(task),
+                    prompt_source_hash=quality_prompt_source_hash(task),
+                )
+                accepted_records[position] = authorized
+                current_outcome = replace(
+                    outcome,
+                    task_manifest_hash=authorized.task_manifest_hash,
+                    replay_spec_hash=authorized.replay_spec_hash,
+                )
+            final_errors = tuple(
+                validate_quality_task(
+                    root,
+                    task,
+                    require_verified=True,
+                    environment_registry_path=environment_registry_path,
+                    source_registry_path=source_registry_path,
+                )
+            )
+        except (
+            ContractError,
+            OSError,
+            RuntimeError,
+            UnicodeDecodeError,
+            ValueError,
+        ) as exc:
+            final_errors = (f"quality_admission: {exc}",)
+        verified = (
+            current_outcome.admission_decision == "verified"
+            and current_outcome.admission_verified
+            and current_outcome.baseline_status == "baseline_reproduced"
+            and current_outcome.gold_status == "resolved"
+            and current_outcome.admission_evidence_hash is not None
+            and current_outcome.admission_bundle_path is not None
+            and current_outcome.admission_bundle_hash is not None
+            and not final_errors
+        )
+        records.append(
+            replace(
+                current_outcome,
+                final_quality_errors=tuple(dict.fromkeys(final_errors)),
+                verified=verified,
+            )
+        )
+    rebound_accepted = replace(accepted, tasks=tuple(accepted_records))
+    _write_canonical_file(
+        accepted_index_path,
+        rebound_accepted.to_dict(),
+        root=root,
+    )
+    return replace(
+        result,
+        accepted_index_hash=rebound_accepted.content_hash,
+        verified_count=sum(record.verified for record in records),
+        results=tuple(records),
+    )

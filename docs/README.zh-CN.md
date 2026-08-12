@@ -4,7 +4,7 @@
 
 文档按版本归档。根目录只保留索引，新增版本时使用 `docs/vX.Y/` 目录，文件名保持小写 snake_case，例如 `design.md`、`developer_guide.md`、`experiment_report.md`、`implementation_plan.md`。
 
-当前稳定历史冻结是 `opbench-v0.7.0`：[25-task cumulative](../datasets/pytorch_v0.7/dataset.json)、[6-task Boundary](../datasets/pytorch_v0.7_boundary/dataset.json)和 [8-task Precision](../datasets/pytorch_v0.7_precision/dataset.json)。验证结果是描述性的 **non-leaderboard** 证据；当前 [v0.7 50-task 质量扩展](v0.7/quality_expansion.md)仍在开发，历史 [v0.6 实验报告](v0.6/experiment_report.md)继续保留。
+`opbench-v0.7.0` 已完成并冻结 [50-task cumulative](../datasets/pytorch_v0.7/dataset.json)、[31-task Boundary](../datasets/pytorch_v0.7_boundary/dataset.json)、[5-task Precision](../datasets/pytorch_v0.7_precision/dataset.json)和 [15-task Device](../datasets/pytorch_v0.7_device/dataset.json)视图。[质量验证](v0.7/validation_report.md)通过 50/50 fresh replay 与 122/122 valid Agent Attempts，结果仍是描述性的 **non-leaderboard** 证据。旧 25/6/8 发布保存在 `archives/v0.7-pre-quality/`，历史 [v0.6 实验报告](v0.6/experiment_report.md)继续保留。
 
 建议按以下顺序阅读：
 
@@ -16,7 +16,7 @@
 6. [v0.7 matched-runtime 配置](v0.7/setup_matched_runtime.md)：可复现 source 与 wheel Runtime 准备。
 7. [v0.7 Boundary Task 报告](v0.7/boundary_tasks.md)：已准入 Task 证据和 B1–B5 覆盖。
 8. [v0.7 Dataset Card](v0.7/dataset_card.md)：发布身份、数据集哈希、来源、分类、污染风险和限制。
-9. [v0.7 验证报告](v0.7/validation_report.md)：18-Attempt 真实 Codex 验证 cohort 和完整性证据。
+9. [v0.7 验证报告](v0.7/validation_report.md)：冻结的 122-Attempt 真实 Codex 验证和完整性证据。
 9. [v0.6 平台设计](v0.6/design.md)：统一的 Demo→Platform 架构和完成定义。
 10. [v0.6 实施计划](v0.6/implementation_plan.md)：M1–M7 依赖、实现范围和验证策略。
 11. [v0.6 开发者指南](v0.6/developer_guide.md)：协议选择、Runtime 支持、身份、Artifact、Resume、失败归因和已知限制。

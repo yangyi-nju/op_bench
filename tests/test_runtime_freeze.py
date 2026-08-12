@@ -101,7 +101,7 @@ class PatchFreezeTests(unittest.TestCase):
         with self.assertRaisesRegex(WorkspaceStateError, "does not accept mutations"):
             workspace.delete("src/operator.py")
 
-    def test_out_of_patch_scope_contamination_is_visible_and_rejected(self) -> None:
+    def test_out_of_writable_scope_contamination_is_visible_and_rejected(self) -> None:
         contaminated = self.workspace()
 
         contaminated.write("src/operator.py", b"VALUE = 2\n")
@@ -117,7 +117,7 @@ class PatchFreezeTests(unittest.TestCase):
         self.assertIn(b"src/operator.py", patch_bytes)
         self.assertIn(b"tests/test_operator.py", patch_bytes)
         self.assertIn(b".agent-cache/state.txt", patch_bytes)
-        with self.assertRaisesRegex(WorkspacePolicyError, "outside patch scope"):
+        with self.assertRaisesRegex(WorkspacePolicyError, "outside writable scope"):
             contaminated.freeze()
 
     def test_repository_local_diff_driver_cannot_change_canonical_patch_bytes(self) -> None:

@@ -1,0 +1,2010 @@
+{
+  "version": "v1",
+  "sources": [
+    {
+      "id": "pytorch-362b409-python-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "362b40939dd6faeebf0569beac563afa51e81dcd",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/362b40939dd6faeebf0569beac563afa51e81dcd/source",
+      "checksum": null,
+      "snapshot_git_commit": "3a36b668f1b575c1612abd9d3b8adbf4fd847193",
+      "tracked_file_count": 16542,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__149693__lazylinear_init"
+      ],
+      "notes": "The task only overlays torch/nn/modules/linear.py into an installed wheel. PyTorch third-party submodules are intentionally not initialized.",
+      "snapshot_mode": "overlay"
+    },
+    {
+      "id": "pytorch-df607364-python-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "df6073641079c781e66a905e4f15ee49ac257eb2",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/df6073641079c781e66a905e4f15ee49ac257eb2/source",
+      "checksum": null,
+      "snapshot_git_commit": "aca0343a1352405ec02529b9768cd562a50730f6",
+      "tracked_file_count": 19340,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__160952__bilinear_lazy_check"
+      ],
+      "notes": "The task only overlays torch/nn/modules/linear.py into an installed wheel. PyTorch third-party submodules are intentionally not initialized.",
+      "snapshot_mode": "overlay"
+    },
+    {
+      "id": "pytorch-8bf3f3f-python-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "8bf3f3fc43bd8c6a35f7dc92e1dfe21623b648bb",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/8bf3f3fc43bd8c6a35f7dc92e1dfe21623b648bb/source",
+      "checksum": null,
+      "snapshot_git_commit": "31d9aa96c9c8a4af537050274bd100cd760535bc",
+      "tracked_file_count": 16551,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__147599__lazylinear_state_forward"
+      ],
+      "notes": "The task only overlays torch/nn/modules/linear.py into an installed wheel. PyTorch third-party submodules are intentionally not initialized.",
+      "snapshot_mode": "overlay"
+    },
+    {
+      "id": "pytorch-6707dc8-python-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "6707dc8e444de405401f2e36e2868a19bb7ba43a",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/6707dc8e444de405401f2e36e2868a19bb7ba43a/source",
+      "checksum": null,
+      "snapshot_git_commit": "3713cda34def84e5e123110052ffc8a8ba83ea47",
+      "tracked_file_count": 14598,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__168159__embeddingbag_2d_offset"
+      ],
+      "snapshot_mode": "overlay"
+    },
+    {
+      "id": "pytorch-fefc406-python-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "fefc406a3d0d90db0f808419fb88045f90b213cd",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/fefc406a3d0d90db0f808419fb88045f90b213cd/source",
+      "checksum": null,
+      "snapshot_git_commit": "759f1836b9d0134b284a47058a7f2e54adcd9bca",
+      "tracked_file_count": 14405,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__162340__nn_arg_length"
+      ],
+      "snapshot_mode": "overlay"
+    },
+    {
+      "id": "pytorch-d8d0bf2-python-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "d8d0bf264a736c7fb3cd17799a1c1aba4addf8d9",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/d8d0bf264a736c7fb3cd17799a1c1aba4addf8d9/source",
+      "checksum": null,
+      "snapshot_git_commit": "9193ec6bdc190689be59ec877372031798f1eef2",
+      "tracked_file_count": 10976,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__127190__lr_scheduler_deepcopy"
+      ],
+      "snapshot_mode": "overlay"
+    },
+    {
+      "id": "pytorch-618efe8-python-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "618efe837d71c179a96dc851ca08ebd9b10cae1f",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/618efe837d71c179a96dc851ca08ebd9b10cae1f/source",
+      "checksum": null,
+      "snapshot_git_commit": "524e45bcf7137dcf33bb9bdf32c27e110e786848",
+      "tracked_file_count": 14803,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__163961__dataloader_subset"
+      ],
+      "snapshot_mode": "overlay"
+    },
+    {
+      "id": "pytorch-d4de871-python-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "d4de871adfac825e12bae9068e1c8433bd58455d",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/d4de871adfac825e12bae9068e1c8433bd58455d/source",
+      "checksum": null,
+      "snapshot_git_commit": "eeec0ed04bf4e47fcfe8310a742157f6782d4ff1",
+      "tracked_file_count": 14599,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__168295__autograd_create_graph"
+      ],
+      "snapshot_mode": "overlay"
+    },
+    {
+      "id": "pytorch-6926710-python-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "6926710adf697e9d2160d43c4a96212dd27ceae0",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/6926710adf697e9d2160d43c4a96212dd27ceae0/source",
+      "checksum": null,
+      "snapshot_git_commit": "5564d3553afaca06a4e6251ea35861df3a3c2329",
+      "tracked_file_count": 14445,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__161488__lbfgs_wolfe"
+      ],
+      "snapshot_mode": "overlay"
+    },
+    {
+      "id": "pytorch-423fc67-python-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "423fc671e9914f6a0ee567bbe47d56afb8cbe82b",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/423fc671e9914f6a0ee567bbe47d56afb8cbe82b/source",
+      "checksum": null,
+      "snapshot_git_commit": "43b3c2385de9b2ae057861fd327353ca3c634744",
+      "tracked_file_count": 11636,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__149312__lr_scheduler_last_epoch"
+      ],
+      "snapshot_mode": "overlay"
+    },
+    {
+      "id": "pytorch-6f9ffaa-python-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "6f9ffaa9916c02fa2aaae453db579a942b354708",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/6f9ffaa9916c02fa2aaae453db579a942b354708/source",
+      "checksum": null,
+      "snapshot_git_commit": "70611c0523fe3739b7d1d535ea6f5a40658a8f76",
+      "tracked_file_count": 11251,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__150975__autograd_backward_inputs"
+      ],
+      "snapshot_mode": "overlay"
+    },
+    {
+      "id": "pytorch-e3c4d1b-python-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "e3c4d1b7d6ea848f6b5558edf67e66dc28243641",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/e3c4d1b7d6ea848f6b5558edf67e66dc28243641/source",
+      "checksum": null,
+      "snapshot_git_commit": "fc501a523ed981ae7835581e699d1e70e1e6b13b",
+      "tracked_file_count": 10898,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__143455__set_submodule"
+      ],
+      "snapshot_mode": "overlay"
+    },
+    {
+      "id": "pytorch-afa78ad-python-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "afa78ad08cc748c25e7e82cec02cec4c97c7d3af",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/afa78ad08cc748c25e7e82cec02cec4c97c7d3af/source",
+      "checksum": null,
+      "snapshot_git_commit": "c14794ecc7f7de085967b70a14940d7e0b2cd303",
+      "tracked_file_count": 10879,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__124385__load_state_dict_prefix"
+      ],
+      "snapshot_mode": "overlay"
+    },
+    {
+      "id": "pytorch-bbf568a-cuda-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "bbf568aac8ec06bcbfc00cac84747256ac021c5d",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/bbf568aac8ec06bcbfc00cac84747256ac021c5d/source",
+      "checksum": null,
+      "snapshot_git_commit": "fe0fbd0e01caa23c36243d6bb45501ffc24a3b1a",
+      "tracked_file_count": 15924,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__132835__njt_sdpa_autocast"
+      ],
+      "snapshot_mode": "overlay"
+    },
+    {
+      "id": "pytorch-79aa174-cuda-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "79aa17489c3fc5ed6d5e972e9ffddf73e6dd0a5c",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/79aa17489c3fc5ed6d5e972e9ffddf73e6dd0a5c/source",
+      "checksum": null,
+      "snapshot_git_commit": "11735a9f48f33778b5b47bcb19ff45475af485d5",
+      "tracked_file_count": 16541,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__147786__faketensor_load_device"
+      ],
+      "snapshot_mode": "overlay"
+    },
+    {
+      "id": "pytorch-0dca756-cuda-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "0dca756832084a65603b7ce4683928bc7a5e3e1b",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/0dca756832084a65603b7ce4683928bc7a5e3e1b/source",
+      "checksum": null,
+      "snapshot_git_commit": "c8ccf1e4be2479cbb7f83054dc6c3a7734535b55",
+      "tracked_file_count": 17941,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__131858__pin_memory_device"
+      ],
+      "snapshot_mode": "overlay"
+    },
+    {
+      "id": "pytorch-09e366c-cuda-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "09e366cb5761a5a6262b26dd93e8a5bd7ce238d4",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/09e366cb5761a5a6262b26dd93e8a5bd7ce238d4/source",
+      "checksum": null,
+      "snapshot_git_commit": "6026539400cdd0ac314689dff359129eff20ca72",
+      "tracked_file_count": 15967,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__133729__device_context_bug"
+      ],
+      "snapshot_mode": "overlay"
+    },
+    {
+      "id": "pytorch-7100c36-cuda-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "7100c36c8a170db3b73e0c293d5366cfe6318c4d",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/7100c36c8a170db3b73e0c293d5366cfe6318c4d/source",
+      "checksum": null,
+      "snapshot_git_commit": "d0dcc8aea2509c959a112fd68739db2629b7fc13",
+      "tracked_file_count": 15925,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__132616__cuda_mem_get_info"
+      ],
+      "snapshot_mode": "overlay"
+    },
+    {
+      "id": "pytorch-240aa77-python-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "240aa77ad01c4f0cd9b2417748272f2f617c112f",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/240aa77ad01c4f0cd9b2417748272f2f617c112f/source",
+      "checksum": null,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__140557__layer_norm_decomp_precision"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.5 P1 precision task. Task overlays torch/_refs/__init__.py; test file test/test_decomp.py is included in the sparse checkout by default (torch/ + test/)."
+    },
+    {
+      "id": "pytorch-60a5050-python-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "60a505022f3fdf070b3a73225d8a39009caa216b",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/60a505022f3fdf070b3a73225d8a39009caa216b/source",
+      "checksum": null,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__139999__masked_mean_bool_upcast"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.5 P2. Overlays torch/masked/_ops.py."
+    },
+    {
+      "id": "pytorch-5d8e23b-python-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "5d8e23b49c5327590fb32b28309c41129e2b3f08",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/5d8e23b49c5327590fb32b28309c41129e2b3f08/source",
+      "checksum": null,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__129138__linear_add_bias_autocast"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.5 P3. Overlays torch/_inductor/fx_passes/mkldnn_fusion.py."
+    },
+    {
+      "id": "pytorch-ff89ebc-cuda-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "ff89ebc50a738c734496393dc25313cf197fd0b4",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/ff89ebc50a738c734496393dc25313cf197fd0b4/source",
+      "checksum": null,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__129154__exp_decomp_numerics"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.5 P4. Overlays torch/_refs/__init__.py. Test is @onlyCUDA → cuda_python_overlay tier."
+    },
+    {
+      "id": "pytorch-06e9dea-python-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "06e9deabb623e004eb6024e703a976c5748d51e6",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/06e9deabb623e004eb6024e703a976c5748d51e6/source",
+      "checksum": null,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__144073__vector_norm_scalar_overflow"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.5 P4. Overlays torch/_refs/linalg/__init__.py."
+    },
+    {
+      "id": "pytorch-356fc41-kernel-build",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "356fc41ae04816fe137bc85ccca4087ede291e3e",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/356fc41ae04816fe137bc85ccca4087ede291e3e/source",
+      "checksum": null,
+      "submodules": {
+        "policy": "third_party_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "inplace_build"
+      ],
+      "related_tasks": [
+        "pytorch__139372__histc_int8_cuda_bounds"
+      ],
+      "snapshot_mode": "kernel_full",
+      "notes": "v0.5 P5. Modifies aten/src/ATen/native/cuda/SummaryOps.cu. Requires kernel_full snapshot + inplace_build."
+    },
+    {
+      "id": "pytorch-d99c9c2-kernel-build",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "d99c9c2acb0fd24e68a71603fc8edc6c11379104",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/d99c9c2acb0fd24e68a71603fc8edc6c11379104/source",
+      "checksum": null,
+      "snapshot_git_commit": "4350ee632bd94298358c6357881eb43f2f188a77",
+      "tracked_file_count": 16105,
+      "submodules": {
+        "policy": "required_for_build",
+        "status": "initialized"
+      },
+      "source_loading_modes": [
+        "inplace_build"
+      ],
+      "related_tasks": [
+        "pytorch__141820__lerp_cuda_cpu_scalar"
+      ],
+      "snapshot_mode": "kernel_full"
+    },
+    {
+      "id": "pytorch-859be14-kernel-build",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "859be14c4e9942cf73456a48ef697a37c3ad22f9",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/859be14c4e9942cf73456a48ef697a37c3ad22f9/source",
+      "checksum": null,
+      "snapshot_git_commit": "7af64597a28de653363933323ba326929412d2f8",
+      "tracked_file_count": 16168,
+      "submodules": {
+        "policy": "required_for_build",
+        "status": "initialized"
+      },
+      "source_loading_modes": [
+        "inplace_build"
+      ],
+      "related_tasks": [
+        "pytorch__143264__addcmul_cpu_scalar"
+      ],
+      "snapshot_mode": "kernel_full"
+    },
+    {
+      "id": "pytorch-06f619d-kernel-build",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "06f619d999ac396bd83e32d36a64360bd24dacca",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/06f619d999ac396bd83e32d36a64360bd24dacca/source",
+      "checksum": null,
+      "snapshot_git_commit": null,
+      "tracked_file_count": null,
+      "submodules": {
+        "policy": "required_for_build",
+        "status": "initialized"
+      },
+      "source_loading_modes": [
+        "inplace_build"
+      ],
+      "snapshot_mode": "kernel_full",
+      "related_tasks": [
+        "pytorch__139409__bool_sort_cuda"
+      ]
+    },
+    {
+      "id": "pytorch-3b8db6d-kernel-build",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "3b8db6de6a23a4d310d54b117b106cc42d903463",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/3b8db6de6a23a4d310d54b117b106cc42d903463/source",
+      "checksum": null,
+      "snapshot_git_commit": null,
+      "tracked_file_count": null,
+      "submodules": {
+        "policy": "required_for_build",
+        "status": "initialized"
+      },
+      "source_loading_modes": [
+        "inplace_build"
+      ],
+      "snapshot_mode": "kernel_full",
+      "related_tasks": [
+        "pytorch__182082__nll_loss2d_zero_total_weight"
+      ]
+    },
+    {
+      "id": "pytorch-2409b49-kernel-build",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "2409b49a33c0ef594d89f9f477d56abad47e65bf",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/2409b49a33c0ef594d89f9f477d56abad47e65bf/source",
+      "checksum": null,
+      "snapshot_git_commit": null,
+      "tracked_file_count": null,
+      "submodules": {
+        "policy": "required_for_build",
+        "status": "initialized"
+      },
+      "source_loading_modes": [
+        "inplace_build"
+      ],
+      "snapshot_mode": "kernel_full",
+      "related_tasks": [
+        "pytorch__144009__softmax_ilpreduce_size"
+      ]
+    },
+    {
+      "id": "pytorch-38b3375-boundary-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "38b3375a81dc3c21d7c0420773187c7c2c3d5835",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/38b3375a81dc3c21d7c0420773187c7c2c3d5835/source",
+      "checksum": null,
+      "snapshot_git_commit": "c720f1a85e15d648ea1cef43d1679482d9b34cb8",
+      "tracked_file_count": 16541,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__143792__addmv_empty_matrix"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 B1. Overlays torch/_decomp/decompositions.py."
+    },
+    {
+      "id": "pytorch-38b3375-boundary-kernel-full",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "38b3375a81dc3c21d7c0420773187c7c2c3d5835",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/38b3375a81dc3c21d7c0420773187c7c2c3d5835/kernel-source",
+      "checksum": null,
+      "snapshot_git_commit": "e156d5b8e2eb568148a2fbccda84627fd04732ea",
+      "tracked_file_count": 16541,
+      "submodules": {
+        "policy": "required_for_build",
+        "status": "initialized"
+      },
+      "source_loading_modes": [
+        "inplace_build"
+      ],
+      "related_tasks": [
+        "pytorch__143792__addmv_empty_matrix"
+      ],
+      "snapshot_mode": "kernel_full",
+      "notes": "v0.7 B1 fallback after stable-wheel compatibility failures; exact Base Commit CPU source build."
+    },
+    {
+      "id": "pytorch-b9293e7-boundary-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "b9293e74a2b476534fa2aee5a0708e3fca255d8e",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/b9293e74a2b476534fa2aee5a0708e3fca255d8e/source",
+      "checksum": null,
+      "snapshot_git_commit": "a6ea302d5cc3cd47bfb1ec6a2cbf18ed04b0c35d",
+      "tracked_file_count": 12556,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__117065__index_copy_zero_dim"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 B2. Overlays torch/_decomp/decompositions.py."
+    },
+    {
+      "id": "pytorch-15ca562-boundary-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "15ca562f863ffe69d76c0ccaf448b27d18ceb2e8",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/15ca562f863ffe69d76c0ccaf448b27d18ceb2e8/source",
+      "checksum": null,
+      "snapshot_git_commit": "fb88768666ce3ebdb4e7b4e95ad65ff3ae2c6710",
+      "tracked_file_count": 16221,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__126461__cummin_rank_zero"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 B2. Overlays torch/_inductor/lowering.py."
+    },
+    {
+      "id": "pytorch-6ccbff1-boundary-kernel-full",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "6ccbff1450bb3936636377d3910906f5666ddcfa",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/6ccbff1450bb3936636377d3910906f5666ddcfa/source",
+      "checksum": null,
+      "snapshot_git_commit": "1e99a8cf7e66d7f55b6d96d5c4e345a60b945019",
+      "tracked_file_count": 16529,
+      "submodules": {
+        "policy": "required_for_build",
+        "status": "initialized"
+      },
+      "source_loading_modes": [
+        "inplace_build"
+      ],
+      "related_tasks": [
+        "pytorch__147352__storage_offset_overflow"
+      ],
+      "snapshot_mode": "kernel_full",
+      "notes": "v0.7 B3. Builds aten/src/ATen/native/Resize.h from the exact Base Commit with BUILD_TEST=0, USE_CUDA=0, USE_ROCM=0, USE_FLASH_ATTENTION=0, USE_MEM_EFF_ATTENTION=0, USE_KLEIDIAI=0, USE_NCCL=0."
+    },
+    {
+      "id": "pytorch-e426924-boundary-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "e426924c19500011aa419accc251a923fe857b94",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/e426924c19500011aa419accc251a923fe857b94/source",
+      "checksum": null,
+      "snapshot_git_commit": "7d878b3067e5070c54faf7b0265c9e37888449bb",
+      "tracked_file_count": 12634,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__118762__weight_norm_default_dim"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 B4. Overlays torch/_decomp/decompositions.py."
+    },
+    {
+      "id": "pytorch-cc98a1b-boundary-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "cc98a1b59909e6f3ce929380e02f0345c862e31d",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/cc98a1b59909e6f3ce929380e02f0345c862e31d/source",
+      "checksum": null,
+      "snapshot_git_commit": "200a65aae3b010ba175670bded648c082efc8b45",
+      "tracked_file_count": 16041,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__139751__triton_ygrid_mask"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 B5. Overlays torch/_inductor/codegen/triton.py."
+    },
+    {
+      "id": "pytorch-5f18efde-vmap-serde-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "5f18efdecccfcfd875fc306227bfa3e1156571a2",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/5f18efdecccfcfd875fc306227bfa3e1156571a2/source",
+      "checksum": null,
+      "snapshot_git_commit": "966a377593be5bdb15eb906f94d522d7061b4366",
+      "tracked_file_count": 16201,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__181263__vmap_serde_roundtrip"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 quality expansion. Overlays the exact Base serialize.py plus its Base-compatible serde schema.py into the registered nightly wheel; only serialize.py is in the production patch scope."
+    },
+    {
+      "id": "pytorch-324a7f79-fx-dce-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "324a7f79cd4b0ed63a8f6e64f27ce19424551d47",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/324a7f79cd4b0ed63a8f6e64f27ce19424551d47/source",
+      "checksum": null,
+      "snapshot_git_commit": "f76cd0417d8853ce19670ccd16b199528c1da23d",
+      "tracked_file_count": 21779,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__180886__fx_dce_effectful_packet"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 quality expansion. Overlays the exact Base torch/_library/utils.py plus its Base-compatible torch/fx/node.py into the registered nightly wheel; only utils.py is in the production patch scope."
+    },
+    {
+      "id": "pytorch-a7c0766a-bool-minmax-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "a7c0766a73e2bb496f13aa59652d4d7f3192d538",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/a7c0766a73e2bb496f13aa59652d4d7f3192d538/source",
+      "checksum": null,
+      "snapshot_git_commit": "2d377966553c8b6b0b6d14cae5011ba8879df559",
+      "tracked_file_count": 21596,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__188862__compiled_bool_minmax"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 quality expansion. Overlays the exact Base Inductor index-propagation and symbolic value-range modules into the registered nightly wheel."
+    },
+    {
+      "id": "pytorch-9b22041c-aoti-arrayref-loop-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "9b22041c7a353b59a19becbb51721acc6188b907",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/9b22041c7a353b59a19becbb51721acc6188b907/source",
+      "checksum": null,
+      "snapshot_git_commit": "36b0e9af82e834eb62f05c18cfc6d670bd610029",
+      "tracked_file_count": 21692,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__180370__aoti_minimal_arrayref_while_loop"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 quality expansion. Overlays the exact Base minimal-arrayref CPU wrapper code generator into the registered nightly wheel."
+    },
+    {
+      "id": "pytorch-f97ca50c-inductor-tiling-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "f97ca50ce1822af045505a6951d562e48d4d9ca5",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/f97ca50ce1822af045505a6951d562e48d4d9ca5/source",
+      "checksum": null,
+      "snapshot_git_commit": "e5a84f4c53e885360b7ba420ac723b0a8f138a63",
+      "tracked_file_count": 21706,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__177673__compiled_reduction_tiling_fallback"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 quality expansion. Overlays the exact Base Inductor SIMD tiling compatibility logic into the registered nightly wheel."
+    },
+    {
+      "id": "pytorch-048c2ae8-dynamic-bmm-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "048c2ae8480abaae0686256bfcd3b24a2fad7f29",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/048c2ae8480abaae0686256bfcd3b24a2fad7f29/source",
+      "checksum": null,
+      "snapshot_git_commit": "fe878fb59d889c6971bb9b1c79e8e563e905951e",
+      "tracked_file_count": 21534,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__178617__dynamic_large_batch_bmm"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 quality expansion. Overlays the exact Base BMM launch and Triton template files plus the Base template-heuristics compatibility dependency into the registered nightly wheel; the enforced patch scope remains limited to the two production BMM files."
+    },
+    {
+      "id": "pytorch-b728815e-fake-unique-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "b728815ef6438f69c7ea64c3f68b4a90453fa657",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/b728815ef6438f69c7ea64c3f68b4a90453fa657/source",
+      "checksum": null,
+      "snapshot_git_commit": "5e61ad3db5c28c9cd9669f23194068127f5dc111",
+      "tracked_file_count": 21587,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__179401__fake_unique_aux_metadata"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 quality expansion. Overlays the exact Base fake unique implementation into the registered nightly wheel."
+    },
+    {
+      "checksum": null,
+      "commit": "0274ad69c3effaef66b5776db5f752b6cf7d8154",
+      "id": "pytorch-0274ad69-after-aot-overlay",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/0274ad69c3effaef66b5776db5f752b6cf7d8154/source",
+      "notes": "Exact frozen Base tree materialized exclusively from the local Git object store; CPU overlay Admission remains pending.",
+      "related_tasks": [
+        "pytorch__180298__symbolic_failure_probe"
+      ],
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "snapshot_git_commit": "0274ad69c3effaef66b5776db5f752b6cf7d8154",
+      "snapshot_mode": "overlay",
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "tracked_file_count": 21702
+    },
+    {
+      "checksum": null,
+      "commit": "065e261caa192bbc8c9acf0d39acd6629abddd4f",
+      "id": "pytorch-065e261c-script-object-size-overlay",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/065e261caa192bbc8c9acf0d39acd6629abddd4f/source",
+      "notes": "Exact frozen Base tree materialized exclusively from the complete local Git object store; CPU overlay Admission and blind pilot remain pending.",
+      "related_tasks": [
+        "pytorch__186008__opaque_partition_cost_policy"
+      ],
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "snapshot_git_commit": "4c58f2f981d5c7e5ac16321b293500d499348d9a",
+      "snapshot_mode": "overlay",
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "tracked_file_count": 21459
+    },
+    {
+      "id": "pytorch-14c2be65-inference-fake-memo-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "14c2be6563899240a522d14383e76b49c8c9d028",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/14c2be6563899240a522d14383e76b49c8c9d028/source",
+      "checksum": null,
+      "snapshot_git_commit": "e788da376abbe87373a60fa8aac42e3f833358c4",
+      "tracked_file_count": 21368,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__188575__inference_boolean_mask_export"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "Diagnostic-only source registration for the exact PR188575 Base snapshot."
+    },
+    {
+      "checksum": null,
+      "commit": "168339d2d7810d26263f85173eb1aae6b306f5ca",
+      "id": "pytorch-168339d2-symbolic-bce-source",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/168339d2d7810d26263f85173eb1aae6b306f5ca/source",
+      "notes": "Exact frozen Base tree materialized exclusively from the local Git object store; full CPU source-build Admission remains pending.",
+      "related_tasks": [
+        "pytorch__180583__symbolic_weighted_bce"
+      ],
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "snapshot_git_commit": "168339d2d7810d26263f85173eb1aae6b306f5ca",
+      "snapshot_mode": "inplace_build",
+      "source_loading_modes": [
+        "inplace_build"
+      ],
+      "submodules": {
+        "policy": "required_for_source_build",
+        "status": "not_initialized"
+      },
+      "tracked_file_count": 21729
+    },
+    {
+      "checksum": null,
+      "commit": "1a08b7040d235fc214de9e5ea25e8ff25caf6e32",
+      "id": "pytorch-1a08b704-aoti-error-source",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/1a08b7040d235fc214de9e5ea25e8ff25caf6e32/source",
+      "notes": "Exact tracked Base tree curated offline from the local object store; full CPU source-build Admission remains pending.",
+      "related_tasks": [
+        "pytorch__180884__aoti_custom_op_error_context"
+      ],
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "snapshot_git_commit": "1a08b7040d235fc214de9e5ea25e8ff25caf6e32",
+      "snapshot_mode": "inplace_build",
+      "source_loading_modes": [
+        "inplace_build"
+      ],
+      "submodules": {
+        "policy": "required_for_source_build",
+        "status": "not_initialized"
+      },
+      "tracked_file_count": 21820
+    },
+    {
+      "id": "pytorch-256ebd1b-copysign-kernel-build",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "256ebd1b2fdde34750a7512169d6eca5845987e6",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/256ebd1b2fdde34750a7512169d6eca5845987e6/source",
+      "checksum": null,
+      "snapshot_git_commit": "256ebd1b2fdde34750a7512169d6eca5845987e6",
+      "tracked_file_count": 21497,
+      "submodules": {
+        "policy": "required_for_build",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "inplace_build"
+      ],
+      "related_tasks": [
+        "pytorch__183959__cuda_low_precision_nan_sign"
+      ],
+      "snapshot_mode": "kernel_full",
+      "notes": "Exact tracked Base tree for offline curation; build submodules are not initialized, so the candidate is not source-ready."
+    },
+    {
+      "checksum": null,
+      "commit": "25cf50a47043eeaeb8995d0b8ef0c559ae42c8bb",
+      "id": "pytorch-25cf50a4-dimension-marking-source",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/25cf50a47043eeaeb8995d0b8ef0c559ae42c8bb/source",
+      "notes": "Exact tracked Base tree materialized exclusively from the complete local Git object store; full CPU source-build Admission and blind pilot remain pending.",
+      "related_tasks": [
+        "pytorch__181469__dimension_annotation_guards"
+      ],
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "snapshot_git_commit": "37f591bd9d705d656732981516c3759c9369afdd",
+      "snapshot_mode": "inplace_build",
+      "source_loading_modes": [
+        "inplace_build"
+      ],
+      "submodules": {
+        "policy": "required_for_source_build",
+        "status": "not_initialized"
+      },
+      "tracked_file_count": 21822
+    },
+    {
+      "checksum": null,
+      "commit": "277d9b355a190b3e495f82b3f151d1ea1f4de338",
+      "id": "pytorch-277d9b35-functional-export-overlay",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/277d9b355a190b3e495f82b3f151d1ea1f4de338/source",
+      "notes": "Exact frozen Base tree materialized exclusively from the local Git object store; CPU overlay Admission remains pending.",
+      "related_tasks": [
+        "pytorch__185314__functional_export_argument_collision"
+      ],
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "snapshot_git_commit": "277d9b355a190b3e495f82b3f151d1ea1f4de338",
+      "snapshot_mode": "overlay",
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "tracked_file_count": 21517
+    },
+    {
+      "checksum": null,
+      "commit": "3d3d505d17ee53e4ea3baee60805420b90f1933d",
+      "id": "pytorch-3d3d505d-autograd-tls-source",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/3d3d505d17ee53e4ea3baee60805420b90f1933d/source",
+      "notes": "Exact frozen Base tree materialized exclusively from the local Git object store; full CPU source-build Admission remains pending.",
+      "related_tasks": [
+        "pytorch__182083__autograd_worker_teardown"
+      ],
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "snapshot_git_commit": "3d3d505d17ee53e4ea3baee60805420b90f1933d",
+      "snapshot_mode": "inplace_build",
+      "source_loading_modes": [
+        "inplace_build"
+      ],
+      "submodules": {
+        "policy": "required_for_source_build",
+        "status": "not_initialized"
+      },
+      "tracked_file_count": 21498
+    },
+    {
+      "checksum": null,
+      "commit": "4336c9673dcab279b9b07a6df84346fe9d5f3217",
+      "id": "pytorch-4336c967-wrapper-alias-overlay",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/4336c9673dcab279b9b07a6df84346fe9d5f3217/source",
+      "notes": "Exact frozen Base tree materialized exclusively from the local Git object store; CPU overlay Admission remains pending.",
+      "related_tasks": [
+        "pytorch__181119__benchmark_alias_storage"
+      ],
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "snapshot_git_commit": "4336c9673dcab279b9b07a6df84346fe9d5f3217",
+      "snapshot_mode": "overlay",
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "tracked_file_count": 21815
+    },
+    {
+      "checksum": null,
+      "commit": "4394db2dc5e5c02f9e5eab16c07c31490cb08db1",
+      "id": "pytorch-4394db2d-aoti-concurrent-fold-source",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/4394db2dc5e5c02f9e5eab16c07c31490cb08db1/source",
+      "notes": "Exact tracked Base tree materialized exclusively from the complete local Git object store; full CUDA source-build Admission remains pending.",
+      "related_tasks": [
+        "pytorch__181941__aoti_concurrent_const_fold"
+      ],
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "snapshot_git_commit": "a49ca28c2cfab81d51c553ec1d23d7e066597a63",
+      "snapshot_mode": "inplace_build",
+      "source_loading_modes": [
+        "inplace_build"
+      ],
+      "submodules": {
+        "policy": "required_for_source_build",
+        "status": "not_initialized"
+      },
+      "tracked_file_count": 21866
+    },
+    {
+      "checksum": null,
+      "commit": "4518aeb70197d13efa40c18de47106b3c9187f0b",
+      "id": "pytorch-4518aeb7-aoti-user-stream-overlay",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/4518aeb70197d13efa40c18de47106b3c9187f0b/source",
+      "notes": "Exact tracked Base tree materialized exclusively from the complete local Git object store; CUDA overlay Admission and blind pilot remain pending.",
+      "related_tasks": [
+        "pytorch__182971__aoti_user_stream_events"
+      ],
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "snapshot_git_commit": "16f8c403b596896d4df387043cc9b01a198d0c04",
+      "snapshot_mode": "overlay",
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "tracked_file_count": 21433
+    },
+    {
+      "checksum": null,
+      "commit": "45e286e38836873fcbff6d13262e97faf1e8bfaa",
+      "id": "pytorch-45e286e3-aoti-input-lifetime-source",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/45e286e38836873fcbff6d13262e97faf1e8bfaa/source",
+      "notes": "Exact frozen Base tree materialized exclusively from the local Git object store; full CUDA source-build Admission remains pending.",
+      "related_tasks": [
+        "pytorch__189503__aoti_rejected_input_memory"
+      ],
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "snapshot_git_commit": "45e286e38836873fcbff6d13262e97faf1e8bfaa",
+      "snapshot_mode": "inplace_build",
+      "source_loading_modes": [
+        "inplace_build"
+      ],
+      "submodules": {
+        "policy": "required_for_source_build",
+        "status": "not_initialized"
+      },
+      "tracked_file_count": 21465
+    },
+    {
+      "id": "pytorch-4924764e-aoti-profile-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "4924764e65484ed1e9f41c75660e3c7a6de6fb71",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/4924764e65484ed1e9f41c75660e3c7a6de6fb71/source",
+      "checksum": null,
+      "snapshot_git_commit": "4924764e65484ed1e9f41c75660e3c7a6de6fb71",
+      "tracked_file_count": 21646,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__176922__aoti_profile_repeated_dynamic_kernel"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "Diagnostic-only source registration for the exact PR176922 Base snapshot."
+    },
+    {
+      "checksum": null,
+      "commit": "4d54f622b91391472c0758f127b720e9acaeab12",
+      "id": "pytorch-4d54f622-semi-sparse-to-overlay",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/4d54f622b91391472c0758f127b720e9acaeab12/source",
+      "notes": "Exact frozen Base tree materialized exclusively from the complete local Git object store; CUDA overlay Admission and blind pilot remain pending.",
+      "related_tasks": [
+        "pytorch__178667__semi_structured_cpu_conversion"
+      ],
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "snapshot_git_commit": "576ef845c2d67c7c95fe74cebb7b55dad1ef1ce6",
+      "snapshot_mode": "overlay",
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "tracked_file_count": 21678
+    },
+    {
+      "checksum": null,
+      "commit": "57f6c965b61451ceb498678f3035084fe8cb4e38",
+      "id": "pytorch-57f6c965-undefined-tensor-boxing-overlay",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/57f6c965b61451ceb498678f3035084fe8cb4e38/source",
+      "notes": "Exact frozen Base tree materialized exclusively from the complete local Git object store; CPU overlay Admission and blind pilot remain pending.",
+      "related_tasks": [
+        "pytorch__188485__undefined_tensor_boxing"
+      ],
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "snapshot_git_commit": "3f3caba56012bdcfc78636719450a82fd9a8f717",
+      "snapshot_mode": "overlay",
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "tracked_file_count": 21394
+    },
+    {
+      "id": "pytorch-68bcdcb1-export-serde-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "68bcdcb1e16e6fef4c432d48795734b14a51182d",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/68bcdcb1e16e6fef4c432d48795734b14a51182d/source",
+      "checksum": null,
+      "snapshot_git_commit": "68bcdcb1e16e6fef4c432d48795734b14a51182d",
+      "tracked_file_count": 21652,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__176677__export_unused_collection_output"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "Diagnostic-only source registration for the exact PR176677 Base snapshot."
+    },
+    {
+      "id": "pytorch-6cda861d-large-offset-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "6cda861d2effac9556dd439c239baf31da1b02f8",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/6cda861d2effac9556dd439c239baf31da1b02f8/source",
+      "checksum": null,
+      "snapshot_git_commit": "6cda861d2effac9556dd439c239baf31da1b02f8",
+      "tracked_file_count": 21584,
+      "submodules": {
+        "policy": "not_required_for_python_overlay",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__179333__dynamic_large_offset_template"
+      ],
+      "snapshot_mode": "python_overlay",
+      "notes": "Exact tracked Base tree curated offline from the local object store; runtime Admission remains pending."
+    },
+    {
+      "checksum": null,
+      "commit": "6ff79233bae2e3e1d12ddcb56ef00dc050cfb0c5",
+      "id": "pytorch-6ff79233-repro-input-overlay",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/6ff79233bae2e3e1d12ddcb56ef00dc050cfb0c5/source",
+      "notes": "Exact frozen Base tree materialized exclusively from the local Git object store; CPU overlay Admission remains pending.",
+      "related_tasks": [
+        "pytorch__177909__repro_relational_inputs"
+      ],
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "snapshot_git_commit": "6ff79233bae2e3e1d12ddcb56ef00dc050cfb0c5",
+      "snapshot_mode": "overlay",
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "tracked_file_count": 21631
+    },
+    {
+      "id": "pytorch-ad0c595c-block-ptr-store-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "ad0c595cd72900c913e68bceb5c240c71751d6f2",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/ad0c595cd72900c913e68bceb5c240c71751d6f2/source",
+      "checksum": null,
+      "snapshot_git_commit": "2b8324691ced154d2b601965788c1fdfc652ee74",
+      "tracked_file_count": 21706,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__177860__flex_attention_captured_grad"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "Diagnostic-only source registration for the exact PR177860 Base snapshot."
+    },
+    {
+      "id": "pytorch-b5dc529f-export-forward-ad-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "b5dc529f30bebe0ff7bd8d4c1ada04fa87a9fb5b",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/b5dc529f30bebe0ff7bd8d4c1ada04fa87a9fb5b/source",
+      "checksum": null,
+      "snapshot_git_commit": "b5dc529f30bebe0ff7bd8d4c1ada04fa87a9fb5b",
+      "tracked_file_count": 21703,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__179686__export_forward_mode_roundtrip"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "Diagnostic-only source registration for the exact PR179686 Base snapshot."
+    },
+    {
+      "checksum": null,
+      "commit": "c07d2221c6172acdeec3658040fd453bdbb51272",
+      "id": "pytorch-c07d2221-identity-hint-overlay",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/c07d2221c6172acdeec3658040fd453bdbb51272/source",
+      "notes": "Exact frozen Base tree materialized exclusively from the complete local Git object store; CPU overlay Admission and blind pilot remain pending.",
+      "related_tasks": [
+        "pytorch__179481__identity_optimization_hint"
+      ],
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "snapshot_git_commit": "0dbbfbbde5d17b3da459aef54823dd4151ab03fb",
+      "snapshot_mode": "overlay",
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "tracked_file_count": 21660
+    },
+    {
+      "checksum": null,
+      "commit": "c24fd660db95111ebffbaa671208f70a7bb4d30e",
+      "id": "pytorch-c24fd660-autotune-lifetime-overlay",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/c24fd660db95111ebffbaa671208f70a7bb4d30e/source",
+      "notes": "Exact frozen Base tree materialized exclusively from the local Git object store; CPU overlay Admission remains pending.",
+      "related_tasks": [
+        "pytorch__188907__autotune_failure_resource_lifetime"
+      ],
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "snapshot_git_commit": "c24fd660db95111ebffbaa671208f70a7bb4d30e",
+      "snapshot_mode": "overlay",
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "tracked_file_count": 21436
+    },
+    {
+      "checksum": null,
+      "commit": "c5b64922a5685b1366bfecd204f062b120a128f7",
+      "id": "pytorch-c5b64922-broadcast-bmm-overlay",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/c5b64922a5685b1366bfecd204f062b120a128f7/source",
+      "notes": "Exact frozen Base tree materialized exclusively from the complete local Git object store; CUDA overlay Admission and blind pilot remain pending.",
+      "related_tasks": [
+        "pytorch__179505__broadcast_batch_autotune"
+      ],
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "snapshot_git_commit": "6452160399bea0e1428ac3e2b137f5b524cc1c57",
+      "snapshot_mode": "overlay",
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "tracked_file_count": 21674
+    },
+    {
+      "id": "pytorch-d61bcb25-aoti-triton-scalar-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "d61bcb257599b8a3830c73d2b1c9fc5517acdc20",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/d61bcb257599b8a3830c73d2b1c9fc5517acdc20/source",
+      "checksum": null,
+      "snapshot_git_commit": "d61bcb257599b8a3830c73d2b1c9fc5517acdc20",
+      "tracked_file_count": 21724,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__180297__aoti_triton_nonfinite_scalar"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "Diagnostic-only source registration for the exact PR180297 Base snapshot."
+    },
+    {
+      "checksum": null,
+      "commit": "dab4e830a34a548e50d8b9b4c23981e7c3d48957",
+      "id": "pytorch-dab4e830-padded-output-overlay",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/dab4e830a34a548e50d8b9b4c23981e7c3d48957/source",
+      "notes": "Exact frozen Base tree materialized exclusively from the local Git object store; CUDA overlay Admission remains pending.",
+      "related_tasks": [
+        "pytorch__179919__padded_output_copy"
+      ],
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "snapshot_git_commit": "dab4e830a34a548e50d8b9b4c23981e7c3d48957",
+      "snapshot_mode": "overlay",
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "tracked_file_count": 21702
+    },
+    {
+      "checksum": null,
+      "commit": "dad4394fa1c20c33da3f6d0452b56cca23a86047",
+      "id": "pytorch-dad4394f-fx-const-fold-overlay",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/dad4394fa1c20c33da3f6d0452b56cca23a86047/source",
+      "notes": "Exact frozen Base tree materialized exclusively from the local Git object store; CPU overlay Admission remains pending.",
+      "related_tasks": [
+        "pytorch__189487__nested_const_fold_policy"
+      ],
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "snapshot_git_commit": "dad4394fa1c20c33da3f6d0452b56cca23a86047",
+      "snapshot_mode": "overlay",
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "tracked_file_count": 21463
+    },
+    {
+      "checksum": null,
+      "commit": "e0ff4ad59d56447c84db56587bf00edd23cec0b9",
+      "id": "pytorch-e0ff4ad5-sparse-output-shape-overlay",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/e0ff4ad59d56447c84db56587bf00edd23cec0b9/source",
+      "notes": "Exact frozen Base tree materialized exclusively from the complete local Git object store; CPU fake-tensor overlay Admission and blind pilot remain pending.",
+      "related_tasks": [
+        "pytorch__183472__sparse_transposed_output_shape"
+      ],
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "snapshot_git_commit": "be89836efa1d718d910e1a64ace1f33cd675f37e",
+      "snapshot_mode": "overlay",
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "tracked_file_count": 21465
+    },
+    {
+      "checksum": null,
+      "commit": "fb1c65811492887145f2d0dd13879da1751d968e",
+      "id": "pytorch-fb1c6581-aoti-runtime-assert-overlay",
+      "local_path": "../../.op_bench_cache/sources/pytorch/pytorch/fb1c65811492887145f2d0dd13879da1751d968e/source",
+      "notes": "Exact tracked Base tree curated offline from the local object store; CUDA runtime Admission remains pending.",
+      "related_tasks": [
+        "pytorch__184624__aoti_shared_dynamic_slice"
+      ],
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "snapshot_git_commit": "fb1c65811492887145f2d0dd13879da1751d968e",
+      "snapshot_mode": "python_overlay",
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "submodules": {
+        "policy": "not_required_for_python_overlay",
+        "status": "not_initialized"
+      },
+      "tracked_file_count": 21507
+    },
+    {
+      "id": "pytorch-030360f5-split-reduction-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "030360f5f8dc3bdbc1028f68878e2e9fc1decbec",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/030360f5f8dc3bdbc1028f68878e2e9fc1decbec/source",
+      "checksum": null,
+      "snapshot_git_commit": "030360f5f8dc3bdbc1028f68878e2e9fc1decbec",
+      "tracked_file_count": 21657,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__177419__split_reduction_backward_group"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 source-bound replacement. Only the declared Python production files are overlaid into a registered nightly wheel."
+    },
+    {
+      "id": "pytorch-8b44e3d4-dynamic-isin-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "8b44e3d44dc8d492ff4adaffd55276fb684e7ca1",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/8b44e3d44dc8d492ff4adaffd55276fb684e7ca1/source",
+      "checksum": null,
+      "snapshot_git_commit": "8b44e3d44dc8d492ff4adaffd55276fb684e7ca1",
+      "tracked_file_count": 21755,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__178076__dynamic_isin_decomposition"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 source-bound replacement. Only the declared Python production files are overlaid into a registered nightly wheel."
+    },
+    {
+      "id": "pytorch-f1a9f64d-shared-unflatten-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "f1a9f64dfd40dd4c1a7a6f2a51d670d53545607d",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/f1a9f64dfd40dd4c1a7a6f2a51d670d53545607d/source",
+      "checksum": null,
+      "snapshot_git_commit": "f1a9f64dfd40dd4c1a7a6f2a51d670d53545607d",
+      "tracked_file_count": 21636,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__179278__shared_module_unflatten_order"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 source-bound replacement. Only the declared Python production files are overlaid into a registered nightly wheel."
+    },
+    {
+      "id": "pytorch-a4097e57-large-guard-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "a4097e577fe5d1e21dfe2fa8c36af3fdf8854e34",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/a4097e577fe5d1e21dfe2fa8c36af3fdf8854e34/source",
+      "checksum": null,
+      "snapshot_git_commit": "1120136f428a20ec6dc2ce40f9957c33a47d968d",
+      "tracked_file_count": 21410,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__186993__large_guard_materialization"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 source-bound replacement. Only the declared Python production files are overlaid into a registered nightly wheel."
+    },
+    {
+      "id": "pytorch-db23bc38-shared-extent-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "db23bc386f9a6c12170415efbf429762bfcd3285",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/db23bc386f9a6c12170415efbf429762bfcd3285/source",
+      "checksum": null,
+      "snapshot_git_commit": "f29247484416f893cab6e87f62c377f6b38c64cc",
+      "tracked_file_count": 21374,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__188278__shared_dynamic_extent_proxy"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 source-bound replacement. Only the declared Python production files are overlaid into a registered nightly wheel."
+    },
+    {
+      "id": "pytorch-c695a129-integer-range-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "c695a129fc9ba66796736b31ae88108a2e1fb993",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/c695a129fc9ba66796736b31ae88108a2e1fb993/source",
+      "checksum": null,
+      "snapshot_git_commit": "c695a129fc9ba66796736b31ae88108a2e1fb993",
+      "tracked_file_count": 21612,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__179028__integer_range_lowering_registry"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 source-bound replacement. Only the declared Python production files are overlaid into a registered nightly wheel."
+    },
+    {
+      "id": "pytorch-fadf0e3f-mapping-shape-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "fadf0e3fec66aab175e1eaad9cf07fac2a562cb2",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/fadf0e3fec66aab175e1eaad9cf07fac2a562cb2/source",
+      "checksum": null,
+      "snapshot_git_commit": "fadf0e3fec66aab175e1eaad9cf07fac2a562cb2",
+      "tracked_file_count": 21729,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__180471__mapping_shape_metadata"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 source-bound replacement. Only the declared Python production files are overlaid into a registered nightly wheel."
+    },
+    {
+      "id": "pytorch-adf92da6-scatter-dtype-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "adf92da677396bbcf36340f94311a5c834a7f232",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/adf92da677396bbcf36340f94311a5c834a7f232/source",
+      "checksum": null,
+      "snapshot_git_commit": "adf92da677396bbcf36340f94311a5c834a7f232",
+      "tracked_file_count": 21524,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__186481__scatter_rewrite_dtype"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 source-bound replacement. Only the declared Python production files are overlaid into a registered nightly wheel."
+    },
+    {
+      "id": "pytorch-71519a98-nested-script-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "71519a98182ddc5bfd839397baa409e498460497",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/71519a98182ddc5bfd839397baa409e498460497/source",
+      "checksum": null,
+      "snapshot_git_commit": "71519a98182ddc5bfd839397baa409e498460497",
+      "tracked_file_count": 21433,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__187863__nested_script_prepare"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 source-bound replacement. Only the declared Python production files are overlaid into a registered nightly wheel."
+    },
+    {
+      "id": "pytorch-e2584b25-nonfinite-printer-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "e2584b2554d11fda4998a8d2be6145b0eded5049",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/e2584b2554d11fda4998a8d2be6145b0eded5049/source",
+      "checksum": null,
+      "snapshot_git_commit": "e2584b2554d11fda4998a8d2be6145b0eded5049",
+      "tracked_file_count": 21615,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__179708__nonfinite_expression_codegen"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 source-bound replacement. Only the declared Python production files are overlaid into a registered nightly wheel."
+    },
+    {
+      "id": "pytorch-64ef0a26-named-hop-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "a5c8eecab3d03a7f154321201fba4609f6939b8b",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/a5c8eecab3d03a7f154321201fba4609f6939b8b/source",
+      "checksum": null,
+      "snapshot_git_commit": "a5c8eecab3d03a7f154321201fba4609f6939b8b",
+      "tracked_file_count": 21733,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__182101__named_hop_argument_roundtrip"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 source-bound replacement. Only the declared Python production files are overlaid into a registered nightly wheel."
+    },
+    {
+      "id": "pytorch-5d72a01a-unrealized-addmm-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "5d72a01abe3c335340bffb58cf23e5e244c521d6",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/5d72a01abe3c335340bffb58cf23e5e244c521d6/source",
+      "checksum": null,
+      "snapshot_git_commit": "5d72a01abe3c335340bffb58cf23e5e244c521d6",
+      "tracked_file_count": 21510,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__183973__unrealized_addmm_bias"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 source-bound replacement. Only the declared Python production files are overlaid into a registered nightly wheel."
+    },
+    {
+      "id": "pytorch-b8777a2c-lazy-scratch-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "b8777a2cc64e21bc425692222c7835417a3a8389",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/b8777a2cc64e21bc425692222c7835417a3a8389/source",
+      "checksum": null,
+      "snapshot_git_commit": "b8777a2cc64e21bc425692222c7835417a3a8389",
+      "tracked_file_count": 21492,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__182825__lazy_scratch_grid_extent"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 source-bound replacement. Only the declared Python production files are overlaid into a registered nightly wheel."
+    },
+    {
+      "id": "pytorch-6574ed24-unsigned-scan-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "6574ed24f3d54c31c1e0750c0d3ae3d50411374e",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/6574ed24f3d54c31c1e0750c0d3ae3d50411374e/source",
+      "checksum": null,
+      "snapshot_git_commit": "6574ed24f3d54c31c1e0750c0d3ae3d50411374e",
+      "tracked_file_count": 21525,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__184514__unsigned_scan_accumulator"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 source-bound replacement. Only the declared Python production files are overlaid into a registered nightly wheel."
+    },
+    {
+      "id": "pytorch-b6f9631d-cached-output-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "b6f9631d32f98f750c4905ab53f10963315cae31",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/b6f9631d32f98f750c4905ab53f10963315cae31/source",
+      "checksum": null,
+      "snapshot_git_commit": "b6f9631d32f98f750c4905ab53f10963315cae31",
+      "tracked_file_count": 21453,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__185257__cached_output_initialization"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 source-bound replacement. Only the declared Python production files are overlaid into a registered nightly wheel."
+    },
+    {
+      "id": "pytorch-048c2ae8-large-bmm-grid-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "048c2ae8480abaae0686256bfcd3b24a2fad7f29",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/048c2ae8480abaae0686256bfcd3b24a2fad7f29/source",
+      "checksum": null,
+      "snapshot_git_commit": "fe878fb59d889c6971bb9b1c79e8e563e905951e",
+      "tracked_file_count": 21534,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__178617__large_batch_bmm_grid"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 source-bound replacement. Only the declared Python production files are overlaid into a registered nightly wheel."
+    },
+    {
+      "id": "pytorch-c76c52c3-shared-reorder-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "f1a9f64dfd40dd4c1a7a6f2a51d670d53545607d",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/f1a9f64dfd40dd4c1a7a6f2a51d670d53545607d/source",
+      "checksum": null,
+      "snapshot_git_commit": "f1a9f64dfd40dd4c1a7a6f2a51d670d53545607d",
+      "tracked_file_count": 21636,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__179278__shared_module_reorder"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 source-bound replacement. Only the declared Python production files are overlaid into a registered nightly wheel."
+    },
+    {
+      "id": "pytorch-9b22041c-arrayref-loop-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "9b22041c7a353b59a19becbb51721acc6188b907",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/9b22041c7a353b59a19becbb51721acc6188b907/source",
+      "checksum": null,
+      "snapshot_git_commit": "36b0e9af82e834eb62f05c18cfc6d670bd610029",
+      "tracked_file_count": 21674,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__180370__arrayref_while_loop"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 source-bound replacement. Only the declared Python production files are overlaid into a registered nightly wheel."
+    },
+    {
+      "id": "pytorch-75f92218-expand-schema-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "75f922180da71a8e3445dd887ffd9c6237e364ad",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/75f922180da71a8e3445dd887ffd9c6237e364ad/source",
+      "checksum": null,
+      "snapshot_git_commit": "75f922180da71a8e3445dd887ffd9c6237e364ad",
+      "tracked_file_count": 21430,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__188758__expand_schema_keyword"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 source-bound replacement. Only the declared Python production files are overlaid into a registered nightly wheel."
+    },
+    {
+      "id": "pytorch-a7c0766a-bool-range-overlay-v2",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "a7c0766a73e2bb496f13aa59652d4d7f3192d538",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/a7c0766a73e2bb496f13aa59652d4d7f3192d538/source",
+      "checksum": null,
+      "snapshot_git_commit": "2d377966553c8b6b0b6d14cae5011ba8879df559",
+      "tracked_file_count": 21596,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__188862__boolean_minmax_propagation"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 source-bound replacement. Only the declared Python production files are overlaid into a registered nightly wheel."
+    },
+    {
+      "id": "pytorch-71b54592-residual-tiling-overlay",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "71b54592225995ee10ea4469d91806f8ec16d0d3",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/71b54592225995ee10ea4469d91806f8ec16d0d3/source",
+      "checksum": null,
+      "snapshot_git_commit": "71b54592225995ee10ea4469d91806f8ec16d0d3",
+      "tracked_file_count": 21431,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__187209__residual_tiling_fallback"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 source-bound replacement. Only the declared Python production files are overlaid into a registered nightly wheel."
+    },
+    {
+      "id": "pytorch-4924764e-profile-scope-overlay-v2",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "4924764e65484ed1e9f41c75660e3c7a6de6fb71",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/4924764e65484ed1e9f41c75660e3c7a6de6fb71/source",
+      "checksum": null,
+      "snapshot_git_commit": "4924764e65484ed1e9f41c75660e3c7a6de6fb71",
+      "tracked_file_count": 21646,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__176922__profiled_kernel_scope"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 source-bound replacement. Only the declared Python production files are overlaid into a registered nightly wheel."
+    },
+    {
+      "id": "pytorch-6cda861d-template-index-overlay-v2",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "6cda861d2effac9556dd439c239baf31da1b02f8",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/6cda861d2effac9556dd439c239baf31da1b02f8/source",
+      "checksum": null,
+      "snapshot_git_commit": "6cda861d2effac9556dd439c239baf31da1b02f8",
+      "tracked_file_count": 21584,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__179333__template_index_width"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 source-bound replacement. Only the declared Python production files are overlaid into a registered nightly wheel."
+    },
+    {
+      "id": "pytorch-4336c967-benchmark-alias-overlay-v2",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "4336c9673dcab279b9b07a6df84346fe9d5f3217",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/4336c9673dcab279b9b07a6df84346fe9d5f3217/source",
+      "checksum": null,
+      "snapshot_git_commit": "4336c9673dcab279b9b07a6df84346fe9d5f3217",
+      "tracked_file_count": 21815,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__181119__benchmark_alias_storage_v2"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 source-bound replacement. Only the declared Python production files are overlaid into a registered nightly wheel."
+    },
+    {
+      "id": "pytorch-14c2be65-inference-memo-overlay-v2",
+      "repo_url": "https://github.com/pytorch/pytorch.git",
+      "commit": "14c2be6563899240a522d14383e76b49c8c9d028",
+      "local_path": "../.op_bench_cache/sources/pytorch/pytorch/14c2be6563899240a522d14383e76b49c8c9d028/source",
+      "checksum": null,
+      "snapshot_git_commit": "e788da376abbe87373a60fa8aac42e3f833358c4",
+      "tracked_file_count": 21368,
+      "submodules": {
+        "policy": "none_required",
+        "status": "not_initialized"
+      },
+      "source_loading_modes": [
+        "python_overlay"
+      ],
+      "related_tasks": [
+        "pytorch__188575__inference_memo_descriptor_v2"
+      ],
+      "snapshot_mode": "overlay",
+      "notes": "v0.7 source-bound replacement. Only the declared Python production files are overlaid into a registered nightly wheel."
+    }
+  ]
+}

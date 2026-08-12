@@ -1,0 +1,35 @@
+diff --git a/test/op_bench/test_mapping_shape_metadata.py b/test/op_bench/test_mapping_shape_metadata.py
+new file mode 100644
+--- /dev/null
++++ b/test/op_bench/test_mapping_shape_metadata.py
+@@ -0,0 +1,30 @@
++import unittest
++
++import sympy
++import torch
++from torch.fx.experimental.symbolic_shapes import _iterate_exprs, free_symbols
++
++
++class MappingShapeMetadataTests(unittest.TestCase):
++    def test_tensor_mapping_is_accepted(self):
++        self.assertEqual(list(_iterate_exprs({"Out": torch.randn(2, 3)})), [])
++
++    def test_mapping_keys_and_values_are_traversed(self):
++        left, right = sympy.symbols("left right")
++        values = list(_iterate_exprs({left: right + 1}))
++        self.assertIn(left, values)
++        self.assertIn(right + 1, values)
++        self.assertEqual(free_symbols({left + right: 1}), {left, right})
++
++    def test_sequence_metadata_remains_recursive(self):
++        left, right = sympy.symbols("left right")
++        values = list(_iterate_exprs([left, (right + 2,)]))
++        self.assertEqual(set(values), {left, right + 2})
++
++    def test_scalar_and_tensor_leaves_remain_ignored(self):
++        self.assertEqual(list(_iterate_exprs(3)), [])
++        self.assertEqual(list(_iterate_exprs(torch.ones(1))), [])
++
++
++if __name__ == "__main__":
++    unittest.main()

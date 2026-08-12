@@ -1,141 +1,219 @@
-# OpBench v0.7 Boundary Validation Cohort 报告
+# OpBench v0.7 50-task Quality Validation 报告
 
-日期：2026-07-28
+日期：2026-08-11
 
-状态：Passed
+状态：Passed（50/50 fresh replay；122/122 valid logical Attempts）
 
-## 1. 结论
+## 1. 当前结论
 
-OpBench v0.7 在冻结的 `pytorch_v0.7_boundary` Dataset 上完成了一个真实
-Codex Validation Cohort：6 个 Boundary Task、5 个 Runtime Profile、每 Task
-3 次 repeat，共 18 个有效 Attempt。结果为 **14 resolved、3 f2p_failed、
-1 no_patch**；Agent terminal 为 17 finished、1 timeout。
+OpBench v0.7 已完成 50 条 verified PyTorch 算子修复任务的 fresh replay 和冻结的
+真实 Codex 验证实验。50 条任务由 14 条 retained historical、21 条 new 和 15 条
+replacement 组成；36 条新增/替换任务均通过真实 Runtime Admission，没有把本地
+preflight 或静态 patch check 当作正式证据。fresh Baseline/Gold replay 为 50/50，
+17 个 cohort 的 122/122 logical Attempts 均由 append-only ledger 选出有效结果，
+122 条 MCP 工具轨迹完整。
 
-这是单一 Agent/模型配置下的 Task 与平台验证，是明确的
-**non-leaderboard** 结果。它不构成跨 Agent 排名，不证明反馈因果关系，也不把
-18 次 Attempt 外推为模型总体能力。
+最终 Attempt 结果为 42 resolved、52 F2P failed、28 invalid patch；没有 P2P failed
+或 no-patch 结果。8 个 infrastructure-invalid 历史 retry 均被保留审计并补跑为有效
+logical Attempt，没有混入 Agent 失败分母。报告三件套已从原始 cohort root 重建并
+与正式产物逐字节一致。
 
-机器可读的
-[index](../../runs/v0.7_validation_report/experiment_index.json)、
-[summary](../../runs/v0.7_validation_report/experiment_summary.json) 和
-[report](../../runs/v0.7_validation_report/experiment_report.md)
-由五个通过 Integrity gate 的正式 cohort 确定性生成。两次独立生成的三个文件
-逐字节一致。
+最终结果只描述冻结的单一 Agent/模型/Runtime 组合，是明确的
+**non-leaderboard** evidence；它不构成跨 Agent 排名，也不支持反馈因果结论。
 
 ## 2. 冻结身份
 
 | 字段 | 值 |
 | --- | --- |
-| Dataset | `pytorch_v0.7_boundary` |
-| Dataset digest | `sha256:eaaa93301975ebcf3507c1efe18b600c729ae1e978696bb331546ca59013f0cf` |
-| Platform | `opbench-v0.6.0` |
+| Dataset | `pytorch_v0.7`，50 verified Tasks |
+| Dataset file hash | `sha256:3695622dd2619a760d510ef49e0a9dbff637c98790ad3263c521bae8e99c9518` |
+| Dataset contract digest | `sha256:a6f2b7c9f54e79e30a698ca0b64b72f5b6e644fb0502a82946796d9ca56cde54` |
+| Quality release digest | `sha256:e35318dd47554f90556bc132c71338a8fb34e952bbe355cac45c0d1dc8de1839` |
+| Validation contract | `factory/v0.7/p9/validation_contract.json`（schema v2） |
+| Validation contract file SHA-256 | `9dfdb7ddc1ef71170e6264baca2bcc8ce6f089b6ef01dc3dc973bae0706cd8f2` |
+| Platform | `opbench-v0.6.0` Runtime Protocol |
 | Agent Adapter | `codex_mcp_canonical` |
 | Model | `gpt-5.6-sol` |
-| Codex CLI | `codex-cli 0.146.0-alpha.3.1` |
-| MCP protocol | `2025-06-18` |
-| Attempt contract | 6 Tasks × repeats 1/2/3 = 18 |
+| Codex CLI | `codex-cli 0.147.0-alpha.1.2` |
+| Action / Evaluation / Scoring | `action-v1` / `evaluation-v1` / `scoring-v1` |
+| Frozen matrix | 17 cohorts、50 Tasks、122 logical Attempts |
 
-18 条 Adapter trace 全部完整：initialize 18、tools/list 18、
-protocol error 0。五个正式 cohort 的 fresh Integrity 结果均与持久化结果一致，
-每个 root 14/14 checks 通过，Runtime resource ownership 与 cleanup gate 均通过。
+合同额外绑定 Agent spec、system/task Prompt、Prompt renderer source、Evaluator、
+Retry、Termination、Scoring、每个 Runtime Profile、Capability、Budget、RunManifest
+以及 50 个 AgentTaskView 的内容 digest。修改任何一个身份都必须形成新实验，不能
+继续写入当前分母。
 
-## 3. Runtime 分区与结果
+## 3. Attempt 矩阵
 
-| Runtime Profile | Task | 结果 |
-| --- | --- | ---: |
-| `remote-cpu-boundary-torch2.2-py311-v1` | `pytorch__117065__index_copy_zero_dim` | 3/3 resolved |
-| `remote-cpu-boundary-torch2.3-py311-v1` | `pytorch__118762__weight_norm_default_dim` | 3/3 resolved |
-| `remote-cpu-boundary-torch2.4-py311-v1` | `pytorch__126461__cummin_rank_zero` | 2/3 resolved、1/3 no_patch |
-| `remote-cpu-source-boundary-py311-v1` | `pytorch__143792__addmv_empty_matrix` | 3/3 resolved |
-| `remote-cpu-source-boundary-py311-v1` | `pytorch__147352__storage_offset_overflow` | 3/3 resolved |
-| `remote-cuda-boundary-torch2.6-cu124-v1` | `pytorch__139751__triton_ygrid_mask` | 0/3 resolved、3/3 f2p_failed |
+```text
+36 new/replacement Tasks × repeats 1/2/3 = 108 Attempts
+14 retained historical Tasks × repeat 1     =  14 Attempts
+                                             --------------
+                                             122 Attempts
+```
 
-Accepted cohort 的 18 个 ledger 选择均为 `valid`，全部来自
-`retry_index=1`，因此公开 summary 的 retry 数为 0。没有把
-infrastructure-invalid Attempt 计入分母。
+17 个 cohort 按完全相同的 Runtime Profile 分区。它们覆盖：
 
-## 4. floor / ceiling 与异常复核
+- 35 个 CPU 与 15 个 CUDA Task；
+- 34 个 CPU overlay、1 个 CPU source build、13 个 CUDA overlay、2 个 CUDA
+  kernel build Task；
+- 35 个 compile 与 21 个 eager Task；
+- 49 个 forward 与 4 个 backward Task。
 
-五条 Task 出现 **ceiling（3/3 resolved）**。逐条检查 patch、F2P/P2P 摘要、
-Action 配对和 selector 执行后：
+同一 Task 可同时覆盖多个 mode/phase，因此后两组计数不是互斥分布。 retained Task
+只运行 1 次，是用户批准的资源分配合同；36 条新增/替换运行 3 次以观察稳定性。
 
-- 三条 CPU overlay Task 中，#117065 与 #118762 的三次 F2P/P2P 都是 1/1；
-- 两条 exact-source Task 的六次 F2P/P2P 都是 1/1，且每次 patch 都由独立
-  evaluator 从当前 authoritative source 构建后执行；
-- 未发现 Task 泄漏、selector 未执行、环境漂移或 transport 输出冒充测试结果。
+## 4. 执行与完整性门禁
 
-`pytorch__126461__cummin_rank_zero` 的一个 no_patch Attempt 没有生成 patch，
-其余两个 repeat 均通过 F2P/P2P。这是 Agent terminal 的真实行为，不是 evaluator
-漏测。
+执行严格分为两步：
 
-`pytorch__139751__triton_ygrid_mask` 出现 **floor（0/3 resolved）**。人工复核
-确认三次都是 Agent patch 的真实回归：
+1. 对冻结 50-task release 执行 fresh Baseline/Gold replay，要求 50/50 bundle、
+   Registry、Runtime 和 selector identity 重建一致；
+2. 先运行 CPU、CPU compile、CUDA overlay、CUDA kernel 四类 canary，再在同一冻结
+   contract 与 append-only ledger 下 resume 完整 122 Attempts。
 
-- repeat 1/2 访问了测试 surrogate 不具备的状态，F2P 失败；
-- repeat 3 的 patch 产生语法/缩进错误，且 Agent terminal 为 timeout，但冻结的
-  patch 仍被 evaluator 正常评测；
-- 三次均有完整 trace 和实际 selector 证据，不是 GPU、容器或 SSH 故障。
+每个正式 Attempt 必须同时满足：
 
-这些 floor / ceiling 观察用于提示后续扩大样本和 Agent 分布，未反向修改
-Admission threshold、Hidden Test、Gold Patch、Dataset membership 或评分规则。
+- logical Attempt ID 与 contract 预期矩阵一致；
+- Agent 只收到扫描后的 AgentTaskView；
+- Session、Frozen Patch 和 fresh Evaluation 绑定同一 patch bytes/hash；
+- F2P/P2P 使用 evaluator-owned structured evidence；
+- Adapter trace 完整且没有协议错误；
+- fresh Integrity graph 通过；
+- Attempt-owned Runtime 资源精确回收；
+- ledger 只选择一个 valid retry 进入逻辑分母。
 
-## 5. source loading 验证
+基础设施无效（`infrastructure-invalid`）记录保留在 append-only 审计中，但不计作
+Agent 失败。补跑必须沿用同一 logical Attempt 身份并由 retry policy 选择最终有效
+结果，不能删除失败历史。
 
-`remote-cpu-source-boundary-py311-v1` 不依赖已安装 wheel 覆盖真实源码。每个
-registered test 在 selector 前执行 source preparation：把 Agent 最终工作区作为
-authoritative source，同步到隔离 Runtime，完成 CPU full-source build，再运行
-F2P/P2P。准备失败或超时会跳过 selector 并产生基础设施无效结果。
+## 5. 失败归因与评分口径
 
-两个 source Task 的 6 个有效 Attempt 全部 resolved，F2P/P2P 各 6/6；这同时验证
-了 current Agent source 对 selector 可见，以及 evaluator 每次仍从 fresh workspace
-独立准备源码，没有复用 Agent 侧测试状态。
+最终机器报告区分：
 
-## 6. transport 审计与 retry 归因
+- `resolved`、`f2p_failed`、`p2p_failed`、`no_patch`；
+- Agent、Runtime、Evaluator 与 Infrastructure failure；
+- retry、terminal reason、trace/integrity/resource gate；
+- origin、difficulty、contract family、failure type、device、mode、phase 与派生切片。
 
-正式 source cohort 前的预验收审计发现：OpenSSH 在远端命令开始前断连时，旧实现
-可能把退出码 255 错归因为逻辑 selector 失败。平台修复分两层：
+Boundary、Precision、Device 是可重叠派生切片，不是互斥顶层 Dataset。独立 slice
+评分只在至少包含 3 条 Task 时报告；样本不足、全 resolved 或全 unresolved 的分组只
+作为描述性观察，避免小桶制造虚假精确度。完整 Agent 自然语言输出与隐藏思考过程
+不进入 v0.7 记录或评分合同。
 
-1. 识别 KEX、connection reset/closed 等 pre-execution transport 信号，并在同一
-   selector deadline 内做有界重试；
-2. 在远端命令真正开始时写入 controller-only sentinel。sentinel 前断连可以安全
-   retry；sentinel 后断连标记为 infrastructure-invalid，绝不重放可能已经开始的
-   evaluator 命令。
+## 6. 最终执行结果
 
-被该问题污染的预验收 root 没有进入正式报告。修复后从统一代码快照重跑完整
-source cohort；6/6 有效结果的控制器证据中均无 KEX、connection reset/closed
-痕迹。五个 accepted cohort 的 18 个结果均无需 retry，因此机器摘要记录 0 retries。
+| 门禁 / 指标 | 结果 |
+| --- | ---: |
+| p8 新增/替换 Runtime Admission | 36/36 verified |
+| p9 cumulative / Boundary / Precision / Device | 50 / 31 / 5 / 15 verified |
+| fresh Baseline/Gold replay | 50/50 passed |
+| Agent cohort / logical Attempt | 17/17；122/122 valid |
+| 完整 MCP trace | 122/122 |
+| resolved | 42/122（34.4%） |
+| F2P failed | 52/122 |
+| invalid patch | 28/122 |
+| infrastructure-invalid retry history | 8（provider 1；runtime 7） |
+| 全部观测 Attempt resolved 的 Task | 15 |
+| 没有观测 Attempt resolved 的 Task | 29 |
 
-## 7. 可复现性与公开边界
+`agent=80` 表示 122 个最终有效 Attempt 中未 resolved 的 80 个结果；`runtime=7`
+则是 8 条无效 retry 历史中的归因子集，二者不是可相加的同一分母。所有 122 个最终
+有效 Attempt 的 Agent terminal 均为 `finished`，MCP protocol error 为 0。15/29 的
+ceiling/floor 只描述当前冻结配置；retained Task 仅运行一次，不能把该组误读为
+跨重复稳定性。
 
-正式分区由
-[`validation_contract.json`](../../factory/v0.7/p4/validation_contract.json)
-冻结。公开报告可用以下等价命令重建；每个 `--run-root` 必须指向对应的、已完成
-Integrity gate 的正式 cohort：
+按主要视图观察：CPU 为 33/85 resolved，CUDA 为 9/37；Boundary 为 31/77，
+Precision 为 3/5，Device 为 9/37。分层数字用于定位覆盖和失败模式，不是独立采样
+总体或跨 Agent 排名。
+
+机器可读证据位于：
+
+- `runs/v0.7_quality_replay/index.json`：50-task fresh replay 索引；
+- `runs/v0.7_quality_validation/index.json`：17-cohort 执行索引；
+- `runs/v0.7_quality_validation_report/experiment_index.json`：脱敏 Attempt 索引；
+- `runs/v0.7_quality_validation_report/experiment_summary.json`：聚合结果；
+- `runs/v0.7_quality_validation_report/experiment_report.md`：确定性机器报告。
+
+原始 replay/cohort 目录包含 evaluator、Runtime 和资源审计细节，保留为本地私有
+证据并由 `.gitignore` 明确排除；公开树只纳入通过隐私扫描的顶层索引和聚合报告。
+
+## 7. 18 项完成标准审计
+
+| # | 结论 | 结构化证据 |
+| ---: | --- | --- |
+| 1 | Passed | `archives/v0.7-pre-quality.json` 绑定 `4f5addc`、旧 Dataset Hash 与 18-attempt cohort 身份 |
+| 2 | Passed | `factory/v0.7/p7/historical_readmission.json`：25/25，14 retained、1 deferred、10 retired |
+| 3 | Passed | cumulative Dataset：50 个唯一 verified Task |
+| 4–5 | Passed | 50 份最终 Prompt evidence 与 AgentTaskView 自动/语义审查；无 provenance、答案路径、Gold/Hidden 或修复指令 |
+| 6–7 | Passed | 50/50 taxonomy/complexity evidence；hard 46、medium 4、easy 0 |
+| 8 | Passed | CPU 35、CUDA 15 |
+| 9 | Passed（有公开缺口） | compile 35；backward 4、gradient 2、唯一并集 5；满足代表性硬门，低于早期 6 条搜索目标的缺口已公开 |
+| 10 | Passed | Boundary/Precision/Device 由同一 Task truth 确定性派生为 31/5/15，并公开 distributed 等缺口 |
+| 11 | Passed | fresh replay 50/50，Baseline/Gold/F2P/P2P/Runtime/Integrity 全部通过 |
+| 12 | Passed | 36 条 new/replacement × 3 = 108 valid Attempts |
+| 13 | Passed | 14 条 retained × 1 = 14 valid Attempts |
+| 14 | Passed | 最终 17 个 cohort 均为 `infrastructure_invalid=0`；8 条历史无效 retry 不进入最终分母 |
+| 15 | Passed | archive、release、Prompt、contract 与 cohort 身份分离；旧 18 Attempts 未拼接 |
+| 16 | Passed | release、validation contract 与报告三件套 fresh 重建逐字节一致 |
+| 17 | Passed | 1101/1101 tests、Schema/compile/JSON/link/safety/privacy/diff gates 通过 |
+| 18 | Passed | Dataset Card、双语入口、路线图、状态、CHANGELOG 与本报告发布一致且明确 non-leaderboard 限制 |
+
+第 9 项采用后续批准的质量优先、非配额合同：CPU/CUDA 保持数值硬门，compile 与
+backward/Autograd 必须有代表性；搜索目标未满时公开缺口，不能用错误标注、简单任务
+或降低 Admission 标准补数。该修订已同步回设计稿，不把 5 条唯一覆盖写成 6 条。
+
+## 8. 历史 18-attempt 证据
+
+2026-07-28 的旧发布曾在 6 条 Boundary Task 上运行 3 repeats，共 18/18 valid，
+结果为 14 resolved、3 f2p_failed、1 no_patch、0 accepted-cohort retry。该实验当时
+通过 trace、Integrity 与 cleanup 门禁，其历史事实仍有效。
+
+但旧实验的 Dataset、CLI、Prompt/Task membership 和 repeat matrix 与当前合同不同，
+因此只能作为历史平台证据，不能拼接到 122 Attempts、不能用于补齐缺失 repeat，
+也不能证明 50-task v0.7 已完成。旧 25/6/8 Dataset 已保存在
+`archives/v0.7-pre-quality/`。
+
+## 9. 可复现性与公开边界
+
+验证冻结合同：
+
+```bash
+PYTHONPATH=src python scripts/build_v07_quality_validation_contract.py \
+  --output /tmp/opbench-v07-validation-contract.json
+cmp factory/v0.7/p9/validation_contract.json \
+  /tmp/opbench-v07-validation-contract.json
+```
+
+从 17 个 cohort root 重建公开报告：
 
 ```bash
 PYTHONPATH=src python scripts/summarize_mcp_experiment.py \
-  --run-root <torch-2.2-cohort> \
-  --run-root <torch-2.3-cohort> \
-  --run-root <torch-2.4-cohort> \
-  --run-root <source-cohort> \
-  --run-root <cuda-cohort> \
-  --output-dir <empty-output-dir> \
-  --expected-model gpt-5.6-sol \
-  --expected-cli-version 'codex-cli 0.146.0-alpha.3.1' \
-  --contract factory/v0.7/p4/validation_contract.json
+  --contract factory/v0.7/p9/validation_contract.json \
+  --input-root runs/v0.7_quality_validation \
+  --output-root runs/v0.7_quality_validation_report
 ```
 
-公开产物只包含内容身份、聚合计数、受限 Attempt 索引和确定性 Markdown。主机、
-账号、凭据、控制器路径、原始 Agent 文本和无界 evaluator 日志均不进入提交。
+重建后的 `experiment_index.json`、`experiment_summary.json` 和
+`experiment_report.md` 已逐字节匹配正式产物。公开产物仅包含内容身份、受限
+Attempt 索引、聚合计数和确定性 Markdown。主机、
+账号、凭据、controller path、原始 Agent 文本、完整 evaluator 日志与私有 selector
+内容不进入提交。
 
-## 8. 限制
+## 10. 限制
 
-- 只有一个 Agent Adapter、一个模型和三个 repeat，不能估计跨模型方差；
-- 六条 Boundary Task 的 ceiling/floor 分布可能受样本规模影响；
-- GPU 仅覆盖冻结的单一硬件类别与 CUDA Runtime；
-- Validation Cohort 描述当前 Task/platform/Agent 组合，不是正式排行榜；
-- 未执行反馈可见性对照实验，因此不支持反馈因果结论。
+- 单一 Agent Adapter、模型和冻结硬件配置不能估计跨模型方差；
+- retained 与 new/replacement 的 repeat 数不同，聚合时必须同时报告 per-Task 与
+  per-Attempt 口径；
+- 50 条仍是 PyTorch-only 研究规模，细分结果需要谨慎解释；
+- GPU 只覆盖冻结的单一目标硬件类别与 Runtime；
+- backward phase 为 4 条、gradient family 为 2 条且唯一并集为 5 条，低于早期
+  6 条搜索目标；这是公开覆盖缺口，不影响“必须有代表性”的最终质量合同；
+- source/kernel build 的 wall-clock 主要反映构建成本，不是 Agent 推理速度；
+- 未执行反馈可见性对照，不支持 feedback causality；
+- 公开上游历史可能进入训练数据，不能声称无污染。
 
-P4 Validation Cohort 结论为 **Passed**。本报告只确认冻结 Dataset、Runtime、
-source loading、Evaluation、Trace 与 Integrity 合同能共同产生可信、可审计的
-18-Attempt 结果。
+v0.7 的 fresh replay、Agent 122/122 valid、确定性报告、Integrity、资源清理、
+公开树隐私扫描和文档门禁均已通过；最终全量回归为 1101/1101（1260.411 秒）。
+后续修改冻结的 Dataset、Prompt、Agent、Runtime、Evaluator、预算或评分身份都
+必须创建新实验，不能继续写入本结果分母。

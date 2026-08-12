@@ -127,7 +127,24 @@ class V07ValidationArtifactTests(unittest.TestCase):
             with self.subTest(forbidden=forbidden):
                 self.assertNotIn(forbidden, public_text)
 
-    def test_human_report_documents_scope_and_anomaly_attribution(self) -> None:
+    def test_historical_machine_report_preserves_anomaly_attribution(self) -> None:
+        self.assertTrue(REPORT.is_file(), f"missing historical report: {REPORT}")
+        text = REPORT.read_text(encoding="utf-8")
+        for required in (
+            "codex-cli 0.146.0-alpha.3.1",
+            "18",
+            "14",
+            "f2p_failed",
+            "no_patch",
+            "Retries",
+        ):
+            with self.subTest(required=required):
+                self.assertIn(required, text)
+        for profile_id in EXPECTED_PROFILES:
+            with self.subTest(profile_id=profile_id):
+                self.assertIn(profile_id, text)
+
+    def test_human_report_documents_current_contract_and_scope(self) -> None:
         self.assertTrue(
             HUMAN_REPORT.is_file(),
             f"missing human validation report: {HUMAN_REPORT}",
@@ -135,24 +152,23 @@ class V07ValidationArtifactTests(unittest.TestCase):
         text = HUMAN_REPORT.read_text(encoding="utf-8")
         for required in (
             "gpt-5.6-sol",
-            "codex-cli 0.146.0-alpha.3.1",
+            "codex-cli 0.147.0-alpha.1.2",
             "codex_mcp_canonical",
-            "18",
-            "14 resolved",
-            "3 f2p_failed",
-            "1 no_patch",
-            "source loading",
-            "transport",
+            "50 verified Tasks",
+            "122 logical Attempts",
+            "17 cohorts",
+            "source build",
+            "kernel build",
+            "infrastructure-invalid",
             "retry",
-            "floor",
-            "ceiling",
+            "Boundary",
+            "Precision",
+            "Device",
+            "AgentTaskView",
             "non-leaderboard",
         ):
             with self.subTest(required=required):
                 self.assertIn(required, text)
-        for profile_id in EXPECTED_PROFILES:
-            with self.subTest(profile_id=profile_id):
-                self.assertIn(profile_id, text)
 
 
 if __name__ == "__main__":

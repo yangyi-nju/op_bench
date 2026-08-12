@@ -50,6 +50,7 @@ class SourceLoadingTests(unittest.TestCase):
                                 "mode": "python_overlay",
                                 "installed_package": "torch",
                                 "overlay_paths": ["torch/nn/modules/linear.py"],
+                                "overlay_tree": "torch",
                                 "runtime_site_packages": "/tmp/op_bench_runtime/site-packages",
                                 "sync_before_tests": True,
                             },
@@ -87,6 +88,7 @@ class SourceLoadingTests(unittest.TestCase):
             self.assertEqual(config["workspace_dir"], "/workspace")
             self.assertEqual(config["installed_package"], "torch")
             self.assertEqual(config["overlay_paths"], ["torch/nn/modules/linear.py"])
+            self.assertEqual(config["overlay_tree"], "torch")
 
     def test_builds_inplace_build_command_with_default(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

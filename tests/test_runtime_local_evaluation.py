@@ -44,6 +44,49 @@ class StepClock:
 
 
 class LocalGitEvaluationBackendTests(unittest.TestCase):
+    def test_local_source_accepts_valid_linked_worktree(self) -> None:
+        worktree = self.root / "linked-worktree"
+        git(
+            self.fixture.repository,
+            "worktree",
+            "add",
+            "--detach",
+            str(worktree),
+            self.fixture.revision,
+        )
+
+        source = LocalGitSource(
+            identity=self.source,
+            repository=worktree,
+            revision=self.fixture.revision,
+        )
+
+        self.assertEqual(source.repository, worktree)
+        self.assertTrue((worktree / ".git").is_file())
+        self.assertEqual(
+            git_archive_source_identity(
+                worktree,
+                self.fixture.revision,
+                self.source.identifier,
+            ),
+            self.source,
+        )
+
+    def test_local_source_rejects_invalid_git_pointer_file(self) -> None:
+        repository = self.root / "invalid-worktree"
+        repository.mkdir()
+        (repository / ".git").write_text(
+            "gitdir: missing-git-directory\n",
+            encoding="utf-8",
+        )
+
+        with self.assertRaisesRegex(ContractError, "expected local Git repository"):
+            LocalGitSource(
+                identity=self.source,
+                repository=repository,
+                revision=self.fixture.revision,
+            )
+
     def test_archive_identity_ignores_ambient_git_authority(self) -> None:
         source = self.fixture.repository
         expected = git_archive_source_identity(

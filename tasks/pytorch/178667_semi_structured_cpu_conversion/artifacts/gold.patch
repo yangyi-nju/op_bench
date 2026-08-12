@@ -1,0 +1,85 @@
+diff --git a/torch/sparse/_semi_structured_ops.py b/torch/sparse/_semi_structured_ops.py
+index a5f4c5504ee..0254a33a4bc 100644
+--- a/torch/sparse/_semi_structured_ops.py
++++ b/torch/sparse/_semi_structured_ops.py
+@@ -16,6 +16,8 @@ __all__ = [
+     "semi_sparse_linear",
+     "semi_sparse_scaled_mm",
+     "semi_sparse_clone",
++    "semi_sparse_to",
++    "semi_sparse_to_copy",
+ ]
+ 
+ 
+@@ -253,3 +255,46 @@ def semi_sparse_clone(func, types, args=(), kwargs=None) -> torch.Tensor:
+         alg_id_cusparselt=self.alg_id_cusparselt,
+         requires_grad=self.requires_grad,
+     )
++
++
++def semi_sparse_to_copy(func, types, args, kwargs=None) -> torch.Tensor:
++    self = args[0]
++    kwargs = kwargs or {}
++
++    device = kwargs.get("device", None)
++
++    if device is not None and torch.device(device).type == "cpu":
++        dense = self.to_dense()
++        return func(dense, **kwargs)
++
++    raise NotImplementedError(
++        f"`_to_copy()` with kwargs={kwargs} is not implemented "
++        "for SparseSemiStructuredTensor. Only converting to CPU is supported currently."
++    )
++
++
++def semi_sparse_to(func, types, args, kwargs=None) -> torch.Tensor:
++    self = args[0]
++    remaining_args = args[1:]
++    kwargs = kwargs or {}
++
++    # Determine the target device from args/kwargs
++    device = None
++    if remaining_args:
++        first_arg = remaining_args[0]
++        if isinstance(first_arg, (torch.device, str)):
++            try:
++                device = torch.device(first_arg)
++            except RuntimeError:
++                pass
++    if "device" in kwargs:
++        device = torch.device(kwargs["device"])
++
++    if device is not None and device.type == "cpu":
++        dense = self.to_dense()
++        return func(dense, *remaining_args, **kwargs)
++
++    raise NotImplementedError(
++        f"`to()` with args={remaining_args}, kwargs={kwargs} is not implemented "
++        "for SparseSemiStructuredTensor. Only `to('cpu')` is supported currently."
++    )
+diff --git a/torch/sparse/semi_structured.py b/torch/sparse/semi_structured.py
+index 2e47239d603..d0f5e9ab2fb 100644
+--- a/torch/sparse/semi_structured.py
++++ b/torch/sparse/semi_structured.py
+@@ -19,6 +19,8 @@ from torch.sparse._semi_structured_ops import (
+     semi_sparse_mm,
+     semi_sparse_scaled_mm,
+     semi_sparse_t,
++    semi_sparse_to,
++    semi_sparse_to_copy,
+     semi_sparse_values,
+     semi_sparse_view,
+ )
+@@ -231,9 +233,10 @@ class SparseSemiStructuredTensor(torch.Tensor):
+                 torch.ops.aten.matmul: semi_sparse_mm,
+                 torch.ops.aten.addmm: semi_sparse_addmm,
+                 torch.ops.aten.linear: semi_sparse_linear,
+-                torch.ops.aten._to_copy: fallback_dispatcher,
++                torch.ops.aten._to_copy: semi_sparse_to_copy,
+                 torch.ops.aten._scaled_mm: semi_sparse_scaled_mm,
+                 torch.ops.aten.clone: semi_sparse_clone,
++                torch.ops.aten.to: semi_sparse_to,
+             }
+             if custom_dispatch_table is not None:
+                 cls.SPARSE_DISPATCH.update(custom_dispatch_table)

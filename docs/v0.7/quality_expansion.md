@@ -1,8 +1,8 @@
 # OpBench v0.7 质量扩展发布合同
 
-日期：2026-08-03
+日期：2026-08-11
 
-状态：In development
+状态：Completed；50/50 fresh replay 与 122/122 valid Agent Attempts
 
 ## 1. 版本边界
 
@@ -10,10 +10,10 @@
 数据集仍是可复现的历史基线，其 Hash、Admission 与 18-attempt Validation
 Cohort 不做追溯改写。
 
-当前开发工作把原计划中的后续数据扩充合并回 v0.7，并以质量优先的 50-task
-发布取代“25 条即为本版本最终规模”的旧完成条件。最终 v0.7 只有在本文件定义的
-50-task 数据、Admission、Agent 实验和发布审计全部通过后才能再次标记为
-Completed。历史 25-task 冻结证明旧发布真实存在，但不能证明当前目标完成。
+本次开发把原计划中的后续数据扩充合并回 v0.7，并以质量优先的 50-task 发布取代
+“25 条即为本版本最终规模”的旧完成条件。本文件定义的 50-task 数据、Admission、
+Agent 实验和发布审计现已全部通过，v0.7 已重新标记为 Completed。历史 25-task
+冻结证明旧发布真实存在，但不能代替最终 50-task 完成证据。
 
 ## 2. 最终规模
 
@@ -30,8 +30,9 @@ Completed。历史 25-task 冻结证明旧发布真实存在，但不能证明�
 - deferred、draft、环境不可用、仅静态校验或只有上游测试的候选均不计数；
 - 不为凑齐 50 条降低复杂度、运行真实性、Prompt 或重复度标准。
 
-`factory/v0.7/p8/accepted_tasks.json` 是新增任务的当前机器可读进度账本。
-其中 `required_task_count=36` 是完成条件，`task_count` 只表示已正式接纳的数量。
+`factory/v0.7/p8/accepted_tasks.json` 是新增任务的机器可读准入账本，当前已经达到
+36/36 verified。最终组成与四轴 coverage 由 `factory/v0.7/p9/` 的内容寻址产物
+冻结；旧 25-task 产物已原样归档，不参与当前分母。
 
 ## 3. 合理而不过细的 Taxonomy
 
@@ -126,3 +127,7 @@ v0.7 重新标记 Completed 前必须同时满足：
 5. 全量 replay、Integrity、隐私扫描、tracked JSON、文档链接和测试通过；
 6. Dataset Card、CHANGELOG 和发布 Hash 更新为最终 50-task 身份；
 7. 不存在把 draft、旧 25-task 基线或静态检查误写成当前完成证据的表述。
+
+以上门禁已于 2026-08-11 全部满足。正式机器报告记录 17/17 cohorts、122/122
+valid logical Attempts 和 122/122 完整 MCP traces；结果为 42 resolved、52 F2P
+failed、28 invalid patch，并继续遵守描述性 **non-leaderboard** 边界。

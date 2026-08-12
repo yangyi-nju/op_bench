@@ -200,6 +200,16 @@ class AttemptResourceLedgerTests(unittest.TestCase):
             with self.assertRaisesRegex(ContractError, "terminal transition"):
                 ledger.released(declared.resource_id)
 
+            recovered = ledger.recover_released(declared.resource_id)
+            self.assertEqual(recovered.transition, "released")
+            self.assertEqual(recovered.raw_handle_hash, handle.raw_handle_hash)
+            self.assertEqual(
+                [record.transition for record in ledger.records],
+                ["declared", "created", "cleanup_failed", "released"],
+            )
+            with self.assertRaisesRegex(ContractError, "terminal transition"):
+                ledger.recover_released(declared.resource_id)
+
             module = importlib.import_module("op_bench.runtime.resources")
             with self.assertRaisesRegex(ContractError, "attempt_id"):
                 module.AttemptResourceLedger(

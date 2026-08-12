@@ -1,0 +1,104 @@
+diff --git a/test/op_bench/test_undefined_tensor_boxing.py b/test/op_bench/test_undefined_tensor_boxing.py
+new file mode 100644
+--- /dev/null
++++ b/test/op_bench/test_undefined_tensor_boxing.py
+@@ -0,0 +1,99 @@
++import unittest
++from types import SimpleNamespace
++from unittest.mock import MagicMock
++
++import torch
++from torch._inductor.codegen.cpp_wrapper_cpu import CppWrapperCpu
++from torch._inductor.virtualized import V
++
++
++class UndefinedTensorBoxingTests(unittest.TestCase):
++    def generated_code(self, namespace, schema, raw_args):
++        graph = MagicMock()
++        graph.cpp_wrapper = True
++        graph.aot_mode = False
++        graph.is_const_graph = False
++        graph.device_types = []
++
++        with torch.library._scoped_library(namespace, "FRAGMENT") as library:
++            library.define(schema)
++            operation_name = schema.split("(", 1)[0]
++            operation = getattr(getattr(torch.ops, namespace), operation_name).default
++            with V.set_graph_handler(graph):
++                wrapper = CppWrapperCpu()
++                wrapper.generate_fallback_kernel_with_runtime_lookup_boxed(
++                    operation,
++                    raw_args=raw_args,
++                    output_args=["result_handle"],
++                    raw_outputs=[],
++                )
++                return "\n".join(str(line) for line in wrapper.lines)
++
++    @staticmethod
++    def tensor_reference(name):
++        return SimpleNamespace(codegen_reference=lambda: name)
++
++    def test_absent_required_tensor_uses_undefined_tensor_sentinel(self):
++        code = self.generated_code(
++            "opbench_undefined_weight",
++            "forward(Tensor input, Tensor weight, SymInt extent) -> Tensor",
++            [self.tensor_reference("input_handle"), None, 8],
++        )
++        self.assertIn("c10::IValue(at::Tensor())", code)
++        self.assertNotIn(
++            "c10::IValue(), c10::IValue(8)",
++            code,
++        )
++
++    def test_absent_required_tensor_between_scalars_is_typed(self):
++        code = self.generated_code(
++            "opbench_undefined_middle",
++            "forward(Tensor input, int mode, Tensor weight, bool train) -> Tensor",
++            [self.tensor_reference("input_handle"), 3, None, False],
++        )
++        boxed = [
++            line.strip()
++            for line in code.splitlines()
++            if "dispatch_stack_0.emplace_back" in line
++        ]
++        self.assertEqual(len(boxed), 4)
++        self.assertNotIn("at::Tensor()", boxed[0])
++        self.assertNotIn("at::Tensor()", boxed[1])
++        self.assertIn("at::Tensor()", boxed[2])
++        self.assertNotIn("at::Tensor()", boxed[3])
++
++    def test_absent_optional_tensor_remains_none(self):
++        code = self.generated_code(
++            "opbench_optional_weight",
++            "forward(Tensor input, Tensor? weight, SymInt extent) -> Tensor",
++            [self.tensor_reference("input_handle"), None, 8],
++        )
++        self.assertNotIn("c10::IValue(at::Tensor())", code)
++        self.assertIn("c10::IValue()", code)
++
++    def test_present_required_tensor_keeps_tensor_handle_path(self):
++        code = self.generated_code(
++            "opbench_present_weight",
++            "forward(Tensor input, Tensor weight, SymInt extent) -> Tensor",
++            [
++                self.tensor_reference("input_handle"),
++                self.tensor_reference("weight_handle"),
++                8,
++            ],
++        )
++        self.assertNotIn("c10::IValue(at::Tensor())", code)
++        self.assertIn("tensor_handle_to_tensor_pointer", code)
++        self.assertIn("weight_handle", code)
++
++    def test_non_tensor_none_remains_untyped_none(self):
++        code = self.generated_code(
++            "opbench_optional_integer",
++            "forward(Tensor input, int? mode) -> Tensor",
++            [self.tensor_reference("input_handle"), None],
++        )
++        self.assertNotIn("c10::IValue(at::Tensor())", code)
++        self.assertIn("c10::IValue()", code)
++
++
++if __name__ == "__main__":
++    unittest.main()

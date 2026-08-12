@@ -18,6 +18,7 @@ from op_bench.registry import (
 from op_bench.runtime.legacy import (
     LegacyV05Defaults,
     _executable_source_revision,
+    agent_task_view_from_v05,
     agent_spec_for_v1_adapter,
     full_task_spec_from_v05,
     run_manifest_from_v05_dataset,
@@ -25,6 +26,7 @@ from op_bench.runtime.legacy import (
 )
 from op_bench.runtime.profiles import load_runtime_profile_registry
 from op_bench.runtime.run_artifacts import AttemptArtifactStore
+from op_bench.runtime.task_view import project_agent_task_view
 from op_bench.runtime.validation import ContractError
 from op_bench.task import TaskManifest
 from tests.test_runtime_contracts import agent_spec
@@ -37,6 +39,14 @@ from tests.runtime_git_fixture import (
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DATASET_PATH = REPO_ROOT / "datasets" / "pytorch_v0.5" / "dataset.json"
+BOUNDARY_DATASET_PATH = (
+    REPO_ROOT
+    / "archives"
+    / "v0.7-pre-quality"
+    / "datasets"
+    / "pytorch_v0.7_boundary"
+    / "dataset.json"
+)
 PROFILE_REGISTRY_PATH = REPO_ROOT / "configs" / "runtime_profiles.v1.json"
 PROFILE_BY_ENVIRONMENT = {
     "pytorch-boundary-cpu-source-build-py311": "remote-cpu-source-boundary-py311-v1",
@@ -248,6 +258,30 @@ class LegacyV05ProjectionTests(unittest.TestCase):
         self.assertEqual(selected.task.digest, private_variant.task.digest)
         self.assertNotEqual(selected.task.digest, public_variant.task.digest)
 
+    def test_public_projection_does_not_require_private_artifact_files(
+        self,
+    ) -> None:
+        original = quality_tasks("opbench-v07-t0001")[0]
+        defaults = LegacyV05Defaults.standard()
+        expected = project_agent_task_view(
+            full_task_spec_from_v05(original),
+            defaults.capability_policy,
+            defaults.budget_policy,
+        )
+
+        with tempfile.TemporaryDirectory() as directory:
+            task_without_private_files = TaskManifest(
+                task_dir=Path(directory),
+                data=copy.deepcopy(original.data),
+            )
+            actual = agent_task_view_from_v05(
+                task_without_private_files,
+                defaults.capability_policy,
+                defaults.budget_policy,
+            )
+
+        self.assertEqual(actual, expected)
+
     def test_projects_all_boundary_environments_to_exact_runtime_profiles(
         self,
     ) -> None:
@@ -255,16 +289,11 @@ class LegacyV05ProjectionTests(unittest.TestCase):
         profiles = {profile.profile_id: profile for profile in registry.profiles}
         matched = 0
 
-        for path in sorted((REPO_ROOT / "tasks" / "pytorch").glob("*/task.json")):
-            task = TaskManifest.load(path)
-            if task.environment_ref not in {
-                "pytorch-boundary-cpu-source-build-py311",
-                "pytorch-matched-boundary-torch2.2.0-cpu",
-                "pytorch-matched-boundary-torch2.3.0-cpu",
-                "pytorch-matched-boundary-torch2.4.0-cpu",
-                "pytorch-matched-boundary-torch2.6.0-cu124",
-            }:
-                continue
+        boundary_tasks = DatasetManifest.load(
+            BOUNDARY_DATASET_PATH
+        ).load_tasks(verified_only=True)
+        for task in boundary_tasks:
+            self.assertIn(task.environment_ref, PROFILE_BY_ENVIRONMENT)
             matched += 1
             projected = full_task_spec_from_v05(task)
             with self.subTest(task=task.task_id):
@@ -531,7 +560,7 @@ class LegacyV05ProjectionTests(unittest.TestCase):
         )
 
     def test_private_runtime_bindings_preserve_source_build_timeout(self) -> None:
-        dataset_path = REPO_ROOT / "datasets" / "pytorch_v0.7_boundary" / "dataset.json"
+        dataset_path = BOUNDARY_DATASET_PATH
         bundle = runtime_bundle_from_v05_dataset(
             dataset_path,
             agents=(agent_spec(),),

@@ -1,0 +1,53 @@
+diff --git a/test/op_bench/test_named_hop_argument_roundtrip.py b/test/op_bench/test_named_hop_argument_roundtrip.py
+new file mode 100644
+--- /dev/null
++++ b/test/op_bench/test_named_hop_argument_roundtrip.py
+@@ -0,0 +1,48 @@
++import unittest
++
++from torch._export.serde.schema import Argument, ArgumentKind, NamedArgument
++from torch._export.serde.serialize import GraphModuleDeserializer
++
++
++class NamedHigherOrderArgumentTests(unittest.TestCase):
++    @staticmethod
++    def integer(name, value, kind):
++        return NamedArgument(
++            name=name,
++            arg=Argument.create(as_int=value),
++            kind=kind,
++        )
++
++    def test_named_positional_arguments_keep_order(self):
++        inputs = [
++            self.integer("tensor_slot", 3, ArgumentKind.POSITIONAL),
++            self.integer("dynamic_count", 9, ArgumentKind.POSITIONAL),
++        ]
++        args, kwargs = GraphModuleDeserializer().deserialize_hoo_inputs(inputs)
++        self.assertEqual(args, (3, 9))
++        self.assertEqual(kwargs, {})
++
++    def test_named_positional_and_launch_metadata_stay_separate(self):
++        inputs = [
++            self.integer("dynamic_count", 11, ArgumentKind.POSITIONAL),
++            self.integer("launch_grid", 4, ArgumentKind.KEYWORD),
++        ]
++        args, kwargs = GraphModuleDeserializer().deserialize_hoo_inputs(inputs)
++        self.assertEqual(args, (11,))
++        self.assertEqual(kwargs, {"launch_grid": 4})
++
++    def test_legacy_unnamed_positional_argument_remains_supported(self):
++        inputs = [self.integer("", 7, ArgumentKind.UNKNOWN)]
++        args, kwargs = GraphModuleDeserializer().deserialize_hoo_inputs(inputs)
++        self.assertEqual(args, (7,))
++        self.assertEqual(kwargs, {})
++
++    def test_keyword_only_metadata_remains_supported(self):
++        inputs = [self.integer("num_warps", 8, ArgumentKind.KEYWORD)]
++        args, kwargs = GraphModuleDeserializer().deserialize_hoo_inputs(inputs)
++        self.assertEqual(args, ())
++        self.assertEqual(kwargs, {"num_warps": 8})
++
++
++if __name__ == "__main__":
++    unittest.main()

@@ -19,6 +19,7 @@ if str(SRC) not in sys.path:
 from op_bench.factory.quality_admission import (  # noqa: E402
     run_quality_admission,
 )
+from op_bench.progress import ProgressLogger  # noqa: E402
 from op_bench.runtime.validation import ContractError  # noqa: E402
 
 
@@ -80,6 +81,7 @@ def main(argv: list[str] | None = None) -> int:
             environment_registry_path=environment_registry,
             source_registry_path=source_registry,
             created_at=args.created_at,
+            progress=ProgressLogger(enabled=not args.quiet),
         )
     except (ContractError, OSError, UnicodeDecodeError, ValueError) as exc:
         print(f"quality admission failed: {exc}", file=sys.stderr)

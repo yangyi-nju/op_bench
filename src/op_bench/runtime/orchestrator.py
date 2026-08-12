@@ -27,7 +27,11 @@ from op_bench.runtime.contracts import (
     RuntimeProfile,
     SessionResult,
 )
-from op_bench.runtime.evaluation import AttemptEvaluationCoordinator, FreshEvaluator
+from op_bench.runtime.evaluation import (
+    AttemptEvaluationCoordinator,
+    FreshEvaluator,
+    StrictPatchApplyError,
+)
 from op_bench.runtime.events import EventJournal
 from op_bench.runtime.integrity import (
     persist_integrity_reports,
@@ -67,6 +71,7 @@ from op_bench.runtime.workspace import (
     WorkspaceError,
     WorkspacePolicy,
     build_patch_artifact,
+    paths_within_scopes,
 )
 
 
@@ -81,6 +86,12 @@ class _InfrastructureNotEvaluatedBackend:
     def evaluate(self, spec, frozen_patch):
         del spec, frozen_patch
         raise ContractError("infrastructure-invalid session cannot be evaluated")
+
+
+class _AgentPatchRejectedBackend:
+    def evaluate(self, spec, frozen_patch):
+        del spec, frozen_patch
+        raise StrictPatchApplyError("Agent patch is outside the private Task scope")
 
 
 @dataclass(frozen=True)
@@ -102,9 +113,23 @@ class V06RunRequest:
         if not isinstance(self.selected_attempt_ids, tuple) or not self.selected_attempt_ids:
             raise ContractError("selected_attempt_ids: expected non-empty tuple")
         expected_order = tuple(item.attempt_id for item in self.manifest.expected_attempts)
-        if self.selected_attempt_ids != expected_order:
+        expected_set = set(expected_order)
+        selected_set: set[str] = set()
+        for index, attempt_id in enumerate(self.selected_attempt_ids):
+            require_str(attempt_id, f"selected_attempt_ids[{index}]")
+            if attempt_id not in expected_set:
+                raise ContractError(
+                    "selected_attempt_ids: includes an Attempt outside the frozen Manifest"
+                )
+            if attempt_id in selected_set:
+                raise ContractError("selected_attempt_ids: includes a duplicate Attempt")
+            selected_set.add(attempt_id)
+        selected_order = tuple(
+            attempt_id for attempt_id in expected_order if attempt_id in selected_set
+        )
+        if self.selected_attempt_ids != selected_order:
             raise ContractError(
-                "selected_attempt_ids: must match the frozen Manifest matrix"
+                "selected_attempt_ids: must follow the frozen Manifest order"
             )
         if not isinstance(self.runtime_profile_registry, RuntimeProfileRegistry):
             raise ContractError(
@@ -213,9 +238,12 @@ class V06Orchestrator:
         skipped: list[str] = []
         blocked: list[str] = []
         cleanup_reports: dict[str, RuntimeCleanupReport] = {}
+        requested = set(request.selected_attempt_ids)
         try:
             store.write_run_manifest()
             for expected in request.manifest.expected_attempts:
+                if expected.attempt_id not in requested:
+                    continue
                 decision = ledger.decide(expected.attempt_id, request.resume_policy)
                 if decision.action == "skip":
                     skipped.append(expected.attempt_id)
@@ -244,12 +272,20 @@ class V06Orchestrator:
             ledger.close()
             store.close()
 
-        integrity = verify_run_artifacts(request.output_root, request.manifest)
+        expected_order = tuple(
+            item.attempt_id for item in request.manifest.expected_attempts
+        )
+        integrity = verify_run_artifacts(
+            request.output_root,
+            request.manifest,
+            allow_incomplete=request.selected_attempt_ids != expected_order,
+        )
         if integrity.status == "passed":
             persist_integrity_reports(
                 request.output_root,
                 request.manifest,
                 integrity,
+                attempt_ids=tuple(item.attempt_id for item in selected),
             )
         return V06RunResult(
             ran_attempt_ids=tuple(ran),
@@ -263,9 +299,16 @@ class V06Orchestrator:
         profile = request.runtime_profile_registry.get(request.runtime_profile_id)
         if request.target_binding.backend != profile.backend:
             raise ContractError("target_binding: backend does not match Runtime Profile")
-        expected_ids = {item.attempt_id for item in request.manifest.expected_attempts}
-        if set(request.selected_attempt_ids) != expected_ids:
-            raise ContractError("selected_attempt_ids: incomplete Manifest matrix")
+        expected_order = tuple(
+            item.attempt_id for item in request.manifest.expected_attempts
+        )
+        selected = set(request.selected_attempt_ids)
+        if request.selected_attempt_ids != tuple(
+            attempt_id for attempt_id in expected_order if attempt_id in selected
+        ):
+            raise ContractError(
+                "selected_attempt_ids: invalid frozen Manifest subset"
+            )
         for task in request.manifest.tasks:
             if task.runtime != profile:
                 raise ContractError(
@@ -496,6 +539,7 @@ class V06Orchestrator:
             if session_result.final_patch is None:
                 frozen = None
                 patch_artifact = None
+                patch_scope_rejected = False
             else:
                 frozen = workspace.freeze()
                 patch_artifact = build_patch_artifact(
@@ -503,6 +547,10 @@ class V06Orchestrator:
                     artifact_id=(
                         f"{expected.attempt_id}/{retry_directory_name(retry_index)}/final.patch"
                     ),
+                )
+                patch_scope_rejected = not paths_within_scopes(
+                    frozen.changed_paths,
+                    task.patch_scope,
                 )
             store.write_session_inputs(
                 expected.attempt_id,
@@ -518,21 +566,24 @@ class V06Orchestrator:
             agent_cleanup = agent_backend.cleanup(agent_lease)
             cleanup_report = agent_cleanup.report
             if cleanup_uncertain is None:
-                evaluation_backend = self._runtime_backend(
-                    profile,
-                    request.target_binding,
-                    "evaluation",
-                )
-                evaluation_implementation = RuntimeFreshEvaluationBackend(
-                    source=source,
-                    hidden_asset=hidden_asset,
-                    python_executable=self._python_executable,
-                    runtime_backend=evaluation_backend,
-                    runtime_profile=profile,
-                    attempt_context=attempt_context,
-                    source_overlay_paths=source_overlay_paths,
-                    source_loading_timeout_ms=source_loading_timeout_ms,
-                )
+                if patch_scope_rejected:
+                    evaluation_implementation = _AgentPatchRejectedBackend()
+                else:
+                    evaluation_backend = self._runtime_backend(
+                        profile,
+                        request.target_binding,
+                        "evaluation",
+                    )
+                    evaluation_implementation = RuntimeFreshEvaluationBackend(
+                        source=source,
+                        hidden_asset=hidden_asset,
+                        python_executable=self._python_executable,
+                        runtime_backend=evaluation_backend,
+                        runtime_profile=profile,
+                        attempt_context=attempt_context,
+                        source_overlay_paths=source_overlay_paths,
+                        source_loading_timeout_ms=source_loading_timeout_ms,
+                    )
             else:
                 evaluation_implementation = _InfrastructureNotEvaluatedBackend()
             evaluation_spec = EvaluationSpec(

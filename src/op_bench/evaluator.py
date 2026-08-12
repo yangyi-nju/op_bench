@@ -174,7 +174,12 @@ class Evaluator:
             command_log.extend(pass_commands)
             if any(result.timed_out for result in pass_results):
                 return finish("timeout")
-            if self._has_environment_error(fail_results + pass_results):
+            if self._has_environment_error(pass_results) or (
+                self._has_environment_error(
+                    fail_results,
+                    allow_target_import_failure=True,
+                )
+            ):
                 return finish("environment_error")
             if self._has_runner_error(fail_results + pass_results):
                 return finish("runner_error")
@@ -402,7 +407,12 @@ class Evaluator:
             label="load patched source",
         )
 
-    def _has_environment_error(self, results: list[CommandResult]) -> bool:
+    def _has_environment_error(
+        self,
+        results: list[CommandResult],
+        *,
+        allow_target_import_failure: bool = False,
+    ) -> bool:
         if not results:
             return False
         failed_outputs = [
@@ -414,7 +424,6 @@ class Evaluator:
             return False
         environment_markers = (
             "ModuleNotFoundError:",
-            "ImportError:",
             "OSError:",
             "No module named",
             "cannot open shared object file",
@@ -427,10 +436,17 @@ class Evaluator:
             "No working C++ compiler found",
             "fatal error: Python.h: No such file or directory",
         )
-        return any(
-            any(marker in output for marker in environment_markers)
-            for output in failed_outputs
-        )
+        for output in failed_outputs:
+            if any(marker in output for marker in environment_markers):
+                return True
+            if "ImportError:" in output:
+                if (
+                    allow_target_import_failure
+                    and "ImportError: cannot import name" in output
+                ):
+                    continue
+                return True
+        return False
 
     def _has_runner_error(self, results: list[CommandResult]) -> bool:
         for result in results:

@@ -4,15 +4,28 @@ This file records user-visible OpBench version milestones. Detailed design,
 implementation, and experiment evidence remain in the versioned documents
 under `docs/`.
 
-## v0.7 - In development (50-task quality expansion)
+## v0.7 - Completed 2026-08-11 (50-task quality release)
 
 The 2026-07-28 25-task release below remains an immutable, reproducible
-historical freeze. The active v0.7 release now incorporates the planned
-follow-up dataset expansion and is not complete until it contains exactly 14
-re-admitted historical tasks plus 36 new or replacement tasks, with the full
-122-attempt Agent experiment matrix and final release audit. The authoritative
-contract is `docs/v0.7/quality_expansion.md`; the machine-readable p8 index
-remains `status=building` until all gates are met.
+historical freeze under `archives/v0.7-pre-quality/`. The final v0.7 release
+contains exactly 14 re-admitted historical tasks plus 21 new and
+15 replacement tasks. All 50 Tasks and all 36 new/replacement Runtime
+Admissions are verified; the cumulative/Boundary/Precision/Device views contain
+50/31/5/15 Tasks. The p9 release and 122-attempt validation contract are frozen.
+The fresh replay passed 50/50. The real Codex experiment completed 17/17 cohorts,
+122/122 valid logical Attempts, and 122/122 complete MCP traces: 42 resolved,
+52 F2P failed, and 28 invalid patches. Eight infrastructure-invalid retry
+records remain in the append-only audit history and do not enter the Agent
+failure denominator. The public report rebuilds byte-for-byte and the result is
+descriptive **non-leaderboard** evidence. Final repository regression passed
+1101/1101 tests. The authoritative contract is
+`docs/v0.7/quality_expansion.md`.
+
+Final Dataset hashes are cumulative
+`sha256:3695622dd2619a760d510ef49e0a9dbff637c98790ad3263c521bae8e99c9518`,
+Boundary `sha256:2890f5937a5b2c7f5a12c870fc9cc550f0f16ff065467245ecf65223b5976a01`,
+Precision `sha256:508ec6928d94c159499ae84bf4f37e594b2bdafdef89b04369f481deeddb2c8d`,
+and Device `sha256:b598fdfe94af9921132b147ab693477de8fb360dabe7e5f611792e5f38c0f138`.
 
 ### Historical 25-task freeze (completed 2026-07-28)
 

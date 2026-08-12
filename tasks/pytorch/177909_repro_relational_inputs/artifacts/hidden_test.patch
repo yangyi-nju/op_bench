@@ -1,0 +1,93 @@
+diff --git a/test/op_bench/test_repro_relational_inputs.py b/test/op_bench/test_repro_relational_inputs.py
+new file mode 100644
+--- /dev/null
++++ b/test/op_bench/test_repro_relational_inputs.py
+@@ -0,0 +1,88 @@
++import io
++import logging
++import subprocess
++import sys
++import unittest
++
++import torch
++import torch._logging.structured
++from torch._inductor.codecache import WritableTempFile
++
++
++TRACE_LOG = logging.getLogger("torch.__trace")
++
++
++class ArtifactFilter(logging.Filter):
++    def filter(self, record):
++        return (
++            "artifact" in record.metadata
++            and record.metadata["artifact"]["name"] == "fx_graph_runnable"
++        )
++
++
++class PayloadFormatter(logging.Formatter):
++    def format(self, record):
++        return record.payload.strip()
++
++
++class RelationalReproInputTests(unittest.TestCase):
++    def setUp(self):
++        torch._dynamo.reset()
++        torch._logging.structured.INTERN_TABLE.clear()
++        self.old_level = TRACE_LOG.level
++        TRACE_LOG.setLevel(logging.DEBUG)
++        self.buffer = io.StringIO()
++        self.handler = logging.StreamHandler(self.buffer)
++        self.handler.setFormatter(PayloadFormatter())
++        self.handler.addFilter(ArtifactFilter())
++        TRACE_LOG.addHandler(self.handler)
++
++    def tearDown(self):
++        TRACE_LOG.removeHandler(self.handler)
++        TRACE_LOG.setLevel(self.old_level)
++
++    def execute_payload(self):
++        payload = self.buffer.getvalue().strip()
++        self.assertIn("def forward", payload)
++        with WritableTempFile("w", suffix=".py") as temporary:
++            temporary.write(payload)
++            temporary.flush()
++            result = subprocess.run(
++                [sys.executable, temporary.name],
++                capture_output=True,
++                text=True,
++                timeout=60,
++            )
++        self.assertEqual(result.returncode, 0, result.stderr)
++        return payload
++
++    @torch._dynamo.config.patch(assume_static_by_default=False)
++    def test_runtime_total_reproducer_executes(self):
++        def model(data, repeats, total):
++            indices = torch.repeat_interleave(
++                repeats,
++                output_size=total.item(),
++            )
++            return data[indices]
++
++        repeats = torch.randint(5, 15, (128,), dtype=torch.int64)
++        total = repeats.sum()
++        data = torch.randn(1000, 16)
++        torch.compile(model, dynamic=True)(data, repeats, total)
++
++        self.execute_payload()
++
++    def test_constant_total_reproducer_executes(self):
++        def model(data, repeats):
++            indices = torch.repeat_interleave(repeats, output_size=1280)
++            return data[indices]
++
++        repeats = torch.full((128,), 10, dtype=torch.int64)
++        data = torch.randn(1000, 16)
++        torch.compile(model)(data, repeats)
++
++        self.execute_payload()
++
++
++if __name__ == "__main__":
++    unittest.main()

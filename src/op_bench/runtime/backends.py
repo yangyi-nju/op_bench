@@ -19,6 +19,7 @@ from typing import Callable, Protocol
 from op_bench.runtime.actions import CommandExecution
 from op_bench.runtime.canonical import canonical_sha256
 from op_bench.runtime.contracts import RuntimeProfile
+from op_bench.runtime.manifest import ATTEMPT_PATTERN
 from op_bench.runtime.resources import (
     AttemptResourceLedger,
     RuntimeCleanupEntry,
@@ -2330,7 +2331,14 @@ def _run_exact_cleanup_command_with_retry(
     argv_runner: ArgvRunner,
     command: tuple[str, ...],
     timeout_ms: int,
+    *,
+    success: Callable[[RuntimeCommandResult], bool] | None = None,
 ) -> RuntimeCommandResult | None:
+    accepted = (
+        success
+        if success is not None
+        else lambda item: item.exit_code == 0 and not item.timed_out
+    )
     started = time.monotonic_ns()
     result: RuntimeCommandResult | None = None
     for _ in range(3):
@@ -2342,9 +2350,95 @@ def _run_exact_cleanup_command_with_retry(
             result = argv_runner(command, None, remaining_ms)
         except RuntimeBackendUnavailable:
             result = None
-        if result is not None and result.exit_code == 0 and not result.timed_out:
+        if result is not None and accepted(result):
             return result
     return result
+
+
+def recover_remote_cleanup_resource(
+    target_binding: RuntimeTargetBinding,
+    handle: RuntimeResourceHandle,
+    *,
+    attempt_id: str,
+    retry_index: int,
+    timeout_ms: int,
+    argv_runner: ArgvRunner | None = None,
+) -> bool:
+    """Retry cleanup for one exact, previously owned remote resource."""
+
+    if not isinstance(target_binding, RuntimeTargetBinding):
+        raise ContractError("target_binding: expected RuntimeTargetBinding")
+    if target_binding.backend != "remote_docker":
+        raise ContractError("target_binding: remote_docker is required for recovery")
+    if not isinstance(handle, RuntimeResourceHandle):
+        raise ContractError("handle: expected RuntimeResourceHandle")
+    attempt = require_str(attempt_id, "attempt_id", pattern=ATTEMPT_PATTERN)
+    retry = require_int(retry_index, "retry_index", minimum=1)
+    timeout = require_int(timeout_ms, "timeout_ms", minimum=1)
+    runner = argv_runner or _default_argv_runner
+    digest = attempt.removeprefix("attempt:v1:")
+
+    if handle.resource_type == "container":
+        base = f"opbench-{digest[:20]}-r{retry:04d}"
+        expected = (
+            base
+            if handle.ordinal == 1
+            else f"{base}-{handle.ordinal:04d}"
+        )
+        if handle.raw_handle != expected:
+            raise ContractError("container recovery handle does not match Attempt identity")
+        def container_absent(item: RuntimeCommandResult) -> bool:
+            if item.timed_out or _is_ssh_transport_failure(item):
+                return False
+            if item.exit_code == 0:
+                return True
+            error = item.stderr.casefold()
+            return "no such container" in error or "no such object" in error
+
+        result = _run_exact_cleanup_command_with_retry(
+            runner,
+            _ssh_command(
+                target_binding,
+                (
+                    target_binding.docker_binary,
+                    "rm",
+                    "--force",
+                    handle.raw_handle,
+                ),
+            ),
+            timeout,
+            success=container_absent,
+        )
+        return result is not None and container_absent(result)
+
+    if handle.resource_type == "remote_workspace":
+        root = target_binding.remote_workspace_root.rstrip("/")
+        leaf = (
+            "workspace"
+            if handle.ordinal == 1
+            else f"workspace-{handle.ordinal:04d}"
+        )
+        remote_path = f"{root}/{digest}/retry-{retry:04d}/{leaf}"
+        expected = f"{_remote_target(target_binding)}:{remote_path}"
+        if handle.raw_handle != expected:
+            raise ContractError(
+                "remote workspace recovery handle does not match Attempt identity"
+            )
+        result = _run_exact_cleanup_command_with_retry(
+            runner,
+            _ssh_command(
+                target_binding,
+                ("rm", "-rf", "--", remote_path),
+            ),
+            timeout,
+        )
+        return (
+            result is not None
+            and result.exit_code == 0
+            and not result.timed_out
+        )
+
+    raise ContractError("handle: unsupported remote cleanup resource type")
 
 
 def _validate_command(command: tuple[str, ...]) -> tuple[str, ...]:
@@ -2516,5 +2610,6 @@ __all__ = [
     "RuntimeLease",
     "RuntimeTargetBinding",
     "RemoteDockerRuntimeBackend",
+    "recover_remote_cleanup_resource",
     "ScriptedRuntimeBackend",
 ]

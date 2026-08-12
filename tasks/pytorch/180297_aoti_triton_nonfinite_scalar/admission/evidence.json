@@ -1,0 +1,49 @@
+{
+  "admission": {
+    "decision": "verified",
+    "failure_classification": null,
+    "verified": true
+  },
+  "baseline": {
+    "duration_sec": 132.85412470798474,
+    "fail_to_pass_passed": 0,
+    "fail_to_pass_total": 1,
+    "mode": "baseline",
+    "pass_to_pass_passed": 1,
+    "pass_to_pass_total": 1,
+    "status": "baseline_reproduced",
+    "task_id": "pytorch__180297__aoti_triton_nonfinite_scalar"
+  },
+  "created_at": "2026-08-10T11:31:00Z",
+  "environment": {
+    "backend": "remote_docker",
+    "digest_kind": "local_image_id",
+    "id": "pytorch-nightly-20260417-torch2.13.0dev-cu126-devel-py311",
+    "image": "op-bench/pytorch-nightly-cu126-devel:2.13.0.dev20260417-py311",
+    "image_digest": "sha256:c2be263d373e3e3a88076d49b49ee3a50921c4e7e1c9aa0702c994ad8681cecd",
+    "platform": "linux/amd64",
+    "runtime_tier": "cuda_python_overlay"
+  },
+  "evidence_id": "pytorch__180297__aoti_triton_nonfinite_scalar:7d1feda36db2:2026-08-10T11:31:00Z",
+  "gold": {
+    "duration_sec": 135.00708320899867,
+    "fail_to_pass_passed": 1,
+    "fail_to_pass_total": 1,
+    "mode": "gold",
+    "pass_to_pass_passed": 1,
+    "pass_to_pass_total": 1,
+    "status": "resolved",
+    "task_id": "pytorch__180297__aoti_triton_nonfinite_scalar"
+  },
+  "schema_version": "v1",
+  "source": {
+    "base_commit": "d61bcb257599b8a3830c73d2b1c9fc5517acdc20",
+    "id": "pytorch-d61bcb25-aoti-triton-scalar-overlay",
+    "repo_url": "https://github.com/pytorch/pytorch.git",
+    "snapshot_hash": null,
+    "snapshot_method": null
+  },
+  "task_id": "pytorch__180297__aoti_triton_nonfinite_scalar",
+  "task_manifest_hash": "sha256:7d1feda36db20e698ab5d47fe8a8b0facdf48765d83b3c7f809faea3689523bd",
+  "task_manifest_hash_kind": "replay_spec_v1"
+}

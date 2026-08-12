@@ -1,0 +1,63 @@
+diff --git a/test/op_bench/test_inference_memo_descriptor_v2.py b/test/op_bench/test_inference_memo_descriptor_v2.py
+new file mode 100644
+--- /dev/null
++++ b/test/op_bench/test_inference_memo_descriptor_v2.py
+@@ -0,0 +1,58 @@
++import unittest
++from types import SimpleNamespace
++
++from torch._subclasses.fake_tensor import SymNumberMemoDescriptor
++
++
++class MemoHolder:
++    cached = SymNumberMemoDescriptor()
++
++    def __init__(self, *, inference):
++        self._cached = None
++        self._cached_vc = None
++        self._cached_epoch = None
++        self._inference = inference
++        self._version = 0
++        self.fake_mode = SimpleNamespace(epoch=1)
++
++    def is_inference(self):
++        return self._inference
++
++
++class InferenceMemoDescriptorTests(unittest.TestCase):
++    def test_inference_value_is_stored_and_retrieved(self):
++        holder = MemoHolder(inference=True)
++        holder.cached = 17
++        self.assertEqual(holder.cached, 17)
++
++    def test_inference_value_can_be_updated_in_same_epoch(self):
++        holder = MemoHolder(inference=True)
++        holder.cached = 5
++        holder.cached = 11
++        self.assertEqual(holder.cached, 11)
++        self.assertIsNone(holder._cached_vc)
++
++    def test_normal_value_tracks_version_counter(self):
++        holder = MemoHolder(inference=False)
++        holder.cached = 23
++        self.assertEqual(holder.cached, 23)
++        holder._version += 1
++        self.assertIsNone(holder.cached)
++
++    def test_epoch_change_invalidates_value(self):
++        holder = MemoHolder(inference=False)
++        holder.cached = 31
++        holder.fake_mode.epoch += 1
++        self.assertIsNone(holder.cached)
++
++    def test_explicit_clear_remains_stable(self):
++        holder = MemoHolder(inference=False)
++        holder.cached = 7
++        holder.cached = None
++        self.assertIsNone(holder.cached)
++        self.assertIsNone(holder._cached_vc)
++        self.assertIsNone(holder._cached_epoch)
++
++
++if __name__ == "__main__":
++    unittest.main()

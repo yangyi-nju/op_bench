@@ -202,6 +202,62 @@ class AttemptArtifactStore:
             label="runtime_cleanup.json",
         )
 
+    def replace_runtime_cleanup_after_recovery(
+        self,
+        attempt_id: str,
+        report: RuntimeCleanupReport,
+        *,
+        retry_index: int = 1,
+    ) -> None:
+        """Replace only cleanup_failed statuses proven released by recovery."""
+
+        if not isinstance(report, RuntimeCleanupReport):
+            raise ContractError("report: expected RuntimeCleanupReport")
+        current = self.read_runtime_cleanup(
+            attempt_id,
+            retry_index=retry_index,
+        )
+        if current.all_released or not report.all_released:
+            raise ContractError(
+                "runtime cleanup recovery: expected failed-to-released transition"
+            )
+        if (
+            report.attempt_id != current.attempt_id
+            or report.retry_index != current.retry_index
+            or report.runtime_profile_hash != current.runtime_profile_hash
+        ):
+            raise ContractError("runtime cleanup recovery: identity mismatch")
+        current_by_id = {entry.resource_id: entry for entry in current.entries}
+        recovered_by_id = {entry.resource_id: entry for entry in report.entries}
+        if set(current_by_id) != set(recovered_by_id):
+            raise ContractError("runtime cleanup recovery: resource matrix mismatch")
+        recovered = 0
+        for resource_id, prior in current_by_id.items():
+            updated = recovered_by_id[resource_id]
+            if updated.resource_type != prior.resource_type:
+                raise ContractError("runtime cleanup recovery: resource type changed")
+            if prior.status == "cleanup_failed":
+                if updated.status != "released" or updated.error_code is not None:
+                    raise ContractError(
+                        "runtime cleanup recovery: failed resource was not released"
+                    )
+                recovered += 1
+            elif updated != prior:
+                raise ContractError(
+                    "runtime cleanup recovery: unrelated resource status changed"
+                )
+        if recovered == 0:
+            raise ContractError("runtime cleanup recovery: no failed resource recovered")
+        payload = report.to_dict()
+        assert_public_artifact_safe(payload)
+        self._atomic_write(
+            self._retry_fd(attempt_id, retry_index),
+            "runtime_cleanup.json",
+            _json_bytes(payload),
+            label="runtime_cleanup.json",
+            replace_existing=True,
+        )
+
     def read_runtime_cleanup(
         self,
         attempt_id: str,

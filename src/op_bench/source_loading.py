@@ -22,6 +22,7 @@ workspace = pathlib.Path(cfg["workspace_dir"])
 runtime_site_packages = pathlib.Path(cfg["runtime_site_packages"])
 package = cfg["installed_package"]
 overlay_paths = cfg["overlay_paths"]
+overlay_tree = cfg.get("overlay_tree")
 
 runtime_site_packages.mkdir(parents=True, exist_ok=True)
 os.chdir("/tmp")
@@ -44,16 +45,58 @@ for site_packages in site.getsitepackages():
         (site_packages_path / "op_bench_runtime_overlay.pth").write_text(pth_line, encoding="utf-8")
 
 synced = []
+if overlay_tree is not None:
+    tree_relative = pathlib.PurePosixPath(overlay_tree)
+    if tree_relative.is_absolute() or ".." in tree_relative.parts:
+        raise ValueError(f"invalid overlay tree: {overlay_tree}")
+    tree_source = workspace / pathlib.Path(*tree_relative.parts)
+    if not tree_source.is_dir():
+        raise FileNotFoundError(f"overlay tree is unavailable: {overlay_tree}")
+    runtime_suffixes = {".py", ".pyi", ".json", ".yaml", ".yml"}
+    for source in sorted(tree_source.rglob("*")):
+        if source.is_symlink() or not source.is_file():
+            continue
+        if source.suffix not in runtime_suffixes:
+            continue
+        relative = source.relative_to(workspace)
+        destination = runtime_site_packages / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, destination)
+        digest = hashlib.sha256(destination.read_bytes()).hexdigest()
+        synced.append({
+            "action": "copied",
+            "workspace": str(source),
+            "runtime": str(destination),
+            "sha256": f"sha256:{digest}",
+        })
+
 for relative in overlay_paths:
     relative_path = pathlib.PurePosixPath(relative)
     if relative_path.is_absolute() or ".." in relative_path.parts:
         raise ValueError(f"invalid overlay path: {relative}")
     source = workspace / pathlib.Path(*relative_path.parts)
     destination = runtime_site_packages / pathlib.Path(*relative_path.parts)
+    if not source.exists():
+        if destination.is_dir():
+            shutil.rmtree(destination)
+        elif destination.exists() or destination.is_symlink():
+            destination.unlink()
+        synced.append({
+            "action": "removed",
+            "workspace": str(source),
+            "runtime": str(destination),
+            "sha256": None,
+        })
+        continue
     destination.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(source, destination)
     digest = hashlib.sha256(destination.read_bytes()).hexdigest()
-    synced.append({"workspace": str(source), "runtime": str(destination), "sha256": f"sha256:{digest}"})
+    synced.append({
+        "action": "copied",
+        "workspace": str(source),
+        "runtime": str(destination),
+        "sha256": f"sha256:{digest}",
+    })
 
 print(json.dumps({"mode": "python_overlay", "package": package, "overlay_files": synced}, sort_keys=True))
 """.strip()
@@ -121,6 +164,7 @@ def _build_python_overlay_command(task: TaskManifest, source_loading: dict) -> l
         "workspace_dir": task.environment_workspace_dir,
         "installed_package": str(source_loading["installed_package"]),
         "overlay_paths": task.source_loading_overlay_paths,
+        "overlay_tree": source_loading.get("overlay_tree"),
         "runtime_site_packages": str(source_loading["runtime_site_packages"]),
     }
     return [

@@ -162,29 +162,53 @@ _SOURCE_KEYWORDS = frozenset(
 )
 _PUBLIC_PROMPT_IDENTIFIERS = frozenset(
     {
+        "canonical",
         "freezing",
         "list",
         "patch",
         "platform",
+        "registered",
     }
 )
-_PUBLIC_PROMPT_LITERALS = frozenset({"freezing"})
+_PUBLIC_PROMPT_LITERALS = frozenset({"freezing", "output"})
 _SCANNER_VERSIONS = ("prompt-overlap-v1", "prompt-overlap-v2")
 _CONTROLLED_PUBLIC_SCANNER_TERMS = frozenset(
     {
         "bmm",
+        "attention",
+        "aotinductor",
+        "backward",
+        "broadcast",
         "compile",
         "compiled",
+        "concurrent",
         "cpu",
         "cuda",
+        "deadlock",
+        "device",
         "dynamic",
+        "event",
+        "gradient",
         "inductor",
+        "inference",
         "loss",
         "nll",
+        "operation",
+        "optional",
+        "ordering",
+        "partitioner",
         "pytorch",
         "reduction",
+        "sentinel",
+        "symbolic",
+        "stream",
+        "synchronization",
         "torch",
         "triton",
+        "unbacked",
+        "undefined",
+        "weight",
+        "worker",
     }
 )
 
@@ -459,11 +483,12 @@ def _parse_unified_diff(patch: str, *, path: str) -> tuple[set[str], tuple[str, 
 def _source_symbols(lines: tuple[str, ...]) -> set[str]:
     symbols: set[str] = set()
     for index, line in enumerate(lines):
+        stripped = line.lstrip()
         for pattern in (_PYTHON_SYMBOL, _CPP_CLASS_SYMBOL):
             match = pattern.match(line)
             if match is not None:
                 symbols.add(match.group(1))
-        if line.lstrip().startswith("@"):
+        if stripped.startswith(("@", "#", "//", "/*", "*")):
             continue
         if (
             "(" not in line
@@ -588,7 +613,9 @@ def build_private_answer_index(
     symbols = {
         symbol
         for symbol in _source_symbols(lines)
-        if symbol.casefold() not in allowed_identifiers
+        if len(symbol) >= 3
+        and symbol.casefold() not in _SOURCE_KEYWORDS
+        and symbol.casefold() not in allowed_identifiers
     }
     identifier_counts = Counter(
         identifier

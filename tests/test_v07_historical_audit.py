@@ -20,7 +20,7 @@ from op_bench.runtime.validation import ContractError
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DATASET = ROOT / "datasets/pytorch_v0.7/dataset.json"
+DATASET = ROOT / "archives/v0.7-pre-quality/datasets/pytorch_v0.7/dataset.json"
 SCRIPT = ROOT / "scripts/audit_v07_historical.py"
 CREATED_AT = "2026-07-29T00:00:00Z"
 

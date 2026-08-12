@@ -1,0 +1,42 @@
+diff --git a/test/op_bench/test_nonfinite_expression_codegen.py b/test/op_bench/test_nonfinite_expression_codegen.py
+new file mode 100644
+--- /dev/null
++++ b/test/op_bench/test_nonfinite_expression_codegen.py
+@@ -0,0 +1,37 @@
++import unittest
++
++import sympy
++from torch.utils._sympy.printers import CppPrinter, ExprPrinter, PythonPrinter
++
++
++class NonFiniteExpressionPrinterTests(unittest.TestCase):
++    def test_python_nan_is_executable(self):
++        self.assertEqual(PythonPrinter().doprint(sympy.nan), "math.nan")
++
++    def test_cpp_nan_is_executable(self):
++        self.assertEqual(
++            CppPrinter().doprint(sympy.nan),
++            "std::numeric_limits<double>::quiet_NaN()",
++        )
++
++    def test_base_printer_requires_explicit_nan_policy(self):
++        with self.assertRaises(NotImplementedError):
++            ExprPrinter().doprint(sympy.nan)
++
++    def test_infinity_rendering_remains_stable(self):
++        self.assertEqual(PythonPrinter().doprint(sympy.oo), "math.inf")
++        self.assertEqual(PythonPrinter().doprint(-sympy.oo), "-math.inf")
++
++    def test_cpp_infinity_rendering_remains_stable(self):
++        self.assertEqual(
++            CppPrinter().doprint(sympy.oo),
++            "std::numeric_limits<double>::infinity()",
++        )
++        self.assertEqual(
++            CppPrinter().doprint(-sympy.oo),
++            "-std::numeric_limits<double>::infinity()",
++        )
++
++
++if __name__ == "__main__":
++    unittest.main()

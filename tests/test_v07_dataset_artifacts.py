@@ -51,9 +51,9 @@ RESTORED_IDS = frozenset(
     }
 )
 DATASET_PATHS = {
-    "cumulative": ROOT / "datasets" / "pytorch_v0.7" / "dataset.json",
-    "boundary": ROOT / "datasets" / "pytorch_v0.7_boundary" / "dataset.json",
-    "precision": ROOT / "datasets" / "pytorch_v0.7_precision" / "dataset.json",
+    "cumulative": ROOT / "archives/v0.7-pre-quality/datasets/pytorch_v0.7/dataset.json",
+    "boundary": ROOT / "archives/v0.7-pre-quality/datasets/pytorch_v0.7_boundary/dataset.json",
+    "precision": ROOT / "archives/v0.7-pre-quality/datasets/pytorch_v0.7_precision/dataset.json",
 }
 
 
@@ -126,11 +126,13 @@ class V07DatasetArtifactTests(unittest.TestCase):
             / "dataset.json"
         )
         cls.release_request = load_canonical(
-            ROOT / "factory" / "v0.7" / "p4" / "release_request.json"
+            ROOT
+            / "archives/v0.7-pre-quality/factory/v0.7/p4/release_request.json"
         )
         cls.release = DatasetReleaseManifest.from_dict(
             load_canonical(
-                ROOT / "factory" / "v0.7" / "p4" / "release_manifest.json"
+                ROOT
+                / "archives/v0.7-pre-quality/factory/v0.7/p4/release_manifest.json"
             )
         )
         cls.datasets = {
@@ -249,14 +251,12 @@ class V07DatasetArtifactTests(unittest.TestCase):
             with self.subTest(role=output.role):
                 self.assertEqual(actual, expected)
 
-    def test_requests_rebuild_from_current_repository_artifacts(self) -> None:
+    def test_historical_requests_remain_archived_after_quality_release(self) -> None:
+        self.assertEqual(self.release_request["release_version"], "v0.7")
+        self.assertEqual(len(self.release_request["entries"]), 25)
         self.assertEqual(
-            build_boundary_freeze_request(ROOT),
-            self.freeze_request,
-        )
-        self.assertEqual(
-            build_release_request(ROOT),
-            self.release_request,
+            self.release_request["output_paths"]["release_manifest"],
+            "factory/v0.7/p4/release_manifest.json",
         )
 
     def test_restored_precision_entries_bind_current_task_and_evidence(self) -> None:

@@ -305,7 +305,6 @@ class AttemptArtifactStoreTests(unittest.TestCase):
             {path.name: path.read_bytes() for path in attempt.iterdir()},
             before,
         )
-
         with self.assertRaisesRegex(ContractError, "conflicting artifact"):
             self.store.write_session_inputs(
                 self.expected.attempt_id,
@@ -314,6 +313,78 @@ class AttemptArtifactStoreTests(unittest.TestCase):
                 frozen,
                 artifact,
             )
+
+    def test_cleanup_recovery_replaces_only_failed_statuses(self) -> None:
+        profile_hash = self.task.runtime.content_hash
+        ledger = AttemptResourceLedger(
+            self.store.runtime_resources_path(self.expected.attempt_id),
+            attempt_id=self.expected.attempt_id,
+            retry_index=1,
+            runtime_profile_hash=profile_hash,
+            clock_ms=StepClock(),
+        )
+        lease_store = RuntimeLeaseStore(
+            self.store.private_runtime_resources_path(self.expected.attempt_id),
+            attempt_id=self.expected.attempt_id,
+            retry_index=1,
+            runtime_profile_hash=profile_hash,
+        )
+        declared = ledger.declare("container", 1)
+        handle = lease_store.put_exact(
+            declared.resource_id,
+            "container",
+            1,
+            "opbench-fixture-r0001",
+        )
+        ledger.created(declared.resource_id, handle.raw_handle_hash)
+        ledger.cleanup_failed(declared.resource_id)
+        failed = RuntimeCleanupReport(
+            attempt_id=self.expected.attempt_id,
+            retry_index=1,
+            runtime_profile_hash=profile_hash,
+            entries=(
+                RuntimeCleanupEntry(
+                    resource_id=declared.resource_id,
+                    resource_type="container",
+                    status="cleanup_failed",
+                    error_code="container_remove_failed",
+                ),
+            ),
+            all_released=False,
+        )
+        self.store.write_runtime_cleanup(self.expected.attempt_id, failed)
+
+        ledger.recover_released(declared.resource_id)
+        recovered = RuntimeCleanupReport(
+            attempt_id=self.expected.attempt_id,
+            retry_index=1,
+            runtime_profile_hash=profile_hash,
+            entries=(
+                RuntimeCleanupEntry(
+                    resource_id=declared.resource_id,
+                    resource_type="container",
+                    status="released",
+                    error_code=None,
+                ),
+            ),
+            all_released=True,
+        )
+        self.store.replace_runtime_cleanup_after_recovery(
+            self.expected.attempt_id,
+            recovered,
+        )
+
+        self.assertEqual(
+            self.store.read_runtime_cleanup(self.expected.attempt_id),
+            recovered,
+        )
+        with self.assertRaisesRegex(ContractError, "failed-to-released"):
+            self.store.replace_runtime_cleanup_after_recovery(
+                self.expected.attempt_id,
+                recovered,
+            )
+        ledger.close()
+        lease_store.close()
 
     def test_public_inputs_reject_host_paths_and_credentials_but_private_output_is_allowed(self) -> None:
         frozen, artifact, result, completed = self.attempt_inputs()

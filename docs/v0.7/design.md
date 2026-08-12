@@ -1,15 +1,17 @@
 # OpBench v0.7 Dataset Factory 与 Boundary Slice 设计
 
-日期：2026-07-17
+日期：2026-07-17（2026-08-12 补充最终版本边界）
 
-状态：历史 25-task 基线已完成；50-task 质量扩展正在开发
+状态：历史设计已完成；50-task 质量版及最终验证均已完成
 
-> 版本边界（2026-08-03）：本文主体记录 2026-07-28 已冻结的旧 v0.7
+> 版本边界（2026-08-12）：本文主体记录 2026-07-28 已冻结的旧 v0.7
 > Factory/Boundary 发布，相关 Hash 与实验结论保持有效，但它不再是当前 v0.7 的
 > 最终完成条件。当前权威目标是
 > [50-task 质量扩展发布合同](quality_expansion.md)：14 条历史保留任务加 36 条
-> 新增或替换任务，并完成 122 个 fresh logical Attempts。下文的 21–25 条目标与
-> “Completed”段落应理解为历史里程碑证据。
+> 新增或替换任务，并完成 122 个 fresh logical Attempts。该合同现已完成：
+> 50/50 fresh replay、17/17 cohorts、122/122 valid Attempts 和最终发布审计均通过。
+> 下文的 21–25 条目标、25/6/8 Dataset 与“Completed”段落应理解为历史里程碑
+> 证据，不是当前 50-task release 的规模或实验结果。
 
 ## 1. 版本定位
 
@@ -422,9 +424,10 @@ commands 分开选择，防止 CPU source profile 继承 CUDA 构建参数。这
 
 Matched Runtime 与 Candidate Search 可以并行推进，但正式 Admission 必须使用同一冻结 v0.6 Evaluation Protocol。
 
-## 13. 完成标准
+## 13. 历史 P1–P5 完成标准
 
-v0.7 的以下 Completed 条件已全部满足：
+2026-07-28 的 25-task 历史里程碑满足以下条件；最终 50-task release 的 18 项
+完成标准及实际 Agent 结果见 [`validation_report.md`](validation_report.md)：
 
 1. [x] Dataset Factory 的状态、Schema、reason code 和 Artifact 可复用；
 2. [x] `datasets/pytorch_v0.7/dataset.json` 全部 entry 为 verified 且 evidence hash 有效；
@@ -466,6 +469,7 @@ v0.7 的以下 Completed 条件已全部满足：
 | `datasets/pytorch_v0.7/dataset.json` | 累计数据集 |
 | `datasets/pytorch_v0.7_boundary/dataset.json` | Boundary Slice |
 | `datasets/pytorch_v0.7_precision/dataset.json` | 更新后的 Precision Slice |
+| `datasets/pytorch_v0.7_device/dataset.json` | CUDA Device 派生切片 |
 | `runs/v0.7_validation/` | RunManifest、Attempt、Integrity 和 Summary |
 
 ## 16. 后续边界

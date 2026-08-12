@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import replace
+import hashlib
 import json
 import os
 import re
@@ -74,6 +75,16 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "Only run these exact task_ids (post-resume filter). "
             "Combines with --filter-tasks. Useful for precise replay."
+        ),
+    )
+    parser.add_argument(
+        "--only-attempt-ids",
+        nargs="+",
+        default=None,
+        metavar="ATTEMPT_ID",
+        help=(
+            "Run only these exact Attempt IDs from the frozen v1 manifest. "
+            "This is a v1-only canary/resume control and does not change the manifest."
         ),
     )
     parser.add_argument(
@@ -166,6 +177,7 @@ def main(argv: list[str] | None = None) -> int:
         or args.target_config is not None
         or args.enable_external_canary
         or args.codex_model is not None
+        or args.only_attempt_ids is not None
         or args.runtime_profile_registry != default_registry
     ):
         print("v1 runtime controls require --runtime-protocol v1", file=sys.stderr)
@@ -627,6 +639,26 @@ def _main_v1(args: argparse.Namespace) -> int:
     )
 
 
+def _selected_v1_attempt_ids(manifest, requested: list[str]) -> tuple[str, ...]:
+    """Select a non-empty exact subset without changing frozen run identity."""
+
+    from op_bench.runtime.validation import ContractError, require_str
+
+    if not requested:
+        raise ContractError("--only-attempt-ids requires at least one Attempt ID")
+    expected = tuple(attempt.attempt_id for attempt in manifest.expected_attempts)
+    expected_set = set(expected)
+    selected: set[str] = set()
+    for index, value in enumerate(requested):
+        attempt_id = require_str(value, f"only_attempt_ids[{index}]")
+        if attempt_id not in expected_set:
+            raise ContractError("--only-attempt-ids includes an unknown Attempt ID")
+        if attempt_id in selected:
+            raise ContractError("--only-attempt-ids includes a duplicate Attempt ID")
+        selected.add(attempt_id)
+    return tuple(attempt_id for attempt_id in expected if attempt_id in selected)
+
+
 def _execute_v1(
     args,
     registry,
@@ -697,6 +729,14 @@ def _execute_v1(
             created_at="1970-01-01T00:00:00Z",
             defaults=defaults,
             selected_task_ids=tuple(task_ids),
+        )
+        selected_attempt_ids = (
+            tuple(attempt.attempt_id for attempt in bundle.manifest.expected_attempts)
+            if args.only_attempt_ids is None
+            else _selected_v1_attempt_ids(
+                bundle.manifest,
+                args.only_attempt_ids,
+            )
         )
     except (ContractError, OSError, ValueError, KeyError):
         print("cannot construct frozen v1 runtime inputs", file=sys.stderr)
@@ -781,10 +821,7 @@ def _execute_v1(
         result = orchestrator.run(
             V06RunRequest(
                 manifest=bundle.manifest,
-                selected_attempt_ids=tuple(
-                    attempt.attempt_id
-                    for attempt in bundle.manifest.expected_attempts
-                ),
+                selected_attempt_ids=selected_attempt_ids,
                 runtime_profile_registry=registry,
                 runtime_profile_id=profile.profile_id,
                 target_binding=target,
@@ -810,8 +847,14 @@ def _execute_v1(
             file=sys.stderr,
         )
         return 1
-    except (ContractError, OSError, ValueError):
-        print("v1 orchestration failed before a valid run result", file=sys.stderr)
+    except (ContractError, OSError, ValueError) as exc:
+        error_digest = hashlib.sha256(str(exc).encode("utf-8")).hexdigest()
+        print(
+            "v1 orchestration failed before a valid run result "
+            f"[error_type={type(exc).__name__}, "
+            f"error_digest=sha256:{error_digest}]",
+            file=sys.stderr,
+        )
         return 1
 
     if result.integrity.status != "passed" or result.blocked_attempt_ids:
@@ -824,10 +867,27 @@ def _execute_v1(
         infrastructure_invalid = int(totals["infrastructure_invalid"])
         valid = int(totals["valid"])
         expected = int(totals["expected"])
+        observed = int(totals["observed"])
+        if observed != int(summary["observed_attempts"]):
+            raise ValueError("summary observed count mismatch")
     except (OSError, ValueError, KeyError, TypeError):
         print("v1 summary is unavailable or invalid", file=sys.stderr)
         return 1
-    if infrastructure_invalid or valid != expected:
+    completed = result.ran_attempt_ids + result.skipped_attempt_ids
+    completed_set = set(completed)
+    selected_set = set(selected_attempt_ids)
+    expected_attempts = len(bundle.manifest.expected_attempts)
+    selection_is_full = len(selected_attempt_ids) == expected_attempts
+    if (
+        len(completed) != len(completed_set)
+        or completed_set != selected_set
+        or infrastructure_invalid
+        or valid != observed
+        or observed < len(selected_attempt_ids)
+        or observed > expected
+        or expected != expected_attempts
+        or (selection_is_full and observed != expected)
+    ):
         print("v1 run completed with infrastructure-invalid Attempts", file=sys.stderr)
         return 1
     if not args.quiet:

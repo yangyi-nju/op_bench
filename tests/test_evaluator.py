@@ -116,6 +116,26 @@ class EvaluatorTests(unittest.TestCase):
 
         self.assertTrue(Evaluator()._has_environment_error([result]))
 
+    def test_missing_target_symbol_can_be_a_fail_to_pass_behavior(self) -> None:
+        result = CommandResult(
+            command=["python", "test.py"],
+            cwd="",
+            exit_code=1,
+            stdout="",
+            stderr=(
+                "ImportError: cannot import name 'new_operator' "
+                "from 'torch.target'"
+            ),
+            duration_sec=0,
+        )
+
+        self.assertTrue(Evaluator()._has_environment_error([result]))
+        self.assertFalse(
+            Evaluator()._has_environment_error(
+                [result], allow_target_import_failure=True
+            )
+        )
+
     def test_fully_skipped_test_is_runner_error(self) -> None:
         result = CommandResult(
             command=["python", "test.py"],

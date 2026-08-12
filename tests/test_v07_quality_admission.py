@@ -23,11 +23,14 @@ from op_bench.factory.quality_admission import (
     load_quality_accepted_task_index,
     load_quality_admission_result_index,
     quality_admission_bundle_hash,
+    revalidate_quality_admission_result_index,
     run_quality_admission,
     validate_quality_admission_prompt,
 )
 from op_bench.executor import DockerExecutor
-from op_bench.factory.quality_release import quality_prompt_source_hash
+from op_bench.factory.quality_release import (
+    quality_prompt_source_hash,
+)
 from op_bench.integrity import replay_spec_hash
 from op_bench.remote import RemoteDockerExecutor, RemoteHost
 from op_bench.runtime.canonical import canonical_sha256
@@ -58,6 +61,38 @@ class V07QualityAdmissionPromptTests(unittest.TestCase):
             self.assertEqual(evidence.task_id, task.task_id)
             self.assertEqual(evidence.public_task_id, task.public_task_id)
             self.assertEqual(evidence.decision, "accepted")
+
+    def test_prompt_sources_do_not_require_prior_admission_evidence(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            task = complete_quality_task(Path(directory))
+            admission_path = (
+                task.task_dir / task.data["admission"]["evidence"]
+            )
+            admission_path.unlink()
+
+            prompt_source_hash = quality_prompt_source_hash(task)
+            evidence = validate_quality_admission_prompt(
+                task,
+                expected_source_hash=prompt_source_hash,
+            )
+
+            self.assertEqual(evidence.task_id, task.task_id)
+            self.assertEqual(evidence.decision, "accepted")
+
+            prompt_path = (
+                task.task_dir
+                / task.data["quality"]["prompt_evidence"]
+            )
+            prompt_path.unlink()
+            self.assertEqual(
+                quality_prompt_source_hash(
+                    task,
+                    scanner_version=evidence.scanner_version,
+                ),
+                prompt_source_hash,
+            )
 
     def test_prompt_revalidation_rejects_private_raw_byte_drift(self) -> None:
         mutations = {
@@ -630,6 +665,272 @@ class V07QualityAdmissionRunnerTests(unittest.TestCase):
                 result.results[0].admission_bundle_hash,
                 quality_admission_bundle_hash(bundle),
             )
+
+    def test_default_preflight_uses_the_admission_registries(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (
+                accepted_path,
+                output,
+                environment_registry,
+                source_registry,
+                accepted,
+            ) = _runner_fixture(root)
+            calls: list[tuple[Path, Path | None, Path | None]] = []
+
+            def fake_preflight(
+                task_dir: Path,
+                *,
+                environment_registry_path: Path | None = None,
+                source_registry_path: Path | None = None,
+            ) -> tuple[bool, list[str]]:
+                calls.append(
+                    (
+                        task_dir,
+                        environment_registry_path,
+                        source_registry_path,
+                    )
+                )
+                return True, ["passed"]
+
+            with patch(
+                "scripts.preflight_task.preflight_task",
+                side_effect=fake_preflight,
+            ):
+                result = run_quality_admission(
+                    root=root,
+                    accepted_index_path=accepted_path,
+                    output_path=output,
+                    environment_registry_path=environment_registry,
+                    source_registry_path=source_registry,
+                    created_at="2026-07-30T03:04:05Z",
+                    admission_runner=AdmissionRunner(
+                        evaluator=_FakeEvaluator(),
+                        now=_now,
+                    ),
+                )
+
+            self.assertEqual(result.verified_count, 1)
+            self.assertEqual(
+                calls,
+                [
+                    (
+                        root / accepted["tasks"][0]["task_path"],
+                        environment_registry,
+                        source_registry,
+                    )
+                ],
+            )
+
+    def test_verified_admission_promotes_candidate_and_rebinds_index(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (
+                accepted_path,
+                output,
+                environment_registry,
+                source_registry,
+                accepted,
+            ) = _runner_fixture(root)
+            record = accepted["tasks"][0]
+            task_dir = root / record["task_path"]
+            manifest_path = task_dir / "task.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["admission"]["status"] = "candidate"
+            manifest["admission"]["verified_at"] = (
+                "2026-07-29T00:00:00Z"
+            )
+            _write_canonical(manifest_path, manifest)
+            readmission_path = (
+                task_dir / manifest["quality"]["readmission_evidence"]
+            )
+            readmission_path.unlink()
+            _refresh_accepted_task_hashes(root, accepted_path, accepted)
+            before = json.loads(accepted_path.read_text(encoding="utf-8"))[
+                "content_hash"
+            ]
+
+            result = run_quality_admission(
+                root=root,
+                accepted_index_path=accepted_path,
+                output_path=output,
+                environment_registry_path=environment_registry,
+                source_registry_path=source_registry,
+                created_at="2026-07-30T03:04:05Z",
+                preflight=lambda path: (True, ["passed"]),
+                admission_runner=AdmissionRunner(
+                    evaluator=_FakeEvaluator(),
+                    now=_now,
+                ),
+            )
+
+            promoted_manifest = json.loads(
+                manifest_path.read_text(encoding="utf-8")
+            )
+            promoted_readmission = json.loads(
+                readmission_path.read_text(encoding="utf-8")
+            )
+            promoted_index = json.loads(
+                accepted_path.read_text(encoding="utf-8")
+            )
+            self.assertEqual(
+                promoted_manifest["admission"]["status"], "verified"
+            )
+            self.assertEqual(
+                promoted_manifest["admission"]["verified_at"],
+                "2026-07-30T03:04:05Z",
+            )
+            self.assertEqual(
+                promoted_readmission["disposition"], "retained"
+            )
+            self.assertNotEqual(promoted_index["content_hash"], before)
+            self.assertEqual(result.verified_count, 1)
+            self.assertEqual(
+                result.accepted_index_hash,
+                promoted_index["content_hash"],
+            )
+            load_quality_admission_result_index(
+                root, output, accepted_path
+            )
+
+    def test_revalidation_finishes_lifecycle_without_rerunning_runtime(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (
+                accepted_path,
+                output,
+                environment_registry,
+                source_registry,
+                accepted,
+            ) = _runner_fixture(root)
+            task_dir = root / accepted["tasks"][0]["task_path"]
+            manifest_path = task_dir / "task.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["admission"]["status"] = "candidate"
+            _write_canonical(manifest_path, manifest)
+            readmission_path = (
+                task_dir / manifest["quality"]["readmission_evidence"]
+            )
+            readmission_path.unlink()
+            complexity_path = (
+                task_dir / manifest["quality"]["complexity_evidence"]
+            )
+            complexity_path.write_bytes(complexity_path.read_bytes() + b"\n")
+            _refresh_accepted_task_hashes(root, accepted_path, accepted)
+
+            interrupted = run_quality_admission(
+                root=root,
+                accepted_index_path=accepted_path,
+                output_path=output,
+                environment_registry_path=environment_registry,
+                source_registry_path=source_registry,
+                created_at="2026-07-30T03:04:05Z",
+                preflight=lambda path: (True, ["passed"]),
+                admission_runner=AdmissionRunner(
+                    evaluator=_FakeEvaluator(),
+                    now=_now,
+                ),
+            )
+            self.assertEqual(interrupted.verified_count, 0)
+            self.assertIn(
+                "expected canonical JSON",
+                interrupted.results[0].final_quality_errors[0],
+            )
+            self.assertEqual(
+                json.loads(manifest_path.read_text(encoding="utf-8"))[
+                    "admission"
+                ]["status"],
+                "candidate",
+            )
+
+            _write_canonical(
+                complexity_path,
+                json.loads(complexity_path.read_text(encoding="utf-8")),
+            )
+            recovered = revalidate_quality_admission_result_index(
+                root,
+                output,
+                accepted_path,
+            )
+            recovered_path = root / "runs/recovered.json"
+            _write_canonical(recovered_path, recovered.to_dict())
+
+            self.assertEqual(recovered.verified_count, 1)
+            self.assertTrue(recovered.results[0].verified)
+            self.assertEqual(
+                json.loads(manifest_path.read_text(encoding="utf-8"))[
+                    "admission"
+                ]["status"],
+                "verified",
+            )
+            self.assertTrue(readmission_path.exists())
+            load_quality_admission_result_index(
+                root,
+                recovered_path,
+                accepted_path,
+            )
+
+    def test_result_loader_keeps_using_its_bound_source_registry(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (
+                accepted_path,
+                output,
+                environment_registry,
+                source_registry,
+                accepted,
+            ) = _runner_fixture(root)
+            staging_source_registry = root / "runs/staging/sources.json"
+            staging_source_registry.parent.mkdir(parents=True)
+            staging_sources = json.loads(
+                source_registry.read_text(encoding="utf-8")
+            )
+            for source in staging_sources["sources"]:
+                local_path = Path(source["local_path"])
+                if not local_path.is_absolute():
+                    source["local_path"] = str(
+                        (source_registry.parent / local_path).resolve()
+                    )
+            _write_canonical(staging_source_registry, staging_sources)
+
+            task = TaskManifest.load(
+                root / accepted["tasks"][0]["task_path"] / "task.json"
+            )
+            official_sources = json.loads(
+                source_registry.read_text(encoding="utf-8")
+            )
+            official_sources["sources"] = [
+                source
+                for source in official_sources["sources"]
+                if source["id"] != task.source_ref
+            ]
+            _write_canonical(source_registry, official_sources)
+
+            result = run_quality_admission(
+                root=root,
+                accepted_index_path=accepted_path,
+                output_path=output,
+                environment_registry_path=environment_registry,
+                source_registry_path=staging_source_registry,
+                created_at="2026-07-30T03:04:05Z",
+                preflight=lambda path: (True, ["passed"]),
+                admission_runner=AdmissionRunner(
+                    evaluator=_FakeEvaluator(),
+                    now=_now,
+                ),
+            )
+
+            self.assertEqual(result.verified_count, 1)
+            loaded = load_quality_admission_result_index(
+                root, output, accepted_path
+            )
+            self.assertEqual(loaded.verified_count, 1)
 
     def test_prompt_failure_stops_preflight_and_admission(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -2099,7 +2400,7 @@ class V07QualityAdmissionCliTests(unittest.TestCase):
                 root, output, accepted_path
             )
 
-    def test_building_phase_tracks_verified_official_admission_results(
+    def test_complete_phase_tracks_all_verified_official_admission_results(
         self,
     ) -> None:
         repository_root = Path(__file__).resolve().parents[1]
@@ -2120,12 +2421,9 @@ class V07QualityAdmissionCliTests(unittest.TestCase):
             require_private_bundles=False,
         )
 
-        self.assertEqual(accepted.status, "building")
-        self.assertGreaterEqual(accepted.task_count, 1)
-        self.assertLess(
-            accepted.task_count,
-            accepted.required_task_count,
-        )
+        self.assertEqual(accepted.status, "complete")
+        self.assertEqual(accepted.task_count, 36)
+        self.assertEqual(accepted.task_count, accepted.required_task_count)
         self.assertEqual(results.task_count, accepted.task_count)
         self.assertEqual(results.verified_count, accepted.task_count)
         self.assertTrue(all(result.verified for result in results.results))

@@ -1,0 +1,65 @@
+diff --git a/test/op_bench/test_functional_export_argument_collision.py b/test/op_bench/test_functional_export_argument_collision.py
+new file mode 100644
+--- /dev/null
++++ b/test/op_bench/test_functional_export_argument_collision.py
+@@ -0,0 +1,60 @@
++import unittest
++
++import torch
++from torch._dynamo.functional_export import (
++    _DynamoBytecodeCodeGen,
++    dynamo_graph_capture_for_export,
++)
++
++
++class FunctionalExportArgumentTests(unittest.TestCase):
++    def setUp(self):
++        torch._dynamo.reset()
++
++    def tearDown(self):
++        torch._dynamo.reset()
++
++    def test_nonleading_legal_name_capture_executes(self):
++        condition = torch.tensor([True, False, True, False])
++        left = torch.tensor(0.0)
++        right = torch.tensor([1.0, 2.0, 3.0, 4.0])
++        operator = torch.ops.aten.where.self
++
++        captured = dynamo_graph_capture_for_export(operator)(condition, left, right)
++
++        torch.testing.assert_close(
++            captured(condition, left, right),
++            operator(condition, left, right),
++        )
++
++    def test_neighboring_name_variants_generate_valid_signature(self):
++        codegen = _DynamoBytecodeCodeGen(
++            ["condition", "self", "self_"],
++            lambda *args: args,
++            lambda outputs, inputs: outputs,
++        )
++
++        definition = codegen.gen_fn_def([], "")
++        compile(
++            definition + "    return None\n",
++            "<generated-module>",
++            "exec",
++        )
++
++    def test_conventional_schema_capture_remains_stable(self):
++        left = torch.randn(3, 4)
++        right = torch.randn(3, 4)
++        operator = torch.ops.aten.cat.default
++
++        inputs = [left, right]
++        captured = dynamo_graph_capture_for_export(operator)(inputs, 0)
++        actual = captured(inputs, 0)
++        expected = operator(inputs, 0)
++
++        torch.testing.assert_close(actual, expected)
++        self.assertEqual(actual.shape, expected.shape)
++        self.assertEqual(actual.dtype, expected.dtype)
++
++
++if __name__ == "__main__":
++    unittest.main()

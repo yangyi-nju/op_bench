@@ -13,7 +13,7 @@ from op_bench.task import TaskManifest
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DATASET = ROOT / "datasets/pytorch_v0.7/dataset.json"
+DATASET = ROOT / "archives/v0.7-pre-quality/datasets/pytorch_v0.7/dataset.json"
 PUBLIC_IDS = ROOT / "factory/v0.7/p6/public_task_ids.json"
 HISTORICAL_INDEX = ROOT / "factory/v0.7/p7/historical_readmission.json"
 PILOT_FACTS = ROOT / "factory/v0.7/p7/pilot_factual_evidence.json"

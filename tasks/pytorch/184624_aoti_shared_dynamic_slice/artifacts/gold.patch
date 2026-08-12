@@ -1,0 +1,176 @@
+diff --git a/torch/_inductor/codegen/cpp_wrapper_cpu.py b/torch/_inductor/codegen/cpp_wrapper_cpu.py
+index 2ac96e8e048..7d936732e5a 100644
+--- a/torch/_inductor/codegen/cpp_wrapper_cpu.py
++++ b/torch/_inductor/codegen/cpp_wrapper_cpu.py
+@@ -573,12 +573,13 @@ class CppWrapperCpu(PythonWrapperCodegen):
+     ):
+         self.prefix.writeline(f"""{info_kind}[{idx}].name = "{name}";""")
+ 
+-    def codegen_input_symbol_assignment(
++    def codegen_input_symbol_assignment(  # type: ignore[override]
+         self,
+         name: str,
+         value: ir.TensorBox,
+         bound_vars: OrderedSet[sympy.Symbol],
+     ):
++        """Assign symbolic shapes to C++ locals, with replacement aliases."""
+         code = self.prefix
+ 
+         @functools.cache
+@@ -591,6 +592,26 @@ class CppWrapperCpu(PythonWrapperCodegen):
+             self.codegen_input_stride_var_decl(code, name)
+             return f"{name}_stride"
+ 
++        def maybe_emit_replacement_aliases(sym: sympy.Symbol) -> None:
++            # Deferred runtime asserts reference pre-replacement backed
++            # symbols (e.g. s77) that were replaced to this canonical
++            # symbol (s31) during constraint solving. Emit aliases so
++            # the asserts compile. Skip unbacked symbols — they are
++            # defined separately by the unbacked symbol codegen path.
++            from torch.utils._sympy.symbol import symbol_is_type, SymT
++
++            for src, tgt in V.graph.sizevars.shape_env.replacements.items():
++                if (
++                    tgt == sym
++                    and isinstance(src, sympy.Symbol)
++                    and src not in bound_vars
++                    and not symbol_is_type(
++                        src, (SymT.UNBACKED_INT, SymT.UNBACKED_FLOAT)
++                    )
++                ):
++                    code.writeline(f"int64_t {src} = {sym};")
++                    bound_vars.add(src)
++
+         def codegen_symbol(
+             sym_or_exp: sympy.Symbol | sympy.Expr,
+             base_name: str,
+@@ -602,6 +623,7 @@ class CppWrapperCpu(PythonWrapperCodegen):
+                     return
+                 code.writeline(f"int64_t {sym_or_exp} = {name_fn(base_name)}[{dim}];")
+                 bound_vars.add(sym_or_exp)
++                maybe_emit_replacement_aliases(sym_or_exp)
+             elif isinstance(sym_or_exp, sympy.Expr):
+                 undefined_symbols = [
+                     sym for sym in sym_or_exp.free_symbols if sym not in bound_vars
+@@ -639,6 +661,7 @@ class CppWrapperCpu(PythonWrapperCodegen):
+                 raise AssertionError("Unexpected symbol type")
+             code.writeline(f"{decl} {value} = {name};")
+             bound_vars.add(value)
++            maybe_emit_replacement_aliases(value)
+         elif isinstance(value, ir.TensorBox):
+             for dim, size in enumerate(value.get_size()):
+                 codegen_symbol(size, name, sizeof, dim)
+diff --git a/torch/_inductor/codegen/wrapper.py b/torch/_inductor/codegen/wrapper.py
+index 7861215b884..33ce381e07f 100644
+--- a/torch/_inductor/codegen/wrapper.py
++++ b/torch/_inductor/codegen/wrapper.py
+@@ -2369,16 +2369,38 @@ class PythonWrapperCodegen(CodeGen):
+             code.writeline(f"{name}_stride = {name}.stride()")
+             return f"{name}_stride"
+ 
++        def maybe_emit_replacement_aliases(sym: sympy.Symbol) -> None:
++            # Deferred runtime asserts reference pre-replacement backed
++            # symbols (e.g. s77) that were replaced to this canonical
++            # symbol (s31) during constraint solving. Emit aliases so
++            # the asserts compile. Skip unbacked symbols — they are
++            # defined separately by the unbacked symbol codegen path.
++            from torch.utils._sympy.symbol import symbol_is_type, SymT
++
++            for src, tgt in V.graph.sizevars.shape_env.replacements.items():
++                if (
++                    tgt == sym
++                    and isinstance(src, sympy.Symbol)
++                    and src not in bound_vars
++                    and not symbol_is_type(
++                        src, (SymT.UNBACKED_INT, SymT.UNBACKED_FLOAT)
++                    )
++                ):
++                    code.writeline(f"{src} = {sym}")
++                    bound_vars.add(src)
++
+         if isinstance(value, sympy.Expr):
+             if not isinstance(value, sympy.Symbol) or value in bound_vars:
+                 return
+             code.writeline(f"{value} = {name}")
+             bound_vars.add(value)
++            maybe_emit_replacement_aliases(value)
+         elif isinstance(value, ir.TensorBox):
+             for dim, size in enumerate(value.get_size()):
+                 if isinstance(size, sympy.Symbol) and size not in bound_vars:
+                     code.writeline(f"{size} = {sizeof(name)}[{dim}]")
+                     bound_vars.add(size)
++                    maybe_emit_replacement_aliases(size)
+             for dim, stride in enumerate(value.get_stride()):
+                 if isinstance(stride, sympy.Symbol) and stride not in bound_vars:
+                     code.writeline(f"{stride} = {strideof(name)}[{dim}]")
+diff --git a/torch/_inductor/graph.py b/torch/_inductor/graph.py
+index c512bef228d..7aa282f8a09 100644
+--- a/torch/_inductor/graph.py
++++ b/torch/_inductor/graph.py
+@@ -107,7 +107,6 @@ from .runtime import autotune_cache
+ from .runtime.autotune_cache import AutotuneCacheBundler
+ from .sizevars import SizeVarAllocator
+ from .utils import (
+-    convert_shape_to_inductor,
+     gather_origins,
+     get_cloned_parameter_buffer_name,
+     get_donated_idxs,
+@@ -593,7 +592,7 @@ class GraphLowering(torch.fx.Interpreter):
+     def freeze_runtime_asserts(self) -> None:
+         self._shape_env.freeze_runtime_asserts()
+ 
+-    def symbolic_sizes_strides(
++    def get_placeholder_sizes_strides(
+         self, ex: torch.Tensor
+     ) -> tuple[Sequence[int | Expr], Sequence[int | Expr]]:
+         sizes, strides, _ = self.symbolic_sizes_strides_storage_offset(ex)
+@@ -608,14 +607,8 @@ class GraphLowering(torch.fx.Interpreter):
+         have the same size they get assigned the same symbolic variable.
+         """
+         if self.reuse_shape_env:
++            size, stride = ex.size(), ex.stride()
+             storage_offset = ex.storage_offset()
+-            return (
+-                convert_shape_to_inductor(ex.size()),
+-                convert_shape_to_inductor(ex.stride()),
+-                storage_offset.node.expr
+-                if isinstance(storage_offset, torch.SymInt)
+-                else sympy.sympify(storage_offset),
+-            )
+         else:
+             from torch._dynamo.source import ConstantSource
+ 
+@@ -639,8 +632,8 @@ class GraphLowering(torch.fx.Interpreter):
+                 source,
+             )
+ 
+-        r_size = [i.node.expr if isinstance(i, torch.SymInt) else i for i in size]
+-        r_stride = [i.node.expr if isinstance(i, torch.SymInt) else i for i in stride]
++        r_size = [sympy.sympify(i) for i in size]
++        r_stride = [sympy.sympify(i) for i in stride]
+         r_storage_offset = (
+             storage_offset.node.expr
+             if isinstance(storage_offset, torch.SymInt)
+diff --git a/torch/_subclasses/meta_utils.py b/torch/_subclasses/meta_utils.py
+index df595074ebd..30b0c13fe9a 100644
+--- a/torch/_subclasses/meta_utils.py
++++ b/torch/_subclasses/meta_utils.py
+@@ -2005,11 +2005,16 @@ class MetaConverter(Generic[_TensorT]):
+                     s = t.storage
+                     if s is None:
+                         raise AssertionError("t.storage must not be None")
++                    from torch.fx.experimental.symbolic_shapes import (
++                        guard_or_false,
++                        sym_eq,
++                    )
++
+                     if s.id not in self.storage_memo and (
+                         r.is_nested
+                         or (
+-                            r.stride() == strides
+-                            and r.storage_offset() == storage_offset
++                            guard_or_false(sym_eq(r.stride(), strides))
++                            and guard_or_false(r.storage_offset() == storage_offset)
+                         )
+                     ):
+                         # You're normal and happy, install the fresh storage into the memo

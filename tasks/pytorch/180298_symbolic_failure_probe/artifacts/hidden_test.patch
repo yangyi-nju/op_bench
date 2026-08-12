@@ -1,0 +1,45 @@
+diff --git a/test/op_bench/test_symbolic_failure_probe.py b/test/op_bench/test_symbolic_failure_probe.py
+new file mode 100644
+--- /dev/null
++++ b/test/op_bench/test_symbolic_failure_probe.py
+@@ -0,0 +1,40 @@
++import unittest
++
++import torch
++from torch._dynamo.repro.after_aot import inductor_fails
++from torch.fx.experimental.proxy_tensor import make_fx
++
++
++class FailureProbeCompileArgumentTests(unittest.TestCase):
++    def test_symbolic_slice_is_not_reported_as_failure(self):
++        def model(extent, x, y):
++            sliced = x[:extent]
++            return (sliced * (extent - 1) + y[:extent],)
++
++        args = [16, torch.randn(32), torch.randn(32)]
++        graph = make_fx(model, tracing_mode="symbolic")(*args)
++
++        self.assertFalse(inductor_fails(graph, args))
++
++    def test_multiple_symbolic_extents_are_not_reported_as_failure(self):
++        def model(rows, columns, x):
++            selected = x[:rows, :columns]
++            return (selected.cos() * (rows + columns),)
++
++        args = [4, 5, torch.randn(8, 9)]
++        graph = make_fx(model, tracing_mode="symbolic")(*args)
++
++        self.assertFalse(inductor_fails(graph, args))
++
++    def test_real_traced_graph_remains_compilable(self):
++        def model(x, y):
++            return (x.sin() + y.cos(),)
++
++        args = [torch.randn(8), torch.randn(8)]
++        graph = make_fx(model, tracing_mode="real")(*args)
++
++        self.assertFalse(inductor_fails(graph, args))
++
++
++if __name__ == "__main__":
++    unittest.main()

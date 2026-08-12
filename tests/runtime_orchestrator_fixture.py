@@ -94,7 +94,13 @@ class OrchestratorFixture:
     output_root: Path
 
 
-def build_orchestrator_fixture(root: Path, *, selected_agent=None) -> OrchestratorFixture:
+def build_orchestrator_fixture(
+    root: Path,
+    *,
+    selected_agent=None,
+    repeat_count: int = 1,
+    writable_paths: tuple[str, ...] = ("calc.py",),
+) -> OrchestratorFixture:
     git_fixture = initialize_evaluation_git_fixture(root / "source")
     (git_fixture.repository / "test_public.py").write_text(
         "import unittest\n\n"
@@ -155,7 +161,7 @@ def build_orchestrator_fixture(root: Path, *, selected_agent=None) -> Orchestrat
             "vcs_diff",
             "session_finish",
         ),
-        writable_paths=("calc.py",),
+        writable_paths=writable_paths,
         registered_tests=(P2P,),
         network_access="provider_only",
     )
@@ -184,7 +190,7 @@ def build_orchestrator_fixture(root: Path, *, selected_agent=None) -> Orchestrat
         agents=(scripted_agent,),
         capability=capability,
         budget=replace(budget_policy(), wall_clock_ms=60_000),
-        repeat_count=1,
+        repeat_count=repeat_count,
     )
     workspaces = root / "workspaces"
     workspaces.mkdir()
@@ -220,12 +226,17 @@ def request_for(
     clock=None,
     adapter_id: str = "scripted_canonical",
     enable_external_canary: bool = False,
+    selected_attempt_ids: tuple[str, ...] | None = None,
 ):
     from op_bench.runtime.orchestrator import V06RunRequest
 
     return V06RunRequest(
         manifest=fixture.manifest,
-        selected_attempt_ids=(fixture.expected.attempt_id,),
+        selected_attempt_ids=(
+            (fixture.expected.attempt_id,)
+            if selected_attempt_ids is None
+            else selected_attempt_ids
+        ),
         runtime_profile_registry=fixture.registry,
         runtime_profile_id=fixture.profile.profile_id,
         target_binding=fixture.target_binding,

@@ -1,0 +1,73 @@
+diff --git a/test/op_bench/test_cached_output_initialization.py b/test/op_bench/test_cached_output_initialization.py
+new file mode 100644
+--- /dev/null
++++ b/test/op_bench/test_cached_output_initialization.py
+@@ -0,0 +1,68 @@
++import unittest
++from itertools import count
++from types import SimpleNamespace
++
++from torch._inductor import config
++from torch._inductor.codegen.cpp_wrapper_cpu_array_ref import CppWrapperCpuArrayRef
++from torch._inductor.utils import IndentedBuffer
++from torch._inductor.virtualized import V
++
++
++class FakeGraph:
++    constants = {}
++    graph_outputs = [object(), object()]
++    is_const_graph = False
++    aot_mode = False
++
++
++def wrapper_instance():
++    wrapper = object.__new__(CppWrapperCpuArrayRef)
++    wrapper.cached_output_id = count()
++    wrapper.scalar_to_tensor_id = count()
++    wrapper.wrapper_call = IndentedBuffer()
++    wrapper.v2_raw_wrapper_body = IndentedBuffer()
++    wrapper.v2_raw_output_refs = None
++    return wrapper
++
++
++class CachedOutputInitializationTests(unittest.TestCase):
++    def test_tensor_interface_constructor_expression_uses_braces(self):
++        wrapper = wrapper_instance()
++        with config.patch({"aot_inductor.use_minimal_arrayref_interface": False}):
++            with V.set_graph_handler(FakeGraph()):
++                wrapper.generate_return(["RAIIAtenTensorHandle(tmp_x)"])
++        code = wrapper.wrapper_call.getvalue()
++        self.assertRegex(
++            code,
++            r"cached_output_\d+\{RAIIAtenTensorHandle\(tmp_x\)\};",
++        )
++
++    def test_raw_array_interface_constructor_expression_uses_braces(self):
++        wrapper = wrapper_instance()
++        code = IndentedBuffer()
++        with V.set_graph_handler(FakeGraph()):
++            wrapper._codegen_v2_raw_outputs(
++                code, ["RAIIAtenTensorHandle(tmp_x)"]
++            )
++        self.assertRegex(
++            code.getvalue(),
++            r"cached_output_\d+\{RAIIAtenTensorHandle\(tmp_x\)\};",
++        )
++
++    def test_null_output_remains_ignored(self):
++        wrapper = wrapper_instance()
++        with config.patch({"aot_inductor.use_minimal_arrayref_interface": False}):
++            with V.set_graph_handler(FakeGraph()):
++                wrapper.generate_return(["nullptr"])
++        self.assertNotIn("ThreadLocalCachedOutput", wrapper.wrapper_call.getvalue())
++
++    def test_handle_release_branch_remains_emitted(self):
++        wrapper = wrapper_instance()
++        with config.patch({"aot_inductor.use_minimal_arrayref_interface": False}):
++            with V.set_graph_handler(FakeGraph()):
++                wrapper.generate_return(["plain_output"])
++        self.assertIn("plain_output.release()", wrapper.wrapper_call.getvalue())
++
++
++if __name__ == "__main__":
++    unittest.main()

@@ -1,0 +1,70 @@
+diff --git a/test/op_bench/test_captured_program_unused_result.py b/test/op_bench/test_captured_program_unused_result.py
+new file mode 100644
+--- /dev/null
++++ b/test/op_bench/test_captured_program_unused_result.py
+@@ -0,0 +1,65 @@
++import unittest
++
++import torch
++from torch._export.serde.serialize import deserialize, serialize
++from torch.export import export
++
++
++_TEST_LIBRARY = torch.library.Library("opbench_persistence_case", "DEF")
++_TEST_LIBRARY.define(
++    "tensor_and_sequence(Tensor input) -> (Tensor, Tensor[])"
++)
++
++
++@torch.library.impl(_TEST_LIBRARY, "tensor_and_sequence", "CPU")
++def _tensor_and_sequence_cpu(input):
++    return input * 2, [input - 1, input + 1]
++
++
++@torch.library.impl(_TEST_LIBRARY, "tensor_and_sequence", "Meta")
++def _tensor_and_sequence_meta(input):
++    return input * 2, [input - 1, input + 1]
++
++
++class _PartiallyObservedModel(torch.nn.Module):
++    def forward(self, input):
++        return torch.ops.opbench_persistence_case.tensor_and_sequence(input)[0]
++
++
++class _FullyObservedModel(torch.nn.Module):
++    def forward(self, input):
++        primary, secondary = (
++            torch.ops.opbench_persistence_case.tensor_and_sequence(input)
++        )
++        return primary + secondary[0] + secondary[1]
++
++
++class ExportSerdeScenarioTests(unittest.TestCase):
++    def _round_trip(self, model):
++        example = torch.randn(4)
++        captured = export(model, (example,), strict=True)
++        captured.graph.eliminate_dead_code()
++        captured.graph_module.recompile()
++        return captured, deserialize(serialize(captured))
++
++    def _assert_round_trip_matches(self, model):
++        captured, loaded = self._round_trip(model)
++        original_module = captured.module()
++        loaded_module = loaded.module()
++        for seed in (11, 29):
++            torch.manual_seed(seed)
++            input = torch.randn(4)
++            torch.testing.assert_close(
++                loaded_module(input),
++                original_module(input),
++            )
++
++    def test_unobserved_secondary_value_round_trip(self):
++        self._assert_round_trip_matches(_PartiallyObservedModel())
++
++    def test_all_values_consumed_round_trip(self):
++        self._assert_round_trip_matches(_FullyObservedModel())
++
++
++if __name__ == "__main__":
++    unittest.main()

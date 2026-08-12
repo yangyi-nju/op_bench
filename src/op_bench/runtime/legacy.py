@@ -13,6 +13,7 @@ from op_bench.integrity import replay_spec_hash
 from op_bench.runtime.canonical import canonical_sha256
 from op_bench.runtime.contracts import (
     ACTION_NAMES,
+    AgentTaskView,
     AgentSpec,
     BudgetPolicy,
     CapabilityPolicy,
@@ -33,7 +34,11 @@ from op_bench.runtime.mcp import (
 )
 from op_bench.runtime.profiles import load_runtime_profile_registry
 from op_bench.runtime.source_materialization import _git_environment
-from op_bench.runtime.task_view import public_runtime_hint
+from op_bench.runtime.task_view import (
+    TaskViewPolicy,
+    assert_public_artifact_safe,
+    public_runtime_hint,
+)
 from op_bench.runtime.validation import ContractError, require_bool, require_int, require_str
 from op_bench.task import InvalidPublicTaskId, TaskManifest
 
@@ -218,13 +223,24 @@ class LegacyV05RuntimeBundle:
         raise ContractError("task: not present in private runtime bundle")
 
 
-def full_task_spec_from_v05(task: TaskManifest) -> FullTaskSpec:
+@dataclass(frozen=True)
+class _LegacyV05Projection:
+    task: ContentIdentity
+    runtime: RuntimeProfile
+    statement_title: str
+    statement_body: str
+    framework: str
+    operator_name: str
+    public_tests: tuple[TestSelector, ...]
+    hidden_tests: tuple[TestSelector, ...]
+
+
+def _legacy_v05_projection(task: TaskManifest) -> _LegacyV05Projection:
+    """Build the exact Task projection without touching private artifacts."""
+
     _require_v05_task_shape(task)
     public_task_id = _public_task_id(task)
-    source = _source_identity(task)
     runtime = _runtime_profile(task)
-    image = runtime.image
-    environment = _environment_identity(task, image, runtime)
     public_tests, hidden_tests = _test_selectors(task)
     statement = _mapping(task.data.get("statement"))
     operator = _mapping(task.data.get("operator"))
@@ -264,11 +280,8 @@ def full_task_spec_from_v05(task: TaskManifest) -> FullTaskSpec:
             digest_kind="replay_spec_v1",
         )
     )
-
-    return FullTaskSpec(
+    return _LegacyV05Projection(
         task=task_identity,
-        source=source,
-        environment=environment,
         runtime=runtime,
         statement_title=statement_title,
         statement_body=statement_body,
@@ -276,6 +289,66 @@ def full_task_spec_from_v05(task: TaskManifest) -> FullTaskSpec:
         operator_name=operator_name,
         public_tests=public_tests,
         hidden_tests=hidden_tests,
+    )
+
+
+def agent_task_view_from_v05(
+    task: TaskManifest,
+    capability_policy: CapabilityPolicy,
+    budget_policy: BudgetPolicy,
+    *,
+    policy: TaskViewPolicy | None = None,
+) -> AgentTaskView:
+    """Project a legacy Task without requiring private Admission artifacts."""
+
+    projection = _legacy_v05_projection(task)
+    selected_policy = policy if policy is not None else TaskViewPolicy()
+    if not isinstance(selected_policy, TaskViewPolicy):
+        raise ContractError("policy: expected TaskViewPolicy")
+    view = AgentTaskView(
+        task=projection.task,
+        statement_title=projection.statement_title,
+        statement_body=projection.statement_body,
+        framework=projection.framework,
+        operator_name=projection.operator_name,
+        runtime_hint=public_runtime_hint(projection.runtime),
+        public_tests=projection.public_tests,
+        capability_policy=capability_policy,
+        budget_policy=budget_policy,
+        termination_notes=selected_policy.termination_notes,
+        attachments=selected_policy.attachments,
+    )
+    assert_public_artifact_safe(view.to_dict())
+    return view
+
+
+def test_selectors_from_v05(
+    task: TaskManifest,
+) -> tuple[tuple[TestSelector, ...], tuple[TestSelector, ...]]:
+    """Return validated public/private selectors without reading artifacts."""
+
+    projection = _legacy_v05_projection(task)
+    return projection.public_tests, projection.hidden_tests
+
+
+def full_task_spec_from_v05(task: TaskManifest) -> FullTaskSpec:
+    projection = _legacy_v05_projection(task)
+    source = _source_identity(task)
+    runtime = projection.runtime
+    image = runtime.image
+    environment = _environment_identity(task, image, runtime)
+
+    return FullTaskSpec(
+        task=projection.task,
+        source=source,
+        environment=environment,
+        runtime=runtime,
+        statement_title=projection.statement_title,
+        statement_body=projection.statement_body,
+        framework=projection.framework,
+        operator_name=projection.operator_name,
+        public_tests=projection.public_tests,
+        hidden_tests=projection.hidden_tests,
         fail_to_pass=tuple(str(value) for value in task.fail_to_pass_tests),
         pass_to_pass=tuple(str(value) for value in task.pass_to_pass_tests),
         patch_scope=tuple(str(value) for value in task.patch_scope_paths),
@@ -687,6 +760,7 @@ def _runtime_profile(task: TaskManifest) -> RuntimeProfile:
 
 _PROFILE_BY_ENVIRONMENT = {
     "opbench-local-cpu-process-v1": "local-cpu-process-v1",
+    "pytorch-boundary-cpu-source-build-cmake3-py311": "remote-cpu-source-boundary-cmake3-py311-v1",
     "pytorch-boundary-cpu-source-build-py311": "remote-cpu-source-boundary-py311-v1",
     "pytorch-cpu-torch2.6.0-py311": "remote-cpu-pytorch-2.6-py311-v1",
     "pytorch-cpu-compile-torch2.6.0-py311": "remote-cpu-compile-pytorch-2.6-py311-v1",
@@ -700,6 +774,16 @@ _PROFILE_BY_ENVIRONMENT = {
     "pytorch-matched-06e9dea-torch2.7.0-py311-cpu": "remote-cpu-matched-torch2.7-py311-v1",
     "pytorch-nightly-20260407-torch2.12.0dev-cpu-py311": "remote-cpu-expansion-nightly-torch2.12.0dev20260407-py311-v1",
     "pytorch-nightly-20260407-torch2.12.0dev-cu126-py311": "remote-cuda-expansion-nightly-torch2.12.0dev20260407-cu126-py311-v1",
+    "pytorch-nightly-20260417-torch2.13.0dev-cu126-devel-py311": "remote-cuda-expansion-nightly-torch2.13.0dev20260417-cu126-devel-py311-v1",
+    "pytorch-nightly-20260423-torch2.13.0dev-cpu-py311": "remote-cpu-expansion-nightly-torch2.13.0dev20260423-py311-v1",
+    "pytorch-nightly-20260612-torch2.14.0dev-cpu-py311": "remote-cpu-expansion-nightly-torch2.14.0dev20260612-py311-v1",
+    "pytorch-nightly-20260612-torch2.14.0dev-cu126-devel-py311": "remote-cuda-expansion-nightly-torch2.14.0dev20260612-cu126-devel-py311-v1",
+    "pytorch-nightly-20260612-torch2.14.0dev-cu126-py311": "remote-cuda-expansion-nightly-torch2.14.0dev20260612-cu126-py311-v1",
+    "pytorch-nightly-20260707-torch2.14.0dev-cpu-py311": "remote-cpu-expansion-nightly-torch2.14.0dev20260707-py311-v1",
+    "pytorch-nightly-20260707-torch2.14.0dev-cu126-devel-py311": "remote-cuda-expansion-nightly-torch2.14.0dev20260707-cu126-devel-py311-v1",
+    "pytorch-nightly-20260710-torch2.14.0dev-cpu-py311": "remote-cpu-expansion-nightly-torch2.14.0dev20260710-py311-v1",
+    "pytorch-nightly-20260710-torch2.14.0dev-cu126-devel-py311": "remote-cuda-expansion-nightly-torch2.14.0dev20260710-cu126-devel-py311-v1",
+    "pytorch-nightly-20260710-torch2.14.0dev-cu126-py311": "remote-cuda-expansion-nightly-torch2.14.0dev20260710-cu126-py311-v1",
 }
 
 

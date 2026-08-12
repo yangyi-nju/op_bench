@@ -1,0 +1,45 @@
+diff --git a/test/op_bench/test_template_index_width.py b/test/op_bench/test_template_index_width.py
+new file mode 100644
+--- /dev/null
++++ b/test/op_bench/test_template_index_width.py
+@@ -0,0 +1,40 @@
++import inspect
++import unittest
++from types import SimpleNamespace
++
++import torch
++from torch._inductor.select_algorithm import TritonTemplateKernel
++
++
++def kernel_with(feature_dtype, override):
++    kernel = object.__new__(TritonTemplateKernel)
++    kernel.features = SimpleNamespace(select_index_dtype=lambda: feature_dtype)
++    kernel._index_dtype_override = override
++    return kernel
++
++
++class TemplateIndexWidthTests(unittest.TestCase):
++    def test_explicit_wide_index_overrides_small_output_heuristic(self):
++        kernel = kernel_with(torch.int32, "tl.int64")
++        self.assertEqual(kernel.index_dtype, "tl.int64")
++
++    def test_explicit_narrow_index_is_preserved(self):
++        kernel = kernel_with(torch.int64, "tl.int32")
++        self.assertEqual(kernel.index_dtype, "tl.int32")
++
++    def test_kernel_constructor_accepts_computed_index_width(self):
++        parameters = inspect.signature(TritonTemplateKernel.__init__).parameters
++        self.assertIn("index_dtype_override", parameters)
++        self.assertIsNone(parameters["index_dtype_override"].default)
++
++    def test_default_narrow_feature_selection_remains_stable(self):
++        kernel = kernel_with(torch.int32, None)
++        self.assertEqual(kernel.index_dtype, "tl.int32")
++
++    def test_default_wide_feature_selection_remains_stable(self):
++        kernel = kernel_with(torch.int64, None)
++        self.assertEqual(kernel.index_dtype, "tl.int64")
++
++
++if __name__ == "__main__":
++    unittest.main()

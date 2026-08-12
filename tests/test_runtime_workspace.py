@@ -119,7 +119,7 @@ class AuthoritativeWorkspaceTests(unittest.TestCase):
         for result in (read, write, added, deleted, test_binding, diff):
             self.assertEqual(result.workspace, self.workspace.identity)
 
-    def test_repository_root_write_delete_and_apply_patch_are_broad_but_freeze_is_private(
+    def test_repository_root_write_delete_apply_and_candidate_freeze_are_broad(
         self,
     ) -> None:
         workspace = AuthoritativeWorkspace.open(
@@ -149,8 +149,11 @@ class AuthoritativeWorkspaceTests(unittest.TestCase):
         self.assertIn(b"README.md", patch_bytes)
         self.assertIn(b"tests/test_operator.py", patch_bytes)
         self.assertIn(b"src/helper.py", patch_bytes)
-        with self.assertRaisesRegex(WorkspacePolicyError, "outside patch scope"):
-            workspace.freeze()
+        frozen = workspace.freeze()
+        self.assertEqual(
+            frozen.changed_paths,
+            ("README.md", "src/helper.py", "tests/test_operator.py"),
+        )
 
     def test_repository_root_capability_preserves_path_and_content_denials(
         self,

@@ -62,7 +62,15 @@ def build_validation_contract(
     root: Path = ROOT,
 ) -> McpExperimentContract:
     root = root.resolve()
-    dataset_path = root / "datasets/pytorch_v0.7_boundary/dataset.json"
+    historical_dataset_path = (
+        root
+        / "archives/v0.7-pre-quality/datasets/pytorch_v0.7_boundary/dataset.json"
+    )
+    dataset_path = (
+        historical_dataset_path
+        if historical_dataset_path.is_file()
+        else root / "datasets/pytorch_v0.7_boundary/dataset.json"
+    )
     selected_task_ids = tuple(
         task_id
         for _, task_ids in COHORT_TASKS

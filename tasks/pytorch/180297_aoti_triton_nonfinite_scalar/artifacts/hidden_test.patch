@@ -1,0 +1,76 @@
+diff --git a/test/op_bench/test_aoti_triton_nonfinite_scalar.py b/test/op_bench/test_aoti_triton_nonfinite_scalar.py
+new file mode 100644
+index 00000000000..bf435315165
+--- /dev/null
++++ b/test/op_bench/test_aoti_triton_nonfinite_scalar.py
+@@ -0,0 +1,70 @@
++import pathlib
++import sys
++import unittest
++
++sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
++
++import torch
++import triton
++import triton.language as tl
++
++
++@triton.jit
++def threshold_kernel(
++    input_pointer,
++    output_pointer,
++    threshold,
++    element_count,
++    BLOCK_SIZE: tl.constexpr,
++):
++    offsets = tl.program_id(0) * BLOCK_SIZE + tl.arange(0, BLOCK_SIZE)
++    mask = offsets < element_count
++    value = tl.load(input_pointer + offsets, mask=mask)
++    result = tl.where(value > threshold, threshold, value)
++    tl.store(output_pointer + offsets, result, mask=mask)
++
++
++class ThresholdModule(torch.nn.Module):
++    def __init__(self, threshold):
++        super().__init__()
++        self.threshold = threshold
++
++    def forward(self, value):
++        output = torch.empty_like(value)
++        element_count = value.numel()
++        threshold_kernel[(triton.cdiv(element_count, 64),)](
++            value,
++            output,
++            self.threshold,
++            element_count,
++            BLOCK_SIZE=64,
++        )
++        return output
++
++
++class AotiTritonNonfiniteScalarTests(unittest.TestCase):
++    def setUp(self):
++        if not torch.cuda.is_available():
++            self.skipTest("CUDA is required")
++        torch.manual_seed(0)
++
++    def _assert_package_matches_eager(self, threshold):
++        from inductor.test_aot_inductor_utils import AOTIRunnerUtil
++
++        model = ThresholdModule(threshold)
++        inputs = (torch.linspace(-2, 2, 257, device="cuda"),)
++        expected = model(*inputs)
++        actual = AOTIRunnerUtil.run(model, inputs)
++        self.assertEqual(actual.dtype, expected.dtype)
++        self.assertEqual(actual.shape, expected.shape)
++        torch.testing.assert_close(actual, expected)
++
++    def test_negative_infinity_threshold_matches_eager(self):
++        self._assert_package_matches_eager(float("-inf"))
++
++    def test_finite_threshold_matches_eager(self):
++        self._assert_package_matches_eager(0.5)
++
++
++if __name__ == "__main__":
++    unittest.main()

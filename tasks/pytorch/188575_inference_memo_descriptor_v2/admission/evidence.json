@@ -1,0 +1,49 @@
+{
+  "admission": {
+    "decision": "verified",
+    "failure_classification": null,
+    "verified": true
+  },
+  "baseline": {
+    "duration_sec": 101.20584112498909,
+    "fail_to_pass_passed": 0,
+    "fail_to_pass_total": 2,
+    "mode": "baseline",
+    "pass_to_pass_passed": 3,
+    "pass_to_pass_total": 3,
+    "status": "baseline_reproduced",
+    "task_id": "pytorch__188575__inference_memo_descriptor_v2"
+  },
+  "created_at": "2026-08-10T15:47:00Z",
+  "environment": {
+    "backend": "remote_docker",
+    "digest_kind": "local_image_id",
+    "id": "pytorch-nightly-20260710-torch2.14.0dev-cpu-py311",
+    "image": "op-bench/pytorch-nightly-cpu:2.14.0.dev20260710-py311",
+    "image_digest": "sha256:3163c72d501e3640d7fb18f9a5bafaf182b501d035474f3eee105859ec4a3047",
+    "platform": "linux/amd64",
+    "runtime_tier": "cpu_python_overlay"
+  },
+  "evidence_id": "pytorch__188575__inference_memo_descriptor_v2:02f66ef6ea31:2026-08-10T15:47:00Z",
+  "gold": {
+    "duration_sec": 92.8532955419505,
+    "fail_to_pass_passed": 2,
+    "fail_to_pass_total": 2,
+    "mode": "gold",
+    "pass_to_pass_passed": 3,
+    "pass_to_pass_total": 3,
+    "status": "resolved",
+    "task_id": "pytorch__188575__inference_memo_descriptor_v2"
+  },
+  "schema_version": "v1",
+  "source": {
+    "base_commit": "14c2be6563899240a522d14383e76b49c8c9d028",
+    "id": "pytorch-14c2be65-inference-memo-overlay-v2",
+    "repo_url": "https://github.com/pytorch/pytorch.git",
+    "snapshot_hash": null,
+    "snapshot_method": null
+  },
+  "task_id": "pytorch__188575__inference_memo_descriptor_v2",
+  "task_manifest_hash": "sha256:02f66ef6ea31d5b04e54189881cd48deb67a0bac753aea3a89801e5e9c67e216",
+  "task_manifest_hash_kind": "replay_spec_v1"
+}

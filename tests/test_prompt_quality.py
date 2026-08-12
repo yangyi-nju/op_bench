@@ -148,16 +148,19 @@ class PromptQualityScannerTests(unittest.TestCase):
         hidden_patch = """diff --git a/test/test_foo.py b/test/test_foo.py
 --- a/test/test_foo.py
 +++ b/test/test_foo.py
-@@ -0,0 +1,9 @@
+@@ -0,0 +1,12 @@
 +def assert_result(self):
 +    self.assertEqual(
 +        actual,
 +        expected,
 +    )
++    canonical = actual
++    Registered = canonical
 +
 +@config.patch({"freezing": True})
 +class Example:
 +    Platform = "cuda"
++    field = "output"
 """
 
         index = build_private_answer_index(
@@ -168,7 +171,10 @@ class PromptQualityScannerTests(unittest.TestCase):
         )
 
         self.assertNotIn("patch", index.added_symbols)
+        self.assertNotIn("canonical", index.internal_names)
         self.assertNotIn("Platform", index.internal_names)
+        self.assertNotIn("Registered", index.internal_names)
+        self.assertNotIn("output", index.distinctive_literals)
         self.assertEqual(
             scan_rendered_prompt(
                 "Return the canonical workspace patch without freezing it.",
@@ -285,6 +291,72 @@ class PromptQualityScannerTests(unittest.TestCase):
                 public_identifiers=("private_sentinel",),
             )
 
+    def test_v2_public_vocabulary_allows_declared_operator_domain_terms(
+        self,
+    ) -> None:
+        vocabulary = controlled_public_scanner_vocabulary(
+            declared_terms=(
+                "flex-attention",
+                "aotinductor",
+                "backward",
+                "broadcast",
+                "concurrent",
+                "device",
+                "event",
+                "gradient",
+                "inference-mode",
+                "operation",
+                "optional",
+                "ordering",
+                "partitioner",
+                "sentinel",
+                "symbolic-shape",
+                "stream",
+                "synchronization",
+                "unbacked",
+                "undefined",
+                "weight",
+                "deadlock",
+                "worker",
+                "private_sentinel",
+            ),
+            rendered_prompt=(
+                "AOTInductor flex attention backward preserves the gradient under concurrent inference "
+                "mode for a symbolic broadcast across a device partitioner and "
+                "weight; an optional operation may use an unbacked or undefined sentinel; "
+                "stream event ordering and synchronization avoid a worker deadlock "
+                "without exposing private_sentinel."
+            ),
+        )
+
+        self.assertEqual(
+            vocabulary,
+            (
+                "aotinductor",
+                "attention",
+                "backward",
+                "broadcast",
+                "concurrent",
+                "deadlock",
+                "device",
+                "event",
+                "gradient",
+                "inference",
+                "operation",
+                "optional",
+                "ordering",
+                "partitioner",
+                "sentinel",
+                "stream",
+                "symbolic",
+                "synchronization",
+                "unbacked",
+                "undefined",
+                "weight",
+                "worker",
+            ),
+        )
+
     def test_private_index_rejects_malformed_or_unsafe_diff_headers(self) -> None:
         for patch in (
             'diff --git "a/torch/foo.py b/torch/foo.py',
@@ -377,6 +449,47 @@ abcdef
 
         self.assertIn("Widget", index.added_symbols)
         self.assertNotIn("value_", index.added_symbols)
+
+    def test_private_index_ignores_short_low_confidence_symbols(self) -> None:
+        hidden_patch = """diff --git a/test/test_foo.py b/test/test_foo.py
+--- a/test/test_foo.py
++++ b/test/test_foo.py
+@@ -0,0 +1,4 @@
++def to(value):
++    return value
++class A:
++    pass
+"""
+
+        index = build_private_answer_index(
+            gold_patch="",
+            hidden_test_patch=hidden_patch,
+            patch_scope=(),
+            hidden_selectors=(),
+        )
+
+        self.assertNotIn("to", index.added_symbols)
+        self.assertNotIn("A", index.added_symbols)
+
+    def test_private_index_does_not_parse_cpp_comments_as_signatures(self) -> None:
+        patch = """diff --git a/torch/foo.cpp b/torch/foo.cpp
+--- a/torch/foo.cpp
++++ b/torch/foo.cpp
+@@ -0,0 +1,4 @@
++// Runtime check (subset match)
++for (auto item : values) {
++    consume(item);
++}
+"""
+
+        index = build_private_answer_index(
+            gold_patch=patch,
+            hidden_test_patch="",
+            patch_scope=(),
+            hidden_selectors=(),
+        )
+
+        self.assertNotIn("for", index.added_symbols)
 
     def test_private_index_does_not_treat_python_calls_as_cpp_symbols(
         self,

@@ -345,11 +345,12 @@ class V06ReleaseDocumentationTests(unittest.TestCase):
 
         project_state = PROJECT_STATE.read_text(encoding="utf-8")
         self.assertIn(
-            "| 当前稳定基线 | v0.7 历史 25-task 冻结",
+            "| 当前稳定基线 | `opbench-v0.7.0` 50-task 质量版已完成",
             project_state,
         )
         self.assertIn("| V06-RELEASE | Passed |", project_state)
         self.assertIn("`opbench-v0.6.0` 统一发布", project_state)
+        self.assertIn("| V07-QX-RELEASE | Passed |", project_state)
 
         changelog = CHANGELOG.read_text(encoding="utf-8")
         self.assertIn("## v0.6 - Completed", changelog)
