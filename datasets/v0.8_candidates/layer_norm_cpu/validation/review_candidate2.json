@@ -1,0 +1,42 @@
+{
+  "task_id": "opbench-layer-norm-cpu-001",
+  "task_revision": "candidate.2",
+  "scope": "operator_integration",
+  "scoring_revision": "candidate.2",
+  "environment_revision": "240aa77-cpu-gcc12-openblas-r1",
+  "tests": [
+    {
+      "id": "cpu_bfloat16_fake_metadata",
+      "group": "fail_to_pass",
+      "argv": [
+        "{python}",
+        "{grader}/test_layer_norm.py",
+        "{workspace}",
+        "CpuBFloat16Metadata"
+      ],
+      "timeout_sec": 120.0,
+      "kind": "unittest",
+      "expected_tests": 1
+    },
+    {
+      "id": "layer_norm_eager_and_float32_regressions",
+      "group": "pass_to_pass",
+      "argv": [
+        "{python}",
+        "{grader}/test_layer_norm.py",
+        "{workspace}",
+        "LayerNormRegressions"
+      ],
+      "timeout_sec": 120.0,
+      "kind": "unittest",
+      "expected_tests": 3
+    }
+  ],
+  "syntax_checked": [
+    "environment/reproduce.py",
+    "environment/source_torch.py",
+    "environment/build_source.py",
+    "grader/test_layer_norm.py"
+  ],
+  "full_source_runtime_controls": "not_executed"
+}

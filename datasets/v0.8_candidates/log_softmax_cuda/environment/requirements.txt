@@ -1,0 +1,18 @@
+# Unchanged dependency versions extracted from the original CUDA recipe.
+setuptools==72.1.0
+wheel==0.45.1
+cmake==3.31.6
+ninja==1.11.1.3
+numpy==1.26.4
+PyYAML==6.0.2
+astunparse==1.6.3
+typing-extensions==4.12.2
+sympy==1.13.3
+filelock==3.16.1
+networkx==3.2.1
+Jinja2==3.1.5
+fsspec==2024.12.0
+packaging==24.2
+psutil==6.1.1
+optree==0.13.1
+requests==2.32.3

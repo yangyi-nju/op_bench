@@ -1,0 +1,3464 @@
+{
+  "document_type": "historical_task_semantic_disposition",
+  "review_version": "2026-09-09",
+  "design_baseline": "docs/v0.8/design.md",
+  "purpose": "v0.8 旧题逐题处置输入；不是运行任务清单或正式准入结果。",
+  "review_method": "由同一 AI 协作者对题面、公开约束、执行选择器、参考补丁改动和测试补丁逐题做静态语义初审；部分高风险或争议题另读旧质量记录。",
+  "scope_of_evidence": "覆盖层次描述所读测试代码声明的执行路径，并与实际选择器核对；不表示这些路径已经运行。未完整审阅选定源码树中未包含在测试补丁内的既有回归函数，未联网核对全部上游 PR 原始内容。",
+  "reviewer_independence": "not_independent_human_review",
+  "executions_performed": 0,
+  "admitted_task_count": 0,
+  "legacy_dataset_views": [
+    {
+      "path": "datasets/pytorch_v0.7/dataset.json",
+      "entries": 50,
+      "git_revision": "55c8ef2bd7d0bf78fc26bfd25498d9252e70781f",
+      "source_url": "https://github.com/yangyi-nju/op_bench/blob/55c8ef2bd7d0bf78fc26bfd25498d9252e70781f/datasets/pytorch_v0.7/dataset.json"
+    },
+    {
+      "path": "datasets/pytorch_v0.7_boundary/dataset.json",
+      "entries": 31,
+      "git_revision": "55c8ef2bd7d0bf78fc26bfd25498d9252e70781f",
+      "source_url": "https://github.com/yangyi-nju/op_bench/blob/55c8ef2bd7d0bf78fc26bfd25498d9252e70781f/datasets/pytorch_v0.7_boundary/dataset.json"
+    },
+    {
+      "path": "datasets/pytorch_v0.7_device/dataset.json",
+      "entries": 15,
+      "git_revision": "55c8ef2bd7d0bf78fc26bfd25498d9252e70781f",
+      "source_url": "https://github.com/yangyi-nju/op_bench/blob/55c8ef2bd7d0bf78fc26bfd25498d9252e70781f/datasets/pytorch_v0.7_device/dataset.json"
+    },
+    {
+      "path": "datasets/pytorch_v0.7_precision/dataset.json",
+      "entries": 5,
+      "git_revision": "55c8ef2bd7d0bf78fc26bfd25498d9252e70781f",
+      "source_url": "https://github.com/yangyi-nju/op_bench/blob/55c8ef2bd7d0bf78fc26bfd25498d9252e70781f/datasets/pytorch_v0.7_precision/dataset.json"
+    }
+  ],
+  "summary": {
+    "unique_reviewed_tasks": 50,
+    "scope_counts": {
+      "framework_support": 9,
+      "operator_integration": 33,
+      "operator": 5,
+      "uncertain": 3
+    },
+    "disposition_counts": {
+      "support_separate": 9,
+      "main_candidate_rework": 37,
+      "defer_scope": 3,
+      "defer_contract": 1
+    },
+    "coverage_tag_counts": {
+      "framework_api": 7,
+      "end_to_end": 19,
+      "direct_operator": 6,
+      "direct_operator_metadata": 2,
+      "helper": 20,
+      "mock": 12,
+      "generated_text": 6,
+      "implementation_identity": 3,
+      "compile_probe": 1,
+      "graph_transform": 3,
+      "generated_code_execution": 4
+    },
+    "coverage_counts_overlap": true,
+    "main_scope_topics": 38,
+    "grouping_review": "pending_no_groups_inferred",
+    "runtime_validation": "not_executed",
+    "independent_review": "pending"
+  },
+  "interpretation": {
+    "operator": "算子公开计算、输入或存储行为；分类不依赖实现语言。",
+    "operator_integration": "直接影响算子执行的编译、自动微分、导出或分派链路；分类不等于当前测试端到端。",
+    "framework_support": "通用模块管理、数据加载、优化器或开发/测量工具，单列不计主分。",
+    "uncertain": "所读证据无法建立足够具体的算子执行联系，先保留范围未知。",
+    "main_candidate_rework": "主范围候选；必须重制公开合同/评分与环境证据后申请准入，不承诺全部保留。",
+    "support_separate": "独立支持题集合候选；本次不修改旧题或自动发布新集合。",
+    "defer_scope": "暂缓主集收录，先补真实场景和范围裁决。",
+    "defer_contract": "先确定资源回归合同或独立优化定位，再决定是否进入修复主集。"
+  },
+  "common_required_follow_up": [
+    "以基线导出、固定离线依赖、受控求解和独立构建评分替换旧路径/文件白名单，候选构建不接触私有 grader。",
+    "把公开要求与必需断言双向映射；helper、mock 和生成源码检查只能支持其实际层次，不能冒充端到端行为。",
+    "真实验证基线、参考解、相关回归和有语义依据的错误变体；高风险题审查替代正确解，全部题完成独立人工裁决。",
+    "记录实际构建加载、设备、数值容差与稳定性。47 题旧 python_overlay 声明不是重新准入证据，不能用它代替匹配源码环境。",
+    "固定任务/环境/评分版本和开发暴露；审查同源缺陷分组，不继承旧 verified、difficulty 或 duplicate_fingerprint 结论。",
+    "审查上游来源、归属和可使用范围；自有代码许可证仍待学校确认，不在本次选择。"
+  ],
+  "tasks": [
+    {
+      "index": 0,
+      "task_id": "pytorch__124385__load_state_dict_prefix",
+      "task_path": "tasks/pytorch/124385_load_state_dict_prefix/task.json",
+      "legacy_public_task_id": "opbench-v07-t0003",
+      "title": "Module.load_state_dict accepts an unrecognized state entry extending a parameter name",
+      "views": [
+        "pytorch_v0.7"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 124385,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/124385",
+        "issue_number": 123510,
+        "issue_url": "https://github.com/pytorch/pytorch/issues/123510",
+        "base_commit": "afa78ad08cc748c25e7e82cec02cec4c97c7d3af",
+        "merge_commit": "TODO"
+      },
+      "gold_patch": "tasks/pytorch/124385_load_state_dict_prefix/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/124385_load_state_dict_prefix/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/nn/modules/module.py"
+      ],
+      "test_target_paths": [
+        "test/nn/test_load_state_dict.py"
+      ],
+      "selected_fail_to_pass": [
+        "TestLoadStateDict.test_load_state_dict_with_unexpected_key_swap_True"
+      ],
+      "selected_pass_to_pass": [
+        "TestLoadStateDict.test_load_state_dict_custom_swap_False"
+      ],
+      "selected_test_command": "{python} test/nn/test_load_state_dict.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "framework_support",
+      "defect": "load_state_dict 将合法参数名后缀扩展的未知键错误接纳，strict/non-strict 的报错或返回列表不正确。",
+      "coverage": [
+        "framework_api"
+      ],
+      "observation": "补丁测试实际调用 Module.load_state_dict，检查嵌套未知键与参数名后缀；没有算子计算或梯度断言。",
+      "environment": "匹配该基线的 CPU PyTorch 和 nn 状态加载测试依赖。",
+      "gaps": [
+        "归入框架支持集合，不计算子主分。",
+        "所选回归是另一 state_dict 测试；需审查 strict、buffer、子模块等公开范围及对应回归。"
+      ],
+      "disposition": "support_separate",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/124385_load_state_dict_prefix/task.json",
+        "tasks/pytorch/124385_load_state_dict_prefix/artifacts/gold.patch",
+        "tasks/pytorch/124385_load_state_dict_prefix/artifacts/hidden_test.patch"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 1,
+      "task_id": "pytorch__129138__linear_add_bias_autocast",
+      "task_path": "tasks/pytorch/129138_linear_add_bias_autocast/task.json",
+      "legacy_public_task_id": "opbench-v07-t0005",
+      "title": "Optimized Linear plus a higher-precision bias fails under CPU autocast",
+      "views": [
+        "pytorch_v0.7",
+        "pytorch_v0.7_precision"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 129138,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/129138",
+        "issue_number": null,
+        "issue_url": null,
+        "base_commit": "5d8e23b49c5327590fb32b28309c41129e2b3f08",
+        "merge_commit": "27ae1f981d8a800505ddfde08898ddcf4c6f9765"
+      },
+      "gold_patch": "tasks/pytorch/129138_linear_add_bias_autocast/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/129138_linear_add_bias_autocast/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/_inductor/fx_passes/mkldnn_fusion.py"
+      ],
+      "test_target_paths": [
+        "test/test_op_bench_linear_add_bias_autocast.py"
+      ],
+      "selected_fail_to_pass": [
+        "TestLinearAddBiasAutocast.test_autocast_bf16_fp32_bias_matches_eager"
+      ],
+      "selected_pass_to_pass": [
+        "TestLinearAddBiasAutocast.test_no_autocast_matches_eager"
+      ],
+      "selected_test_command": "{python} test/test_op_bench_linear_add_bias_autocast.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "operator_integration",
+      "defect": "CPU autocast 中 Linear 的低精度权重与 float32 bias 被错误融合，造成编译路径失败或结果不一致。",
+      "coverage": [
+        "end_to_end"
+      ],
+      "observation": "隐藏测试实际 torch.compile Linear+bias，与 eager 比较 dtype 和数值，另测 float32；测试还 monkeypatch Match.erase_nodes 以兼容不同年代的运行时。",
+      "environment": "CPU Inductor、MKLDNN、C++ 工具链；基线源码与整个依赖栈版本匹配。",
+      "gaps": [
+        "移除把旧模块覆盖到较新运行时所需的兼容 monkeypatch，或证明其不改变被测路径。",
+        "补充与题面对应的低精度、bias、冻结和相关融合回归，给出 1e-2 容差依据。"
+      ],
+      "disposition": "main_candidate_rework",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/129138_linear_add_bias_autocast/task.json",
+        "tasks/pytorch/129138_linear_add_bias_autocast/artifacts/gold.patch",
+        "tasks/pytorch/129138_linear_add_bias_autocast/artifacts/hidden_test.patch"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 2,
+      "task_id": "pytorch__129154__exp_decomp_numerics",
+      "task_path": "tasks/pytorch/129154_exp_decomp_numerics/task.json",
+      "legacy_public_task_id": "opbench-v07-t0006",
+      "title": "CUDA exponential sampling can return infinity for a valid random endpoint",
+      "views": [
+        "pytorch_v0.7",
+        "pytorch_v0.7_boundary",
+        "pytorch_v0.7_device",
+        "pytorch_v0.7_precision"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 129154,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/129154",
+        "issue_number": 127749,
+        "issue_url": "https://github.com/pytorch/pytorch/issues/127749",
+        "base_commit": "ff89ebc50a738c734496393dc25313cf197fd0b4",
+        "merge_commit": "8cd9b104568754c088f843eebeb9f2b4f1c426d2"
+      },
+      "gold_patch": "tasks/pytorch/129154_exp_decomp_numerics/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/129154_exp_decomp_numerics/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/_refs/__init__.py"
+      ],
+      "test_target_paths": [
+        "test/test_decomp.py"
+      ],
+      "selected_fail_to_pass": [
+        "DecompOneOffTestsCUDA.test_exponential_non_inf_cuda"
+      ],
+      "selected_pass_to_pass": [
+        "DecompOneOffTestsCUDA.test_contiguous_log_softmax_cuda"
+      ],
+      "selected_test_command": "{python} test/test_decomp.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "operator",
+      "defect": "CUDA exponential 采样的分解公式在有效随机端点产生无穷，与 native 变换不一致。",
+      "coverage": [
+        "direct_operator"
+      ],
+      "observation": "保存 RNG 状态后比较原生 exponential_ 与 torch._refs.exponential 的张量结果并检查无穷；依赖大随机样本触及端点。",
+      "environment": "匹配基线的 CUDA PyTorch 及随机数实现，实际 GPU。",
+      "gaps": [
+        "用有依据的确定性端点用例补足随机触发可靠性，声明 RNG 与 dtype/rate 的合同。",
+        "原有 P2P 是 log_softmax，需增加 sampling 自身的相关回归和数值容差依据。"
+      ],
+      "disposition": "main_candidate_rework",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/129154_exp_decomp_numerics/task.json",
+        "tasks/pytorch/129154_exp_decomp_numerics/artifacts/gold.patch",
+        "tasks/pytorch/129154_exp_decomp_numerics/artifacts/hidden_test.patch"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 3,
+      "task_id": "pytorch__132835__njt_sdpa_autocast",
+      "task_path": "tasks/pytorch/132835_njt_sdpa_autocast/task.json",
+      "legacy_public_task_id": "opbench-v07-t0008",
+      "title": "Nested-tensor scaled dot-product attention disagrees with dense attention under CUDA autocast",
+      "views": [
+        "pytorch_v0.7",
+        "pytorch_v0.7_boundary",
+        "pytorch_v0.7_device",
+        "pytorch_v0.7_precision"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 132835,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/132835",
+        "issue_number": 132835,
+        "issue_url": "https://github.com/pytorch/pytorch/pull/132835",
+        "base_commit": "bbf568aac8ec06bcbfc00cac84747256ac021c5d",
+        "merge_commit": "59f4725b49a59bc328bd55744e44369a0113ec95"
+      },
+      "gold_patch": "tasks/pytorch/132835_njt_sdpa_autocast/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/132835_njt_sdpa_autocast/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/nested/_internal/sdpa.py"
+      ],
+      "test_target_paths": [
+        "test/test_nestedtensor.py"
+      ],
+      "selected_fail_to_pass": [
+        "TestNestedTensorSubclassCUDA.test_sdpa_autocast_cuda"
+      ],
+      "selected_pass_to_pass": [
+        "TestNestedTensorSubclassCUDA.test_nested_tensor_activation_checkpoint_cuda"
+      ],
+      "selected_test_command": "{python} test/test_nestedtensor.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "operator_integration",
+      "defect": "jagged nested SDPA 的 autocast 与后端选择时序不一致，导致混合精度输出及梯度偏离 dense。",
+      "coverage": [
+        "end_to_end"
+      ],
+      "observation": "实际运行 dense/nested、eager/compile 四条 CUDA 路径并比较前向和两组输入梯度；有 fused-attention、SM70 和平台 skip 条件。",
+      "environment": "CUDA、支持 fused attention 的 GPU、Inductor/Triton 与对应 nested tensor 基线。",
+      "gaps": [
+        "把 skip 条件转成明确环境准入要求，不能未执行即通过。",
+        "测试为等长 nested、固定 shape 的 float32/float16 组合；需声明不等长、mask、dtype 等适用范围和容差。"
+      ],
+      "disposition": "main_candidate_rework",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/132835_njt_sdpa_autocast/task.json",
+        "tasks/pytorch/132835_njt_sdpa_autocast/artifacts/gold.patch",
+        "tasks/pytorch/132835_njt_sdpa_autocast/artifacts/hidden_test.patch"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 4,
+      "task_id": "pytorch__139372__histc_int8_cuda_bounds",
+      "task_path": "tasks/pytorch/139372_histc_int8_cuda_bounds/task.json",
+      "legacy_public_task_id": "opbench-v07-t0009",
+      "title": "CUDA torch.histc accepts an invalid range for int8 input",
+      "views": [
+        "pytorch_v0.7",
+        "pytorch_v0.7_boundary",
+        "pytorch_v0.7_device"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 139372,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/139372",
+        "issue_number": 139360,
+        "issue_url": "https://github.com/pytorch/pytorch/issues/139360",
+        "base_commit": "356fc41ae04816fe137bc85ccca4087ede291e3e",
+        "merge_commit": "ffb7a08921239784636dc1e41f69990522c4d76e"
+      },
+      "gold_patch": "tasks/pytorch/139372_histc_int8_cuda_bounds/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/139372_histc_int8_cuda_bounds/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "aten/src/ATen/native/cuda/SummaryOps.cu",
+        "torch/testing/_internal/common_methods_invocations.py"
+      ],
+      "test_target_paths": [
+        "test/test_reductions.py"
+      ],
+      "selected_fail_to_pass": [
+        "TestReductionsCUDA.test_histc_int8_bounds_overflow_cuda_int8"
+      ],
+      "selected_pass_to_pass": [
+        "TestReductionsCUDA.test_histc_cuda"
+      ],
+      "selected_test_command": "{python} test/test_reductions.py {test}",
+      "legacy_loading_mode": "inplace_build",
+      "scope": "operator",
+      "defect": "CUDA histc 将 min/max 收窄到 int8 后溢出，错误接受 max 不大于 min 的输入范围。",
+      "coverage": [
+        "direct_operator"
+      ],
+      "observation": "真实 torch.histc CUDA int8 调用验证 min=256/max=1 报错；Gold 同时修改 kernel 边界类型和 OpInfo 的 uint8 声明。",
+      "environment": "完整 CUDA 源码构建，确保修改的 SummaryOps.cu 进入实际加载库。",
+      "gaps": [
+        "除单一错误区间外验证有效直方图和受支持整数类型；核实 OpInfo 改动的必要性与覆盖。",
+        "错误合同是否必须使用特定文本应公开或改为语义判定。"
+      ],
+      "disposition": "main_candidate_rework",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/139372_histc_int8_cuda_bounds/task.json",
+        "tasks/pytorch/139372_histc_int8_cuda_bounds/artifacts/gold.patch",
+        "tasks/pytorch/139372_histc_int8_cuda_bounds/artifacts/hidden_test.patch"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 5,
+      "task_id": "pytorch__140557__layer_norm_decomp_precision",
+      "task_path": "tasks/pytorch/140557_layer_norm_decomp_precision/task.json",
+      "legacy_public_task_id": "opbench-v07-t0012",
+      "title": "Fake-tensor native_layer_norm reports the wrong CPU bfloat16 output dtypes",
+      "views": [
+        "pytorch_v0.7"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 140557,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/140557",
+        "issue_number": null,
+        "issue_url": null,
+        "base_commit": "240aa77ad01c4f0cd9b2417748272f2f617c112f",
+        "merge_commit": "9ae19ffbedaa7754ee194b5da8d57cc2d2fee20e"
+      },
+      "gold_patch": "tasks/pytorch/140557_layer_norm_decomp_precision/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/140557_layer_norm_decomp_precision/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/_refs/__init__.py"
+      ],
+      "test_target_paths": [
+        "test/test_decomp.py"
+      ],
+      "selected_fail_to_pass": [
+        "DecompOneOffTestsCPU.test_native_layer_norm_cpu_decomp_cpu"
+      ],
+      "selected_pass_to_pass": [
+        "DecompOneOffTestsCPU.test_contiguous_softmax_cpu"
+      ],
+      "selected_test_command": "{python} test/test_decomp.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "operator_integration",
+      "defect": "CPU bfloat16 native_layer_norm 在 FakeTensor/Python dispatcher 下报告的输出、mean/rstd dtype 与 eager 不符。",
+      "coverage": [
+        "direct_operator_metadata"
+      ],
+      "observation": "真实调用 native_layer_norm 的 eager 与 FakeTensor 路径，仅比较三个输出 dtype；不测数值、梯度或完整 compile。",
+      "environment": "与基线一致的 CPU 源码构建和 FakeTensor/dispatcher 栈。",
+      "gaps": [
+        "此题合同是元数据一致性，不能宣称已验证数值精度修复。",
+        "补充相关 dtype、normalized_shape 和 fake/eager 元数据回归；现有 v0.8 LayerNorm 候选仍需实际构建控制组。"
+      ],
+      "disposition": "main_candidate_rework",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/140557_layer_norm_decomp_precision/task.json",
+        "tasks/pytorch/140557_layer_norm_decomp_precision/artifacts/gold.patch",
+        "tasks/pytorch/140557_layer_norm_decomp_precision/artifacts/hidden_test.patch"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": "datasets/v0.8_candidates/layer_norm_cpu/task.json"
+    },
+    {
+      "index": 6,
+      "task_id": "pytorch__143455__set_submodule",
+      "task_path": "tasks/pytorch/143455_set_submodule/task.json",
+      "legacy_public_task_id": "opbench-v07-t0013",
+      "title": "The torch.nn child-replacement API mishandles top-level and strict requests",
+      "views": [
+        "pytorch_v0.7"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 143455,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/143455",
+        "issue_number": 143441,
+        "issue_url": "https://github.com/pytorch/pytorch/issues/143441",
+        "base_commit": "e3c4d1b7d6ea848f6b5558edf67e66dc28243641",
+        "merge_commit": "TODO"
+      },
+      "gold_patch": "tasks/pytorch/143455_set_submodule/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/143455_set_submodule/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/nn/modules/module.py"
+      ],
+      "test_target_paths": [
+        "test/test_nn.py"
+      ],
+      "selected_fail_to_pass": [
+        "TestNN.test_set_submodule"
+      ],
+      "selected_pass_to_pass": [
+        "TestNN.test_module_to_argparse"
+      ],
+      "selected_test_command": "{python} test/test_nn.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "framework_support",
+      "defect": "Module.set_submodule 顶层与点路径创建/替换及 strict、非法替换值处理不完整。",
+      "coverage": [
+        "framework_api"
+      ],
+      "observation": "构造 Linear/Conv2d 作为模块树对象，检查对象身份和异常；没有调用它们进行数值计算或反向。",
+      "environment": "匹配基线的 CPU nn 模块 API 测试环境。",
+      "gaps": [
+        "单独归入框架支持，不把测试使用神经网络对象当作算子覆盖。",
+        "公开接口必须明确 strict 的参数形式，避免只按参考补丁签名判题。"
+      ],
+      "disposition": "support_separate",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/143455_set_submodule/task.json",
+        "tasks/pytorch/143455_set_submodule/artifacts/gold.patch",
+        "tasks/pytorch/143455_set_submodule/artifacts/hidden_test.patch"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 7,
+      "task_id": "pytorch__144009__softmax_ilpreduce_size",
+      "task_path": "tasks/pytorch/144009_softmax_ilpreduce_size/task.json",
+      "legacy_public_task_id": "opbench-v07-t0015",
+      "title": "CUDA logarithmic softmax is not normalized for a float64 width-513 input",
+      "views": [
+        "pytorch_v0.7",
+        "pytorch_v0.7_boundary",
+        "pytorch_v0.7_device",
+        "pytorch_v0.7_precision"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 144009,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/144009",
+        "issue_number": 143644,
+        "issue_url": "https://github.com/pytorch/pytorch/issues/143644",
+        "base_commit": "2409b49a33c0ef594d89f9f477d56abad47e65bf",
+        "merge_commit": "TODO"
+      },
+      "gold_patch": "tasks/pytorch/144009_softmax_ilpreduce_size/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/144009_softmax_ilpreduce_size/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "aten/src/ATen/native/cuda/SoftMax.cu"
+      ],
+      "test_target_paths": [
+        "test/test_nn.py"
+      ],
+      "selected_fail_to_pass": [
+        "TestNNDeviceTypeCUDA.test_softmax_double_cuda_float64"
+      ],
+      "selected_pass_to_pass": [
+        "TestNNDeviceTypeCUDA.test_softmax_cuda_float32"
+      ],
+      "selected_test_command": "{python} test/test_nn.py {test}",
+      "legacy_loading_mode": "inplace_build",
+      "scope": "operator",
+      "defect": "CUDA LogSoftmax 的尾部归约长度递减错误使 float64 宽度 513 的输出不满足归一化。",
+      "coverage": [
+        "direct_operator"
+      ],
+      "observation": "真实 CUDA F.log_softmax 后 exp/sum 检查每行和为 1；Gold 修改 SoftMax.cu 两个长度递减位置。",
+      "environment": "完整 CUDA 源码构建与实际 GPU，验证新 SoftMax.cu 已加载。",
+      "gaps": [
+        "只有归一化性质不足以排除输出均匀分布等错误修复，需独立数值参考。",
+        "补足邻近尾尺寸、stride/dim、极值、梯度与相关 softmax 回归，并解释容差。"
+      ],
+      "disposition": "main_candidate_rework",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/144009_softmax_ilpreduce_size/task.json",
+        "tasks/pytorch/144009_softmax_ilpreduce_size/artifacts/gold.patch",
+        "tasks/pytorch/144009_softmax_ilpreduce_size/artifacts/hidden_test.patch"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 8,
+      "task_id": "pytorch__144073__vector_norm_scalar_overflow",
+      "task_path": "tasks/pytorch/144073_vector_norm_scalar_overflow/task.json",
+      "legacy_public_task_id": "opbench-v07-t0016",
+      "title": "Compiled vector_norm overflows on one-element reductions with large negative ord",
+      "views": [
+        "pytorch_v0.7",
+        "pytorch_v0.7_boundary",
+        "pytorch_v0.7_precision"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 144073,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/144073",
+        "issue_number": 143960,
+        "issue_url": "https://github.com/pytorch/pytorch/issues/143960",
+        "base_commit": "06e9deabb623e004eb6024e703a976c5748d51e6",
+        "merge_commit": "957faaadca78ec453d60f2fe986c1191e2e7c5b6"
+      },
+      "gold_patch": "tasks/pytorch/144073_vector_norm_scalar_overflow/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/144073_vector_norm_scalar_overflow/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/_refs/linalg/__init__.py"
+      ],
+      "test_target_paths": [
+        "test/inductor/test_torchinductor.py"
+      ],
+      "selected_fail_to_pass": [
+        "CpuTests.test_norm_constant_overflow_cpu"
+      ],
+      "selected_pass_to_pass": [
+        "CpuTests.test_add_const_int_cpu"
+      ],
+      "selected_test_command": "{python} test/inductor/test_torchinductor.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "operator_integration",
+      "defect": "编译 vector_norm 在所选归约轴只有一个元素且负大 ord 时数值溢出。",
+      "coverage": [
+        "end_to_end"
+      ],
+      "observation": "Inductor 测试 self.common 执行 torch.norm 的两个 dim，输入 shape=(4,1,4)；Gold 对单元素轴做 abs/reshape 特化。",
+      "environment": "匹配基线的 CPU Inductor 和 C++ 编译工具链。",
+      "gaps": [
+        "独立确认 common 驱动真实编译加载修改的 refs；不继承 overlay 假设。",
+        "公开和测试 dim=None/负轴、多轴、keepdim、dtype、零值等适用边界；避免仅一个 shape。"
+      ],
+      "disposition": "main_candidate_rework",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/144073_vector_norm_scalar_overflow/task.json",
+        "tasks/pytorch/144073_vector_norm_scalar_overflow/artifacts/gold.patch",
+        "tasks/pytorch/144073_vector_norm_scalar_overflow/artifacts/hidden_test.patch"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 9,
+      "task_id": "pytorch__147352__storage_offset_overflow",
+      "task_path": "tasks/pytorch/147352_storage_offset_overflow/task.json",
+      "legacy_public_task_id": "opbench-v07-t0017",
+      "title": "torch.as_strided accepts an out-of-range storage offset for a non-empty view",
+      "views": [
+        "pytorch_v0.7",
+        "pytorch_v0.7_boundary"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 147352,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/147352",
+        "issue_number": null,
+        "issue_url": null,
+        "base_commit": "6ccbff1450bb3936636377d3910906f5666ddcfa",
+        "merge_commit": "e64441915fdefdd30ad57edc58d5eaca2ef77470"
+      },
+      "gold_patch": "tasks/pytorch/147352_storage_offset_overflow/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/147352_storage_offset_overflow/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "aten/src/ATen/native/Resize.h"
+      ],
+      "test_target_paths": [
+        "test/op_bench_boundary/test_storage_offset_overflow.py"
+      ],
+      "selected_fail_to_pass": [
+        "BoundaryStorageOverflowTests.test_storage_offset_checked_overflow"
+      ],
+      "selected_pass_to_pass": [
+        "BoundaryStorageOverflowTests.test_normal_and_zero_size_views"
+      ],
+      "selected_test_command": "{python} test/op_bench_boundary/test_storage_offset_overflow.py {test}",
+      "legacy_loading_mode": "inplace_build",
+      "scope": "operator",
+      "defect": "as_strided 非空 view 的极大 storage_offset 字节运算溢出，错误接纳越界视图。",
+      "coverage": [
+        "direct_operator"
+      ],
+      "observation": "直接 as_strided 检查两种大 offset 抛异常、正常视图值、零尺寸视图任意 offset 保留。",
+      "environment": "完整 CPU 源码构建，修改 Resize.h 后实际库重新构建加载。",
+      "gaps": [
+        "补充 itemsize、size/stride 与溢出组合的公开输入域和必要回归。",
+        "控制组需证明失败来自算术边界而非环境；是否固定 overflow 文本需公开依据。"
+      ],
+      "disposition": "main_candidate_rework",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/147352_storage_offset_overflow/task.json",
+        "tasks/pytorch/147352_storage_offset_overflow/artifacts/gold.patch",
+        "tasks/pytorch/147352_storage_offset_overflow/artifacts/hidden_test.patch"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 10,
+      "task_id": "pytorch__160952__bilinear_lazy_check",
+      "task_path": "tasks/pytorch/160952_bilinear_lazy_check/task.json",
+      "legacy_public_task_id": "opbench-v07-t0021",
+      "title": "Bilinear cannot serve as the base of a lazy module with unknown input widths",
+      "views": [
+        "pytorch_v0.7",
+        "pytorch_v0.7_boundary"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 160952,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/160952",
+        "issue_number": 160407,
+        "issue_url": "https://github.com/pytorch/pytorch/issues/160407",
+        "base_commit": "df6073641079c781e66a905e4f15ee49ac257eb2",
+        "merge_commit": "10838530e9625afda0076d573124aaa03251dba6"
+      },
+      "gold_patch": "tasks/pytorch/160952_bilinear_lazy_check/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/160952_bilinear_lazy_check/artifacts/test.patch",
+      "legacy_test_artifact_key": "test_patch",
+      "gold_target_paths": [
+        "torch/nn/modules/linear.py"
+      ],
+      "test_target_paths": [
+        "test/nn/test_bilinear_lazy_op_bench.py"
+      ],
+      "selected_fail_to_pass": [
+        "TestLazyBilinearOpBench.test_lazy_bilinear_can_be_constructed"
+      ],
+      "selected_pass_to_pass": [
+        "TestLazyBilinearOpBench.test_regular_bilinear_still_runs"
+      ],
+      "selected_test_command": "{python} test/nn/test_bilinear_lazy_op_bench.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "operator_integration",
+      "defect": "Bilinear 构造时过早检查未知输入宽度，使基于 LazyModuleMixin 的参数延迟初始化无法到达首次 forward。",
+      "coverage": [
+        "end_to_end"
+      ],
+      "observation": "artifacts.test_patch 实际是 test.patch；隐藏用例构建测试用 LazyBilinear、首次双输入 forward 并检查 shape 与类转换，普通 Bilinear 仅查 shape。",
+      "environment": "匹配基线的 CPU nn/LazyModuleMixin 与 Bilinear 执行环境。",
+      "gaps": [
+        "作为特定算子参数物化至 forward 链路候选，独立审查其与通用模块初始化的边界。",
+        "补数值、参数物化、bias 与第二输入宽度、非法普通初始化的合同；现有 shape 断言不证明计算正确。"
+      ],
+      "disposition": "main_candidate_rework",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/160952_bilinear_lazy_check/task.json",
+        "tasks/pytorch/160952_bilinear_lazy_check/artifacts/gold.patch",
+        "tasks/pytorch/160952_bilinear_lazy_check/artifacts/test.patch"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 11,
+      "task_id": "pytorch__161488__lbfgs_wolfe",
+      "task_path": "tasks/pytorch/161488_lbfgs_wolfe/task.json",
+      "legacy_public_task_id": "opbench-v07-t0022",
+      "title": "LBFGS line search stops before the expected closure-call count",
+      "views": [
+        "pytorch_v0.7"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 161488,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/161488",
+        "issue_number": 91581,
+        "issue_url": "https://github.com/pytorch/pytorch/issues/91581",
+        "base_commit": "6926710adf697e9d2160d43c4a96212dd27ceae0",
+        "merge_commit": "TODO"
+      },
+      "gold_patch": "tasks/pytorch/161488_lbfgs_wolfe/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/161488_lbfgs_wolfe/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/optim/lbfgs.py"
+      ],
+      "test_target_paths": [
+        "test/test_optim.py"
+      ],
+      "selected_fail_to_pass": [
+        "TestOptimRenewedCPU.test_step_iteration_float32_cpu_float32"
+      ],
+      "selected_pass_to_pass": [
+        "TestOptimRenewedCPU.test_non_empty_state_LBFGS_cpu_float32"
+      ],
+      "selected_test_command": "{python} test/test_optim.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "framework_support",
+      "defect": "LBFGS strong-Wolfe 内部迭代预算未接收剩余 max_eval，特定训练 step 的 closure 次数偏离要求。",
+      "coverage": [
+        "framework_api"
+      ],
+      "observation": "实际 Conv2d+BatchNorm forward/backward 用于驱动 optimizer，最终断言 closure 恰好调用 6 次；不测算子实现错误。",
+      "environment": "CPU PyTorch optimizer、确定性训练 fixture。",
+      "gaps": [
+        "归入优化器/训练控制支持集合；题面写明 6 次仍需审查该精确次数是否合理的稳定合同。",
+        "随机模型和输入依赖上游测试初始化，需确认种子与平台稳定性；增加线搜索有效性和状态回归。"
+      ],
+      "disposition": "support_separate",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/161488_lbfgs_wolfe/task.json",
+        "tasks/pytorch/161488_lbfgs_wolfe/artifacts/gold.patch",
+        "tasks/pytorch/161488_lbfgs_wolfe/artifacts/hidden_test.patch"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 12,
+      "task_id": "pytorch__162340__nn_arg_length",
+      "task_path": "tasks/pytorch/162340_nn_arg_length/task.json",
+      "legacy_public_task_id": "opbench-v07-t0023",
+      "title": "torch.nn spatial modules accept iterable arguments with the wrong dimensionality",
+      "views": [
+        "pytorch_v0.7",
+        "pytorch_v0.7_boundary"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 162340,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/162340",
+        "issue_number": 162327,
+        "issue_url": "https://github.com/pytorch/pytorch/issues/162327",
+        "base_commit": "fefc406a3d0d90db0f808419fb88045f90b213cd",
+        "merge_commit": "TODO"
+      },
+      "gold_patch": "tasks/pytorch/162340_nn_arg_length/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/162340_nn_arg_length/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/nn/modules/conv.py",
+        "torch/nn/modules/utils.py"
+      ],
+      "test_target_paths": [
+        "test/nn/test_pooling.py",
+        "test/quantization/core/test_quantized_op.py",
+        "test/test_mps.py",
+        "test/test_nn.py"
+      ],
+      "selected_fail_to_pass": [
+        "TestPoolingNN.test_max_unpool3d_input_check"
+      ],
+      "selected_pass_to_pass": [
+        "TestPoolingNN.test_adaptive_pooling_size_none"
+      ],
+      "selected_test_command": "{python} test/nn/test_pooling.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "operator",
+      "defect": "空间 nn 算子参数 iterable 长度不符时缺少早期校验，单元素展开也不统一。",
+      "coverage": [
+        "direct_operator"
+      ],
+      "observation": "正式选择的 F2P 只将 max_unpool3d 错误长度的异常类型从 RuntimeError 改为 AssertionError；隐藏补丁还改了未被该命令选中的 quantization/MPS/nn 测试。",
+      "environment": "CPU 空间算子前端与相关卷积/池化测试；只有声明额外 MPS/量化范围时才需要对应环境。",
+      "gaps": [
+        "题面要求单元素展开、精确长度接受、其余立即失败，而当前选择器未直接覆盖前两者。",
+        "不应无公开依据强制 AssertionError；需面向实际 API 的维数/生成器/conv-transpose 回归，区分未选中的补丁用例。"
+      ],
+      "disposition": "main_candidate_rework",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/162340_nn_arg_length/task.json",
+        "tasks/pytorch/162340_nn_arg_length/artifacts/gold.patch",
+        "tasks/pytorch/162340_nn_arg_length/artifacts/hidden_test.patch"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 13,
+      "task_id": "pytorch__163961__dataloader_subset",
+      "task_path": "tasks/pytorch/163961_dataloader_subset/task.json",
+      "legacy_public_task_id": "opbench-v07-t0024",
+      "title": "Subset accepts custom single-item access that DataLoader batching will bypass",
+      "views": [
+        "pytorch_v0.7"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 163961,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/163961",
+        "issue_number": 163184,
+        "issue_url": "https://github.com/pytorch/pytorch/issues/163184",
+        "base_commit": "618efe837d71c179a96dc851ca08ebd9b10cae1f",
+        "merge_commit": "TODO"
+      },
+      "gold_patch": "tasks/pytorch/163961_dataloader_subset/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/163961_dataloader_subset/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/utils/data/dataset.py"
+      ],
+      "test_target_paths": [
+        "test/test_dataloader.py"
+      ],
+      "selected_fail_to_pass": [
+        "TestDataLoader.test_subset_override_getitem_requires_getitems"
+      ],
+      "selected_pass_to_pass": [
+        "TestDataLoader.test_subset_custom_getitem"
+      ],
+      "selected_test_command": "{python} test/test_dataloader.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "framework_support",
+      "defect": "Subset 子类只覆写单条访问时，DataLoader 批量访问绕过自定义变换；构造未报告不兼容。",
+      "coverage": [
+        "framework_api"
+      ],
+      "observation": "测试实际实例化 Subset 并遍历 DataLoader，验证变换值及缺少 batched override 的构造异常。",
+      "environment": "CPU DataLoader、Dataset/Subset 基线及测试依赖。",
+      "gaps": [
+        "属于数据加载协议，不并入算子主分。",
+        "审查要求拒绝构造还是兼容回退的公开合同与合理解空间；tuple 变体虽在 patch 中但不在当前选择器。"
+      ],
+      "disposition": "support_separate",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/163961_dataloader_subset/task.json",
+        "tasks/pytorch/163961_dataloader_subset/artifacts/gold.patch",
+        "tasks/pytorch/163961_dataloader_subset/artifacts/hidden_test.patch"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 14,
+      "task_id": "pytorch__176677__export_unused_collection_output",
+      "task_path": "tasks/pytorch/176677_export_unused_collection_output/task.json",
+      "legacy_public_task_id": "opbench-v07-t0037",
+      "title": "Captured program persistence fails when a secondary result is unused",
+      "views": [
+        "pytorch_v0.7"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 176677,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/176677",
+        "issue_number": null,
+        "issue_url": null,
+        "base_commit": "68bcdcb1e16e6fef4c432d48795734b14a51182d",
+        "merge_commit": "a3ca67c68bd98ff74792b105dc8583dc33eef39b"
+      },
+      "gold_patch": "tasks/pytorch/176677_export_unused_collection_output/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/176677_export_unused_collection_output/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/_export/serde/serialize.py"
+      ],
+      "test_target_paths": [
+        "test/op_bench/test_captured_program_unused_result.py"
+      ],
+      "selected_fail_to_pass": [
+        "ExportSerdeScenarioTests.test_unobserved_secondary_value_round_trip"
+      ],
+      "selected_pass_to_pass": [
+        "ExportSerdeScenarioTests.test_all_values_consumed_round_trip"
+      ],
+      "selected_test_command": "{python} test/op_bench/test_captured_program_unused_result.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "operator_integration",
+      "defect": "多结果 custom op 的未消费 Tensor[] 输出没有 FX user 时，export 序列化错误要求 user 节点存在。",
+      "coverage": [
+        "end_to_end"
+      ],
+      "observation": "注册 CPU/Meta custom op，export 后 serialize/deserialize，对部分消费和全部消费分别运行两组输入比较输出。",
+      "environment": "匹配基线的 CPU export/serde/custom op dispatch 环境。",
+      "gaps": [
+        "明确 custom op schema 和 unused 输出的公开合同；参考与loaded共享customop，需保证错误由序列化而非共同实现掩盖。",
+        "补嵌套/空集合及命名碰撞等与该缺陷相关的变体，不机械要求所有输出类型。"
+      ],
+      "disposition": "main_candidate_rework",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/176677_export_unused_collection_output/task.json",
+        "tasks/pytorch/176677_export_unused_collection_output/artifacts/gold.patch",
+        "tasks/pytorch/176677_export_unused_collection_output/artifacts/hidden_test.patch"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 15,
+      "task_id": "pytorch__176922__profiled_kernel_scope",
+      "task_path": "tasks/pytorch/176922_profiled_kernel_scope/task.json",
+      "legacy_public_task_id": "opbench-v07-t0063",
+      "title": "Kernel profiling loses a dynamic launch size between repeated calls",
+      "views": [
+        "pytorch_v0.7",
+        "pytorch_v0.7_boundary",
+        "pytorch_v0.7_device"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 176922,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/176922",
+        "issue_number": null,
+        "issue_url": null,
+        "base_commit": "4924764e65484ed1e9f41c75660e3c7a6de6fb71",
+        "merge_commit": "c722f2a0b33ced20554e48e9e9667db3aceaff21"
+      },
+      "gold_patch": "tasks/pytorch/176922_profiled_kernel_scope/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/176922_profiled_kernel_scope/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/_inductor/codegen/cpp_wrapper_cpu.py"
+      ],
+      "test_target_paths": [
+        "test/op_bench/test_profiled_kernel_scope.py"
+      ],
+      "selected_fail_to_pass": [
+        "ProfiledKernelScopeTests.test_repeated_profiled_call_redeclares_numel",
+        "ProfiledKernelScopeTests.test_three_profiled_scopes_each_receive_a_declaration"
+      ],
+      "selected_pass_to_pass": [
+        "ProfiledKernelScopeTests.test_unprofiled_repeated_call_reuses_declaration",
+        "ProfiledKernelScopeTests.test_distinct_graph_scopes_remain_independent"
+      ],
+      "selected_test_command": "{python} test/op_bench/test_profiled_kernel_scope.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "operator_integration",
+      "defect": "AOT CUDA wrapper 的 profiling 使重复 kernel 调用各在独立 C++ scope，动态 launch size 变量声明却只出现在先前 scope。",
+      "coverage": [
+        "helper",
+        "mock",
+        "generated_text"
+      ],
+      "observation": "object.__new__ 构造不完整 wrapper，SimpleNamespace 参数直接调 _generate_symbolic_call_arg_helper，检查文本 int64_t 声明次数；没有编译包装器或 CUDA 调用。",
+      "environment": "Linux/Windows profiling 支持、AOTInductor C++/CUDA 完整生成和打包环境。",
+      "gaps": [
+        "需真实带 profiling 的重复 kernel 打包、编译、加载、执行及结果验证。",
+        "不能把变量名、声明数量等 helper 结构作为所有正确修复的必需约束；独立审查替代作用域设计。"
+      ],
+      "disposition": "main_candidate_rework",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/176922_profiled_kernel_scope/task.json",
+        "tasks/pytorch/176922_profiled_kernel_scope/artifacts/gold.patch",
+        "tasks/pytorch/176922_profiled_kernel_scope/artifacts/hidden_test.patch"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 16,
+      "task_id": "pytorch__177419__split_reduction_backward_group",
+      "task_path": "tasks/pytorch/177419_split_reduction_backward_group/task.json",
+      "legacy_public_task_id": "opbench-v07-t0045",
+      "title": "Feature-axis splitting destabilizes a fused normalization backward pass",
+      "views": [
+        "pytorch_v0.7",
+        "pytorch_v0.7_boundary",
+        "pytorch_v0.7_device"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 177419,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/177419",
+        "issue_number": null,
+        "issue_url": null,
+        "base_commit": "030360f5f8dc3bdbc1028f68878e2e9fc1decbec",
+        "merge_commit": "910e89b1c31c8e888545fe1364f7e012b3f09218"
+      },
+      "gold_patch": "tasks/pytorch/177419_split_reduction_backward_group/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/177419_split_reduction_backward_group/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/_inductor/scheduler.py"
+      ],
+      "test_target_paths": [
+        "test/op_bench/test_split_reduction_backward.py"
+      ],
+      "selected_fail_to_pass": [
+        "SplitReductionBackwardTests.test_large_feature_split_backward_matches_eager"
+      ],
+      "selected_pass_to_pass": [
+        "SplitReductionBackwardTests.test_unsplit_backward_remains_stable"
+      ],
+      "selected_test_command": "{python} test/op_bench/test_split_reduction_backward.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "operator_integration",
+      "defect": "大 feature reduction 已被 split 后仍尝试混合归约顺序融合，导致 normalization-like 反向编译无效。",
+      "coverage": [
+        "end_to_end"
+      ],
+      "observation": "真实 CUDA torch.compile，比较输入与权重梯度；8472 features 为失败触发，1024 为未拆分回归。",
+      "environment": "CUDA/Inductor/Triton，能触发指定 mix-order/split reduction 的基线与 GPU。",
+      "gaps": [
+        "记录实际 split/mix-order 路径证据，不能仅从 shape 推定经过目标优化。",
+        "增加前向和相关边界覆盖，审查 1e-3 容差与数值参考独立性。"
+      ],
+      "disposition": "main_candidate_rework",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/177419_split_reduction_backward_group/task.json",
+        "tasks/pytorch/177419_split_reduction_backward_group/artifacts/gold.patch",
+        "tasks/pytorch/177419_split_reduction_backward_group/artifacts/hidden_test.patch"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 17,
+      "task_id": "pytorch__177673__compiled_reduction_tiling_fallback",
+      "task_path": "tasks/pytorch/177673_compiled_reduction_tiling_fallback/task.json",
+      "legacy_public_task_id": "opbench-v07-t0031",
+      "title": "CUDA compiled NLL loss fails for a multi-axis reduction",
+      "views": [
+        "pytorch_v0.7",
+        "pytorch_v0.7_device"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 177673,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/177673",
+        "issue_number": null,
+        "issue_url": null,
+        "base_commit": "f97ca50ce1822af045505a6951d562e48d4d9ca5",
+        "merge_commit": "ad0c595cd72900c913e68bceb5c240c71751d6f2"
+      },
+      "gold_patch": "tasks/pytorch/177673_compiled_reduction_tiling_fallback/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/177673_compiled_reduction_tiling_fallback/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/_inductor/codegen/simd.py"
+      ],
+      "test_target_paths": [
+        "test/op_bench/test_inductor_tiling_compatibility.py"
+      ],
+      "selected_fail_to_pass": [
+        "InductorTilingCompatibilityTests.test_incomplete_reduction_tiling_is_rejected_and_falls_back"
+      ],
+      "selected_pass_to_pass": [
+        "InductorTilingCompatibilityTests.test_compatible_reduction_tiling_remains_available"
+      ],
+      "selected_test_command": "{python} test/op_bench/test_inductor_tiling_compatibility.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "operator_integration",
+      "defect": "Inductor 对不完整多轴 reduction tiling 未拒绝，CUDA NLL loss codegen 失败。",
+      "coverage": [
+        "end_to_end",
+        "helper"
+      ],
+      "observation": "先检查 SIMDKernel.is_compatible 的内部布尔判定，再真实编译四维 NLL loss；兼容 tiling 同样有 helper 和 sum 数值回归。",
+      "environment": "CUDA、Inductor/Triton 与 reduction tiling 支持的基线。",
+      "gaps": [
+        "保留实际编译结果作为主断言，内部 is_compatible 返回值是否属于公开合同需审查。",
+        "补全 reduction 参数域与必要梯度/模式范围，确保 fallback 不绕开题面要求的编译执行。"
+      ],
+      "disposition": "main_candidate_rework",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/177673_compiled_reduction_tiling_fallback/task.json",
+        "tasks/pytorch/177673_compiled_reduction_tiling_fallback/artifacts/gold.patch",
+        "tasks/pytorch/177673_compiled_reduction_tiling_fallback/artifacts/hidden_test.patch"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 18,
+      "task_id": "pytorch__177909__repro_relational_inputs",
+      "task_path": "tasks/pytorch/177909_repro_relational_inputs/task.json",
+      "legacy_public_task_id": "opbench-v07-t0051",
+      "title": "Standalone reproducer loses a required relation between sampled inputs",
+      "views": [
+        "pytorch_v0.7",
+        "pytorch_v0.7_boundary"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 177909,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/177909",
+        "issue_number": null,
+        "issue_url": null,
+        "base_commit": "6ff79233bae2e3e1d12ddcb56ef00dc050cfb0c5",
+        "merge_commit": "7b45702237852c500f256730439dddb726ad59c6"
+      },
+      "gold_patch": "tasks/pytorch/177909_repro_relational_inputs/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/177909_repro_relational_inputs/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/_dynamo/repro/after_aot.py"
+      ],
+      "test_target_paths": [
+        "test/op_bench/test_repro_relational_inputs.py"
+      ],
+      "selected_fail_to_pass": [
+        "RelationalReproInputTests.test_runtime_total_reproducer_executes"
+      ],
+      "selected_pass_to_pass": [
+        "RelationalReproInputTests.test_constant_total_reproducer_executes"
+      ],
+      "selected_test_command": "{python} test/op_bench/test_repro_relational_inputs.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "framework_support",
+      "defect": "Dynamo 独立复现脚本生成各输入时丢失 repeat_interleave 的 sum(repeats)=output_size 关系，原图可运行但生成脚本失败。",
+      "coverage": [
+        "end_to_end"
+      ],
+      "observation": "实际 torch.compile 捕获 trace 中 fx_graph_runnable，再以子进程执行脚本并看退出码；验证的是复现工具，原算子执行本来成功。",
+      "environment": "CPU Dynamo/Inductor、日志产物与干净子进程运行环境。",
+      "gaps": [
+        "归入开发/复现工具支持集合，除非重写为实际算子执行缺陷。",
+        "脚本退出成功不足以证明输入关系与结果正确；题面 constant total 不引入修复代码的要求未被测试直接检查。"
+      ],
+      "disposition": "support_separate",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/177909_repro_relational_inputs/task.json",
+        "tasks/pytorch/177909_repro_relational_inputs/artifacts/gold.patch",
+        "tasks/pytorch/177909_repro_relational_inputs/artifacts/hidden_test.patch"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 19,
+      "task_id": "pytorch__178617__dynamic_large_batch_bmm",
+      "task_path": "tasks/pytorch/178617_dynamic_large_batch_bmm/task.json",
+      "legacy_public_task_id": "opbench-v07-t0032",
+      "title": "Compiled BMM fails for a large dynamic CUDA batch",
+      "views": [
+        "pytorch_v0.7",
+        "pytorch_v0.7_boundary",
+        "pytorch_v0.7_device"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 178617,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/178617",
+        "issue_number": null,
+        "issue_url": null,
+        "base_commit": "048c2ae8480abaae0686256bfcd3b24a2fad7f29",
+        "merge_commit": "566c4167d4c01b084e3b2d62f5b0822897c41314"
+      },
+      "gold_patch": "tasks/pytorch/178617_dynamic_large_batch_bmm/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/178617_dynamic_large_batch_bmm/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/_inductor/kernel/bmm.py",
+        "torch/_inductor/kernel/templates/triton_bmm.py.jinja"
+      ],
+      "test_target_paths": [
+        "test/op_bench/test_dynamic_large_batch_bmm.py"
+      ],
+      "selected_fail_to_pass": [
+        "DynamicLargeBatchBmmTests.test_large_dynamic_batch_matches_eager"
+      ],
+      "selected_pass_to_pass": [
+        "DynamicLargeBatchBmmTests.test_ordinary_dynamic_batch_matches_eager"
+      ],
+      "selected_test_command": "{python} test/op_bench/test_dynamic_large_batch_bmm.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "operator_integration",
+      "defect": "动态 batch CUDA BMM 用 grid_y 承载全部 batch，运行时超过网格维度限制造成已有编译 specialization 失败。",
+      "coverage": [
+        "end_to_end"
+      ],
+      "observation": "Triton-only max-autotune torch.compile，先运行 batch=32，再复用到 65537，并与 eager BMM 比较；1024 为回归。",
+      "environment": "CUDA GPU、Triton max-autotune、足够显存和对应 Inductor/Jinja 模板源码。",
+      "gaps": [
+        "证明真实复用了 dynamic specialization 并运行指定 backend，记录显存及编译成本。",
+        "补网格拆分尾部、邻近边界和 stride/shape 适用范围；避免只有大 batch 退出状态而无尾数据验证。"
+      ],
+      "disposition": "main_candidate_rework",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/178617_dynamic_large_batch_bmm/task.json",
+        "tasks/pytorch/178617_dynamic_large_batch_bmm/artifacts/gold.patch",
+        "tasks/pytorch/178617_dynamic_large_batch_bmm/artifacts/hidden_test.patch"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 20,
+      "task_id": "pytorch__178667__semi_structured_cpu_conversion",
+      "task_path": "tasks/pytorch/178667_semi_structured_cpu_conversion/task.json",
+      "legacy_public_task_id": "opbench-v07-t0058",
+      "title": "Semi-structured sparse conversion does not honor the CPU boundary",
+      "views": [
+        "pytorch_v0.7",
+        "pytorch_v0.7_device"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 178667,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/178667",
+        "issue_number": null,
+        "issue_url": null,
+        "base_commit": "4d54f622b91391472c0758f127b720e9acaeab12",
+        "merge_commit": "0139cab1136faa1497b2c3a574a9e107e635d392"
+      },
+      "gold_patch": "tasks/pytorch/178667_semi_structured_cpu_conversion/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/178667_semi_structured_cpu_conversion/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/sparse/_semi_structured_ops.py",
+        "torch/sparse/semi_structured.py"
+      ],
+      "test_target_paths": [
+        "test/op_bench/test_semi_structured_cpu_conversion.py"
+      ],
+      "selected_fail_to_pass": [
+        "SemiStructuredCpuConversionTests.test_positional_cpu_conversion_returns_dense_values",
+        "SemiStructuredCpuConversionTests.test_keyword_cpu_and_dtype_conversion_is_forwarded",
+        "SemiStructuredCpuConversionTests.test_copy_overload_converts_after_densifying",
+        "SemiStructuredCpuConversionTests.test_non_cpu_requests_fail_explicitly",
+        "SemiStructuredCpuConversionTests.test_dispatch_table_uses_conversion_specific_handlers"
+      ],
+      "selected_pass_to_pass": [
+        "SemiStructuredCpuConversionTests.test_dispatch_disabled_dense_behavior_remains_stable"
+      ],
+      "selected_test_command": "{python} test/op_bench/test_semi_structured_cpu_conversion.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "operator_integration",
+      "defect": "半结构化稀疏张量通过 to/_to_copy 转 CPU 时未正确致密化和转发 dtype/参数。",
+      "coverage": [
+        "helper",
+        "mock",
+        "implementation_identity"
+      ],
+      "observation": "以 CPU dense tensor 包装的 SparseDouble 调新 helper，不创建真实 SparseSemiStructuredTensor 或发生 CUDA→CPU 转移；另断言分发表绑定到参考补丁新增函数。",
+      "environment": "支持半结构化稀疏后端的 CUDA GPU和基线、CPU 接收端；真实稀疏对象及其 dispatch。",
+      "gaps": [
+        "必须通过公开转换 API 执行真实稀疏→dense CPU 路径并比较值、dtype、设备及复制语义。",
+        "移除对 semi_sparse_to/_copy 名称和函数对象身份的强制要求；允许不同内部实现。"
+      ],
+      "disposition": "main_candidate_rework",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/178667_semi_structured_cpu_conversion/task.json",
+        "tasks/pytorch/178667_semi_structured_cpu_conversion/artifacts/gold.patch",
+        "tasks/pytorch/178667_semi_structured_cpu_conversion/artifacts/hidden_test.patch"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 21,
+      "task_id": "pytorch__179278__shared_module_reorder",
+      "task_path": "tasks/pytorch/179278_shared_module_reorder/task.json",
+      "legacy_public_task_id": "opbench-v07-t0061",
+      "title": "Export reconstruction fails while ordering a reused child module",
+      "views": [
+        "pytorch_v0.7"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 179278,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/179278",
+        "issue_number": null,
+        "issue_url": null,
+        "base_commit": "f1a9f64dfd40dd4c1a7a6f2a51d670d53545607d",
+        "merge_commit": "fdcd168b127e9a13a4c11b9649f94e004390a6de"
+      },
+      "gold_patch": "tasks/pytorch/179278_shared_module_reorder/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/179278_shared_module_reorder/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/export/unflatten.py"
+      ],
+      "test_target_paths": [
+        "test/op_bench/test_shared_module_reorder.py"
+      ],
+      "selected_fail_to_pass": [
+        "RepeatedChildReorderTests.test_alias_qualified_child_does_not_raise",
+        "RepeatedChildReorderTests.test_shared_identity_survives_reordering",
+        "RepeatedChildReorderTests.test_alias_uses_base_child_order"
+      ],
+      "selected_pass_to_pass": [
+        "RepeatedChildReorderTests.test_ordinary_children_follow_declared_order",
+        "RepeatedChildReorderTests.test_nested_ordinary_children_remain_available"
+      ],
+      "selected_test_command": "{python} test/op_bench/test_shared_module_reorder.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "framework_support",
+      "defect": "export unflatten 重排重复注册的共享子模块时，别名 FQN 不在排序表中导致失败或顺序错误。",
+      "coverage": [
+        "helper",
+        "framework_api"
+      ],
+      "observation": "直接调用 _reorder_submodules，构造含 node@1 的模块树，检查 _modules 顺序和对象身份；没有 export/unflatten 或 forward。",
+      "environment": "CPU export/unflatten 与共享模块测试环境。",
+      "gaps": [
+        "当前合同和断言聚焦模块注册顺序/身份，先列框架支持，不仅因 export 路径就并入主分。",
+        "若主张直接算子执行影响，需给出真实共享模块 export→重建→运行证据和参数/状态关系。"
+      ],
+      "disposition": "support_separate",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/179278_shared_module_reorder/task.json",
+        "tasks/pytorch/179278_shared_module_reorder/artifacts/gold.patch",
+        "tasks/pytorch/179278_shared_module_reorder/artifacts/hidden_test.patch"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 22,
+      "task_id": "pytorch__179333__template_index_width",
+      "task_path": "tasks/pytorch/179333_template_index_width/task.json",
+      "legacy_public_task_id": "opbench-v07-t0040",
+      "title": "A dynamic matrix view overflows template pointer indexing",
+      "views": [
+        "pytorch_v0.7",
+        "pytorch_v0.7_boundary",
+        "pytorch_v0.7_device"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 179333,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/179333",
+        "issue_number": null,
+        "issue_url": null,
+        "base_commit": "6cda861d2effac9556dd439c239baf31da1b02f8",
+        "merge_commit": "c4506f678113c8d80dc0453b3b69962346c57e2c"
+      },
+      "gold_patch": "tasks/pytorch/179333_template_index_width/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/179333_template_index_width/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/_inductor/select_algorithm.py"
+      ],
+      "test_target_paths": [
+        "test/op_bench/test_template_index_width.py"
+      ],
+      "selected_fail_to_pass": [
+        "TemplateIndexWidthTests.test_explicit_wide_index_overrides_small_output_heuristic",
+        "TemplateIndexWidthTests.test_explicit_narrow_index_is_preserved",
+        "TemplateIndexWidthTests.test_kernel_constructor_accepts_computed_index_width"
+      ],
+      "selected_pass_to_pass": [
+        "TemplateIndexWidthTests.test_default_narrow_feature_selection_remains_stable",
+        "TemplateIndexWidthTests.test_default_wide_feature_selection_remains_stable"
+      ],
+      "selected_test_command": "{python} test/op_bench/test_template_index_width.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "operator_integration",
+      "defect": "动态切片矩阵输入 storage offset 超出 32 位，但模板依据小输出选择窄索引，指针运算溢出。",
+      "coverage": [
+        "helper",
+        "mock",
+        "implementation_identity"
+      ],
+      "observation": "object.__new__ 构造 kernel、mock features，只检查 index_dtype 属性和 __init__ 必须有 index_dtype_override；没有实际矩阵乘或大偏移。",
+      "environment": "CUDA Triton 模板编译、动态 shape 和大 offset 可验证的存储/显存方案。",
+      "gaps": [
+        "需要真实动态切片→模板 mm 的值和边界验证，避免只检查类型名。",
+        "题面未规定 index_dtype_override 内部参数名，现有签名断言会拒绝其他合理修复，应删除或改成公开行为证据。"
+      ],
+      "disposition": "main_candidate_rework",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/179333_template_index_width/task.json",
+        "tasks/pytorch/179333_template_index_width/artifacts/gold.patch",
+        "tasks/pytorch/179333_template_index_width/artifacts/hidden_test.patch",
+        "tasks/pytorch/179333_template_index_width/quality/complexity.json",
+        "tasks/pytorch/179333_template_index_width/quality/readmission.json",
+        "tasks/pytorch/179333_template_index_width/quality/prompt.json"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 23,
+      "task_id": "pytorch__179401__fake_unique_aux_metadata",
+      "task_path": "tasks/pytorch/179401_fake_unique_aux_metadata/task.json",
+      "legacy_public_task_id": "opbench-v07-t0029",
+      "title": "Fake tensor unique metadata breaks downstream indexing",
+      "views": [
+        "pytorch_v0.7"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 179401,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/179401",
+        "issue_number": null,
+        "issue_url": null,
+        "base_commit": "b728815ef6438f69c7ea64c3f68b4a90453fa657",
+        "merge_commit": "daa505864efb7086d31dcb7f3f3ed358fa0d0416"
+      },
+      "gold_patch": "tasks/pytorch/179401_fake_unique_aux_metadata/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/179401_fake_unique_aux_metadata/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/_subclasses/fake_impls.py"
+      ],
+      "test_target_paths": [
+        "test/op_bench/test_fake_unique_aux_metadata.py"
+      ],
+      "selected_fail_to_pass": [
+        "FakeUniqueAuxiliaryMetadataTests.test_unique_auxiliary_metadata_supports_index_use"
+      ],
+      "selected_pass_to_pass": [
+        "FakeUniqueAuxiliaryMetadataTests.test_fake_tensor_elementwise_metadata_preserved"
+      ],
+      "selected_test_command": "{python} test/op_bench/test_fake_unique_aux_metadata.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "operator_integration",
+      "defect": "FakeTensor unique 的 inverse/counts 辅助结果继承输入浮点 dtype，导致 export 后索引重建无效。",
+      "coverage": [
+        "end_to_end",
+        "direct_operator_metadata"
+      ],
+      "observation": "真实 export 含 unique 和后续 indexing/index_select 的图，并运行 exported.module 比较值、shape、dtype；含 flatten/dim=0 及 fake elementwise 回归。",
+      "environment": "匹配基线的 CPU FakeTensor、dynamic-output unique 与 export。",
+      "gaps": [
+        "补 return_inverse/counts 关闭时的空输出、整数输入和适用 dim 的元数据合同。",
+        "确认 export 实际经修改的 fake_impls，声明数据依赖输出 shape 的支持范围。"
+      ],
+      "disposition": "main_candidate_rework",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/179401_fake_unique_aux_metadata/task.json",
+        "tasks/pytorch/179401_fake_unique_aux_metadata/artifacts/gold.patch",
+        "tasks/pytorch/179401_fake_unique_aux_metadata/artifacts/hidden_test.patch"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 24,
+      "task_id": "pytorch__179481__identity_optimization_hint",
+      "task_path": "tasks/pytorch/179481_identity_optimization_hint/task.json",
+      "legacy_public_task_id": "opbench-v07-t0057",
+      "title": "Equivalent symbolic size expressions fail to produce an estimate",
+      "views": [
+        "pytorch_v0.7",
+        "pytorch_v0.7_boundary"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 179481,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/179481",
+        "issue_number": null,
+        "issue_url": null,
+        "base_commit": "c07d2221c6172acdeec3658040fd453bdbb51272",
+        "merge_commit": "44a01f77e0461b27be1f10c43e5574f74659cbf1"
+      },
+      "gold_patch": "tasks/pytorch/179481_identity_optimization_hint/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/179481_identity_optimization_hint/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/fx/experimental/_size_hinting.py"
+      ],
+      "test_target_paths": [
+        "test/op_bench/test_identity_optimization_hint.py"
+      ],
+      "selected_fail_to_pass": [
+        "IdentityOptimizationHintTests.test_wrapped_unit_affine_expression_resolves",
+        "IdentityOptimizationHintTests.test_wrapped_scaled_affine_expression_resolves",
+        "IdentityOptimizationHintTests.test_two_runtime_extents_share_one_consistent_hint"
+      ],
+      "selected_pass_to_pass": [
+        "IdentityOptimizationHintTests.test_plain_symbolic_affine_expression_remains_stable",
+        "IdentityOptimizationHintTests.test_concrete_integer_hint_remains_stable"
+      ],
+      "selected_test_command": "{python} test/op_bench/test_identity_optimization_hint.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "uncertain",
+      "defect": "size optimization hint 对含 Identity 的 unbacked SymInt 表达式替换失败，等价代数式无法得到 fallback 整数。",
+      "coverage": [
+        "helper"
+      ],
+      "observation": "直接 SizeVarAllocator.optimization_hint 与 SymPy Identity 表达式比较整数结果；没有具体算子图、编译或执行。",
+      "environment": "CPU SymPy 与匹配基线的 symbolic_shapes/size hint 栈；若进入主集还需实际编译图环境。",
+      "gaps": [
+        "需明确真实算子/编译触发、正确结果或必需执行失败，当前资料不足以区分主集集成缺陷与通用优化启发式支持。",
+        "fallback 常数传播的 helper 合同可作诊断，不足以声称测到算子修复。"
+      ],
+      "disposition": "defer_scope",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/179481_identity_optimization_hint/task.json",
+        "tasks/pytorch/179481_identity_optimization_hint/artifacts/gold.patch",
+        "tasks/pytorch/179481_identity_optimization_hint/artifacts/hidden_test.patch",
+        "tasks/pytorch/179481_identity_optimization_hint/quality/complexity.json",
+        "tasks/pytorch/179481_identity_optimization_hint/quality/readmission.json",
+        "tasks/pytorch/179481_identity_optimization_hint/quality/prompt.json"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 25,
+      "task_id": "pytorch__179686__export_forward_mode_roundtrip",
+      "task_path": "tasks/pytorch/179686_export_forward_mode_roundtrip/task.json",
+      "legacy_public_task_id": "opbench-v07-t0038",
+      "title": "Program capture fails around tangent propagation",
+      "views": [
+        "pytorch_v0.7"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 179686,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/179686",
+        "issue_number": null,
+        "issue_url": null,
+        "base_commit": "b5dc529f30bebe0ff7bd8d4c1ada04fa87a9fb5b",
+        "merge_commit": "83de8b82320df0aec81da546ae46bf880cd4798d"
+      },
+      "gold_patch": "tasks/pytorch/179686_export_forward_mode_roundtrip/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/179686_export_forward_mode_roundtrip/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/_dynamo/trace_rules.py",
+        "torch/_dynamo/variables/ctx_manager.py",
+        "torch/_export/utils.py",
+        "torch/_export/verifier.py",
+        "torch/_functorch/eager_transforms.py",
+        "torch/_functorch/predispatch.py",
+        "torch/autograd/forward_ad.py",
+        "torch/fx/experimental/proxy_tensor.py",
+        "torch/fx/experimental/symbolic_shapes.py"
+      ],
+      "test_target_paths": [
+        "test/op_bench/test_program_forward_ad_roundtrip.py"
+      ],
+      "selected_fail_to_pass": [
+        "ProgramTransformScenarioTests.test_directional_derivative_round_trip",
+        "ProgramTransformScenarioTests.test_nested_directional_derivative_round_trip"
+      ],
+      "selected_pass_to_pass": [
+        "ProgramTransformScenarioTests.test_plain_capture_round_trip"
+      ],
+      "selected_test_command": "{python} test/op_bench/test_program_forward_ad_roundtrip.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "operator_integration",
+      "defect": "forward-mode AD/jvp 的双数和嵌套变换状态未正确进入 export predispatch 图，使捕获失败。",
+      "coverage": [
+        "end_to_end"
+      ],
+      "observation": "真实 export+unflatten 包含 jvp 及嵌套 jvp 的模块，在不同输入下比较 primal/tangent 树输出；普通捕获为回归。",
+      "environment": "CPU 源码与完整一致的 Dynamo、functorch、autograd、export/FX 栈。",
+      "gaps": [
+        "Gold 跨多个子系统，需完整基线加载和相关 eager/变换状态清理回归，不能局部覆盖掩盖依赖。",
+        "补解析导数或独立数值依据，避免 eager 与导出路径共享错误；区分捕获/重建与磁盘 serde。"
+      ],
+      "disposition": "main_candidate_rework",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/179686_export_forward_mode_roundtrip/task.json",
+        "tasks/pytorch/179686_export_forward_mode_roundtrip/artifacts/gold.patch",
+        "tasks/pytorch/179686_export_forward_mode_roundtrip/artifacts/hidden_test.patch"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 26,
+      "task_id": "pytorch__179708__nonfinite_expression_codegen",
+      "task_path": "tasks/pytorch/179708_nonfinite_expression_codegen/task.json",
+      "legacy_public_task_id": "opbench-v07-t0039",
+      "title": "Generated comparison guards contain an undefined non-finite literal",
+      "views": [
+        "pytorch_v0.7",
+        "pytorch_v0.7_boundary"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 179708,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/179708",
+        "issue_number": null,
+        "issue_url": null,
+        "base_commit": "e2584b2554d11fda4998a8d2be6145b0eded5049",
+        "merge_commit": "a253c9b3390f59a930b6576f28943195c511e9d2"
+      },
+      "gold_patch": "tasks/pytorch/179708_nonfinite_expression_codegen/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/179708_nonfinite_expression_codegen/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/utils/_sympy/printers.py"
+      ],
+      "test_target_paths": [
+        "test/op_bench/test_nonfinite_expression_codegen.py"
+      ],
+      "selected_fail_to_pass": [
+        "NonFiniteExpressionPrinterTests.test_python_nan_is_executable",
+        "NonFiniteExpressionPrinterTests.test_cpp_nan_is_executable",
+        "NonFiniteExpressionPrinterTests.test_base_printer_requires_explicit_nan_policy"
+      ],
+      "selected_pass_to_pass": [
+        "NonFiniteExpressionPrinterTests.test_infinity_rendering_remains_stable",
+        "NonFiniteExpressionPrinterTests.test_cpp_infinity_rendering_remains_stable"
+      ],
+      "selected_test_command": "{python} test/op_bench/test_nonfinite_expression_codegen.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "operator_integration",
+      "defect": "SymPy NaN 输出为不可执行的 Python/C++ guard 表达式，非有限值代码生成失败。",
+      "coverage": [
+        "helper",
+        "generated_text"
+      ],
+      "observation": "名称含 is_executable 的测试实际只比较字符串 math.nan 和 std::numeric_limits<double>::quiet_NaN()，未解释执行或编译 C++。",
+      "environment": "CPU Inductor、Python 与 C++ 编译工具链；真实含 NaN 的 guard 生成路径。",
+      "gaps": [
+        "以实际语言执行和 NaN 语义验证替代精确字符串，接受 float('nan') 等合理实现。",
+        "补真实编译比较场景及 inf/-inf 回归，核实 base printer 拒绝是否公开必需合同。"
+      ],
+      "disposition": "main_candidate_rework",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/179708_nonfinite_expression_codegen/task.json",
+        "tasks/pytorch/179708_nonfinite_expression_codegen/artifacts/gold.patch",
+        "tasks/pytorch/179708_nonfinite_expression_codegen/artifacts/hidden_test.patch"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 27,
+      "task_id": "pytorch__179919__padded_output_copy",
+      "task_path": "tasks/pytorch/179919_padded_output_copy/task.json",
+      "legacy_public_task_id": "opbench-v07-t0052",
+      "title": "Aligned compiled output performs a redundant full-buffer copy",
+      "views": [
+        "pytorch_v0.7",
+        "pytorch_v0.7_boundary",
+        "pytorch_v0.7_device"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 179919,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/179919",
+        "issue_number": null,
+        "issue_url": null,
+        "base_commit": "dab4e830a34a548e50d8b9b4c23981e7c3d48957",
+        "merge_commit": "5e344fd391f1d6adab02d794d44cab3f4b5b3744"
+      },
+      "gold_patch": "tasks/pytorch/179919_padded_output_copy/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/179919_padded_output_copy/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/_inductor/ir.py"
+      ],
+      "test_target_paths": [
+        "test/op_bench/test_padded_output_copy.py"
+      ],
+      "selected_fail_to_pass": [
+        "PaddedOutputCopyTests.test_padded_wide_join_reuses_output_storage",
+        "PaddedOutputCopyTests.test_padded_tall_join_reuses_output_storage"
+      ],
+      "selected_pass_to_pass": [
+        "PaddedOutputCopyTests.test_unpadded_join_remains_stable"
+      ],
+      "selected_test_command": "{python} test/op_bench/test_padded_output_copy.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "operator_integration",
+      "defect": "开启 padding 后，已兼容布局的 CUDA concat 输出仍被复制到第二个完整缓冲，数值原本正确。",
+      "coverage": [
+        "end_to_end",
+        "generated_text"
+      ],
+      "observation": "真实 torch.compile 两种 concat shape 比较输出，再 regex 数源码 empty_strided_cuda 调用，强制等于 1；未测真实分配、内存或复制。",
+      "environment": "CUDA Inductor/Triton，支持 padding，并有可信的分配/复制或内存资源测量。",
+      "gaps": [
+        "先确认纳入修复主合同的资源回归依据，还是独立优化任务；不能把优化目标混作数值修复率。",
+        "源码调用计数依赖生成方式且不等于实际 backing allocation，需行为测量、噪声/资源协议及替代解审查。"
+      ],
+      "disposition": "defer_contract",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/179919_padded_output_copy/task.json",
+        "tasks/pytorch/179919_padded_output_copy/artifacts/gold.patch",
+        "tasks/pytorch/179919_padded_output_copy/artifacts/hidden_test.patch"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 28,
+      "task_id": "pytorch__180297__aoti_triton_nonfinite_scalar",
+      "task_path": "tasks/pytorch/180297_aoti_triton_nonfinite_scalar/task.json",
+      "legacy_public_task_id": "opbench-v07-t0036",
+      "title": "AOTInductor cannot package a Triton kernel with a non-finite scalar",
+      "views": [
+        "pytorch_v0.7",
+        "pytorch_v0.7_boundary",
+        "pytorch_v0.7_device"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 180297,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/180297",
+        "issue_number": null,
+        "issue_url": null,
+        "base_commit": "d61bcb257599b8a3830c73d2b1c9fc5517acdc20",
+        "merge_commit": "fff19a7982b604eed2b35b5db005db17d178e15a"
+      },
+      "gold_patch": "tasks/pytorch/180297_aoti_triton_nonfinite_scalar/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/180297_aoti_triton_nonfinite_scalar/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/_inductor/codegen/cpp_wrapper_gpu.py",
+        "torch/_inductor/codegen/wrapper.py"
+      ],
+      "test_target_paths": [
+        "test/op_bench/test_aoti_triton_nonfinite_scalar.py"
+      ],
+      "selected_fail_to_pass": [
+        "AotiTritonNonfiniteScalarTests.test_negative_infinity_threshold_matches_eager"
+      ],
+      "selected_pass_to_pass": [
+        "AotiTritonNonfiniteScalarTests.test_finite_threshold_matches_eager"
+      ],
+      "selected_test_command": "{python} test/op_bench/test_aoti_triton_nonfinite_scalar.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "operator_integration",
+      "defect": "AOTInductor 为用户 Triton kernel 序列化非有限 float 标量时产生无效 C++，包生成失败。",
+      "coverage": [
+        "end_to_end"
+      ],
+      "observation": "实际用户 Triton threshold kernel，经 AOTIRunnerUtil 打包运行，与 eager 比较 -inf 和有限阈值输出、shape、dtype。",
+      "environment": "CUDA、Triton、AOTInductor C++ 打包编译和加载工具链。",
+      "gaps": [
+        "保留真实打包路径及参数传递证据，避免替换 AOT helper 为普通 eager。",
+        "题面说非有限端点，目前只覆盖 -inf；需明确 +inf/NaN 是否范围内并制定对应等价规则。"
+      ],
+      "disposition": "main_candidate_rework",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/180297_aoti_triton_nonfinite_scalar/task.json",
+        "tasks/pytorch/180297_aoti_triton_nonfinite_scalar/artifacts/gold.patch",
+        "tasks/pytorch/180297_aoti_triton_nonfinite_scalar/artifacts/hidden_test.patch"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 29,
+      "task_id": "pytorch__180298__symbolic_failure_probe",
+      "task_path": "tasks/pytorch/180298_symbolic_failure_probe/task.json",
+      "legacy_public_task_id": "opbench-v07-t0049",
+      "title": "Dynamic generated graph is misclassified as a compiler failure",
+      "views": [
+        "pytorch_v0.7",
+        "pytorch_v0.7_boundary"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 180298,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/180298",
+        "issue_number": null,
+        "issue_url": null,
+        "base_commit": "0274ad69c3effaef66b5776db5f752b6cf7d8154",
+        "merge_commit": "6a6780b2b05fe25471d79bfbb2837f71bc68f5a6"
+      },
+      "gold_patch": "tasks/pytorch/180298_symbolic_failure_probe/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/180298_symbolic_failure_probe/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/_dynamo/repro/after_aot.py"
+      ],
+      "test_target_paths": [
+        "test/op_bench/test_symbolic_failure_probe.py"
+      ],
+      "selected_fail_to_pass": [
+        "FailureProbeCompileArgumentTests.test_symbolic_slice_is_not_reported_as_failure",
+        "FailureProbeCompileArgumentTests.test_multiple_symbolic_extents_are_not_reported_as_failure"
+      ],
+      "selected_pass_to_pass": [
+        "FailureProbeCompileArgumentTests.test_real_traced_graph_remains_compilable"
+      ],
+      "selected_test_command": "{python} test/op_bench/test_symbolic_failure_probe.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "framework_support",
+      "defect": "Dynamo 复现验证器将 symbolic FX 图用 concrete args 编译，产生未绑定符号并误报 inductor_fails。",
+      "coverage": [
+        "framework_api",
+        "compile_probe"
+      ],
+      "observation": "make_fx 生成 symbolic/real 图后仅断言 inductor_fails 返回 False；不检查题面所说运行输出 shape 和值，也未验证探针能报告真正失败。",
+      "environment": "CPU Dynamo/Inductor 和 C++ 编译工具链。",
+      "gaps": [
+        "作为编译问题诊断/复现工具支持题单列，原始算子函数本来有效。",
+        "增加可信的已知失败控制，防止恒 False 通过；补实际输出和 real/symbolic 参数关系验证。"
+      ],
+      "disposition": "support_separate",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/180298_symbolic_failure_probe/task.json",
+        "tasks/pytorch/180298_symbolic_failure_probe/artifacts/gold.patch",
+        "tasks/pytorch/180298_symbolic_failure_probe/artifacts/hidden_test.patch"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 30,
+      "task_id": "pytorch__180370__aoti_minimal_arrayref_while_loop",
+      "task_path": "tasks/pytorch/180370_aoti_minimal_arrayref_while_loop/task.json",
+      "legacy_public_task_id": "opbench-v07-t0030",
+      "title": "Minimal-arrayref AOT compilation rejects higher-order loops",
+      "views": [
+        "pytorch_v0.7",
+        "pytorch_v0.7_boundary"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 180370,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/180370",
+        "issue_number": null,
+        "issue_url": null,
+        "base_commit": "9b22041c7a353b59a19becbb51721acc6188b907",
+        "merge_commit": "472d243108ae9abad346b85dd4bb2e89ac39057a"
+      },
+      "gold_patch": "tasks/pytorch/180370_aoti_minimal_arrayref_while_loop/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/180370_aoti_minimal_arrayref_while_loop/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/_inductor/codegen/cpp_wrapper_cpu_array_ref.py"
+      ],
+      "test_target_paths": [
+        "test/op_bench/test_aoti_minimal_arrayref_while_loop.py"
+      ],
+      "selected_fail_to_pass": [
+        "AotiMinimalArrayrefWhileLoopTests.test_minimal_arrayref_while_loops_match_eager"
+      ],
+      "selected_pass_to_pass": [
+        "AotiMinimalArrayrefWhileLoopTests.test_ordinary_abi_parameter_graph_preserved"
+      ],
+      "selected_test_command": "{python} test/op_bench/test_aoti_minimal_arrayref_while_loop.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "operator_integration",
+      "defect": "CPU AOTInductor minimal-arrayref ABI 不支持 while_loop 的 carried/captured tensor 传递，条件与 body 子图代码生成失败。",
+      "coverage": [
+        "end_to_end"
+      ],
+      "observation": "真实 AOTIRunnerUtil 执行含 Linear captured state 和 dynamic/data-dependent loop，与 eager 比较；普通 ABI Linear 为回归。",
+      "environment": "完整 CPU AOTInductor、C++ 编译加载、minimal arrayref 与 stack allocation 支持。",
+      "gaps": [
+        "动态声明只运行一个 batch，需同包多 shape 及零/多迭代、carried状态回归。",
+        "验证打包结果使用指定 ABI 而非回退普通 ABI，说明不支持 stack_output 是否属于公开范围。"
+      ],
+      "disposition": "main_candidate_rework",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/180370_aoti_minimal_arrayref_while_loop/task.json",
+        "tasks/pytorch/180370_aoti_minimal_arrayref_while_loop/artifacts/gold.patch",
+        "tasks/pytorch/180370_aoti_minimal_arrayref_while_loop/artifacts/hidden_test.patch"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 31,
+      "task_id": "pytorch__180471__mapping_shape_metadata",
+      "task_path": "tasks/pytorch/180471_mapping_shape_metadata/task.json",
+      "legacy_public_task_id": "opbench-v07-t0033",
+      "title": "Compiler shape analysis rejects mapping-valued operator metadata",
+      "views": [
+        "pytorch_v0.7",
+        "pytorch_v0.7_boundary"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 180471,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/180471",
+        "issue_number": null,
+        "issue_url": null,
+        "base_commit": "fadf0e3fec66aab175e1eaad9cf07fac2a562cb2",
+        "merge_commit": "96c92e04d03385205381d460e67a8e93978ddc6e"
+      },
+      "gold_patch": "tasks/pytorch/180471_mapping_shape_metadata/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/180471_mapping_shape_metadata/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/fx/experimental/symbolic_shapes.py"
+      ],
+      "test_target_paths": [
+        "test/op_bench/test_mapping_shape_metadata.py"
+      ],
+      "selected_fail_to_pass": [
+        "MappingShapeMetadataTests.test_tensor_mapping_is_accepted",
+        "MappingShapeMetadataTests.test_mapping_keys_and_values_are_traversed"
+      ],
+      "selected_pass_to_pass": [
+        "MappingShapeMetadataTests.test_sequence_metadata_remains_recursive",
+        "MappingShapeMetadataTests.test_scalar_and_tensor_leaves_remain_ignored"
+      ],
+      "selected_test_command": "{python} test/op_bench/test_mapping_shape_metadata.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "uncertain",
+      "defect": "symbolic_shapes 遍历只接受 sequence/若干 leaf，不处理 mapping 的 key/value，命名输出元数据分析报错。",
+      "coverage": [
+        "helper"
+      ],
+      "observation": "直接 _iterate_exprs/free_symbols 处理普通 dict、SymPy 和实张量；没有题面所称编译算子或 immutable mapping 的真实图。",
+      "environment": "CPU symbolic_shapes/FX；进入主集前需具体返回 mapping 的算子与编译路径环境。",
+      "gaps": [
+        "需要具体算子 schema、图元数据来源及真实分析失败，当前不能判断是直接算子链路还是通用容器处理支持。",
+        "题面 immutable mapping 未被实际 dict 之外的对象覆盖；补嵌套 key/value 和真实符号依赖验证。"
+      ],
+      "disposition": "defer_scope",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/180471_mapping_shape_metadata/task.json",
+        "tasks/pytorch/180471_mapping_shape_metadata/artifacts/gold.patch",
+        "tasks/pytorch/180471_mapping_shape_metadata/artifacts/hidden_test.patch",
+        "tasks/pytorch/180471_mapping_shape_metadata/quality/complexity.json",
+        "tasks/pytorch/180471_mapping_shape_metadata/quality/readmission.json",
+        "tasks/pytorch/180471_mapping_shape_metadata/quality/prompt.json"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 32,
+      "task_id": "pytorch__180886__fx_dce_effectful_packet",
+      "task_path": "tasks/pytorch/180886_fx_dce_effectful_packet/task.json",
+      "legacy_public_task_id": "opbench-v07-t0027",
+      "title": "FX graph cleanup drops a call with declared side effects",
+      "views": [
+        "pytorch_v0.7"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 180886,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/180886",
+        "issue_number": null,
+        "issue_url": null,
+        "base_commit": "324a7f79cd4b0ed63a8f6e64f27ce19424551d47",
+        "merge_commit": "5332111c523227c8c0b5fa917455e1173a5ced64"
+      },
+      "gold_patch": "tasks/pytorch/180886_fx_dce_effectful_packet/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/180886_fx_dce_effectful_packet/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/_library/utils.py"
+      ],
+      "test_target_paths": [
+        "test/op_bench/test_fx_dce_effectful_packet.py"
+      ],
+      "selected_fail_to_pass": [
+        "FxDceEffectfulPacketTests.test_effect_marked_packet_survives_dce"
+      ],
+      "selected_pass_to_pass": [
+        "FxDceEffectfulPacketTests.test_unregistered_pure_packet_is_eliminated"
+      ],
+      "selected_test_command": "{python} test/op_bench/test_fx_dce_effectful_packet.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "operator_integration",
+      "defect": "FX DCE 对 OpOverloadPacket 未识别注册副作用，删除未被消费但必须保留的算子调用。",
+      "coverage": [
+        "graph_transform"
+      ],
+      "observation": "真实 custom op 注册、symbolic_trace 和 eliminate_dead_code，检查图中 packet 节点存在/消失；实现返回 clone，没有可观察副作用或最终图执行。",
+      "environment": "CPU FX 与 library effect 注册，匹配基线。",
+      "gaps": [
+        "用可观察的受控副作用验证清理后真实执行语义，不仅数节点。",
+        "同时覆盖 packet/default 的 effect 来源和 pure 删除，避免粗暴保留全部算子。"
+      ],
+      "disposition": "main_candidate_rework",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/180886_fx_dce_effectful_packet/task.json",
+        "tasks/pytorch/180886_fx_dce_effectful_packet/artifacts/gold.patch",
+        "tasks/pytorch/180886_fx_dce_effectful_packet/artifacts/hidden_test.patch"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 33,
+      "task_id": "pytorch__181119__benchmark_alias_storage_v2",
+      "task_path": "tasks/pytorch/181119_benchmark_alias_storage_v2/task.json",
+      "legacy_public_task_id": "opbench-v07-t0034",
+      "title": "Generated performance inputs lose shared storage relationships",
+      "views": [
+        "pytorch_v0.7",
+        "pytorch_v0.7_boundary"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 181119,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/181119",
+        "issue_number": null,
+        "issue_url": null,
+        "base_commit": "4336c9673dcab279b9b07a6df84346fe9d5f3217",
+        "merge_commit": "529282f3dbc57c9e54a2a4a89e3021ef689db9ae"
+      },
+      "gold_patch": "tasks/pytorch/181119_benchmark_alias_storage_v2/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/181119_benchmark_alias_storage_v2/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/_inductor/codegen/wrapper.py"
+      ],
+      "test_target_paths": [
+        "test/op_bench/test_benchmark_alias_storage_v2.py"
+      ],
+      "selected_fail_to_pass": [
+        "BenchmarkAliasStorageTests.test_two_views_reuse_one_generated_storage",
+        "BenchmarkAliasStorageTests.test_three_aliases_share_the_same_generated_storage"
+      ],
+      "selected_pass_to_pass": [
+        "BenchmarkAliasStorageTests.test_independent_inputs_remain_independent",
+        "BenchmarkAliasStorageTests.test_single_input_generation_remains_stable"
+      ],
+      "selected_test_command": "{python} test/op_bench/test_benchmark_alias_storage_v2.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "framework_support",
+      "defect": "生成 benchmark 输入时把同一 storage 上的多个 view 分别分配，破坏共享关系并增大内存。",
+      "coverage": [
+        "helper",
+        "mock",
+        "generated_code_execution"
+      ],
+      "observation": "FakeInput/FakeSizeVars/假 graph 调 wrapper，执行生成 get_args 并检查指针共享；还限制 _shared_storage_0 文本，未运行编译模型 benchmark。",
+      "environment": "CPU benchmark 输入生成与真实 alias-sensitive workload；若宣称 GPU 内存则需对应设备测量。",
+      "gaps": [
+        "作为测量工具支持题单列，不能把修复测量输入当成修复原算子。",
+        "Gold 只保存 shape/stride，生成 as_strided 未传 storage_offset；测试原 view offset=2/10 却不检查重建 offset/重叠关系，需重审参考修复。",
+        "改用行为关系而非生成变量名称/字符串，补多 dtype、相对偏移、空 storage 等公开范围。"
+      ],
+      "disposition": "support_separate",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/181119_benchmark_alias_storage_v2/task.json",
+        "tasks/pytorch/181119_benchmark_alias_storage_v2/artifacts/gold.patch",
+        "tasks/pytorch/181119_benchmark_alias_storage_v2/artifacts/hidden_test.patch",
+        "tasks/pytorch/181119_benchmark_alias_storage_v2/quality/complexity.json",
+        "tasks/pytorch/181119_benchmark_alias_storage_v2/quality/readmission.json",
+        "tasks/pytorch/181119_benchmark_alias_storage_v2/quality/prompt.json"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 34,
+      "task_id": "pytorch__181263__vmap_serde_roundtrip",
+      "task_path": "tasks/pytorch/181263_vmap_serde_roundtrip/task.json",
+      "legacy_public_task_id": "opbench-v07-t0026",
+      "title": "A vectorized exported program cannot survive a save/load round trip",
+      "views": [
+        "pytorch_v0.7"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 181263,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/181263",
+        "issue_number": null,
+        "issue_url": null,
+        "base_commit": "5f18efdecccfcfd875fc306227bfa3e1156571a2",
+        "merge_commit": "88690689a323f7214b09de18010b488b41e0cdea"
+      },
+      "gold_patch": "tasks/pytorch/181263_vmap_serde_roundtrip/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/181263_vmap_serde_roundtrip/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/_export/serde/serialize.py"
+      ],
+      "test_target_paths": [
+        "test/op_bench/test_vmap_serde_roundtrip.py"
+      ],
+      "selected_fail_to_pass": [
+        "VmapSerializationRoundTripTests.test_vmap_roundtrip_preserves_tensor_value"
+      ],
+      "selected_pass_to_pass": [
+        "VmapSerializationRoundTripTests.test_ordinary_roundtrip_preserves_value_and_autograd"
+      ],
+      "selected_test_command": "{python} test/op_bench/test_vmap_serde_roundtrip.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "operator_integration",
+      "defect": "pre-dispatch export 中 vmap wrapper 与普通 tensor metadata 未被 serde 支持，保存/加载失败。",
+      "coverage": [
+        "end_to_end"
+      ],
+      "observation": "真实 _export(pre_dispatch=True)、save/load 并运行 vmap 图比较结果；普通 sin 图检查值和 requires_grad 标志。",
+      "environment": "CPU export/serde/functorch predispatch 一致基线。",
+      "gaps": [
+        "vmap 只用一个一维输入，需不同输入、批维或嵌套适用范围；只查 requires_grad 不能声称梯度值已验证。",
+        "可加解析 vmap 结果以减少 reference 与 candidate 共享变换逻辑的盲点。"
+      ],
+      "disposition": "main_candidate_rework",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/181263_vmap_serde_roundtrip/task.json",
+        "tasks/pytorch/181263_vmap_serde_roundtrip/artifacts/gold.patch",
+        "tasks/pytorch/181263_vmap_serde_roundtrip/artifacts/hidden_test.patch"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 35,
+      "task_id": "pytorch__182101__named_hop_argument_roundtrip",
+      "task_path": "tasks/pytorch/182101_named_hop_argument_roundtrip/task.json",
+      "legacy_public_task_id": "opbench-v07-t0043",
+      "title": "Export round-trip reclassifies named kernel operands as metadata",
+      "views": [
+        "pytorch_v0.7",
+        "pytorch_v0.7_boundary"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 182101,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/182101",
+        "issue_number": null,
+        "issue_url": null,
+        "base_commit": "a5c8eecab3d03a7f154321201fba4609f6939b8b",
+        "merge_commit": "aacace9a6c5dbf0cc8fcb203dd5bbc8d4cd15f00"
+      },
+      "gold_patch": "tasks/pytorch/182101_named_hop_argument_roundtrip/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/182101_named_hop_argument_roundtrip/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/_export/serde/serialize.py"
+      ],
+      "test_target_paths": [
+        "test/op_bench/test_named_hop_argument_roundtrip.py"
+      ],
+      "selected_fail_to_pass": [
+        "NamedHigherOrderArgumentTests.test_named_positional_arguments_keep_order",
+        "NamedHigherOrderArgumentTests.test_named_positional_and_launch_metadata_stay_separate"
+      ],
+      "selected_pass_to_pass": [
+        "NamedHigherOrderArgumentTests.test_legacy_unnamed_positional_argument_remains_supported",
+        "NamedHigherOrderArgumentTests.test_keyword_only_metadata_remains_supported"
+      ],
+      "selected_test_command": "{python} test/op_bench/test_named_hop_argument_roundtrip.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "operator_integration",
+      "defect": "higher-order kernel serde 将带名称的 positional 参数当成 keyword metadata，改变 ABI 参数顺序。",
+      "coverage": [
+        "helper"
+      ],
+      "observation": "手工 NamedArgument 均用整数占位，直接 deserialize_hoo_inputs 并检查 tuple/dict；没有序列化、tensor 参数或 kernel 执行。",
+      "environment": "匹配基线的 export/serde 与真实 higher-order kernel；原始场景若为 Triton 需 CUDA/Triton。",
+      "gaps": [
+        "补真实 export→save/load→kernel 执行，覆盖 tensor、SymInt 与 launch metadata，验证正反两侧。",
+        "测试单独修 deserializer 即可通过但 Gold 还修 serializer，说明当前证据不能证明完整 round trip。"
+      ],
+      "disposition": "main_candidate_rework",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/182101_named_hop_argument_roundtrip/task.json",
+        "tasks/pytorch/182101_named_hop_argument_roundtrip/artifacts/gold.patch",
+        "tasks/pytorch/182101_named_hop_argument_roundtrip/artifacts/hidden_test.patch"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 36,
+      "task_id": "pytorch__182825__lazy_scratch_grid_extent",
+      "task_path": "tasks/pytorch/182825_lazy_scratch_grid_extent/task.json",
+      "legacy_public_task_id": "opbench-v07-t0050",
+      "title": "Lazy CUDA launch under-allocates per-block scratch memory",
+      "views": [
+        "pytorch_v0.7",
+        "pytorch_v0.7_boundary",
+        "pytorch_v0.7_device"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 182825,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/182825",
+        "issue_number": null,
+        "issue_url": null,
+        "base_commit": "b8777a2cc64e21bc425692222c7835417a3a8389",
+        "merge_commit": "ce664085b84edd88b24165156a738ad26dc72e05"
+      },
+      "gold_patch": "tasks/pytorch/182825_lazy_scratch_grid_extent/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/182825_lazy_scratch_grid_extent/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/_inductor/codegen/cpp_wrapper_gpu.py"
+      ],
+      "test_target_paths": [
+        "test/op_bench/test_lazy_scratch_grid_extent.py"
+      ],
+      "selected_fail_to_pass": [
+        "LazyScratchGridTests.test_global_scratch_scales_with_full_launch_grid",
+        "LazyScratchGridTests.test_profile_scratch_scales_with_full_launch_grid"
+      ],
+      "selected_pass_to_pass": [
+        "LazyScratchGridTests.test_scratch_pointers_remain_kernel_arguments",
+        "LazyScratchGridTests.test_zero_scratch_guards_remain_present"
+      ],
+      "selected_test_command": "{python} test/op_bench/test_lazy_scratch_grid_extent.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "operator_integration",
+      "defect": "lazy CUDA wrapper 只按单 CTA scratch 分配，三维 runtime grid 下多个 block 所需总空间不足。",
+      "coverage": [
+        "helper",
+        "mock",
+        "generated_text"
+      ],
+      "observation": "假 Wrapper/DeviceCodegen 调 _generate_lazy_scratch，仅查乘法字符串、参数串和 if 文本；没有实际分配或 kernel。",
+      "environment": "CUDA、Triton lazy compilation、C++ wrapper 编译与可控 scratch 使用 kernel。",
+      "gaps": [
+        "需真实多维 launch 及 global/profile scratch 行为验证，保证分配范围与写入不重叠。",
+        "不能强制 static_cast 或乘法顺序等特定源码形式；补零值、总量溢出/资源不足的适用合同。"
+      ],
+      "disposition": "main_candidate_rework",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/182825_lazy_scratch_grid_extent/task.json",
+        "tasks/pytorch/182825_lazy_scratch_grid_extent/artifacts/gold.patch",
+        "tasks/pytorch/182825_lazy_scratch_grid_extent/artifacts/hidden_test.patch"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 37,
+      "task_id": "pytorch__184624__aoti_shared_dynamic_slice",
+      "task_path": "tasks/pytorch/184624_aoti_shared_dynamic_slice/task.json",
+      "legacy_public_task_id": "opbench-v07-t0042",
+      "title": "AOT packaging fails for a shared dynamic, data-dependent slice",
+      "views": [
+        "pytorch_v0.7",
+        "pytorch_v0.7_boundary",
+        "pytorch_v0.7_device"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 184624,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/184624",
+        "issue_number": null,
+        "issue_url": null,
+        "base_commit": "fb1c65811492887145f2d0dd13879da1751d968e",
+        "merge_commit": "aad2dad9bd90950b1d8ba5c49b2ceb02b97e764d"
+      },
+      "gold_patch": "tasks/pytorch/184624_aoti_shared_dynamic_slice/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/184624_aoti_shared_dynamic_slice/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/_inductor/codegen/cpp_wrapper_cpu.py",
+        "torch/_inductor/codegen/wrapper.py",
+        "torch/_inductor/graph.py",
+        "torch/_subclasses/meta_utils.py"
+      ],
+      "test_target_paths": [
+        "test/op_bench/test_aoti_shared_dynamic_slice.py"
+      ],
+      "selected_fail_to_pass": [
+        "AotiSharedDynamicSliceTests.test_data_dependent_slice_matches_eager"
+      ],
+      "selected_pass_to_pass": [
+        "AotiSharedDynamicSliceTests.test_fixed_offset_slice_matches_eager"
+      ],
+      "selected_test_command": "{python} test/op_bench/test_aoti_shared_dynamic_slice.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "operator_integration",
+      "defect": "多个共享 dynamic dimension 的 CUDA 输入经 data-dependent slice 后，AOT wrapper 的替换符号别名/元数据绑定缺失导致打包失败。",
+      "coverage": [
+        "end_to_end"
+      ],
+      "observation": "真实 AOTIRunnerUtil 打包 Linear 加多个切片，mask nonzero 形成 offset，与 eager 比较；固定 offset 为回归。",
+      "environment": "CUDA AOTInductor、C++ 工具链、动态 shape/MetaConverter 的完整基线栈。",
+      "gaps": [
+        "多文件修复需真实加载一致性证据，不能把 Python overlay 视为完整环境。",
+        "dynamic_shapes 声明但当前只运行 batch=8/一种 mask，应复用同包验证多个合法 batch/offset。"
+      ],
+      "disposition": "main_candidate_rework",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/184624_aoti_shared_dynamic_slice/task.json",
+        "tasks/pytorch/184624_aoti_shared_dynamic_slice/artifacts/gold.patch",
+        "tasks/pytorch/184624_aoti_shared_dynamic_slice/artifacts/hidden_test.patch"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 38,
+      "task_id": "pytorch__185257__cached_output_initialization",
+      "task_path": "tasks/pytorch/185257_cached_output_initialization/task.json",
+      "legacy_public_task_id": "opbench-v07-t0064",
+      "title": "Generated C++ misparses a cached tensor-view output",
+      "views": [
+        "pytorch_v0.7",
+        "pytorch_v0.7_boundary"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 185257,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/185257",
+        "issue_number": null,
+        "issue_url": null,
+        "base_commit": "b6f9631d32f98f750c4905ab53f10963315cae31",
+        "merge_commit": "dbe83be6eea8d06e94505bb43746cd4eda595aec"
+      },
+      "gold_patch": "tasks/pytorch/185257_cached_output_initialization/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/185257_cached_output_initialization/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/_inductor/codegen/cpp_wrapper_cpu_array_ref.py"
+      ],
+      "test_target_paths": [
+        "test/op_bench/test_cached_output_initialization.py"
+      ],
+      "selected_fail_to_pass": [
+        "CachedOutputInitializationTests.test_tensor_interface_constructor_expression_uses_braces",
+        "CachedOutputInitializationTests.test_raw_array_interface_constructor_expression_uses_braces"
+      ],
+      "selected_pass_to_pass": [
+        "CachedOutputInitializationTests.test_null_output_remains_ignored",
+        "CachedOutputInitializationTests.test_handle_release_branch_remains_emitted"
+      ],
+      "selected_test_command": "{python} test/op_bench/test_cached_output_initialization.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "operator_integration",
+      "defect": "CPU AOT arrayref wrapper 对 constructor-expression 输出的 thread-local cache 使用圆括号，C++ 将其解析为函数声明。",
+      "coverage": [
+        "helper",
+        "mock",
+        "generated_text"
+      ],
+      "observation": "object.__new__ wrapper 和 FakeGraph 生成返回代码，仅 regex 要求花括号，以及 release/null 字符串；未编译 C++ 或执行 dtype view。",
+      "environment": "CPU AOTInductor C++ 编译加载，tensor-return 与 raw arrayref 两种接口。",
+      "gaps": [
+        "通过真实 dtype-reinterpreted view 图生成、编译、运行验证缓存输出和生命周期。",
+        "不要强制 braces 这一种修复形式；可接受其他无歧义定义，null/handle release 应以行为验证。"
+      ],
+      "disposition": "main_candidate_rework",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/185257_cached_output_initialization/task.json",
+        "tasks/pytorch/185257_cached_output_initialization/artifacts/gold.patch",
+        "tasks/pytorch/185257_cached_output_initialization/artifacts/hidden_test.patch"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 39,
+      "task_id": "pytorch__185314__functional_export_argument_collision",
+      "task_path": "tasks/pytorch/185314_functional_export_argument_collision/task.json",
+      "legacy_public_task_id": "opbench-v07-t0053",
+      "title": "Graph capture rejects valid operator parameter names",
+      "views": [
+        "pytorch_v0.7"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 185314,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/185314",
+        "issue_number": null,
+        "issue_url": null,
+        "base_commit": "277d9b355a190b3e495f82b3f151d1ea1f4de338",
+        "merge_commit": "b6bc2b4c9519c0e63911511bfc9c2b8ce384875e"
+      },
+      "gold_patch": "tasks/pytorch/185314_functional_export_argument_collision/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/185314_functional_export_argument_collision/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/_dynamo/functional_export.py"
+      ],
+      "test_target_paths": [
+        "test/op_bench/test_functional_export_argument_collision.py"
+      ],
+      "selected_fail_to_pass": [
+        "FunctionalExportArgumentTests.test_nonleading_legal_name_capture_executes",
+        "FunctionalExportArgumentTests.test_neighboring_name_variants_generate_valid_signature"
+      ],
+      "selected_pass_to_pass": [
+        "FunctionalExportArgumentTests.test_conventional_schema_capture_remains_stable"
+      ],
+      "selected_test_command": "{python} test/op_bench/test_functional_export_argument_collision.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "operator_integration",
+      "defect": "functional export 为合法算子 schema 生成 Python forward 时，非首位 self 与 receiver 重名导致 SyntaxError。",
+      "coverage": [
+        "end_to_end",
+        "helper",
+        "generated_code_execution"
+      ],
+      "observation": "真实捕获 aten.where.self 和 cat 并运行比较；相邻 self/self_ 名称 case 只 compile 生成函数定义。",
+      "environment": "CPU Dynamo functional_export/FX 基线与真实 operator dispatch。",
+      "gaps": [
+        "相邻名称 case 仅验证语法，需验证位置参数绑定值，避免重命名后正文仍取错参数。",
+        "题面应充分指明合法 schema/位置参数义务，补合理名称冲突及多次输入回归。"
+      ],
+      "disposition": "main_candidate_rework",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/185314_functional_export_argument_collision/task.json",
+        "tasks/pytorch/185314_functional_export_argument_collision/artifacts/gold.patch",
+        "tasks/pytorch/185314_functional_export_argument_collision/artifacts/hidden_test.patch"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 40,
+      "task_id": "pytorch__186008__opaque_partition_cost_policy",
+      "task_path": "tasks/pytorch/186008_opaque_partition_cost_policy/task.json",
+      "legacy_public_task_id": "opbench-v07-t0059",
+      "title": "Opaque graph values lack a safe partition-cost policy",
+      "views": [
+        "pytorch_v0.7",
+        "pytorch_v0.7_boundary"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 186008,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/186008",
+        "issue_number": null,
+        "issue_url": null,
+        "base_commit": "065e261caa192bbc8c9acf0d39acd6629abddd4f",
+        "merge_commit": "42b23c1107347e293c45f29aa5eb24faf29493bb"
+      },
+      "gold_patch": "tasks/pytorch/186008_opaque_partition_cost_policy/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/186008_opaque_partition_cost_policy/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/_functorch/config.py",
+        "torch/_functorch/partitioners.py"
+      ],
+      "test_target_paths": [
+        "test/op_bench/test_opaque_partition_cost_policy.py"
+      ],
+      "selected_fail_to_pass": [
+        "OpaquePartitionCostPolicyTests.test_default_policy_refuses_an_unsound_size_guess",
+        "OpaquePartitionCostPolicyTests.test_explicit_opt_in_allows_zero_cost_estimation",
+        "OpaquePartitionCostPolicyTests.test_opt_in_is_scoped_and_restores_safe_default"
+      ],
+      "selected_pass_to_pass": [
+        "OpaquePartitionCostPolicyTests.test_tensor_cost_estimation_remains_exact",
+        "OpaquePartitionCostPolicyTests.test_tensor_collection_cost_estimation_remains_additive",
+        "OpaquePartitionCostPolicyTests.test_void_returning_operation_remains_zero_cost"
+      ],
+      "selected_test_command": "{python} test/op_bench/test_opaque_partition_cost_policy.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "uncertain",
+      "defect": "AOT activation partitioner 无法估算 opaque ScriptObject 持有 tensor 的内存，需安全拒绝与明确 opt-in 零成本策略。",
+      "coverage": [
+        "helper",
+        "mock",
+        "implementation_identity"
+      ],
+      "observation": "手工给 abs FX 节点附 FakeScriptObject，直接调 _size_of；要求 Gold 新配置 unsafe_treat_script_objects_as_zero_size 及报错片段，没有真实分区/算子图。",
+      "environment": "CPU AOTAutograd partitioner、真实/假 ScriptObject；若实际问题涉及 FBGEMM 则需对应 custom class/kernel 环境。",
+      "gaps": [
+        "当前是代价策略接口扩展，缺真实可复现算子编译/执行结果；需先明确主范围或独立支持定位。",
+        "公开题面未给新配置名，但测试强制该名字，需公开稳定 API 或接受等价接口；默认安全与 opt-in 风险是合同而非特定实现。"
+      ],
+      "disposition": "defer_scope",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/186008_opaque_partition_cost_policy/task.json",
+        "tasks/pytorch/186008_opaque_partition_cost_policy/artifacts/gold.patch",
+        "tasks/pytorch/186008_opaque_partition_cost_policy/artifacts/hidden_test.patch",
+        "tasks/pytorch/186008_opaque_partition_cost_policy/quality/complexity.json",
+        "tasks/pytorch/186008_opaque_partition_cost_policy/quality/readmission.json",
+        "tasks/pytorch/186008_opaque_partition_cost_policy/quality/prompt.json"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 41,
+      "task_id": "pytorch__186481__scatter_rewrite_dtype",
+      "task_path": "tasks/pytorch/186481_scatter_rewrite_dtype/task.json",
+      "legacy_public_task_id": "opbench-v07-t0041",
+      "title": "Compiled scalar scatter widens a low-precision destination",
+      "views": [
+        "pytorch_v0.7",
+        "pytorch_v0.7_boundary"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 186481,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/186481",
+        "issue_number": null,
+        "issue_url": null,
+        "base_commit": "adf92da677396bbcf36340f94311a5c834a7f232",
+        "merge_commit": "1d07ace8e29fa115d49ce7150df8aed7505fbeb4"
+      },
+      "gold_patch": "tasks/pytorch/186481_scatter_rewrite_dtype/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/186481_scatter_rewrite_dtype/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/_inductor/fx_passes/joint_graph.py"
+      ],
+      "test_target_paths": [
+        "test/op_bench/test_scatter_rewrite_dtype.py"
+      ],
+      "selected_fail_to_pass": [
+        "ScatterRewriteDtypeTests.test_float16_scatter_preserves_source_dtype",
+        "ScatterRewriteDtypeTests.test_bfloat16_scatter_preserves_source_dtype"
+      ],
+      "selected_pass_to_pass": [
+        "ScatterRewriteDtypeTests.test_float32_scatter_remains_stable",
+        "ScatterRewriteDtypeTests.test_eager_low_precision_scatter_remains_stable"
+      ],
+      "selected_test_command": "{python} test/op_bench/test_scatter_rewrite_dtype.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "operator_integration",
+      "defect": "const tensor 的 scalar scatter 被改写为 where 后，Python 标量提升使 float16/bfloat16 输出变为 float32。",
+      "coverage": [
+        "helper",
+        "mock",
+        "direct_operator"
+      ],
+      "observation": "CaptureMatch.replace_by_example 直接执行 rewrite 函数，与 eager scatter 比较 dtype/值；未运行 torch.compile 或真实 pattern 匹配。",
+      "environment": "CPU Inductor joint graph 及 C++ 编译工具链，或明确声明对应设备的真实编译配置。",
+      "gaps": [
+        "补 torch.compile fill→scatter→下游运算的端到端路径与两种低精度、float32 回归。",
+        "验证真实 pattern 被触发，说明 scalar 转换与舍入参考；helper 结果不能代表全链路修复。"
+      ],
+      "disposition": "main_candidate_rework",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/186481_scatter_rewrite_dtype/task.json",
+        "tasks/pytorch/186481_scatter_rewrite_dtype/artifacts/gold.patch",
+        "tasks/pytorch/186481_scatter_rewrite_dtype/artifacts/hidden_test.patch"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 42,
+      "task_id": "pytorch__186993__large_guard_materialization",
+      "task_path": "tasks/pytorch/186993_large_guard_materialization/task.json",
+      "legacy_public_task_id": "opbench-v07-t0062",
+      "title": "Export reconstruction crashes on a very large shape guard",
+      "views": [
+        "pytorch_v0.7",
+        "pytorch_v0.7_boundary"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 186993,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/186993",
+        "issue_number": null,
+        "issue_url": null,
+        "base_commit": "a4097e577fe5d1e21dfe2fa8c36af3fdf8854e34",
+        "merge_commit": "083e2617b8ee20b66def9e05dfcee5be84af623a"
+      },
+      "gold_patch": "tasks/pytorch/186993_large_guard_materialization/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/186993_large_guard_materialization/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/export/_unlift.py"
+      ],
+      "test_target_paths": [
+        "test/op_bench/test_large_guard_materialization.py"
+      ],
+      "selected_fail_to_pass": [
+        "LargeGuardMaterializationTests.test_codegen_survives_pretty_print_recursion",
+        "LargeGuardMaterializationTests.test_multiple_runtime_guards_survive_pretty_print_recursion"
+      ],
+      "selected_pass_to_pass": [
+        "LargeGuardMaterializationTests.test_normal_guard_keeps_validation_semantics",
+        "LargeGuardMaterializationTests.test_empty_guard_set_remains_callable"
+      ],
+      "selected_test_command": "{python} test/op_bench/test_large_guard_materialization.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "operator_integration",
+      "defect": "export materialization 对深层 shape guard 进行 AST pretty-print 时 RecursionError，阻止生成可运行模块。",
+      "coverage": [
+        "helper",
+        "mock",
+        "generated_code_execution"
+      ],
+      "observation": "mock ast.unparse 一律抛 RecursionError，再生成简单 guards 并调用检查有效/无效参数；额外要求 warning 含固定片段。",
+      "environment": "CPU export/unlift、实际大动态 shape graph 和对应 Python AST 实现。",
+      "gaps": [
+        "补真实大型 guard 触发及 exported.module 执行，确认该限制不是只模拟错误分支。",
+        "warning 内容是否必需应公开；替代非递归规范化也可能正确，不应必须抛 warning。"
+      ],
+      "disposition": "main_candidate_rework",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/186993_large_guard_materialization/task.json",
+        "tasks/pytorch/186993_large_guard_materialization/artifacts/gold.patch",
+        "tasks/pytorch/186993_large_guard_materialization/artifacts/hidden_test.patch"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 43,
+      "task_id": "pytorch__187863__nested_script_prepare",
+      "task_path": "tasks/pytorch/187863_nested_script_prepare/task.json",
+      "legacy_public_task_id": "opbench-v07-t0056",
+      "title": "Nesting a precompiled module rejects an ignored live submodule",
+      "views": [
+        "pytorch_v0.7"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 187863,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/187863",
+        "issue_number": null,
+        "issue_url": null,
+        "base_commit": "71519a98182ddc5bfd839397baa409e498460497",
+        "merge_commit": "4a8a16bb1524a74e0b670017ce7f9f27996c8b3a"
+      },
+      "gold_patch": "tasks/pytorch/187863_nested_script_prepare/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/187863_nested_script_prepare/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/jit/_script.py"
+      ],
+      "test_target_paths": [
+        "test/op_bench/test_nested_script_prepare.py"
+      ],
+      "selected_fail_to_pass": [
+        "AlreadyScriptedPrepareTests.test_scripted_child_with_ignored_leaf_can_be_nested",
+        "AlreadyScriptedPrepareTests.test_two_scripted_children_with_ignored_leaves_can_be_nested"
+      ],
+      "selected_pass_to_pass": [
+        "AlreadyScriptedPrepareTests.test_plain_scripted_child_can_still_be_nested",
+        "AlreadyScriptedPrepareTests.test_unscripted_child_is_prepared_normally"
+      ],
+      "selected_test_command": "{python} test/op_bench/test_nested_script_prepare.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "framework_support",
+      "defect": "二次 TorchScript 转换递归准备已经 scripted 的子模块，尝试重新赋值其 ignored eager 子模块而失败。",
+      "coverage": [
+        "end_to_end",
+        "framework_api"
+      ],
+      "observation": "真实 script 嵌套 IgnoredLeaf，script 分支只返回 zeros_like；普通 ReLU 脚本为回归。缺陷与模块准备/注册有关，非特定算子算法。",
+      "environment": "CPU TorchScript 与 Module/ScriptModule 递归准备环境。",
+      "gaps": [
+        "列框架支持；若申请主集需说明特定算子状态或执行合同的直接关系。",
+        "测试只证明 ignored 子模块保持可登记和脚本输出，需审查 eager-only 对象身份/状态保留的实际要求。"
+      ],
+      "disposition": "support_separate",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/187863_nested_script_prepare/task.json",
+        "tasks/pytorch/187863_nested_script_prepare/artifacts/gold.patch",
+        "tasks/pytorch/187863_nested_script_prepare/artifacts/hidden_test.patch"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 44,
+      "task_id": "pytorch__188278__shared_dynamic_extent_proxy",
+      "task_path": "tasks/pytorch/188278_shared_dynamic_extent_proxy/task.json",
+      "legacy_public_task_id": "opbench-v07-t0046",
+      "title": "Dynamic full reduction fails when dimensions share one extent",
+      "views": [
+        "pytorch_v0.7",
+        "pytorch_v0.7_boundary"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 188278,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/188278",
+        "issue_number": null,
+        "issue_url": null,
+        "base_commit": "db23bc386f9a6c12170415efbf429762bfcd3285",
+        "merge_commit": "4e5d6a25fdd898a3500ec0a9f75c09522b64ed4f"
+      },
+      "gold_patch": "tasks/pytorch/188278_shared_dynamic_extent_proxy/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/188278_shared_dynamic_extent_proxy/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/fx/experimental/proxy_tensor.py"
+      ],
+      "test_target_paths": [
+        "test/op_bench/test_shared_dynamic_extent_proxy.py"
+      ],
+      "selected_fail_to_pass": [
+        "SharedDynamicExtentProxyTests.test_square_extent_is_rebuilt_without_existing_output",
+        "SharedDynamicExtentProxyTests.test_cube_extent_registers_an_executable_graph"
+      ],
+      "selected_pass_to_pass": [
+        "SharedDynamicExtentProxyTests.test_distinct_extent_product_remains_rebuildable",
+        "SharedDynamicExtentProxyTests.test_affine_extent_remains_rebuildable"
+      ],
+      "selected_test_command": "{python} test/op_bench/test_shared_dynamic_extent_proxy.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "operator_integration",
+      "defect": "相等动态维度的乘积被 SymPy 规范成 Pow，proxy expression builder 没有 pow_by_natural handler，无法重建 reduction numel。",
+      "coverage": [
+        "helper",
+        "graph_transform"
+      ],
+      "observation": "手工构建 symbolic tracker，平方 case 检查符号相等、立方 case 执行 FX 整数图得 54；没有实际 tensor full reduction 或 torch.compile。",
+      "environment": "CPU Dynamo/FX/Inductor 及 C++ 编译，能保持共享动态维度的真实 reduction 图。",
+      "gaps": [
+        "补题面所述 equal dynamic dimensions 的 fullgraph reduction，多合法 shape、数值与 metadata 验证。",
+        "手工 tracker 的内部结构不应成为合法补丁约束；共享 symbol 的真实来源需记录。"
+      ],
+      "disposition": "main_candidate_rework",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/188278_shared_dynamic_extent_proxy/task.json",
+        "tasks/pytorch/188278_shared_dynamic_extent_proxy/artifacts/gold.patch",
+        "tasks/pytorch/188278_shared_dynamic_extent_proxy/artifacts/hidden_test.patch"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 45,
+      "task_id": "pytorch__188485__undefined_tensor_boxing",
+      "task_path": "tasks/pytorch/188485_undefined_tensor_boxing/task.json",
+      "legacy_public_task_id": "opbench-v07-t0060",
+      "title": "Compiled fallback loses the type of an absent required tensor",
+      "views": [
+        "pytorch_v0.7"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 188485,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/188485",
+        "issue_number": null,
+        "issue_url": null,
+        "base_commit": "57f6c965b61451ceb498678f3035084fe8cb4e38",
+        "merge_commit": "19b0a20f74c3282da68583ba384a639fc86fdaa4"
+      },
+      "gold_patch": "tasks/pytorch/188485_undefined_tensor_boxing/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/188485_undefined_tensor_boxing/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/_inductor/codegen/cpp_wrapper_cpu.py"
+      ],
+      "test_target_paths": [
+        "test/op_bench/test_undefined_tensor_boxing.py"
+      ],
+      "selected_fail_to_pass": [
+        "UndefinedTensorBoxingTests.test_absent_required_tensor_uses_undefined_tensor_sentinel",
+        "UndefinedTensorBoxingTests.test_absent_required_tensor_between_scalars_is_typed"
+      ],
+      "selected_pass_to_pass": [
+        "UndefinedTensorBoxingTests.test_absent_optional_tensor_remains_none",
+        "UndefinedTensorBoxingTests.test_present_required_tensor_keeps_tensor_handle_path",
+        "UndefinedTensorBoxingTests.test_non_tensor_none_remains_untyped_none"
+      ],
+      "selected_test_command": "{python} test/op_bench/test_undefined_tensor_boxing.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "operator_integration",
+      "defect": "compiled custom op fallback 将 required Tensor 位上的缺席值装箱为无类型 None，未保留 undefined Tensor 哨兵。",
+      "coverage": [
+        "helper",
+        "mock",
+        "generated_text"
+      ],
+      "observation": "MagicMock graph、手工 raw_args 与 schema 调 wrapper，检查 c10::IValue(at::Tensor()) 等输出文本；没有注册/运行实际 fallback 实现或 C++ unbox。",
+      "environment": "CPU C++ wrapper 编译与真实 custom op dispatch/decomposition，必要的 C++ 扩展工具链。",
+      "gaps": [
+        "真实缺席 required Tensor、optional Tensor、标量混合的编译调用需执行并与 eager 比较。",
+        "以类型/行为判定替代具体 IValue 字符串与 dispatch_stack_0 名称，验证候选确实进入 fallback。"
+      ],
+      "disposition": "main_candidate_rework",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/188485_undefined_tensor_boxing/task.json",
+        "tasks/pytorch/188485_undefined_tensor_boxing/artifacts/gold.patch",
+        "tasks/pytorch/188485_undefined_tensor_boxing/artifacts/hidden_test.patch"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 46,
+      "task_id": "pytorch__188575__inference_memo_descriptor_v2",
+      "task_path": "tasks/pytorch/188575_inference_memo_descriptor_v2/task.json",
+      "legacy_public_task_id": "opbench-v07-t0044",
+      "title": "Inference fake tensors lose a reused symbolic result",
+      "views": [
+        "pytorch_v0.7",
+        "pytorch_v0.7_boundary"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 188575,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/188575",
+        "issue_number": null,
+        "issue_url": null,
+        "base_commit": "14c2be6563899240a522d14383e76b49c8c9d028",
+        "merge_commit": "b69604df78e08aecf64093ce5195b1e683f7bac3"
+      },
+      "gold_patch": "tasks/pytorch/188575_inference_memo_descriptor_v2/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/188575_inference_memo_descriptor_v2/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/_subclasses/fake_tensor.py"
+      ],
+      "test_target_paths": [
+        "test/op_bench/test_inference_memo_descriptor_v2.py"
+      ],
+      "selected_fail_to_pass": [
+        "InferenceMemoDescriptorTests.test_inference_value_is_stored_and_retrieved",
+        "InferenceMemoDescriptorTests.test_inference_value_can_be_updated_in_same_epoch"
+      ],
+      "selected_pass_to_pass": [
+        "InferenceMemoDescriptorTests.test_normal_value_tracks_version_counter",
+        "InferenceMemoDescriptorTests.test_epoch_change_invalidates_value",
+        "InferenceMemoDescriptorTests.test_explicit_clear_remains_stable"
+      ],
+      "selected_test_command": "{python} test/op_bench/test_inference_memo_descriptor_v2.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "operator_integration",
+      "defect": "inference FakeTensor 因无普通版本计数而不保存 symbolic memo，同 mask 索引重复产生不相关输出长度符号。",
+      "coverage": [
+        "helper",
+        "mock"
+      ],
+      "observation": "MemoHolder 假对象与 SimpleNamespace fake_mode 直接测试 descriptor 存取；没有 FakeTensor、bool mask 或真实 inference_mode。",
+      "environment": "CPU FakeTensor、inference_mode、symbolic shape 与 masking/export/compile 真实链路。",
+      "gaps": [
+        "补真实共享 mask 推导相同长度并完成下游运算的场景。",
+        "inference 对象的 epoch/clear 也需验证；当前 epoch/clear 控制只测 normal holder，且 holder 人工有 _version。"
+      ],
+      "disposition": "main_candidate_rework",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/188575_inference_memo_descriptor_v2/task.json",
+        "tasks/pytorch/188575_inference_memo_descriptor_v2/artifacts/gold.patch",
+        "tasks/pytorch/188575_inference_memo_descriptor_v2/artifacts/hidden_test.patch"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 47,
+      "task_id": "pytorch__188862__compiled_bool_minmax",
+      "task_path": "tasks/pytorch/188862_compiled_bool_minmax/task.json",
+      "legacy_public_task_id": "opbench-v07-t0028",
+      "title": "Compiled boolean minimum and maximum fail on CPU",
+      "views": [
+        "pytorch_v0.7"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 188862,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/188862",
+        "issue_number": 188230,
+        "issue_url": "https://github.com/pytorch/pytorch/issues/188230",
+        "base_commit": "a7c0766a73e2bb496f13aa59652d4d7f3192d538",
+        "merge_commit": "3f859bc06a3e6479a17805ae36071265acd5f1e4"
+      },
+      "gold_patch": "tasks/pytorch/188862_compiled_bool_minmax/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/188862_compiled_bool_minmax/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/_inductor/index_propagation.py",
+        "torch/utils/_sympy/value_ranges.py"
+      ],
+      "test_target_paths": [
+        "test/op_bench/test_compiled_bool_minmax.py"
+      ],
+      "selected_fail_to_pass": [
+        "CompiledBoolMinMaxTests.test_boolean_minimum_maximum_match_eager"
+      ],
+      "selected_pass_to_pass": [
+        "CompiledBoolMinMaxTests.test_floating_minimum_maximum_match_eager"
+      ],
+      "selected_test_command": "{python} test/op_bench/test_compiled_bool_minmax.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "operator_integration",
+      "defect": "CPU Inductor 的 boolean minimum/maximum index propagation/value ranges 用数值 min/max 规则，编译内部 bool 临时值失败。",
+      "coverage": [
+        "end_to_end"
+      ],
+      "observation": "真实 fullgraph compile；内部 empty_like(bool) 只查 shape/dtype，初始化 left/right 覆盖四种真值并精确比较，另测 float64。",
+      "environment": "CPU Inductor 与匹配基线的 index_propagation、SymPy value_ranges，C++ 工具链。",
+      "gaps": [
+        "未初始化 bool 的数值本来不可比较，保留其仅作编译/metadata 触发，不能宣称验证该输出数值。",
+        "应寻找可控初始化的同路径触发或证明 uninitialized 状态不会引入平台不稳定；补 dtype/shape 适用范围。"
+      ],
+      "disposition": "main_candidate_rework",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/188862_compiled_bool_minmax/task.json",
+        "tasks/pytorch/188862_compiled_bool_minmax/artifacts/gold.patch",
+        "tasks/pytorch/188862_compiled_bool_minmax/artifacts/hidden_test.patch"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 48,
+      "task_id": "pytorch__188907__autotune_failure_resource_lifetime",
+      "task_path": "tasks/pytorch/188907_autotune_failure_resource_lifetime/task.json",
+      "legacy_public_task_id": "opbench-v07-t0054",
+      "title": "Autotuning retains caller resources after failed candidates",
+      "views": [
+        "pytorch_v0.7",
+        "pytorch_v0.7_device"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 188907,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/188907",
+        "issue_number": null,
+        "issue_url": null,
+        "base_commit": "c24fd660db95111ebffbaa671208f70a7bb4d30e",
+        "merge_commit": "77b1231acb2aa5e8436e59588a26aa46d1d23b71"
+      },
+      "gold_patch": "tasks/pytorch/188907_autotune_failure_resource_lifetime/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/188907_autotune_failure_resource_lifetime/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/_inductor/runtime/triton_heuristics.py"
+      ],
+      "test_target_paths": [
+        "test/op_bench/test_autotune_failure_resource_lifetime.py"
+      ],
+      "selected_fail_to_pass": [
+        "AutotuneFailureResourceTests.test_mixed_candidates_release_caller_resource"
+      ],
+      "selected_pass_to_pass": [
+        "AutotuneFailureResourceTests.test_all_failed_candidates_release_caller_resource",
+        "AutotuneFailureResourceTests.test_all_successful_candidates_preserve_launchers",
+        "AutotuneFailureResourceTests.test_low_stage_retry_behavior_is_preserved"
+      ],
+      "selected_test_command": "{python} test/op_bench/test_autotune_failure_resource_lifetime.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "operator_integration",
+      "defect": "Triton autotune 某些 launcher 成功而后续失败时，保留异常 traceback 导致 caller benchmark 资源在禁用 GC 时滞留。",
+      "coverage": [
+        "helper",
+        "mock"
+      ],
+      "observation": "SimpleNamespace autotuner、mock DeviceGuard、合成 launcher 和 weakref Sentinel 检查释放；模拟 OOM/低 stage fallback，没有实际 GPU kernel 或显存资源。",
+      "environment": "CUDA Triton autotuner、真实编译候选与受控失败场景，资源生命周期和调用者内存观测。",
+      "gaps": [
+        "需真实 kernel 选择后输出正确且资源释放的链路，区分 Python Sentinel 释放与实际设备内存释放。",
+        "公开 GC、引用生命周期和失败策略合同；不要将不稳定真实 OOM 当成唯一可复现触发。"
+      ],
+      "disposition": "main_candidate_rework",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/188907_autotune_failure_resource_lifetime/task.json",
+        "tasks/pytorch/188907_autotune_failure_resource_lifetime/artifacts/gold.patch",
+        "tasks/pytorch/188907_autotune_failure_resource_lifetime/artifacts/hidden_test.patch"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    },
+    {
+      "index": 49,
+      "task_id": "pytorch__189487__nested_const_fold_policy",
+      "task_path": "tasks/pytorch/189487_nested_const_fold_policy/task.json",
+      "legacy_public_task_id": "opbench-v07-t0048",
+      "title": "Constant-folding policy is ignored inside nested program graphs",
+      "views": [
+        "pytorch_v0.7",
+        "pytorch_v0.7_boundary"
+      ],
+      "source": {
+        "repo": "pytorch/pytorch",
+        "repo_url": "https://github.com/pytorch/pytorch.git",
+        "pr_number": 189487,
+        "pr_url": "https://github.com/pytorch/pytorch/pull/189487",
+        "issue_number": null,
+        "issue_url": null,
+        "base_commit": "dad4394fa1c20c33da3f6d0452b56cca23a86047",
+        "merge_commit": "4c7bbbec95d045a4a734da2c7cb7be3ee46860d9"
+      },
+      "gold_patch": "tasks/pytorch/189487_nested_const_fold_policy/artifacts/gold.patch",
+      "test_patch": "tasks/pytorch/189487_nested_const_fold_policy/artifacts/hidden_test.patch",
+      "legacy_test_artifact_key": "hidden_test_patch",
+      "gold_target_paths": [
+        "torch/fx/experimental/const_fold.py"
+      ],
+      "test_target_paths": [
+        "test/op_bench/test_nested_const_fold_policy.py"
+      ],
+      "selected_fail_to_pass": [
+        "NestedConstFoldPolicyTests.test_selected_nested_node_prevents_atomic_fold",
+        "NestedConstFoldPolicyTests.test_symbolic_nested_node_is_not_evaluated"
+      ],
+      "selected_pass_to_pass": [
+        "NestedConstFoldPolicyTests.test_unselected_pure_nested_graph_still_folds"
+      ],
+      "selected_test_command": "{python} test/op_bench/test_nested_const_fold_policy.py {test}",
+      "legacy_loading_mode": "python_overlay",
+      "scope": "operator_integration",
+      "defect": "FX 常量折叠对嵌套 call_module 原子执行时未传播 skip policy，提前求值 runtime SymInt 引发未绑定符号。",
+      "coverage": [
+        "graph_transform",
+        "generated_code_execution"
+      ],
+      "observation": "真实 export 的 pure 子图和手造 unbacked SymInt 子图调用 const_fold；失败用例主要查 const_subgraph_module 为 None，pure 回归实际折叠并比较张量值。",
+      "environment": "CPU FX/export/const_fold 与 symbolic shape 基线。",
+      "gaps": [
+        "题面承诺任意嵌套，现有仅一层；补多层与 mixed pure/runtime 子图，验证策略按 owning module 处理。",
+        "symbolic 失败子图本身无运行时绑定，不能声称最终运行成功；需可执行 runtime-symbol 模型及输出验证，减少内部 const_subgraph 结构约束。"
+      ],
+      "disposition": "main_candidate_rework",
+      "review_status": "static_review_complete",
+      "admission_status": "not_admitted",
+      "runtime_validation": "not_executed",
+      "independent_review": "pending",
+      "reviewed_inputs": [
+        "tasks/pytorch/189487_nested_const_fold_policy/task.json",
+        "tasks/pytorch/189487_nested_const_fold_policy/artifacts/gold.patch",
+        "tasks/pytorch/189487_nested_const_fold_policy/artifacts/hidden_test.patch"
+      ],
+      "related_defect_group": {
+        "status": "pending",
+        "group_id": null,
+        "evidence": []
+      },
+      "migration_counterpart": null
+    }
+  ]
+}

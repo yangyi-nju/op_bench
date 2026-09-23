@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "dataset_id": "opbench-vector-norm-compile-candidate",
+  "version": "candidate.2",
+  "status": "candidate",
+  "tasks": [
+    "task.json"
+  ]
+}

@@ -1,0 +1,84 @@
+{
+  "task_id": "opbench-layer-norm-cpu-001",
+  "task_revision": "candidate.2",
+  "scoring_revision": "candidate.2",
+  "source_revision": "240aa77ad01c4f0cd9b2417748272f2f617c112f",
+  "environment_revision": "240aa77-cpu-gcc12-openblas-r2",
+  "environment": {
+    "backend": "docker",
+    "image": "opbench/pytorch-layernorm-source:240aa77-cpu-r2",
+    "python": "python3",
+    "prepare": [
+      [
+        "{python}",
+        "-I",
+        "/opt/opbench-layernorm/build_source.py",
+        "{workspace}",
+        "--check"
+      ]
+    ],
+    "build": [
+      [
+        "{python}",
+        "-I",
+        "/opt/opbench-layernorm/build_source.py",
+        "{workspace}"
+      ]
+    ],
+    "prepare_timeout_sec": 120,
+    "build_timeout_sec": 14400,
+    "cpus": 16,
+    "memory": "64g",
+    "pids_limit": 2048,
+    "environment": {
+      "USE_CUDA": "0",
+      "USE_ROCM": "0",
+      "USE_XPU": "0",
+      "USE_DISTRIBUTED": "0",
+      "BUILD_TEST": "0",
+      "MAX_JOBS": "16",
+      "BLAS": "OpenBLAS",
+      "CMAKE_BUILD_TYPE": "Release",
+      "PYTORCH_BUILD_VERSION": "2.6.0a0+opbench.240aa77",
+      "PYTORCH_BUILD_NUMBER": "1",
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "PYTHONDONTWRITEBYTECODE": "1"
+    },
+    "environment_id": "pytorch-layernorm-cpu-py312",
+    "revision": "240aa77-cpu-gcc12-openblas-r2"
+  },
+  "status": "full_source_build_failed",
+  "observation_source": "deployment controller report from actual complete CPU build",
+  "dependency_image_status": "built_successfully",
+  "failures": [
+    {
+      "backend": "NNPACK",
+      "stage": "build_dependency_download",
+      "diagnostic": "NNPACK CMake attempted to download six-1.11.0.tar.gz; the evaluation build has no network access",
+      "impact": "Configured optional backend requires an undeclared online build dependency"
+    },
+    {
+      "backend": "FBGEMM",
+      "stage": "cxx_compile",
+      "diagnostic": "GCC 12 AVX512 headers emitted maybe-uninitialized diagnostics promoted to errors by -Werror",
+      "impact": "Optional FBGEMM compilation failed before the framework was ready"
+    }
+  ],
+  "raw_logs": "Retained by the deployment controller; not copied into this bundle",
+  "operator_cases_executed": 0,
+  "control_matrix": "not_executed",
+  "admission_status": "not_admitted",
+  "followup": {
+    "environment_revision": "240aa77-cpu-gcc12-openblas-r3",
+    "dependency_image": "opbench/pytorch-layernorm-source:240aa77-cpu-r2",
+    "environment_changes": {
+      "USE_NNPACK": "0",
+      "USE_FBGEMM": "0"
+    },
+    "rationale": "CPU native_layer_norm eager and FakeTensor metadata checks do not require NNPACK or FBGEMM. Disable those optional backends while retaining the complete configured framework build.",
+    "build_network": "none",
+    "full_source_build": "pending",
+    "task_and_scoring_revision": "unchanged"
+  }
+}

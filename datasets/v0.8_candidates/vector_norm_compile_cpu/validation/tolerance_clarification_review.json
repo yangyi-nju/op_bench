@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "task_id": "opbench-vector-norm-compile-cpu-001",
+  "task_revision": "candidate.2",
+  "scoring_revision": "candidate.1",
+  "reviewed_date": "2026-09-09",
+  "review_kind": "ai_assisted_tolerance_clarification_follow_up",
+  "reviewer": "Codex independent review subagent",
+  "human_review": false,
+  "formal_admission": false,
+  "outcome": "historical_tolerance_scope_finding_resolved_by_wording_clarification",
+  "historical_review": {
+    "path": "validation/independent_oracle_review.json",
+    "task_revision": "candidate.1",
+    "scoring_revision": "candidate.1",
+    "preserved_without_modification": true,
+    "resolved_finding": "contract_tolerance_scope_mismatch"
+  },
+  "scope": {
+    "reviewed_files": [
+      "task.json",
+      "authoring/assemble_task.py",
+      "README.md",
+      "migration_review.md",
+      "grader/singleton_reductions.json",
+      "grader/float32_regressions.json",
+      "grader/float64_regressions.json",
+      "validation/independent_oracle_review.json"
+    ],
+    "activity": "Read the current candidate.2 tolerance wording and match its categories to the saved grader operations and tolerance values, including the ordinary_singleton regression.",
+    "framework_executed": false,
+    "new_runtime_evidence": false,
+    "new_agent_evidence": false,
+    "new_independent_repeat": false,
+    "saved_observations_regraded": false,
+    "scores_relabelled": false,
+    "task_public_grader_environment_or_core_modified_by_this_review": false
+  },
+  "tolerance_mapping": [
+    {
+      "public_category": "Float32 singleton comparisons with ord=-41/+41",
+      "grader": "grader/singleton_reductions.json",
+      "operation_count": 6,
+      "atol": 0.000001,
+      "rtol": 0.000001,
+      "conclusion": "All six saved operations use float32, singleton reduction groups and order -41 or +41. The public strict tolerance now names this scope explicitly."
+    },
+    {
+      "public_category": "Other float32 checks",
+      "grader": "grader/float32_regressions.json",
+      "operation_count": 7,
+      "atol": 0.00002,
+      "rtol": 0.000002,
+      "conclusion": "All seven saved float32 regressions use orders outside -41/+41. ordinary_singleton uses ord=2, shape [2,1,3] and dim [1], so it now unambiguously belongs to this category."
+    },
+    {
+      "public_category": "Float64 checks",
+      "grader": "grader/float64_regressions.json",
+      "operation_count": 3,
+      "atol": 1e-12,
+      "rtol": 1e-12,
+      "conclusion": "All three saved float64 operations, including the two singleton +/-41 operations, retain the declared float64 tolerance."
+    }
+  ],
+  "resolution": {
+    "wording": "task.json and its authoring source now restrict the strict float32 singleton tolerance to ord=-41/+41. README and migration review describe the same task-only clarification.",
+    "scoring_behavior_change": false,
+    "tolerance_weakening_relative_to_saved_grader": false,
+    "interpretation": "The tolerance values are the same values recorded in the candidate.1 independent review and used by the saved grader. This resolves a broader statement in the old contract; it does not assert that candidate.1 ordinary_singleton was originally scored with the stricter tolerance.",
+    "identity": "The task revision advances to candidate.2 while the scoring revision remains candidate.1. Existing physical runs and their outcomes retain their original task identity and are not relabelled as candidate.2 executions.",
+    "unchanged_evidence_scope": "The earlier mathematical oracle check and its coverage limits remain historical evidence. This follow-up neither reruns those calculations nor expands negative-order zero-input coverage, shape/dtype evidence, batch-level compilation diagnostics, runtime validation or admission claims."
+  }
+}

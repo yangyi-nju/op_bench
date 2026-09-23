@@ -1,0 +1,235 @@
+[
+  {
+    "case_id": "double_tail_values",
+    "provisional_group": "fail_to_pass",
+    "segments": [
+      {
+        "name": "log_double_513",
+        "start": 0,
+        "count": 2565,
+        "shape": [
+          5,
+          513
+        ],
+        "operation": "log_softmax",
+        "dtype": "float64"
+      },
+      {
+        "name": "log_double_517",
+        "start": 2565,
+        "count": 2585,
+        "shape": [
+          5,
+          517
+        ],
+        "operation": "log_softmax",
+        "dtype": "float64"
+      },
+      {
+        "name": "log_double_515_strided",
+        "start": 5150,
+        "count": 2575,
+        "shape": [
+          5,
+          515
+        ],
+        "operation": "log_softmax",
+        "dtype": "float64"
+      },
+      {
+        "name": "softmax_double_513",
+        "start": 7725,
+        "count": 2565,
+        "shape": [
+          5,
+          513
+        ],
+        "operation": "softmax",
+        "dtype": "float64"
+      },
+      {
+        "name": "log_double_513_positive_shift",
+        "start": 10290,
+        "count": 1539,
+        "shape": [
+          3,
+          513
+        ],
+        "operation": "log_softmax",
+        "dtype": "float64"
+      }
+    ],
+    "atol": 1e-10,
+    "rtol": 1e-11
+  },
+  {
+    "case_id": "float32_forward_regressions",
+    "provisional_group": "pass_to_pass",
+    "segments": [
+      {
+        "name": "log_float_511",
+        "start": 0,
+        "count": 1533,
+        "shape": [
+          3,
+          511
+        ],
+        "operation": "log_softmax",
+        "dtype": "float32"
+      },
+      {
+        "name": "log_float_512",
+        "start": 1533,
+        "count": 1536,
+        "shape": [
+          3,
+          512
+        ],
+        "operation": "log_softmax",
+        "dtype": "float32"
+      },
+      {
+        "name": "log_float_513",
+        "start": 3069,
+        "count": 1539,
+        "shape": [
+          3,
+          513
+        ],
+        "operation": "log_softmax",
+        "dtype": "float32"
+      },
+      {
+        "name": "log_float_517_strided",
+        "start": 4608,
+        "count": 1551,
+        "shape": [
+          3,
+          517
+        ],
+        "operation": "log_softmax",
+        "dtype": "float32"
+      },
+      {
+        "name": "softmax_float_517",
+        "start": 6159,
+        "count": 1551,
+        "shape": [
+          3,
+          517
+        ],
+        "operation": "softmax",
+        "dtype": "float32"
+      },
+      {
+        "name": "log_float_axis0",
+        "start": 7710,
+        "count": 85,
+        "shape": [
+          5,
+          17
+        ],
+        "operation": "log_softmax",
+        "dtype": "float32"
+      },
+      {
+        "name": "log_float_extreme",
+        "start": 7795,
+        "count": 1536,
+        "shape": [
+          3,
+          512
+        ],
+        "operation": "log_softmax",
+        "dtype": "float32"
+      }
+    ],
+    "atol": 2e-05,
+    "rtol": 2e-06
+  },
+  {
+    "case_id": "double_neighbor_and_gradient_regressions",
+    "provisional_group": "pass_to_pass",
+    "segments": [
+      {
+        "name": "log_double_511",
+        "start": 0,
+        "count": 1533,
+        "shape": [
+          3,
+          511
+        ],
+        "operation": "log_softmax",
+        "dtype": "float64"
+      },
+      {
+        "name": "log_double_512",
+        "start": 1533,
+        "count": 1536,
+        "shape": [
+          3,
+          512
+        ],
+        "operation": "log_softmax",
+        "dtype": "float64"
+      },
+      {
+        "name": "log_double_514_aligned",
+        "start": 3069,
+        "count": 1542,
+        "shape": [
+          3,
+          514
+        ],
+        "operation": "log_softmax",
+        "dtype": "float64"
+      },
+      {
+        "name": "log_double_axis0",
+        "start": 4611,
+        "count": 85,
+        "shape": [
+          5,
+          17
+        ],
+        "operation": "log_softmax",
+        "dtype": "float64"
+      },
+      {
+        "name": "log_double_extreme",
+        "start": 4696,
+        "count": 1536,
+        "shape": [
+          3,
+          512
+        ],
+        "operation": "log_softmax",
+        "dtype": "float64"
+      },
+      {
+        "name": "grad_log_double_512",
+        "start": 6232,
+        "count": 1536,
+        "shape": [
+          3,
+          512
+        ],
+        "operation": "grad_log_softmax",
+        "dtype": "float64"
+      },
+      {
+        "name": "grad_softmax_double_512",
+        "start": 7768,
+        "count": 1536,
+        "shape": [
+          3,
+          512
+        ],
+        "operation": "grad_softmax",
+        "dtype": "float64"
+      }
+    ],
+    "atol": 1e-10,
+    "rtol": 1e-11
+  }
+]

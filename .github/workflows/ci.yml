@@ -1,0 +1,95 @@
+name: Core behavior
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install .
+      - run: python -m unittest discover -s tests/core -v
+      - run: python scripts/check_markdown_links.py
+      - name: Evaluate and verify with the installed package away from checkout
+        working-directory: /tmp
+        env:
+          PYTHONPATH: ""
+        run: |
+          opbench evaluate --task "$GITHUB_WORKSPACE/tests/fixtures/numeric_softmax/task.json" \
+            --patch "$GITHUB_WORKSPACE/tests/fixtures/numeric_softmax/controls/reference.patch" \
+            --output "$RUNNER_TEMP/opbench-installed"
+          opbench verify --evaluation "$RUNNER_TEMP/opbench-installed"
+          python -c 'import json,sys; assert json.load(open(sys.argv[1]))["status"] == "resolved"' "$RUNNER_TEMP/opbench-installed/result.json"
+
+  docker:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - fixture: numeric_softmax
+            image: opbench/numeric-fixture:py3.12
+            task: task.docker.json
+            reference: controls/reference.patch
+            alternative: controls/alternative.patch
+            mutation: controls/mutation.patch
+          - fixture: pytorch_softmax
+            image: opbench/softmax-fixture:torch2.6.0
+            task: task.json
+            reference: gold.patch
+            alternative: alternative.patch
+            mutation: wrong.patch
+          - fixture: cpp_reduction
+            image: opbench/cpp-fixture:cpu
+            task: task.json
+            reference: gold.patch
+            alternative: alternative.patch
+            mutation: wrong.patch
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install .
+      - run: docker build -t ${{ matrix.image }} tests/fixtures/${{ matrix.fixture }}
+      - name: Real baseline, reference, alternative and mutation controls
+        run: >-
+          opbench check-task --task tests/fixtures/${{ matrix.fixture }}/${{ matrix.task }}
+          --reference tests/fixtures/${{ matrix.fixture }}/${{ matrix.reference }}
+          --alternative tests/fixtures/${{ matrix.fixture }}/${{ matrix.alternative }}
+          --mutation tests/fixtures/${{ matrix.fixture }}/${{ matrix.mutation }}
+          --reuse-baseline
+          --output /tmp/opbench-controls
+      - name: Docker numeric isolation and controlled model tools
+        if: matrix.fixture == 'numeric_softmax'
+        env:
+          PYTHONPATH: tests/core
+          OPBENCH_TEST_DOCKER: "1"
+          OPBENCH_TEST_DOCKER_IMAGE: opbench/numeric-fixture:py3.12
+        run: >-
+          python -m unittest
+          test_numeric.NumericEvaluationTests.test_docker_numeric_uses_only_current_input_and_fresh_no_grader_sessions
+          test_controlled_experiment.ControlledExperimentTests.test_docker_tool_build_and_test_have_no_grader_or_controller_credentials
+          -v
+      - name: Docker lifecycle cleanup after a lost CLI response
+        if: matrix.fixture == 'cpp_reduction'
+        env:
+          PYTHONPATH: tests/core
+          OPBENCH_TEST_DOCKER_IMAGE: opbench/cpp-fixture:cpu
+        run: >-
+          python -m unittest
+          test_execution.ExecutionLifecycleTests.test_real_created_volume_and_container_are_cleaned_after_lost_cli_response
+          -v
+      - name: Preserve execution evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: operator-control-evidence-${{ matrix.fixture }}
+          path: /tmp/opbench-controls

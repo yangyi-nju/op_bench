@@ -1,0 +1,118 @@
+{
+  "schema_version": 2,
+  "task_id": "opbench-layer-norm-cpu-001",
+  "statement": "Fix CPU bfloat16 metadata for torch.ops.aten.native_layer_norm.default when FakeTensorMode and the Python dispatcher are enabled. For nonempty finite CPU inputs and independently absent or bfloat16 affine weight/bias, the normalized output, mean and reciprocal standard deviation must have the same shapes and dtypes as eager execution; all three dtypes are bfloat16. The output shape equals the input shape; each statistic has the input's leading dimensions followed by one singleton per normalized dimension. Support valid one- and multi-dimension normalized_shape values, all four optional-affine combinations, and noncontiguous inputs. Preserve float32 fake dtype/shape/device metadata. Preserve eager numerical results for bfloat16, float32 and float64 homogeneous input/affine dtypes, and first-order gradients with respect to float64 input, weight and bias. Numerical regressions use finite bounded inputs (absolute value at most 3), affine values (absolute value at most 2) and positive eps from 1e-5 to 0.5; the independent formula uses population variance. Comparisons allow rtol/atol 0.03125/0.03125 for bfloat16, 2e-5/2e-6 for float32 and 1e-10/1e-12 for float64 results and gradients. Mixed input/affine dtypes, empty or symbolic shapes, CUDA, the out overload, higher-order gradients and performance are outside this task's scope. The public reproducer demonstrates the original full-affine case; the required behavior also covers the stated optional-affine and shape/layout cases. Use the full source build command before reproducing. Any source implementation or registration strategy is acceptable; no specific file or helper name is required.",
+  "source": {
+    "path": "../../../.op_bench_cache/managed/pytorch-layernorm-240aa77ad01c4f0cd9b2417748272f2f617c112f",
+    "repo_url": "https://github.com/pytorch/pytorch.git",
+    "revision": "240aa77ad01c4f0cd9b2417748272f2f617c112f"
+  },
+  "environment": {
+    "backend": "docker",
+    "image": "opbench/pytorch-layernorm-source:240aa77-cpu-r2",
+    "python": "python3",
+    "prepare": [
+      [
+        "{python}",
+        "-I",
+        "/opt/opbench-layernorm/build_source.py",
+        "{workspace}",
+        "--check"
+      ]
+    ],
+    "build": [
+      [
+        "{python}",
+        "-I",
+        "/opt/opbench-layernorm/build_source.py",
+        "{workspace}"
+      ]
+    ],
+    "prepare_timeout_sec": 120,
+    "build_timeout_sec": 14400,
+    "cpus": 16,
+    "memory": "64g",
+    "pids_limit": 2048,
+    "environment": {
+      "USE_CUDA": "0",
+      "USE_ROCM": "0",
+      "USE_XPU": "0",
+      "USE_DISTRIBUTED": "0",
+      "BUILD_TEST": "0",
+      "MAX_JOBS": "16",
+      "BLAS": "OpenBLAS",
+      "CMAKE_BUILD_TYPE": "Release",
+      "PYTORCH_BUILD_VERSION": "2.6.0a0+opbench.240aa77",
+      "PYTORCH_BUILD_NUMBER": "1",
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "USE_NNPACK": "0",
+      "USE_FBGEMM": "0"
+    },
+    "environment_id": "pytorch-layernorm-cpu-py312",
+    "revision": "240aa77-cpu-gcc12-openblas-r3"
+  },
+  "grader_dir": "grader",
+  "tests": [
+    {
+      "id": "cpu_bfloat16_fake_metadata",
+      "group": "fail_to_pass",
+      "kind": "unittest",
+      "expected_tests": 1,
+      "argv": [
+        "{python}",
+        "{grader}/test_layer_norm.py",
+        "{workspace}",
+        "CpuBFloat16Metadata"
+      ],
+      "timeout_sec": 120
+    },
+    {
+      "id": "layer_norm_eager_and_float32_regressions",
+      "group": "pass_to_pass",
+      "kind": "unittest",
+      "expected_tests": 3,
+      "argv": [
+        "{python}",
+        "{grader}/test_layer_norm.py",
+        "{workspace}",
+        "LayerNormRegressions"
+      ],
+      "timeout_sec": 120
+    }
+  ],
+  "public_commands": [
+    [
+      "{python}",
+      "-I",
+      "/opt/opbench-layernorm/build_source.py",
+      "{workspace}"
+    ],
+    [
+      "{python}",
+      "-I",
+      "/opt/opbench-layernorm/reproduce.py",
+      "{workspace}"
+    ]
+  ],
+  "metadata": {
+    "status": "candidate",
+    "admission_status": "not_admitted",
+    "source_revision": "240aa77ad01c4f0cd9b2417748272f2f617c112f",
+    "upstream_pr": "https://github.com/pytorch/pytorch/pull/140557",
+    "migration_review": "migration_review.md",
+    "requires": "Complete CPU source build; no single-file overlay or installed-wheel fallback",
+    "documentation": "README.md",
+    "environment_recipe": "environment/Dockerfile",
+    "resource_envelope": "16 CPU / 64 GiB / MAX_JOBS=16 selected; minimum hardware requirements have not been measured",
+    "source_loading": "Complete setup.py build output; Python modules, native extension and loaded libtorch CPU libraries must resolve under workspace/build/opbench-package",
+    "contract_scope": "CPU homogeneous-dtype native_layer_norm integration; not mixed-precision or CUDA parity",
+    "previous_full_build_failure": "validation/r2_full_build_failure.json",
+    "validation_records": "validation/"
+  },
+  "task_revision": "candidate.2",
+  "scope": "operator_integration",
+  "defect_group": "pytorch-pr-140557",
+  "scoring_revision": "candidate.2"
+}

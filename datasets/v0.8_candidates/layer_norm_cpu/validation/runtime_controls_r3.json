@@ -1,0 +1,233 @@
+{
+  "date": "2026-09-09",
+  "status": "execution_controls_passed",
+  "admission_status": "not_admitted",
+  "task_id": "opbench-layer-norm-cpu-001",
+  "task_revision": "candidate.2",
+  "scoring_revision": "candidate.2",
+  "source_revision": "240aa77ad01c4f0cd9b2417748272f2f617c112f",
+  "environment_revision": "240aa77-cpu-gcc12-openblas-r3",
+  "image_id": "sha256:8bc7df5037adcd4e6a78fed76ea0d8ba250aec624b4f76f049c36a0c12bf218e",
+  "baseline_build": "r3_full_build.json",
+  "controls": {
+    "baseline": {
+      "status": "test_failed",
+      "duration_sec": 582.2369689120096,
+      "groups": {
+        "fail_to_pass": {
+          "passed": 0,
+          "total": 1
+        },
+        "pass_to_pass": {
+          "passed": 1,
+          "total": 1
+        }
+      },
+      "offline_verification_valid": true,
+      "cleanup_errors": [],
+      "cases": [
+        {
+          "id": "cpu_bfloat16_fake_metadata",
+          "group": "fail_to_pass",
+          "status": "failed",
+          "expected_tests": 1,
+          "witness": {
+            "schema_version": 1,
+            "runner_invocations": 1,
+            "tests_run": 1,
+            "failures": 13,
+            "errors": 0,
+            "skipped": 0,
+            "expected_failures": 0,
+            "unexpected_successes": 0
+          },
+          "duration_sec": 4.486506320012268
+        },
+        {
+          "id": "layer_norm_eager_and_float32_regressions",
+          "group": "pass_to_pass",
+          "status": "passed",
+          "expected_tests": 3,
+          "witness": {
+            "schema_version": 1,
+            "runner_invocations": 1,
+            "tests_run": 3,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0,
+            "expected_failures": 0,
+            "unexpected_successes": 0
+          },
+          "duration_sec": 3.3136723049974535
+        }
+      ]
+    },
+    "reference": {
+      "status": "resolved",
+      "duration_sec": 518.7016347069875,
+      "groups": {
+        "fail_to_pass": {
+          "passed": 1,
+          "total": 1
+        },
+        "pass_to_pass": {
+          "passed": 1,
+          "total": 1
+        }
+      },
+      "offline_verification_valid": true,
+      "cleanup_errors": [],
+      "cases": [
+        {
+          "id": "cpu_bfloat16_fake_metadata",
+          "group": "fail_to_pass",
+          "status": "passed",
+          "expected_tests": 1,
+          "witness": {
+            "schema_version": 1,
+            "runner_invocations": 1,
+            "tests_run": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0,
+            "expected_failures": 0,
+            "unexpected_successes": 0
+          },
+          "duration_sec": 5.967890219995752
+        },
+        {
+          "id": "layer_norm_eager_and_float32_regressions",
+          "group": "pass_to_pass",
+          "status": "passed",
+          "expected_tests": 3,
+          "witness": {
+            "schema_version": 1,
+            "runner_invocations": 1,
+            "tests_run": 3,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0,
+            "expected_failures": 0,
+            "unexpected_successes": 0
+          },
+          "duration_sec": 4.001827580999816
+        }
+      ]
+    },
+    "alternative-1": {
+      "status": "resolved",
+      "duration_sec": 627.2416382819938,
+      "groups": {
+        "fail_to_pass": {
+          "passed": 1,
+          "total": 1
+        },
+        "pass_to_pass": {
+          "passed": 1,
+          "total": 1
+        }
+      },
+      "offline_verification_valid": true,
+      "cleanup_errors": [],
+      "cases": [
+        {
+          "id": "cpu_bfloat16_fake_metadata",
+          "group": "fail_to_pass",
+          "status": "passed",
+          "expected_tests": 1,
+          "witness": {
+            "schema_version": 1,
+            "runner_invocations": 1,
+            "tests_run": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0,
+            "expected_failures": 0,
+            "unexpected_successes": 0
+          },
+          "duration_sec": 5.119339661003323
+        },
+        {
+          "id": "layer_norm_eager_and_float32_regressions",
+          "group": "pass_to_pass",
+          "status": "passed",
+          "expected_tests": 3,
+          "witness": {
+            "schema_version": 1,
+            "runner_invocations": 1,
+            "tests_run": 3,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0,
+            "expected_failures": 0,
+            "unexpected_successes": 0
+          },
+          "duration_sec": 4.417017205996672
+        }
+      ]
+    },
+    "mutation-1": {
+      "status": "test_failed",
+      "duration_sec": 659.9873246189964,
+      "groups": {
+        "fail_to_pass": {
+          "passed": 0,
+          "total": 1
+        },
+        "pass_to_pass": {
+          "passed": 1,
+          "total": 1
+        }
+      },
+      "offline_verification_valid": true,
+      "cleanup_errors": [],
+      "cases": [
+        {
+          "id": "cpu_bfloat16_fake_metadata",
+          "group": "fail_to_pass",
+          "status": "failed",
+          "expected_tests": 1,
+          "witness": {
+            "schema_version": 1,
+            "runner_invocations": 1,
+            "tests_run": 1,
+            "failures": 10,
+            "errors": 0,
+            "skipped": 0,
+            "expected_failures": 0,
+            "unexpected_successes": 0
+          },
+          "duration_sec": 6.514730354014318
+        },
+        {
+          "id": "layer_norm_eager_and_float32_regressions",
+          "group": "pass_to_pass",
+          "status": "passed",
+          "expected_tests": 3,
+          "witness": {
+            "schema_version": 1,
+            "runner_invocations": 1,
+            "tests_run": 3,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0,
+            "expected_failures": 0,
+            "unexpected_successes": 0
+          },
+          "duration_sec": 5.672536947997287
+        }
+      ]
+    }
+  },
+  "public_reproducer": {
+    "baseline": "declared_bfloat16_dtype_mismatch_observed",
+    "record": "runs/v0.8_rebuild_validation/20260909-remote/remote/cpu-public-reproducer-r3/summary.json"
+  },
+  "raw_evidence": "runs/v0.8_rebuild_validation/20260909-remote/remote/cpu-controls-r3/",
+  "model_called": false,
+  "limitations": [
+    "Shared host correctness validation; no performance claim",
+    "Command/unittest observation shares a process with the candidate framework; no general malicious-code attestation",
+    "No independent human admission or formal benchmark membership"
+  ]
+}

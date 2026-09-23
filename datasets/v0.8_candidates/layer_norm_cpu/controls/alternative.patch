@@ -1,0 +1,18 @@
+diff --git a/torch/_subclasses/fake_impls.py b/torch/_subclasses/fake_impls.py
+--- a/torch/_subclasses/fake_impls.py
++++ b/torch/_subclasses/fake_impls.py
+@@ -140,6 +140,14 @@
+         return op_impl
+ 
+     return impl_decorator
++
++
++@register_op_impl(aten.native_layer_norm.default)
++def native_layer_norm_metadata(fake_mode, func, *args, **kwargs):
++    _, normalized = normalize_function(
++        func, args=args, kwargs=kwargs, normalize_to_only_use_kwargs=True
++    )
++    return torch._refs.native_layer_norm(**normalized)
+ 
+ 
+ @register_op_impl(op_implementations_dict.__contains__)

@@ -1,0 +1,51 @@
+--- a/opbench_public/numeric_worker.py
++++ b/opbench_public/numeric_worker.py
+@@ -72,12 +72,43 @@
+ 
+ 
+ def main():
+-    workspace = Path(__file__).resolve().parent.parent
+-    torch = load_source_torch(workspace)
++    # Negative control: compute the public formula in the bridge without fixing torch.
++    import math
++    import struct
+     request = json.load(sys.stdin)
+-    observation = execute_batch(torch, request)
+-    print(json.dumps(observation, allow_nan=False, separators=(",", ":")))
+-
++    observed = []
++    for item in request["operations"]:
++        def number(value):
++            return struct.unpack("f", struct.pack("f", value))[0] if item["dtype"] == "float32" else value
++        rows, width = item["shape"]
++        values = [number(value) for value in item["values"]]
++        weights = [number(value) for value in item.get("gradient", [])]
++        output = [0.0] * len(values)
++        groups = ([row * width + col for col in range(width)] for row in range(rows)) if item["dim"] % 2 else (
++            [row * width + col for row in range(rows)] for col in range(width))
++        for indices in groups:
++            selected = [values[index] for index in indices]
++            anchor = max(selected)
++            exponential = [math.exp(value - anchor) for value in selected]
++            total = math.fsum(exponential)
++            probabilities = [value / total for value in exponential]
++            operation = item["operation"]
++            if operation == "log_softmax":
++                result = [value - anchor - math.log(total) for value in selected]
++            elif operation == "softmax":
++                result = probabilities
++            elif operation == "grad_log_softmax":
++                aggregate = math.fsum(weights[index] for index in indices)
++                result = [weights[index] - probability * aggregate for index, probability in zip(indices, probabilities)]
++            elif operation == "grad_softmax":
++                aggregate = math.fsum(weights[index] * probability for index, probability in zip(indices, probabilities))
++                result = [probability * (weights[index] - aggregate) for index, probability in zip(indices, probabilities)]
++            else:
++                raise ValueError("Unsupported public operation")
++            for index, value in zip(indices, result):
++                output[index] = value
++        observed.extend(output)
++    print(json.dumps({"shape": [len(observed)], "values": observed}, allow_nan=False))
+ 
+ if __name__ == "__main__":
+     main()

@@ -1,0 +1,135 @@
+{
+  "schema_version": 2,
+  "task_id": "opbench-vector-norm-compile-cpu-001",
+  "task_revision": "candidate.2",
+  "scoring_revision": "candidate.1",
+  "scope": "operator_integration",
+  "defect_group": "pytorch:vector-norm-singleton-pow-overflow",
+  "statement": "CPU Inductor compilation of torch.linalg.vector_norm can produce nonfinite or zero results when the selected reduction axes contain one element and ord is +41 or -41, even though the correct result is the finite absolute value of that element. A public reproducer uses a float32 (4,1,4) tensor containing +/-16 and +/-0.0625, reducing dim=1 with ord=-41. Repair the complete provided framework source so the actual compiled API returns the correct values, shape and dtype; preserve ordinary multi-element norms and float64 behavior. The declared domain is nonempty rank-2/rank-3 CPU float32/float64 tensors with finite values in [-16,16], contiguous or noncontiguous layouts, dim=None or unique nonnegative dimension indices, and keepdim=False/True. Singleton reduction groups cover ord=-41/+41; ordinary multi-element regressions cover ord=-1,0,1,2,+inf,-inf. Negative orders follow the usual zero-input norm convention. Float32 singleton comparisons with ord=-41/+41 use abs(actual-reference)<=1e-6+1e-6*abs(reference); other float32 checks use 2e-5+2e-6*abs(reference), and float64 checks use 1e-12+1e-12*abs(reference). Outputs retain the input floating dtype and CPU device, with the declared axes removed or retained at length one. Complex/low-precision types, explicit dtype conversion, empty or symbolic shapes, negative dimension indices, gradients, out=, CUDA and performance are outside this candidate contract. Use torch.compile(fullgraph=True, backend=\"inductor\", dynamic=False) and execute its returned callable. CPU C++ kernel generation/execution must remain enabled; replacing compilation by eager execution or routing the API around compilation does not meet the contract. The published fixed transport invokes the source-built API and records generated kernel and loaded compiler-cache library diagnostics. These diagnostics are not universal attestation against hostile candidate code. The transport encodes each output as a finite flag and value (zero placeholder when nonfinite); a separate controller compares these observations with private independent scalar references. The transport contains no oracle or numerical pass/fail verdict. Build the complete configured framework with python3 -I /opt/opbench-layernorm/build_source.py /workspace. Both Torch Python modules and native libraries must load from /workspace/build/opbench-package. Dependencies are preinstalled; builds and execution stay offline, with compiler caches inside the workspace runtime. Public commands include the reproducer and full build. Any source or build change consistent with this contract is allowed; there is no reference-patch file whitelist. This is a relocated upstream-derived candidate on commit 240aa77ad01c4f0cd9b2417748272f2f617c112f, not the original PR parent 06e9deabb623e004eb6024e703a976c5748d51e6, and is not formally admitted.",
+  "source": {
+    "path": "../../../.op_bench_cache/managed/pytorch-layernorm-240aa77ad01c4f0cd9b2417748272f2f617c112f",
+    "repo_url": "https://github.com/pytorch/pytorch.git",
+    "revision": "240aa77ad01c4f0cd9b2417748272f2f617c112f"
+  },
+  "environment": {
+    "backend": "docker",
+    "image": "opbench/pytorch-layernorm-source:240aa77-cpu-r2",
+    "python": "python3",
+    "prepare": [
+      [
+        "{python}",
+        "-I",
+        "/opt/opbench-layernorm/build_source.py",
+        "{workspace}",
+        "--check"
+      ]
+    ],
+    "build": [
+      [
+        "{python}",
+        "-I",
+        "/opt/opbench-layernorm/build_source.py",
+        "{workspace}"
+      ]
+    ],
+    "prepare_timeout_sec": 120,
+    "build_timeout_sec": 14400,
+    "cpus": 16,
+    "memory": "64g",
+    "pids_limit": 2048,
+    "environment": {
+      "USE_CUDA": "0",
+      "USE_ROCM": "0",
+      "USE_XPU": "0",
+      "USE_DISTRIBUTED": "0",
+      "BUILD_TEST": "0",
+      "MAX_JOBS": "16",
+      "BLAS": "OpenBLAS",
+      "CMAKE_BUILD_TYPE": "Release",
+      "PYTORCH_BUILD_VERSION": "2.6.0a0+opbench.240aa77",
+      "PYTORCH_BUILD_NUMBER": "1",
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "USE_NNPACK": "0",
+      "USE_FBGEMM": "0"
+    },
+    "environment_id": "pytorch-layernorm-cpu-py312",
+    "revision": "240aa77-cpu-gcc12-openblas-r3"
+  },
+  "grader_dir": "grader",
+  "public_commands": [
+    [
+      "{python}",
+      "-I",
+      "/opt/opbench-layernorm/build_source.py",
+      "{workspace}"
+    ],
+    [
+      "{python}",
+      "-I",
+      "-c",
+      "\"\"\"Public deterministic reproducer; no private oracle is read.\"\"\"\n\"\"\"Public CPU Inductor transport. Contains no oracle or numerical verdicts.\"\"\"\nimport json\nimport math\nimport os\nfrom pathlib import Path\nimport sys\nimport tempfile\n\n\ndef mapped_libraries():\n    return sorted({line.split()[-1] for line in Path('/proc/self/maps').read_text().splitlines()\n                   if '/' in line and '.so' in line.split()[-1]})\n\n\ndef load_source_torch(workspace):\n    package = workspace / 'build/opbench-package'\n    if not (package / 'torch/__init__.py').is_file() or not list((package / 'torch').glob('_C*.so')):\n        raise RuntimeError('Build the complete configured source into build/opbench-package first')\n    if 'torch' in sys.modules:\n        raise RuntimeError('A fresh source-loading process is required')\n    sys.path.insert(0, str(package))\n    import torch\n    for path in (torch.__file__, torch._C.__file__):\n        if not Path(path).resolve().is_relative_to(package.resolve()):\n            raise RuntimeError('Torch package/native extension is outside the complete candidate build')\n    libraries = [path for path in mapped_libraries()\n                 if Path(path).name.startswith(('libtorch', 'libc10'))]\n    required = {'libtorch_cpu.so', 'libtorch_python.so', 'libc10.so'}\n    if not required <= {Path(path).name for path in libraries}:\n        raise RuntimeError('Required source-built framework libraries are not loaded')\n    if any(not Path(path).resolve().is_relative_to(workspace) for path in libraries):\n        raise RuntimeError('Framework library came from outside the candidate workspace')\n    print(json.dumps({'event': 'source_cpu_runtime', 'package': torch.__file__,\n                      'native_extension': torch._C.__file__, 'libraries': libraries}), file=sys.stderr)\n    return torch\n\n\nimport os\nfrom pathlib import Path\nimport sys\nimport tempfile\n\nworkspace = Path(sys.argv[1]).resolve()\nos.environ['TORCHINDUCTOR_CACHE_DIR'] = tempfile.mkdtemp(prefix='opbench-reproduce-', dir=os.environ['TMPDIR'])\nos.environ['TORCHINDUCTOR_COMPILE_THREADS'] = '1'\ntorch = load_source_torch(workspace)\n\ndef operation(value):\n    return torch.linalg.vector_norm(value, ord=-41.0, dim=1)\n\nvalue = torch.tensor([-16.0, -0.0625, 16.0, 0.0625] * 4, dtype=torch.float32).reshape(4, 1, 4)\ncompiled = torch.compile(operation, fullgraph=True, backend='inductor', dynamic=False)\nactual = compiled(value)\nexpected = value.abs().squeeze(1)\nprint({'compiled': actual.tolist(), 'expected_singleton_abs': expected.tolist()})\nif not torch.isfinite(actual).all() or not torch.allclose(actual, expected, atol=1e-6, rtol=1e-6):\n    raise AssertionError('Compiled singleton vector_norm does not preserve the finite absolute value')\n",
+      "{workspace}"
+    ]
+  ],
+  "tests": [
+    {
+      "id": "singleton_reductions",
+      "group": "fail_to_pass",
+      "kind": "numeric",
+      "oracle": "singleton_reductions.json",
+      "argv": [
+        "{python}",
+        "-I",
+        "-c",
+        "\"\"\"Public CPU Inductor transport. Contains no oracle or numerical verdicts.\"\"\"\nimport json\nimport math\nimport os\nfrom pathlib import Path\nimport sys\nimport tempfile\n\n\ndef mapped_libraries():\n    return sorted({line.split()[-1] for line in Path('/proc/self/maps').read_text().splitlines()\n                   if '/' in line and '.so' in line.split()[-1]})\n\n\ndef load_source_torch(workspace):\n    package = workspace / 'build/opbench-package'\n    if not (package / 'torch/__init__.py').is_file() or not list((package / 'torch').glob('_C*.so')):\n        raise RuntimeError('Build the complete configured source into build/opbench-package first')\n    if 'torch' in sys.modules:\n        raise RuntimeError('A fresh source-loading process is required')\n    sys.path.insert(0, str(package))\n    import torch\n    for path in (torch.__file__, torch._C.__file__):\n        if not Path(path).resolve().is_relative_to(package.resolve()):\n            raise RuntimeError('Torch package/native extension is outside the complete candidate build')\n    libraries = [path for path in mapped_libraries()\n                 if Path(path).name.startswith(('libtorch', 'libc10'))]\n    required = {'libtorch_cpu.so', 'libtorch_python.so', 'libc10.so'}\n    if not required <= {Path(path).name for path in libraries}:\n        raise RuntimeError('Required source-built framework libraries are not loaded')\n    if any(not Path(path).resolve().is_relative_to(workspace) for path in libraries):\n        raise RuntimeError('Framework library came from outside the candidate workspace')\n    print(json.dumps({'event': 'source_cpu_runtime', 'package': torch.__file__,\n                      'native_extension': torch._C.__file__, 'libraries': libraries}), file=sys.stderr)\n    return torch\n\n\ndef main():\n    workspace = Path(sys.argv[1]).resolve()\n    request = json.load(sys.stdin)\n    runtime = Path(os.environ['TMPDIR']).resolve()\n    if not runtime.is_relative_to(workspace):\n        raise RuntimeError('Compiler cache must stay within the declared workspace runtime')\n    cache = Path(tempfile.mkdtemp(prefix='opbench-inductor-', dir=runtime))\n    os.environ['TORCHINDUCTOR_CACHE_DIR'] = str(cache)\n    os.environ['TORCHINDUCTOR_COMPILE_THREADS'] = '1'\n    os.environ['TORCHINDUCTOR_FX_GRAPH_CACHE'] = '0'\n    torch = load_source_torch(workspace)\n    from torch._inductor import config, metrics\n    torch.set_num_threads(1)\n    torch._dynamo.reset()\n    metrics.reset()\n    observed = []\n    with torch._dynamo.config.patch(suppress_errors=False), config.patch(\n            cpu_backend='cpp', fx_graph_cache=False, force_disable_caches=True, compile_threads=1):\n        for item in request['operations']:\n            dtype = {'float32': torch.float32, 'float64': torch.float64}[item['dtype']]\n            value = torch.tensor(item['values'], dtype=dtype, device='cpu').reshape(item['shape'])\n            if item.get('layout') == 'noncontiguous':\n                value = value.transpose(0, -1).contiguous().transpose(0, -1)\n                if value.is_contiguous():\n                    raise RuntimeError('Requested noncontiguous input was not constructed')\n            dim = None if item['dim'] is None else tuple(item['dim'])\n            order, keepdim = float(item['ord']), item['keepdim']\n\n            def operation(argument):\n                return torch.linalg.vector_norm(argument, ord=order, dim=dim, keepdim=keepdim)\n\n            compiled = torch.compile(operation, fullgraph=True, backend='inductor', dynamic=False)\n            result = compiled(value)\n            axes = set(range(value.ndim)) if dim is None else set(dim)\n            shape = [1 if axis in axes else size for axis, size in enumerate(value.shape)] if keepdim else [\n                size for axis, size in enumerate(value.shape) if axis not in axes]\n            if list(result.shape) != shape or result.dtype != dtype or result.device.type != 'cpu':\n                raise RuntimeError('Compiled vector_norm changed declared shape, dtype or device')\n            numbers = result.detach().reshape(-1).tolist()\n            # Nonfinite results remain valid transport observations. The private\n            # controller decides whether finite flags and numbers are correct.\n            for number in numbers:\n                finite = math.isfinite(number)\n                observed.extend((1.0 if finite else 0.0, number if finite else 0.0))\n            print(json.dumps({'event': 'compiled_observation', 'name': item['name'],\n                              'shape': list(result.shape), 'dtype': str(result.dtype),\n                              'input_stride': list(value.stride()), 'returned_values': len(numbers)}), file=sys.stderr)\n    compiled_libraries = [name for name in mapped_libraries() if Path(name).resolve().is_relative_to(cache)]\n    if metrics.generated_kernel_count < 1 or not compiled_libraries:\n        raise RuntimeError('No generated CPU kernel and loaded compiler-cache library were observed')\n    print(json.dumps({'event': 'cpu_compilation_witness', 'generated_kernels': metrics.generated_kernel_count,\n                      'cache': str(cache), 'loaded_libraries': compiled_libraries,\n                      'limit': 'Ordinary compilation/loading diagnostics, not adversarial attestation of candidate code'}), file=sys.stderr)\n    print(json.dumps({'shape': [len(observed)], 'values': observed}, allow_nan=False))\n\n\nif __name__ == '__main__':\n    main()\n",
+        "{workspace}"
+      ],
+      "timeout_sec": 900
+    },
+    {
+      "id": "float32_regressions",
+      "group": "pass_to_pass",
+      "kind": "numeric",
+      "oracle": "float32_regressions.json",
+      "argv": [
+        "{python}",
+        "-I",
+        "-c",
+        "\"\"\"Public CPU Inductor transport. Contains no oracle or numerical verdicts.\"\"\"\nimport json\nimport math\nimport os\nfrom pathlib import Path\nimport sys\nimport tempfile\n\n\ndef mapped_libraries():\n    return sorted({line.split()[-1] for line in Path('/proc/self/maps').read_text().splitlines()\n                   if '/' in line and '.so' in line.split()[-1]})\n\n\ndef load_source_torch(workspace):\n    package = workspace / 'build/opbench-package'\n    if not (package / 'torch/__init__.py').is_file() or not list((package / 'torch').glob('_C*.so')):\n        raise RuntimeError('Build the complete configured source into build/opbench-package first')\n    if 'torch' in sys.modules:\n        raise RuntimeError('A fresh source-loading process is required')\n    sys.path.insert(0, str(package))\n    import torch\n    for path in (torch.__file__, torch._C.__file__):\n        if not Path(path).resolve().is_relative_to(package.resolve()):\n            raise RuntimeError('Torch package/native extension is outside the complete candidate build')\n    libraries = [path for path in mapped_libraries()\n                 if Path(path).name.startswith(('libtorch', 'libc10'))]\n    required = {'libtorch_cpu.so', 'libtorch_python.so', 'libc10.so'}\n    if not required <= {Path(path).name for path in libraries}:\n        raise RuntimeError('Required source-built framework libraries are not loaded')\n    if any(not Path(path).resolve().is_relative_to(workspace) for path in libraries):\n        raise RuntimeError('Framework library came from outside the candidate workspace')\n    print(json.dumps({'event': 'source_cpu_runtime', 'package': torch.__file__,\n                      'native_extension': torch._C.__file__, 'libraries': libraries}), file=sys.stderr)\n    return torch\n\n\ndef main():\n    workspace = Path(sys.argv[1]).resolve()\n    request = json.load(sys.stdin)\n    runtime = Path(os.environ['TMPDIR']).resolve()\n    if not runtime.is_relative_to(workspace):\n        raise RuntimeError('Compiler cache must stay within the declared workspace runtime')\n    cache = Path(tempfile.mkdtemp(prefix='opbench-inductor-', dir=runtime))\n    os.environ['TORCHINDUCTOR_CACHE_DIR'] = str(cache)\n    os.environ['TORCHINDUCTOR_COMPILE_THREADS'] = '1'\n    os.environ['TORCHINDUCTOR_FX_GRAPH_CACHE'] = '0'\n    torch = load_source_torch(workspace)\n    from torch._inductor import config, metrics\n    torch.set_num_threads(1)\n    torch._dynamo.reset()\n    metrics.reset()\n    observed = []\n    with torch._dynamo.config.patch(suppress_errors=False), config.patch(\n            cpu_backend='cpp', fx_graph_cache=False, force_disable_caches=True, compile_threads=1):\n        for item in request['operations']:\n            dtype = {'float32': torch.float32, 'float64': torch.float64}[item['dtype']]\n            value = torch.tensor(item['values'], dtype=dtype, device='cpu').reshape(item['shape'])\n            if item.get('layout') == 'noncontiguous':\n                value = value.transpose(0, -1).contiguous().transpose(0, -1)\n                if value.is_contiguous():\n                    raise RuntimeError('Requested noncontiguous input was not constructed')\n            dim = None if item['dim'] is None else tuple(item['dim'])\n            order, keepdim = float(item['ord']), item['keepdim']\n\n            def operation(argument):\n                return torch.linalg.vector_norm(argument, ord=order, dim=dim, keepdim=keepdim)\n\n            compiled = torch.compile(operation, fullgraph=True, backend='inductor', dynamic=False)\n            result = compiled(value)\n            axes = set(range(value.ndim)) if dim is None else set(dim)\n            shape = [1 if axis in axes else size for axis, size in enumerate(value.shape)] if keepdim else [\n                size for axis, size in enumerate(value.shape) if axis not in axes]\n            if list(result.shape) != shape or result.dtype != dtype or result.device.type != 'cpu':\n                raise RuntimeError('Compiled vector_norm changed declared shape, dtype or device')\n            numbers = result.detach().reshape(-1).tolist()\n            # Nonfinite results remain valid transport observations. The private\n            # controller decides whether finite flags and numbers are correct.\n            for number in numbers:\n                finite = math.isfinite(number)\n                observed.extend((1.0 if finite else 0.0, number if finite else 0.0))\n            print(json.dumps({'event': 'compiled_observation', 'name': item['name'],\n                              'shape': list(result.shape), 'dtype': str(result.dtype),\n                              'input_stride': list(value.stride()), 'returned_values': len(numbers)}), file=sys.stderr)\n    compiled_libraries = [name for name in mapped_libraries() if Path(name).resolve().is_relative_to(cache)]\n    if metrics.generated_kernel_count < 1 or not compiled_libraries:\n        raise RuntimeError('No generated CPU kernel and loaded compiler-cache library were observed')\n    print(json.dumps({'event': 'cpu_compilation_witness', 'generated_kernels': metrics.generated_kernel_count,\n                      'cache': str(cache), 'loaded_libraries': compiled_libraries,\n                      'limit': 'Ordinary compilation/loading diagnostics, not adversarial attestation of candidate code'}), file=sys.stderr)\n    print(json.dumps({'shape': [len(observed)], 'values': observed}, allow_nan=False))\n\n\nif __name__ == '__main__':\n    main()\n",
+        "{workspace}"
+      ],
+      "timeout_sec": 900
+    },
+    {
+      "id": "float64_regressions",
+      "group": "pass_to_pass",
+      "kind": "numeric",
+      "oracle": "float64_regressions.json",
+      "argv": [
+        "{python}",
+        "-I",
+        "-c",
+        "\"\"\"Public CPU Inductor transport. Contains no oracle or numerical verdicts.\"\"\"\nimport json\nimport math\nimport os\nfrom pathlib import Path\nimport sys\nimport tempfile\n\n\ndef mapped_libraries():\n    return sorted({line.split()[-1] for line in Path('/proc/self/maps').read_text().splitlines()\n                   if '/' in line and '.so' in line.split()[-1]})\n\n\ndef load_source_torch(workspace):\n    package = workspace / 'build/opbench-package'\n    if not (package / 'torch/__init__.py').is_file() or not list((package / 'torch').glob('_C*.so')):\n        raise RuntimeError('Build the complete configured source into build/opbench-package first')\n    if 'torch' in sys.modules:\n        raise RuntimeError('A fresh source-loading process is required')\n    sys.path.insert(0, str(package))\n    import torch\n    for path in (torch.__file__, torch._C.__file__):\n        if not Path(path).resolve().is_relative_to(package.resolve()):\n            raise RuntimeError('Torch package/native extension is outside the complete candidate build')\n    libraries = [path for path in mapped_libraries()\n                 if Path(path).name.startswith(('libtorch', 'libc10'))]\n    required = {'libtorch_cpu.so', 'libtorch_python.so', 'libc10.so'}\n    if not required <= {Path(path).name for path in libraries}:\n        raise RuntimeError('Required source-built framework libraries are not loaded')\n    if any(not Path(path).resolve().is_relative_to(workspace) for path in libraries):\n        raise RuntimeError('Framework library came from outside the candidate workspace')\n    print(json.dumps({'event': 'source_cpu_runtime', 'package': torch.__file__,\n                      'native_extension': torch._C.__file__, 'libraries': libraries}), file=sys.stderr)\n    return torch\n\n\ndef main():\n    workspace = Path(sys.argv[1]).resolve()\n    request = json.load(sys.stdin)\n    runtime = Path(os.environ['TMPDIR']).resolve()\n    if not runtime.is_relative_to(workspace):\n        raise RuntimeError('Compiler cache must stay within the declared workspace runtime')\n    cache = Path(tempfile.mkdtemp(prefix='opbench-inductor-', dir=runtime))\n    os.environ['TORCHINDUCTOR_CACHE_DIR'] = str(cache)\n    os.environ['TORCHINDUCTOR_COMPILE_THREADS'] = '1'\n    os.environ['TORCHINDUCTOR_FX_GRAPH_CACHE'] = '0'\n    torch = load_source_torch(workspace)\n    from torch._inductor import config, metrics\n    torch.set_num_threads(1)\n    torch._dynamo.reset()\n    metrics.reset()\n    observed = []\n    with torch._dynamo.config.patch(suppress_errors=False), config.patch(\n            cpu_backend='cpp', fx_graph_cache=False, force_disable_caches=True, compile_threads=1):\n        for item in request['operations']:\n            dtype = {'float32': torch.float32, 'float64': torch.float64}[item['dtype']]\n            value = torch.tensor(item['values'], dtype=dtype, device='cpu').reshape(item['shape'])\n            if item.get('layout') == 'noncontiguous':\n                value = value.transpose(0, -1).contiguous().transpose(0, -1)\n                if value.is_contiguous():\n                    raise RuntimeError('Requested noncontiguous input was not constructed')\n            dim = None if item['dim'] is None else tuple(item['dim'])\n            order, keepdim = float(item['ord']), item['keepdim']\n\n            def operation(argument):\n                return torch.linalg.vector_norm(argument, ord=order, dim=dim, keepdim=keepdim)\n\n            compiled = torch.compile(operation, fullgraph=True, backend='inductor', dynamic=False)\n            result = compiled(value)\n            axes = set(range(value.ndim)) if dim is None else set(dim)\n            shape = [1 if axis in axes else size for axis, size in enumerate(value.shape)] if keepdim else [\n                size for axis, size in enumerate(value.shape) if axis not in axes]\n            if list(result.shape) != shape or result.dtype != dtype or result.device.type != 'cpu':\n                raise RuntimeError('Compiled vector_norm changed declared shape, dtype or device')\n            numbers = result.detach().reshape(-1).tolist()\n            # Nonfinite results remain valid transport observations. The private\n            # controller decides whether finite flags and numbers are correct.\n            for number in numbers:\n                finite = math.isfinite(number)\n                observed.extend((1.0 if finite else 0.0, number if finite else 0.0))\n            print(json.dumps({'event': 'compiled_observation', 'name': item['name'],\n                              'shape': list(result.shape), 'dtype': str(result.dtype),\n                              'input_stride': list(value.stride()), 'returned_values': len(numbers)}), file=sys.stderr)\n    compiled_libraries = [name for name in mapped_libraries() if Path(name).resolve().is_relative_to(cache)]\n    if metrics.generated_kernel_count < 1 or not compiled_libraries:\n        raise RuntimeError('No generated CPU kernel and loaded compiler-cache library were observed')\n    print(json.dumps({'event': 'cpu_compilation_witness', 'generated_kernels': metrics.generated_kernel_count,\n                      'cache': str(cache), 'loaded_libraries': compiled_libraries,\n                      'limit': 'Ordinary compilation/loading diagnostics, not adversarial attestation of candidate code'}), file=sys.stderr)\n    print(json.dumps({'shape': [len(observed)], 'values': observed}, allow_nan=False))\n\n\nif __name__ == '__main__':\n    main()\n",
+        "{workspace}"
+      ],
+      "timeout_sec": 900
+    }
+  ],
+  "metadata": {
+    "status": "candidate",
+    "admission_status": "not_admitted",
+    "formal_benchmark_member": false,
+    "origin": "upstream_issue_relocated_to_pre_fix_base",
+    "upstream_pr": "https://github.com/pytorch/pytorch/pull/144073",
+    "upstream_issue": "https://github.com/pytorch/pytorch/issues/143960",
+    "original_parent": "06e9deabb623e004eb6024e703a976c5748d51e6",
+    "upstream_fix": "957faaadca78ec453d60f2fe986c1191e2e7c5b6",
+    "relocation_review": "migration_review.md",
+    "validation_records": "validation/",
+    "oracle_method": "Independent 80-digit Decimal scalar norm, explicit singleton absolute value, then target-dtype rounding; no torch imports.",
+    "environment_reuse": "Same complete environment/source declaration as the CPU LayerNorm r3 candidate; environment names identify a shared build, not task semantics.",
+    "trust_limit": "Fixed published driver imports candidate Torch; compiler counters, import paths and process maps are ordinary diagnostics and can be spoofed by hostile code. Numerical comparison is performed outside the candidate process."
+  }
+}

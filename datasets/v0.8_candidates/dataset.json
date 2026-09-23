@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "dataset_id": "opbench-v0.8-upstream-candidates",
+  "version": "0.8.0-candidate.2",
+  "status": "candidate",
+  "metadata": {
+    "formal_benchmark_member": false
+  },
+  "tasks": [
+    "layer_norm_cpu/task.json",
+    "log_softmax_cuda/task.json",
+    "vector_norm_compile_cpu/task.json"
+  ]
+}

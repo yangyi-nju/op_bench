@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "dataset_id": "opbench-numeric-softmax-engineering",
+  "version": "2",
+  "status": "development",
+  "metadata": {
+    "formal_benchmark_member": false
+  },
+  "tasks": [
+    "task.docker.json"
+  ]
+}

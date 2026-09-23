@@ -1,0 +1,44 @@
+{
+  "status": "candidate_recipe_not_runtime_validated",
+  "source_revision": "2409b49a33c0ef594d89f9f477d56abad47e65bf",
+  "source_requirement": "Full upstream PyTorch tree with every recursive gitlink exported at its pinned commit; no .git or task/grader/control directory in the execution workspace.",
+  "dependency_image": "opbench/pytorch-cuda-source:cu124-sm70-r1",
+  "build_argv": [
+    "python3",
+    "setup.py",
+    "build"
+  ],
+  "build_timeout_sec": 21600,
+  "environment": {
+    "USE_CUDA": "1",
+    "TORCH_CUDA_ARCH_LIST": "7.0",
+    "USE_CUDNN": "0",
+    "USE_DISTRIBUTED": "0",
+    "USE_NCCL": "0",
+    "USE_MAGMA": "0",
+    "USE_KINETO": "0",
+    "USE_MKLDNN": "0",
+    "USE_FBGEMM": "0",
+    "USE_NNPACK": "0",
+    "USE_XNNPACK": "0",
+    "BUILD_TEST": "0",
+    "MAX_JOBS": "12",
+    "BLAS": "OpenBLAS",
+    "PYTORCH_BUILD_VERSION": "2.6.0a0+opbench",
+    "PYTORCH_BUILD_NUMBER": "1",
+    "USE_FLASH_ATTENTION": "0",
+    "USE_MEM_EFF_ATTENTION": "0",
+    "USE_CUSPARSELT": "0",
+    "USE_CUDSS": "0"
+  },
+  "workspace_contract": "HOME, temporary directories, caches, user installs and build/lib.* must remain in workspace; dependencies such as nvcc and Python build packages are preinstalled in the image. setup.py build does not install torch into site-packages.",
+  "cpu_comparison": "Optional CPU build uses the same source revision and recursive submodule export in a separate clean tree with USE_CUDA=0. It is diagnostic, not a substitute for the required CUDA variant.",
+  "resources": {
+    "cpus": 12,
+    "memory": "96g",
+    "pids_limit": 4096,
+    "required_architecture": "Linux x86_64",
+    "cuda_compute_capability": "7.0",
+    "performance_measurement": false
+  }
+}

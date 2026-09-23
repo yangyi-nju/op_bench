@@ -1,0 +1,208 @@
+{
+  "date": "2026-09-09",
+  "status": "execution_controls_passed",
+  "admission_status": "not_admitted",
+  "task_id": "opbench-cuda-logsoftmax-tail-001",
+  "task_revision": "2",
+  "scoring_revision": "2",
+  "source_revision": "2409b49a33c0ef594d89f9f477d56abad47e65bf",
+  "environment_id": "cuda-cu124-sm70-python310-source",
+  "environment_revision": "1",
+  "image_id": "sha256:faf6daea5a5bf6da0f69ee91810f5372e3199b9ce8fb6e62d23e6d764ef28f6a",
+  "baseline_build_duration_sec": 2113.6201546090015,
+  "baseline_producer_task_identity": {
+    "status": "declared",
+    "task_id": "opbench-cuda-logsoftmax-tail-001",
+    "task_revision": "1",
+    "scope": "operator",
+    "defect_group": "pytorch:cuda-softmax-aligned-prefix-tail-remainder",
+    "scoring_revision": "1",
+    "solver_environment": {
+      "environment_id": "cuda-cu124-sm70-python310-source",
+      "revision": "1"
+    },
+    "required_variants": [
+      {
+        "variant_id": "default",
+        "environment": {
+          "environment_id": "cuda-cu124-sm70-python310-source",
+          "revision": "1"
+        }
+      }
+    ]
+  },
+  "hardware": {
+    "gpu": "Tesla V100-SXM2-32GB",
+    "compute_capability": "7.0",
+    "selected_device_index": 2,
+    "driver": "535.247.01",
+    "cuda_runtime": "12.4",
+    "shared_host": true,
+    "performance_measured": false
+  },
+  "controls": {
+    "baseline": {
+      "status": "test_failed",
+      "duration_sec": 418.8507666589867,
+      "offline_verification_valid": true,
+      "cleanup_errors": [],
+      "cases": [
+        {
+          "id": "double_tail_values",
+          "group": "fail_to_pass",
+          "status": "failed",
+          "valid_observation": true,
+          "compared_values": 11829,
+          "mismatched_values": 4629
+        },
+        {
+          "id": "float32_forward_regressions",
+          "group": "pass_to_pass",
+          "status": "passed",
+          "valid_observation": true,
+          "compared_values": 9331,
+          "mismatched_values": 0
+        },
+        {
+          "id": "double_neighbor_and_gradient_regressions",
+          "group": "pass_to_pass",
+          "status": "passed",
+          "valid_observation": true,
+          "compared_values": 9304,
+          "mismatched_values": 0
+        }
+      ]
+    },
+    "reference": {
+      "status": "resolved",
+      "duration_sec": 497.23221376299625,
+      "offline_verification_valid": true,
+      "cleanup_errors": [],
+      "cases": [
+        {
+          "id": "double_tail_values",
+          "group": "fail_to_pass",
+          "status": "passed",
+          "valid_observation": true,
+          "compared_values": 11829,
+          "mismatched_values": 0
+        },
+        {
+          "id": "float32_forward_regressions",
+          "group": "pass_to_pass",
+          "status": "passed",
+          "valid_observation": true,
+          "compared_values": 9331,
+          "mismatched_values": 0
+        },
+        {
+          "id": "double_neighbor_and_gradient_regressions",
+          "group": "pass_to_pass",
+          "status": "passed",
+          "valid_observation": true,
+          "compared_values": 9304,
+          "mismatched_values": 0
+        }
+      ]
+    },
+    "alternative-1": {
+      "status": "resolved",
+      "duration_sec": 455.3239143899991,
+      "offline_verification_valid": true,
+      "cleanup_errors": [],
+      "cases": [
+        {
+          "id": "double_tail_values",
+          "group": "fail_to_pass",
+          "status": "passed",
+          "valid_observation": true,
+          "compared_values": 11829,
+          "mismatched_values": 0
+        },
+        {
+          "id": "float32_forward_regressions",
+          "group": "pass_to_pass",
+          "status": "passed",
+          "valid_observation": true,
+          "compared_values": 9331,
+          "mismatched_values": 0
+        },
+        {
+          "id": "double_neighbor_and_gradient_regressions",
+          "group": "pass_to_pass",
+          "status": "passed",
+          "valid_observation": true,
+          "compared_values": 9304,
+          "mismatched_values": 0
+        }
+      ]
+    },
+    "mutation-1": {
+      "status": "test_failed",
+      "duration_sec": 511.40711589402054,
+      "offline_verification_valid": true,
+      "cleanup_errors": [],
+      "cases": [
+        {
+          "id": "double_tail_values",
+          "group": "fail_to_pass",
+          "status": "failed",
+          "valid_observation": true,
+          "compared_values": 11829,
+          "mismatched_values": 9264
+        },
+        {
+          "id": "float32_forward_regressions",
+          "group": "pass_to_pass",
+          "status": "failed",
+          "valid_observation": true,
+          "compared_values": 9331,
+          "mismatched_values": 7780
+        },
+        {
+          "id": "double_neighbor_and_gradient_regressions",
+          "group": "pass_to_pass",
+          "status": "failed",
+          "valid_observation": true,
+          "compared_values": 9304,
+          "mismatched_values": 7768
+        }
+      ]
+    },
+    "mutation-2": {
+      "status": "test_failed",
+      "duration_sec": 538.6524989540048,
+      "offline_verification_valid": true,
+      "cleanup_errors": [],
+      "cases": [
+        {
+          "id": "double_tail_values",
+          "group": "fail_to_pass",
+          "status": "failed",
+          "valid_observation": true,
+          "compared_values": 11829,
+          "mismatched_values": 4629
+        },
+        {
+          "id": "float32_forward_regressions",
+          "group": "pass_to_pass",
+          "status": "passed",
+          "valid_observation": true,
+          "compared_values": 9331,
+          "mismatched_values": 0
+        },
+        {
+          "id": "double_neighbor_and_gradient_regressions",
+          "group": "pass_to_pass",
+          "status": "passed",
+          "valid_observation": true,
+          "compared_values": 9304,
+          "mismatched_values": 0
+        }
+      ]
+    }
+  },
+  "raw_evidence": "runs/v0.8_rebuild_validation/20260909-remote/remote/cuda-controls-r2",
+  "controller_source_copy": "runs/v0.8_rebuild_validation/20260909-remote/remote/controller/snapshots/cuda-controls-r2/src",
+  "assurance": "Actual full-framework build and source-built CUDA API observations. Offline verification recomputed numeric judgments without importing candidates. These are authoring controls, not model measurements, independent human admission, or arbitrary-code device attestation."
+}

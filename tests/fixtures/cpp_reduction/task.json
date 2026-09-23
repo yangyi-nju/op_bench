@@ -1,0 +1,51 @@
+{
+  "schema_version": 2,
+  "task_id": "fixture-cpp-row-sum",
+  "task_revision": "1",
+  "scoring_revision": "1",
+  "scope": "operator",
+  "defect_group": "synthetic:row-sum-row-indexing",
+  "statement": "This is original synthetic engineering integration code, not an upstream issue or a member of the formal challenge dataset. Repair the CPU C++ reduction in operator.cpp. Its public C ABI is extern C void row_sum(const double* input, int rows, int cols, double* output). For integer dimensions 1 <= rows, cols <= 1024, input points to a contiguous row-major array of rows*cols finite IEEE 754 double values with absolute value at most 1e6, and output points to a separate writable array of at least rows doubles. Each output[row] must approximate the sum of that row's cols values. Allow ordinary double summation rounding, including cancellation: the absolute error relative to an accurately accumulated sum must not exceed 1e-12 + 2*cols*epsilon*sum(abs(row_values)), where epsilon=2^-52. Preserve the input and write exactly rows output elements; do not read other rows to compute a row's sum. Support rectangular arrays, one-column arrays, single rows, negative values, zero values, and fractional double values. Invalid pointers, overlapping input/output, values or dimensions outside the stated bounds, nonfinite values, overflow, and parallel or GPU execution are outside scope. Keep the function name and C ABI so ctypes can load it. Build the candidate from the source workspace using c++ -shared -fPIC -O2 operator.cpp -o liboperator.so, then run python3 test_public.py -v. The evaluator runs this build command after applying each candidate patch and before loading workspace/liboperator.so. The shared library is a generated build artifact and is ignored by Git; submit changes to source and rebuild locally when testing. The baseline incorrectly repeats the first row's sum for every output row.",
+  "source": {"path": "source"},
+  "environment": {
+    "backend": "docker",
+    "environment_id": "synthetic-cpp-reduction-cpu",
+    "revision": "1",
+    "image": "opbench/cpp-fixture:cpu",
+    "python": "python3",
+    "prepare": [],
+    "build": [["c++", "-shared", "-fPIC", "-O2", "operator.cpp", "-o", "liboperator.so"]],
+    "build_timeout_sec": 60,
+    "cpus": 2,
+    "memory": "1g",
+    "pids_limit": 128,
+    "environment": {"PYTHONDONTWRITEBYTECODE": "1"}
+  },
+  "grader_dir": "grader",
+  "public_commands": [
+    ["c++", "-shared", "-fPIC", "-O2", "operator.cpp", "-o", "liboperator.so"],
+    ["{python}", "{workspace}/test_public.py", "-v"]
+  ],
+  "tests": [
+    {"id": "distinct-rows", "group": "fail_to_pass", "kind": "unittest", "expected_tests": 1, "argv": ["{python}", "{grader}/test_reduction.py", "{workspace}", "RowSumTests.test_distinct_rows", "-v"], "timeout_sec": 30},
+    {"id": "rectangular-shapes", "group": "fail_to_pass", "kind": "unittest", "expected_tests": 1, "argv": ["{python}", "{grader}/test_reduction.py", "{workspace}", "RowSumTests.test_rectangular_shapes", "-v"], "timeout_sec": 30},
+    {"id": "negative-and-zero-values", "group": "fail_to_pass", "kind": "unittest", "expected_tests": 1, "argv": ["{python}", "{grader}/test_reduction.py", "{workspace}", "RowSumTests.test_negative_and_zero_values", "-v"], "timeout_sec": 30},
+    {"id": "single-row", "group": "pass_to_pass", "kind": "unittest", "expected_tests": 1, "argv": ["{python}", "{grader}/test_reduction.py", "{workspace}", "RowSumTests.test_single_row", "-v"], "timeout_sec": 30},
+    {"id": "single-element", "group": "pass_to_pass", "kind": "unittest", "expected_tests": 1, "argv": ["{python}", "{grader}/test_reduction.py", "{workspace}", "RowSumTests.test_single_element", "-v"], "timeout_sec": 30},
+    {"id": "zero-single-row", "group": "pass_to_pass", "kind": "unittest", "expected_tests": 1, "argv": ["{python}", "{grader}/test_reduction.py", "{workspace}", "RowSumTests.test_zero_single_row", "-v"], "timeout_sec": 30},
+    {"id": "cancellation", "group": "pass_to_pass", "kind": "unittest", "expected_tests": 1, "argv": ["{python}", "{grader}/test_reduction.py", "{workspace}", "RowSumTests.test_cancellation", "-v"], "timeout_sec": 30}
+  ],
+  "metadata": {
+    "purpose": "engineering_integration_fixture",
+    "origin": "synthetic_original_example",
+    "formal_challenge_member": false,
+    "scope": "operator",
+    "operator": "row_sum",
+    "authorship": "Original OpBench example code and tests; no upstream issue or patch copied",
+    "reference_patch": "gold.patch",
+    "alternative_patch": "alternative.patch",
+    "mutation_patch": "wrong.patch",
+    "validation_status": "requires_execution",
+    "note": "This fixture checks C++ rebuilding and loading the resulting shared library. It is not an admission decision or evidence of Agent capability."
+  }
+}

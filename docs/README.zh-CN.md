@@ -1,50 +1,30 @@
-# OpBench 文档
+# 文档导航
 
-语言：[English](README.md) | 中文
+第一次接触项目，先读[项目说明](../README.zh-CN.md)，再按需要选择下面的入口。
 
-文档按版本归档。根目录只保留索引，新增版本时使用 `docs/vX.Y/` 目录，文件名保持小写 snake_case，例如 `design.md`、`developer_guide.md`、`experiment_report.md`、`implementation_plan.md`。
+## 理解和使用当前项目
 
-`opbench-v0.7.0` 已完成并冻结 [50-task cumulative](../datasets/pytorch_v0.7/dataset.json)、[31-task Boundary](../datasets/pytorch_v0.7_boundary/dataset.json)、[5-task Precision](../datasets/pytorch_v0.7_precision/dataset.json)和 [15-task Device](../datasets/pytorch_v0.7_device/dataset.json)视图。[质量验证](v0.7/validation_report.md)通过 50/50 fresh replay 与 122/122 valid Agent Attempts，结果仍是描述性的 **non-leaderboard** 证据。旧 25/6/8 发布保存在 `archives/v0.7-pre-quality/`，历史 [v0.6 实验报告](v0.6/experiment_report.md)继续保留。
+| 你想做什么 | 从这里开始 |
+| --- | --- |
+| 理解代码结构、调用流程和模块职责 | [架构导读](architecture.md) |
+| 运行第一个模型，查看结果或恢复实验 | [实验配置与模型接入](v0.8/agent_integration.md#实验配置与运行) |
+| 编写一道题，检查正确与错误补丁 | [任务格式](v0.8/task_format.md)、[候选任务包](../datasets/v0.8_candidates/README.md) |
+| 理解模型能调用哪些工具 | [模型与工具接入](v0.8/agent_integration.md) |
+| 理解源码、公开测试、私有评分之间的边界 | [信息边界](v0.8/information_boundary.md) |
+| 理解 resolved_rate 与未完成实验 | [计分规则](v0.8/statistical_protocol.md) |
+| 在 CPU/GPU 主机部署环境 | [运行环境指南](v0.8/remote_execution.md) |
+| 修改代码和运行测试 | [贡献说明](../CONTRIBUTING.md) |
+| 保存实验、区分批次、查找旧结果 | [运行记录](../runs/README.md) |
 
-建议按以下顺序阅读：
+## 查看当前版本的设计与进度
 
-1. [全局项目方案](project_plan.md)：使命、研究问题、原则、路线图、发布门和 v1.0 目标。
-2. [当前项目状态](project_state.md)：事实基线、当前版本、已确认决策、开放项和下一动作。
-3. [v0.7 Dataset Factory 与 Boundary 设计](v0.7/design.md)：Boundary 分类、Admission Factory、matched-runtime 恢复和数据集合同。
-4. [v0.7 50-task 质量扩展](v0.7/quality_expansion.md)：当前质量门、多轴分类、Admission 和 122-attempt 合同。
-5. [v0.7 候选检索](v0.7/candidate_search.md)：来源窗口、自动候选漏斗和人工复核结论。
-6. [v0.7 matched-runtime 配置](v0.7/setup_matched_runtime.md)：可复现 source 与 wheel Runtime 准备。
-7. [v0.7 Boundary Task 报告](v0.7/boundary_tasks.md)：已准入 Task 证据和 B1–B5 覆盖。
-8. [v0.7 Dataset Card](v0.7/dataset_card.md)：发布身份、数据集哈希、来源、分类、污染风险和限制。
-9. [v0.7 验证报告](v0.7/validation_report.md)：冻结的 122-Attempt 真实 Codex 验证和完整性证据。
-9. [v0.6 平台设计](v0.6/design.md)：统一的 Demo→Platform 架构和完成定义。
-10. [v0.6 实施计划](v0.6/implementation_plan.md)：M1–M7 依赖、实现范围和验证策略。
-11. [v0.6 开发者指南](v0.6/developer_guide.md)：协议选择、Runtime 支持、身份、Artifact、Resume、失败归因和已知限制。
-12. [v0.6 验收矩阵](v0.6/acceptance_matrix.md)：可度量的发布要求和证据状态。
-13. [v0.6 发布说明](v0.6/release_notes.md)：已完成的平台范围、迁移合同、关闭门、冻结证据和明确不作出的结论。
-14. [v0.6 实验报告](v0.6/experiment_report.md)：面向读者的 51-Attempt 真实 MCP 结果、分析、证据与边界。
-15. [v0.6 真实 MCP Agent 实验手册](v0.6/mcp_agent_experiment.md)：冻结的四组执行流程、Resume 规则与发布边界。
-16. [v0.6 真实 MCP 实验验证](v0.6/mcp_agent_experiment_verification.md)：Integrity、Trace、Cleanup、确定性报告与隐私门禁。
-17. [v0.6 M6 验证记录](v0.6/m6_verification.md)：Runtime Conformance、Replay 清单、真实 Codex canary、精确 Remote 原始阻塞及 85/85 关闭附录。
-18. [v0.6 M7 验证记录](v0.6/m7_verification.md)：可执行 Demo、文档、干净环境验证和最终发布判定。
-19. [v0.5 实验报告](v0.5/experiment_report.md)：verified 17-task 数据集、51-attempt 全量结果、precision 拆解和 8 维指标。
-20. [v0.5 设计方案](v0.5/design.md)：问题维度分类、precision 子类、候选策略和扩展指标。
-21. [v0.5 候选检索](v0.5/candidate_search.md)：兼容 ghstack 的 PyTorch PR 检索和 precision 筛选规则。
-22. [v0.5 远程 agent 配置](v0.5/setup_remote_agent.md)：远程镜像、主机配置和 admission 执行方法。
-23. [v0.5 admission prompt](v0.5/admission_prompt.md)：precision task 批量 admission 说明。
-24. [v0.4 设计方案](v0.4/design.md)：CUDA runtime tier、远程 GPU Docker SSH 执行器、`inplace_build` 源码加载和 public test ablation 设计。
-25. [v0.4 实验报告](v0.4/experiment_report.md)：13-task 3-repeat Codex CLI 评测，84.6% resolved rate，按 tier 拆解。
-26. [v0.4 CUDA 候选 task](v0.4/candidate_tasks_cuda.md)：CUDA task 筛选标准和 PR 候选池。
-27. [v0.3 设计方案](v0.3/design.md)：10-task PyTorch 数据扩展、public/hidden test 分层、multi-file overlay 和 CUDA 试点方案。
-28. [v0.3 实验报告](v0.3/experiment_report.md)：10-task 评测结果，76.7% resolved rate，稳定性分析。
-29. [v0.2 设计文档](v0.2/design.md)：环境管理与数据准入版本的需求和架构。
-30. [v0.2 开发者指南](v0.2/developer_guide.md)：registry、admission、curation、资产检查和容器管理流程。
-31. [v0.2 实验报告](v0.2/experiment_report.md)：3-task verified 数据集、admission、gold 闭环和真实 Codex action bridge 评测结果。
-32. [v0.2 实施计划](v0.2/implementation_plan.md)：开发里程碑和验证命令。
-33. [v0.1 开发者指南](v0.1/developer_guide.md)：v0.1 架构、模块职责、实验流程和扩展规则。
-34. [v0.1 手动验证流程](v0.1/manual_validation.md)：v0.1 将 task 从 `draft` 晋升为 `verified` 的操作命令。
-35. [v0.1 实验报告](v0.1/experiment_report.md)：第一次真实 Codex action bridge 实验的证据和分析。
-36. [v0.1 数据构建流程](v0.1/builder_workflow.md)：如何从 GitHub PR 初始化 draft task。
-37. [v0.1 PRD](v0.1/product_requirements.md)：v0.1 规划阶段的产品需求记录。
+v0.8 工程实现与本地验收已完成，尚未正式发布；v0.9 更新数据集与准入；v0.10 在目标模型服务联调通过后开展多模型实验。
 
-版本迭代记录见仓库根目录的 `CHANGELOG.md`。
+- [v0.8 设计](v0.8/design.md)：本轮范围和设计取舍。
+- [实现状态](v0.8/development_status.md)、[实施计划](v0.8/implementation_plan.md)、[验收清单](v0.8/acceptance_matrix.md)：已经完成和仍需处理的事项。
+- [验证记录](v0.8/validation_report.md)：实际测试、运行结果和已知限制。
+- [数据候选](../datasets/v0.8_candidates/README.md)、[历史任务初审](v0.8/task_disposition.md)：后续数据集整理的输入。
+
+## 回顾历次迭代
+
+[历史版本记录](history/README.md)保留早期版本文档与实验报告的原文。查阅时按版本理解其口径；当前安装、命令和模块结构以上面的入口为准。各版本变化摘要见 [CHANGELOG](../CHANGELOG.md)。

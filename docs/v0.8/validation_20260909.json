@@ -1,0 +1,385 @@
+{
+  "executed_at": "2026-09-09",
+  "scope": "engineering_validation_not_research_release",
+  "software_identity": {
+    "version": "0.8.0.dev1",
+    "git_revision": "82c8e064bf30fead2d941d11cf94053ce3fc7e14",
+    "working_tree_modified": true,
+    "installation": "checkout"
+  },
+  "host": {
+    "platform": "macOS-26.5.1-arm64-arm-64bit",
+    "python": "3.12.13"
+  },
+  "core_suite": {
+    "discovered": 211,
+    "passed": 203,
+    "default_skipped": 8
+  },
+  "numeric_controls": [
+    {
+      "backend": "docker",
+      "control": "alternative",
+      "task_identity": {
+        "status": "declared",
+        "task_id": "synthetic-numeric-softmax",
+        "task_revision": "1",
+        "scope": "operator",
+        "defect_group": "synthetic:softmax-finite-offset-stability",
+        "scoring_revision": "1",
+        "solver_environment": {
+          "environment_id": "synthetic-stdlib-python-cpu-container",
+          "revision": "1"
+        },
+        "required_variants": [
+          {
+            "variant_id": "default",
+            "environment": {
+              "environment_id": "synthetic-stdlib-python-cpu-container",
+              "revision": "1"
+            }
+          }
+        ]
+      },
+      "status": "resolved",
+      "groups": {
+        "fail_to_pass": {
+          "passed": 2,
+          "total": 2
+        },
+        "pass_to_pass": {
+          "passed": 1,
+          "total": 1
+        }
+      },
+      "image_id": "sha256:83993db86f158f06f5470904a150cf98e4e58e82521b3f89c3fc7410867b8efa",
+      "cleanup_errors": [],
+      "verified": true
+    },
+    {
+      "backend": "docker",
+      "control": "baseline",
+      "task_identity": {
+        "status": "declared",
+        "task_id": "synthetic-numeric-softmax",
+        "task_revision": "1",
+        "scope": "operator",
+        "defect_group": "synthetic:softmax-finite-offset-stability",
+        "scoring_revision": "1",
+        "solver_environment": {
+          "environment_id": "synthetic-stdlib-python-cpu-container",
+          "revision": "1"
+        },
+        "required_variants": [
+          {
+            "variant_id": "default",
+            "environment": {
+              "environment_id": "synthetic-stdlib-python-cpu-container",
+              "revision": "1"
+            }
+          }
+        ]
+      },
+      "status": "test_failed",
+      "groups": {
+        "fail_to_pass": {
+          "passed": 0,
+          "total": 2
+        },
+        "pass_to_pass": {
+          "passed": 1,
+          "total": 1
+        }
+      },
+      "image_id": "sha256:83993db86f158f06f5470904a150cf98e4e58e82521b3f89c3fc7410867b8efa",
+      "cleanup_errors": [],
+      "verified": true
+    },
+    {
+      "backend": "docker",
+      "control": "mutation",
+      "task_identity": {
+        "status": "declared",
+        "task_id": "synthetic-numeric-softmax",
+        "task_revision": "1",
+        "scope": "operator",
+        "defect_group": "synthetic:softmax-finite-offset-stability",
+        "scoring_revision": "1",
+        "solver_environment": {
+          "environment_id": "synthetic-stdlib-python-cpu-container",
+          "revision": "1"
+        },
+        "required_variants": [
+          {
+            "variant_id": "default",
+            "environment": {
+              "environment_id": "synthetic-stdlib-python-cpu-container",
+              "revision": "1"
+            }
+          }
+        ]
+      },
+      "status": "test_failed",
+      "groups": {
+        "fail_to_pass": {
+          "passed": 0,
+          "total": 2
+        },
+        "pass_to_pass": {
+          "passed": 1,
+          "total": 1
+        }
+      },
+      "image_id": "sha256:83993db86f158f06f5470904a150cf98e4e58e82521b3f89c3fc7410867b8efa",
+      "cleanup_errors": [],
+      "verified": true
+    },
+    {
+      "backend": "docker",
+      "control": "reference",
+      "task_identity": {
+        "status": "declared",
+        "task_id": "synthetic-numeric-softmax",
+        "task_revision": "1",
+        "scope": "operator",
+        "defect_group": "synthetic:softmax-finite-offset-stability",
+        "scoring_revision": "1",
+        "solver_environment": {
+          "environment_id": "synthetic-stdlib-python-cpu-container",
+          "revision": "1"
+        },
+        "required_variants": [
+          {
+            "variant_id": "default",
+            "environment": {
+              "environment_id": "synthetic-stdlib-python-cpu-container",
+              "revision": "1"
+            }
+          }
+        ]
+      },
+      "status": "resolved",
+      "groups": {
+        "fail_to_pass": {
+          "passed": 2,
+          "total": 2
+        },
+        "pass_to_pass": {
+          "passed": 1,
+          "total": 1
+        }
+      },
+      "image_id": "sha256:83993db86f158f06f5470904a150cf98e4e58e82521b3f89c3fc7410867b8efa",
+      "cleanup_errors": [],
+      "verified": true
+    },
+    {
+      "backend": "local",
+      "control": "alternative",
+      "task_identity": {
+        "status": "declared",
+        "task_id": "synthetic-numeric-softmax",
+        "task_revision": "1",
+        "scope": "operator",
+        "defect_group": "synthetic:softmax-finite-offset-stability",
+        "scoring_revision": "1",
+        "solver_environment": {
+          "environment_id": "synthetic-stdlib-python-local",
+          "revision": "1"
+        },
+        "required_variants": [
+          {
+            "variant_id": "default",
+            "environment": {
+              "environment_id": "synthetic-stdlib-python-local",
+              "revision": "1"
+            }
+          }
+        ]
+      },
+      "status": "resolved",
+      "groups": {
+        "fail_to_pass": {
+          "passed": 2,
+          "total": 2
+        },
+        "pass_to_pass": {
+          "passed": 1,
+          "total": 1
+        }
+      },
+      "image_id": null,
+      "cleanup_errors": [],
+      "verified": true
+    },
+    {
+      "backend": "local",
+      "control": "baseline",
+      "task_identity": {
+        "status": "declared",
+        "task_id": "synthetic-numeric-softmax",
+        "task_revision": "1",
+        "scope": "operator",
+        "defect_group": "synthetic:softmax-finite-offset-stability",
+        "scoring_revision": "1",
+        "solver_environment": {
+          "environment_id": "synthetic-stdlib-python-local",
+          "revision": "1"
+        },
+        "required_variants": [
+          {
+            "variant_id": "default",
+            "environment": {
+              "environment_id": "synthetic-stdlib-python-local",
+              "revision": "1"
+            }
+          }
+        ]
+      },
+      "status": "test_failed",
+      "groups": {
+        "fail_to_pass": {
+          "passed": 0,
+          "total": 2
+        },
+        "pass_to_pass": {
+          "passed": 1,
+          "total": 1
+        }
+      },
+      "image_id": null,
+      "cleanup_errors": [],
+      "verified": true
+    },
+    {
+      "backend": "local",
+      "control": "mutation",
+      "task_identity": {
+        "status": "declared",
+        "task_id": "synthetic-numeric-softmax",
+        "task_revision": "1",
+        "scope": "operator",
+        "defect_group": "synthetic:softmax-finite-offset-stability",
+        "scoring_revision": "1",
+        "solver_environment": {
+          "environment_id": "synthetic-stdlib-python-local",
+          "revision": "1"
+        },
+        "required_variants": [
+          {
+            "variant_id": "default",
+            "environment": {
+              "environment_id": "synthetic-stdlib-python-local",
+              "revision": "1"
+            }
+          }
+        ]
+      },
+      "status": "test_failed",
+      "groups": {
+        "fail_to_pass": {
+          "passed": 0,
+          "total": 2
+        },
+        "pass_to_pass": {
+          "passed": 1,
+          "total": 1
+        }
+      },
+      "image_id": null,
+      "cleanup_errors": [],
+      "verified": true
+    },
+    {
+      "backend": "local",
+      "control": "reference",
+      "task_identity": {
+        "status": "declared",
+        "task_id": "synthetic-numeric-softmax",
+        "task_revision": "1",
+        "scope": "operator",
+        "defect_group": "synthetic:softmax-finite-offset-stability",
+        "scoring_revision": "1",
+        "solver_environment": {
+          "environment_id": "synthetic-stdlib-python-local",
+          "revision": "1"
+        },
+        "required_variants": [
+          {
+            "variant_id": "default",
+            "environment": {
+              "environment_id": "synthetic-stdlib-python-local",
+              "revision": "1"
+            }
+          }
+        ]
+      },
+      "status": "resolved",
+      "groups": {
+        "fail_to_pass": {
+          "passed": 2,
+          "total": 2
+        },
+        "pass_to_pass": {
+          "passed": 1,
+          "total": 1
+        }
+      },
+      "image_id": null,
+      "cleanup_errors": [],
+      "verified": true
+    }
+  ],
+  "native_smoke": {
+    "same_report_after_resume_and_recompute": true,
+    "attempts": 4,
+    "information_profile": "closed",
+    "identity_status": "legacy_unidentified",
+    "agents": {
+      "scripted-noop": {
+        "planned": 2,
+        "resolved": 0,
+        "valid": 2,
+        "unknown": 0,
+        "missing": 0
+      },
+      "scripted-repair": {
+        "planned": 2,
+        "resolved": 2,
+        "valid": 2,
+        "unknown": 0,
+        "missing": 0
+      }
+    },
+    "cleanup_errors": []
+  },
+  "clean_install": {
+    "installation": "/var/folders/yf/pljpbb8x7nl_crf68gh72hs00000gn/T/opbench-v08-install-2qgaisj3",
+    "resolved": true,
+    "task_id": "synthetic-numeric-softmax",
+    "software_identity": {
+      "version": "0.8.0.dev1",
+      "git_revision": null,
+      "working_tree_modified": null,
+      "installation": "package"
+    },
+    "source_repository_required": false
+  },
+  "historical_review": {
+    "unique_tasks": 50,
+    "operator": 5,
+    "operator_integration": 33,
+    "framework_support": 9,
+    "uncertain": 3,
+    "new_admissions": 0
+  },
+  "not_validated": [
+    "real_model_provider_and_agent_canary",
+    "full_upstream_framework_build",
+    "cuda",
+    "independent_task_admission",
+    "research_protocol_and_full_experiment",
+    "school_license_and_upstream_distribution_permissions"
+  ],
+  "local_raw_root": "runs/v0.8_rebuild_validation/20260909-core"
+}

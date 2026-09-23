@@ -1,0 +1,224 @@
+{
+  "schema_version": 1,
+  "date": "2026-09-14",
+  "scope": "v0.8 fixed model loop and controlled MCP tools",
+  "status": "engineering_scope_complete_unreleased",
+  "source": {
+    "version": "0.8.0.dev1",
+    "git_revision": "82c8e064bf30fead2d941d11cf94053ce3fc7e14",
+    "working_tree_modified": true,
+    "final_source_snapshot": "runs/v0.8_controlled_validation/20260914/controller-source-final",
+    "note": "The real model run preceded the final invalid-output classification and response-evidence additions. The final source passed the full suite and fresh installation controls; no second model run was needed for these failure-path changes."
+  },
+  "core_tests": {
+    "tests": 216,
+    "duration_sec": 80.962,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "python": "Python 3.12.13",
+    "docker_enabled": true,
+    "docker_image": "opbench/cpp-fixture:cpu",
+    "command": "OPBENCH_TEST_DOCKER_IMAGE=opbench/cpp-fixture:cpu OPBENCH_TEST_DOCKER=1 python -m unittest discover -s tests/core -v",
+    "log": "runs/v0.8_controlled_validation/20260914/core-final.log"
+  },
+  "installed_package": {
+    "check_task_exit": 0,
+    "outside_checkout": true,
+    "pythonpath_removed": true,
+    "controls": [
+      {
+        "control": "baseline",
+        "status": "test_failed",
+        "verify_exit": 0,
+        "software_identity": {
+          "version": "0.8.0.dev1",
+          "git_revision": null,
+          "working_tree_modified": null,
+          "installation": "package"
+        }
+      },
+      {
+        "control": "reference",
+        "status": "resolved",
+        "verify_exit": 0,
+        "software_identity": {
+          "version": "0.8.0.dev1",
+          "git_revision": null,
+          "working_tree_modified": null,
+          "installation": "package"
+        }
+      },
+      {
+        "control": "alternative-1",
+        "status": "resolved",
+        "verify_exit": 0,
+        "software_identity": {
+          "version": "0.8.0.dev1",
+          "git_revision": null,
+          "working_tree_modified": null,
+          "installation": "package"
+        }
+      },
+      {
+        "control": "mutation-1",
+        "status": "test_failed",
+        "verify_exit": 0,
+        "software_identity": {
+          "version": "0.8.0.dev1",
+          "git_revision": null,
+          "working_tree_modified": null,
+          "installation": "package"
+        }
+      }
+    ]
+  },
+  "model_smoke": {
+    "config": "examples/controlled_models/experiment.docker.json",
+    "task_id": "synthetic-numeric-softmax",
+    "attempt_id": "attempt-000001",
+    "run": "runs/v0.8_controlled_validation/20260914/codex-controlled-r2",
+    "cli_version": "codex-cli 0.154.0-alpha.6.2",
+    "model": {
+      "model_id": "gpt-5.5",
+      "backend": "codex_cli",
+      "model": "gpt-5.5",
+      "base_url": null,
+      "api_key_env": null,
+      "codex_binary": "codex",
+      "reasoning_effort": "high",
+      "max_completion_tokens": 4096,
+      "max_response_bytes": 8388608
+    },
+    "harness": {
+      "budget_sec": 900,
+      "max_turns": 16,
+      "max_context_chars": 200000,
+      "per_tool_timeout_sec": 120
+    },
+    "tool_version": "controlled-tools-1",
+    "information_profile": "controlled",
+    "information_boundary": {
+      "status": "enforced",
+      "source_history": "fresh_baseline",
+      "solver_network": "none",
+      "model_access": "trusted_controller",
+      "tools": "controlled-tools-1",
+      "scope": "Workspace execution boundary; model transport and backend limits are recorded separately."
+    },
+    "terminal_status": "finished",
+    "harness_elapsed_sec": 52.960775,
+    "model_calls": 5,
+    "tool_calls": 7,
+    "usage": {
+      "input_tokens": 17301,
+      "output_tokens": 1308,
+      "total_tokens": 18609,
+      "known_totals": {
+        "input_tokens": 17301,
+        "output_tokens": 1308,
+        "total_tokens": 18609
+      },
+      "known_calls": {
+        "input_tokens": 5,
+        "output_tokens": 5,
+        "total_tokens": 5
+      },
+      "sources": [
+        "cli_reported"
+      ],
+      "cost_usd": null
+    },
+    "evaluation": {
+      "status": "resolved",
+      "groups": {
+        "fail_to_pass": {
+          "passed": 2,
+          "total": 2
+        },
+        "pass_to_pass": {
+          "passed": 1,
+          "total": 1
+        }
+      },
+      "duration_sec": 1.72837800020352
+    },
+    "report": {
+      "planned": 1,
+      "resolved": 1,
+      "unresolved": 0,
+      "missing": 0,
+      "errors": 0,
+      "resolved_rate": 1.0,
+      "complete": true
+    },
+    "checks": {
+      "resume_exit": 0,
+      "report_exit": 0,
+      "verify_exit": 0,
+      "requests_before": 5,
+      "requests_after": 5,
+      "new_model_requests": 0,
+      "session_ids_checked": [
+        "opbench-fbbd228b58d14641aa82d150be96521a",
+        "opbench-4552c51f00e148cb8e0c0f78883364df",
+        "opbench-46d13410acfa47519c8efee989884625",
+        "opbench-789c5297057b451f88ed935775d2d203",
+        "opbench-6964b3546b9e498cb0cb5499e7ecbcfc"
+      ],
+      "remaining_resources": [],
+      "evaluation_recovery": "verified"
+    },
+    "limitations": [
+      "One synthetic engineering fixture, not a model-comparison result or admitted dataset.",
+      "Codex CLI produces model-only structured decisions; this adapter is not claimed equivalent to direct API transport.",
+      "The CLI does not enforce max_completion_tokens; reported tokens are CLI supplied and cost remains unknown.",
+      "CLI under-development skip_host_skill_discovery warning was retained."
+    ]
+  },
+  "retained_early_attempt": {
+    "run": "runs/v0.8_controlled_validation/20260914/codex-development-r1",
+    "terminal_status": "cancelled",
+    "submission_status": "frozen",
+    "evaluated": false,
+    "reason": "Controller cancellation after slow default WebSocket retries; preserved original actions and frozen patch; not counted as a successful attempt or resumed into r2."
+  },
+  "correctness_fixes": [
+    "Workspace helper payload is passed by stdin so source literals cannot be replaced by command placeholders.",
+    "Command execution logs retain up to 16 MiB while public model feedback is bounded separately to 32768 characters.",
+    "Explicit new source files remain in the frozen patch even when ignored by initial Git rules.",
+    "Models producing invalid decisions are stopped and their frozen patch is graded; service/adapter failures retain incomplete status.",
+    "Completed-attempt resume does not recall the model; report and recovery do not rewrite original attempts.",
+    "Local task subprocesses receive only declared environment plus a small execution allowlist, not controller credentials."
+  ],
+  "retired": [
+    "arbitrary native Agent argv execution",
+    "reference_agent implementation",
+    "model_channel and model_gateway relay",
+    "native_smoke/native_codex/reference_agent/model_gateway examples",
+    "multi-repeat best-of and complex comparison reporting"
+  ],
+  "historical_controls": {
+    "rerun_this_round": false,
+    "index": "docs/v0.8/validation_remote_20260909.json",
+    "cpu_controls": 4,
+    "cuda_controls": 5,
+    "compile_controls": 4,
+    "note": "Preserved original protocol and failures; not evidence for the new fixed model loop."
+  },
+  "deferred": {
+    "v0.9": "category definitions, at least ten independent tasks per category, dataset update and repository admission workflow",
+    "v0.10": "fixed-harness multi-model experiments",
+    "later": "same-model Agent framework comparisons and behavior analysis"
+  },
+  "publication": {
+    "committed": false,
+    "pushed": false,
+    "published": false,
+    "license_decided": false
+  },
+  "documentation_checks": {
+    "markdown_link_findings": 0,
+    "git_diff_check_exit": 0
+  }
+}

@@ -1,0 +1,112 @@
+{
+  "date": "2026-09-09",
+  "kind": "scripted_native_submission_and_independent_physical_replay",
+  "model_called": false,
+  "admission_status": "not_admitted",
+  "original_attempt": {
+    "name": "cuda-native-r4",
+    "terminal_status": "finished",
+    "submission": {
+      "status": "frozen",
+      "path": "patch.diff"
+    },
+    "information_boundary": {
+      "status": "enforced",
+      "source_history": "fresh_baseline",
+      "solver_network": "none",
+      "model_access": "none",
+      "scope": "execution observations only; task, image and provider admission are separate"
+    },
+    "agent_exit_code": 0,
+    "timing_protocol_revision": null,
+    "solver_startup_duration_sec": 145.8132781420136,
+    "agent_duration_sec": 78.94411335099721,
+    "solve_duration_sec": 224.75749788299436,
+    "public_reproducer_max_absolute_error": {
+      "before": 0.36510581450284363,
+      "after": 8.881784197001252e-16
+    },
+    "source_git": {
+      "commit_count_before_agent": 1,
+      "remotes": [],
+      "original_upstream_commit_absent": true,
+      "agent_created_local_commit": true
+    },
+    "evaluation_status": "test_failed",
+    "grading_failures": [
+      {
+        "case_id": "double_tail_values",
+        "reason": "CUDA out of memory in candidate process"
+      },
+      {
+        "case_id": "float32_forward_regressions",
+        "reason": "CUDA out of memory in candidate process"
+      }
+    ],
+    "cleanup_errors": []
+  },
+  "replay": {
+    "name": "cuda-native-replay-r4",
+    "status": "completed",
+    "evaluation_status": "resolved",
+    "duration_sec": 1169.5969183630077,
+    "evaluation_duration_sec": 1094.6022806630062,
+    "generation_performed": false,
+    "new_independent_repeat": false,
+    "origin_timing_protocol_revision": null,
+    "same_patch": true,
+    "offline_verification": {
+      "valid": true,
+      "findings": [],
+      "scope": "Artifact presence, recorded process outcomes, numeric observation comparison and score arithmetic; no candidate code is imported. Rerun evaluate to replay the patch; this check does not authenticate artifacts."
+    },
+    "cleanup_errors": [],
+    "cases": [
+      {
+        "id": "double_tail_values",
+        "status": "passed",
+        "numeric": {
+          "valid_observation": true,
+          "compared_values": 11829,
+          "mismatched_values": 0
+        }
+      },
+      {
+        "id": "float32_forward_regressions",
+        "status": "passed",
+        "numeric": {
+          "valid_observation": true,
+          "compared_values": 9331,
+          "mismatched_values": 0
+        }
+      },
+      {
+        "id": "double_neighbor_and_gradient_regressions",
+        "status": "passed",
+        "numeric": {
+          "valid_observation": true,
+          "compared_values": 9304,
+          "mismatched_values": 0
+        }
+      }
+    ]
+  },
+  "gpu_observations": {
+    "sample_count": 489,
+    "interval_sec": 2,
+    "free_memory_mib_min": 227.0,
+    "free_memory_mib_max": 32501.0,
+    "selected_device": 2,
+    "scope": "Concurrent replay telemetry on shared host; not original-failure-time evidence and not proof of the original OOM cause"
+  },
+  "kept_earlier_attempts": {
+    "cuda-native-r2": "controller Git pathspec initialization timeout before Agent; subsequently corrected by literal index streaming",
+    "cuda-native-r3": "scripted repair precondition was overbroad; Agent failed before modifying source; unmodified patch graded as failed"
+  },
+  "raw_evidence": "runs/v0.8_rebuild_validation/20260909-remote/remote/",
+  "limits": [
+    "Scripted known repair, no model capability measurement",
+    "Original failed evaluation is retained and not relabeled as successful",
+    "Whole shared-host resource control and real model canary remain unaccepted"
+  ]
+}

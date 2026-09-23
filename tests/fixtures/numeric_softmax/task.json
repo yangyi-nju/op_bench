@@ -1,0 +1,31 @@
+{
+  "schema_version": 2,
+  "task_id": "synthetic-numeric-softmax",
+  "task_revision": "1",
+  "scoring_revision": "1",
+  "scope": "operator",
+  "defect_group": "synthetic:softmax-finite-offset-stability",
+  "statement": "This is an original engineering fixture, not a formal benchmark member or upstream issue. Repair the softmax implementation and its public worker CLI. Input is one JSON object containing values, a list of 1 to 128 finite binary64 numbers in [-1000,1000]. Return one JSON object containing shape=[N] and N finite real values in values. Each output must approximate exp(x_i)/sum_j(exp(x_j)) with absolute error <= 1e-12 + 1e-12*abs(reference_i). Large positive and negative offsets must not overflow or underflow into invalid results; equal inputs yield equal probabilities. The mathematical formula specifies the answer, not a required implementation. The worker reads one input from stdin, writes only the JSON observation to stdout, and may write diagnostics to stderr. Empty inputs, nonfinite inputs, gradients, GPU execution, performance and internal dtype verification are outside this fixture. Run python3 test_public.py -v for public feedback. The evaluator applies the complete patch, compiles Python modules, stops the build environment, then executes the public worker for each private input in a fresh environment with no private grader mounted. Dependencies must already exist in the environment; build outputs must remain in the workspace. Candidate changes may affect any source file, including the worker, provided the public protocol and semantics are preserved.",
+  "source": {"path": "source"},
+  "environment": {
+    "backend": "local",
+    "python": "python3",
+    "environment_id": "synthetic-stdlib-python-local",
+    "revision": "1",
+    "build": [["{python}", "-m", "py_compile", "{workspace}/ops.py", "{workspace}/worker.py"]]
+  },
+  "grader_dir": "grader",
+  "public_commands": [["{python}", "{workspace}/test_public.py", "-v"]],
+  "tests": [
+    {"id": "large", "group": "fail_to_pass", "kind": "numeric", "oracle": "large.json", "argv": ["{python}", "{workspace}/worker.py"], "timeout_sec": 10},
+    {"id": "negative", "group": "fail_to_pass", "kind": "numeric", "oracle": "negative.json", "argv": ["{python}", "{workspace}/worker.py"], "timeout_sec": 10},
+    {"id": "zero", "group": "pass_to_pass", "kind": "numeric", "oracle": "zero.json", "argv": ["{python}", "{workspace}/worker.py"], "timeout_sec": 10}
+  ],
+  "metadata": {
+    "formal_benchmark_member": false,
+    "admission_status": "engineering_fixture_not_admitted",
+    "origin": "original_synthetic",
+    "oracle_method": "Privately stored mathematical logistic(1) probabilities computed independently to decimal precision, rounded to binary64 by the parser; equal-input output is exactly 1/N. No candidate import or execution generates expected values.",
+    "coverage_limit": "Three cases demonstrate transport and semantic mutation rejection, not exhaustive numerical-domain coverage or formal task admission."
+  }
+}

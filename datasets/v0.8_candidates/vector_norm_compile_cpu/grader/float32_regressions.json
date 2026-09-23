@@ -1,0 +1,223 @@
+{
+  "schema_version": 1,
+  "input": {
+    "operations": [
+      {
+        "name": "ordinary_l2",
+        "shape": [
+          2,
+          4
+        ],
+        "dim": [
+          1
+        ],
+        "ord": 2,
+        "dtype": "float32",
+        "keepdim": false,
+        "layout": "contiguous",
+        "values": [
+          -16,
+          -4,
+          -1,
+          -0.25,
+          -0.0625,
+          0.0625,
+          0.25,
+          1
+        ]
+      },
+      {
+        "name": "negative_multi_element",
+        "shape": [
+          2,
+          4
+        ],
+        "dim": [
+          1
+        ],
+        "ord": -1,
+        "dtype": "float32",
+        "keepdim": true,
+        "layout": "contiguous",
+        "values": [
+          -16,
+          -4,
+          -1,
+          -0.25,
+          -0.0625,
+          0.0625,
+          0.25,
+          1
+        ]
+      },
+      {
+        "name": "l1_noncontiguous",
+        "shape": [
+          3,
+          4
+        ],
+        "dim": [
+          0
+        ],
+        "ord": 1,
+        "dtype": "float32",
+        "keepdim": false,
+        "layout": "noncontiguous",
+        "values": [
+          -16,
+          -4,
+          -1,
+          -0.25,
+          -0.0625,
+          0.0625,
+          0.25,
+          1,
+          4,
+          16,
+          -16,
+          -4
+        ]
+      },
+      {
+        "name": "infinity",
+        "shape": [
+          2,
+          4
+        ],
+        "dim": null,
+        "ord": "inf",
+        "dtype": "float32",
+        "keepdim": false,
+        "layout": "contiguous",
+        "values": [
+          -16,
+          -4,
+          -1,
+          -0.25,
+          -0.0625,
+          0.0625,
+          0.25,
+          1
+        ]
+      },
+      {
+        "name": "negative_infinity",
+        "shape": [
+          2,
+          4
+        ],
+        "dim": [
+          1
+        ],
+        "ord": "-inf",
+        "dtype": "float32",
+        "keepdim": false,
+        "layout": "contiguous",
+        "values": [
+          -16,
+          -4,
+          -1,
+          -0.25,
+          -0.0625,
+          0.0625,
+          0.25,
+          1
+        ]
+      },
+      {
+        "name": "zero_order",
+        "shape": [
+          2,
+          4
+        ],
+        "dim": [
+          1
+        ],
+        "ord": 0,
+        "dtype": "float32",
+        "keepdim": false,
+        "layout": "contiguous",
+        "values": [
+          0,
+          1,
+          -1,
+          0,
+          2,
+          0,
+          3,
+          4
+        ]
+      },
+      {
+        "name": "ordinary_singleton",
+        "shape": [
+          2,
+          1,
+          3
+        ],
+        "dim": [
+          1
+        ],
+        "ord": 2,
+        "dtype": "float32",
+        "keepdim": false,
+        "layout": "contiguous",
+        "values": [
+          -16,
+          -4,
+          -1,
+          -0.25,
+          -0.0625,
+          0.0625
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "shape": [
+      38
+    ],
+    "values": [
+      1.0,
+      16.52460289001465,
+      1.0,
+      1.0345591306686401,
+      1.0,
+      0.1882352977991104,
+      1.0,
+      0.027027027681469917,
+      1.0,
+      20.0625,
+      1.0,
+      20.0625,
+      1.0,
+      17.25,
+      1.0,
+      5.25,
+      1.0,
+      16.0,
+      1.0,
+      0.25,
+      1.0,
+      0.0625,
+      1.0,
+      2.0,
+      1.0,
+      3.0,
+      1.0,
+      16.0,
+      1.0,
+      4.0,
+      1.0,
+      1.0,
+      1.0,
+      0.25,
+      1.0,
+      0.0625,
+      1.0,
+      0.0625
+    ]
+  },
+  "atol": 2e-05,
+  "rtol": 2e-06
+}

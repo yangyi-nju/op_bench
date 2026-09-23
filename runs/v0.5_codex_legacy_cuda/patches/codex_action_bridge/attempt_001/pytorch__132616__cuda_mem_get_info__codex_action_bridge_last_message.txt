@@ -1,5 +1,0 @@
-Fixed `torch.cuda.memory.mem_get_info("cuda")` by allowing an unspecified CUDA device index to resolve to the current device.
-
-Validated with:
-
-`TestCudaMultiGPU.test_mem_get_info` — passed.

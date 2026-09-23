@@ -1,0 +1,14 @@
+--- a/ops.py
++++ b/ops.py
+@@ -1,7 +1,8 @@
+-"""Small original softmax implementation used to exercise numeric scoring."""
++"""Independent log-normalization implementation for the engineering fixture."""
+ import math
+ 
+ 
+ def softmax(values):
+-    numerators = [math.exp(value) for value in values]
+-    return [value / sum(numerators) for value in numerators]
++    anchor = max(values)
++    log_total = math.log(math.fsum(math.exp(value - anchor) for value in values))
++    return [math.exp((value - anchor) - log_total) for value in values]
