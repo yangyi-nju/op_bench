@@ -1,0 +1,471 @@
+{
+  "executed_date": "2026-09-09",
+  "scope": "engineering_validation_on_complete_configured_upstream_frameworks_not_research_release",
+  "status": "planned_scripted_controls_completed",
+  "software_identity": {
+    "version": "0.8.0.dev1",
+    "git_revision": "82c8e064bf30fead2d941d11cf94053ce3fc7e14",
+    "working_tree_modified": true,
+    "installation": "checkout"
+  },
+  "software_provenance_limit": "Unpublished working tree. Frozen controller source directories are retained per remote run; a version string or dirty flag does not uniquely identify unpublished changes. Execution records retain their original software and timing revisions.",
+  "legacy_replacement": {
+    "base_revision": "55c8ef2bd7d0bf78fc26bfd25498d9252e70781f",
+    "tracked_files_deleted": 732,
+    "old_runtime_replaced": true,
+    "old_task_sources_retained_for_remake": true,
+    "committed_or_pushed": false
+  },
+  "local_host": {
+    "platform": "macOS-26.5.1-arm64-arm-64bit",
+    "python": "3.12.13"
+  },
+  "local_development_environment": {
+    "python": "3.12.13",
+    "executable": "/Users/yy/dev/graduate/op_bench/.venv/bin/python",
+    "package_version": "0.8.0.dev1",
+    "installation": "editable",
+    "help_entrypoint_passed": true,
+    "previous_environment_backup": "/Users/yy/dev/graduate/opbench-v08-backup-20260907-171339/local-python39-venv-20260909",
+    "previous_python": "3.9.6",
+    "active_old_venv_processes_before_move": 0
+  },
+  "core_suite": {
+    "passed": 292,
+    "skipped": 0,
+    "discovered": 292,
+    "duration_sec": 116.972,
+    "docker_enabled": true,
+    "command": "PYTHONPATH=src OPBENCH_TEST_DOCKER_IMAGE=opbench/cpp-fixture:cpu OPBENCH_TEST_DOCKER=1 python3.12 -m unittest discover -s tests/core -v",
+    "log": "runs/v0.8_rebuild_validation/20260909-remote/final-core-with-docker-r2.log"
+  },
+  "clean_installed_package": {
+    "software_identity": {
+      "version": "0.8.0.dev1",
+      "git_revision": null,
+      "working_tree_modified": null,
+      "installation": "package"
+    },
+    "execution_checks_passed": true,
+    "controls": [
+      {
+        "control": "baseline",
+        "status": "test_failed",
+        "verification": true
+      },
+      {
+        "control": "reference",
+        "status": "resolved",
+        "verification": true
+      },
+      {
+        "control": "alternative-1",
+        "status": "resolved",
+        "verification": true
+      },
+      {
+        "control": "mutation-1",
+        "status": "test_failed",
+        "verification": true
+      }
+    ],
+    "cwd": "/tmp/opbench-v08-external-20260909-r3",
+    "PYTHONPATH_unset": true
+  },
+  "native_cpp_timing_revision_2": {
+    "attempts": [
+      {
+        "path": "runs/v0.8_rebuild_validation/20260909-remote/native-cpp-timing-v2/attempts/attempt-000001",
+        "terminal_status": "finished",
+        "evaluation_status": "resolved",
+        "timing_protocol_revision": "2",
+        "initial_workspace_upload": {
+          "status": "completed",
+          "duration_sec": 0.21384737500920892
+        },
+        "solver_wall_duration_sec": 0.5738593328278512,
+        "solve_duration_sec": 0.36001195781864226,
+        "cleanup_errors": [],
+        "verification": true
+      },
+      {
+        "path": "runs/v0.8_rebuild_validation/20260909-remote/native-cpp-timing-v2/attempts/attempt-000002",
+        "terminal_status": "finished",
+        "evaluation_status": "test_failed",
+        "timing_protocol_revision": "2",
+        "initial_workspace_upload": {
+          "status": "completed",
+          "duration_sec": 0.2191362080629915
+        },
+        "solver_wall_duration_sec": 0.405517416074872,
+        "solve_duration_sec": 0.18638120801188052,
+        "cleanup_errors": [],
+        "verification": true
+      },
+      {
+        "path": "runs/v0.8_rebuild_validation/20260909-remote/native-cpp-timing-v2/attempts/attempt-000003",
+        "terminal_status": "finished",
+        "evaluation_status": "resolved",
+        "timing_protocol_revision": "2",
+        "initial_workspace_upload": {
+          "status": "completed",
+          "duration_sec": 0.22535787499509752
+        },
+        "solver_wall_duration_sec": 0.5956956250593066,
+        "solve_duration_sec": 0.3703377500642091,
+        "cleanup_errors": [],
+        "verification": true
+      },
+      {
+        "path": "runs/v0.8_rebuild_validation/20260909-remote/native-cpp-timing-v2/attempts/attempt-000004",
+        "terminal_status": "finished",
+        "evaluation_status": "test_failed",
+        "timing_protocol_revision": "2",
+        "initial_workspace_upload": {
+          "status": "completed",
+          "duration_sec": 0.21586212515830994
+        },
+        "solver_wall_duration_sec": 0.4031784588005394,
+        "solve_duration_sec": 0.18731633364222944,
+        "cleanup_errors": [],
+        "verification": true
+      }
+    ],
+    "resume_completed": true,
+    "model_called": false
+  },
+  "remote_host": {
+    "gpu_model": "Tesla V100-SXM2-32GB",
+    "gpu_count": 4,
+    "selected_host_device": 2,
+    "cuda_image_toolkit": "12.4",
+    "selected_compute_capability": "7.0",
+    "nvidia_driver": "535.247.01",
+    "docker_version": "28.5.1",
+    "shared_host": true,
+    "exclusive_gpu": false,
+    "performance_claim": false
+  },
+  "full_source_baselines": {
+    "cpu": {
+      "artifact": "cpu-baseline-build-r3",
+      "status": "ready",
+      "duration_sec": 1925.0586280470015,
+      "source": {
+        "kind": "git",
+        "revision": "240aa77ad01c4f0cd9b2417748272f2f617c112f"
+      },
+      "environment_id": "pytorch-layernorm-cpu-py312",
+      "environment_revision": "240aa77-cpu-gcc12-openblas-r3",
+      "image_id": "sha256:8bc7df5037adcd4e6a78fed76ea0d8ba250aec624b4f76f049c36a0c12bf218e",
+      "patch_applied": false,
+      "grader_provided": false,
+      "model_channel_provided": false,
+      "cleanup_errors": []
+    },
+    "cuda": {
+      "artifact": "cuda-baseline-build-2",
+      "status": "ready",
+      "duration_sec": 2113.6201546090015,
+      "source": {
+        "kind": "git",
+        "revision": "2409b49a33c0ef594d89f9f477d56abad47e65bf"
+      },
+      "environment_id": "cuda-cu124-sm70-python310-source",
+      "environment_revision": "1",
+      "image_id": "sha256:faf6daea5a5bf6da0f69ee91810f5372e3199b9ce8fb6e62d23e6d764ef28f6a",
+      "patch_applied": false,
+      "grader_provided": false,
+      "model_channel_provided": false,
+      "cleanup_errors": []
+    }
+  },
+  "upstream_controls": {
+    "layer_norm_cpu": {
+      "record": "datasets/v0.8_candidates/layer_norm_cpu/validation/runtime_controls_r3.json",
+      "status": "execution_controls_passed",
+      "admission_status": "not_admitted",
+      "executed_task_revision": "candidate.2",
+      "scoring_revision": "candidate.2",
+      "controls": {
+        "baseline": {
+          "status": "test_failed",
+          "duration_sec": 582.2369689120096,
+          "offline_verification_valid": true,
+          "cleanup_errors": []
+        },
+        "reference": {
+          "status": "resolved",
+          "duration_sec": 518.7016347069875,
+          "offline_verification_valid": true,
+          "cleanup_errors": []
+        },
+        "alternative-1": {
+          "status": "resolved",
+          "duration_sec": 627.2416382819938,
+          "offline_verification_valid": true,
+          "cleanup_errors": []
+        },
+        "mutation-1": {
+          "status": "test_failed",
+          "duration_sec": 659.9873246189964,
+          "offline_verification_valid": true,
+          "cleanup_errors": []
+        }
+      }
+    },
+    "log_softmax_cuda": {
+      "record": "datasets/v0.8_candidates/log_softmax_cuda/validation/runtime_controls_r2.json",
+      "status": "execution_controls_passed",
+      "admission_status": "not_admitted",
+      "executed_task_revision": "2",
+      "scoring_revision": "2",
+      "controls": {
+        "baseline": {
+          "status": "test_failed",
+          "duration_sec": 418.8507666589867,
+          "offline_verification_valid": true,
+          "cleanup_errors": []
+        },
+        "reference": {
+          "status": "resolved",
+          "duration_sec": 497.23221376299625,
+          "offline_verification_valid": true,
+          "cleanup_errors": []
+        },
+        "alternative-1": {
+          "status": "resolved",
+          "duration_sec": 455.3239143899991,
+          "offline_verification_valid": true,
+          "cleanup_errors": []
+        },
+        "mutation-1": {
+          "status": "test_failed",
+          "duration_sec": 511.40711589402054,
+          "offline_verification_valid": true,
+          "cleanup_errors": []
+        },
+        "mutation-2": {
+          "status": "test_failed",
+          "duration_sec": 538.6524989540048,
+          "offline_verification_valid": true,
+          "cleanup_errors": []
+        }
+      }
+    },
+    "vector_norm_compile_cpu": {
+      "record": "datasets/v0.8_candidates/vector_norm_compile_cpu/validation/runtime_controls_r1.json",
+      "status": "execution_controls_passed",
+      "admission_status": "not_admitted",
+      "executed_task_revision": "candidate.1",
+      "scoring_revision": "candidate.1",
+      "controls": {
+        "baseline": {
+          "status": "test_failed",
+          "duration_sec": 1295.5307249779871,
+          "offline_verification_valid": true,
+          "cleanup_errors": []
+        },
+        "reference": {
+          "status": "resolved",
+          "duration_sec": 651.375204497017,
+          "offline_verification_valid": true,
+          "cleanup_errors": []
+        },
+        "alternative-1": {
+          "status": "resolved",
+          "duration_sec": 571.1670495919825,
+          "offline_verification_valid": true,
+          "cleanup_errors": []
+        },
+        "mutation-1": {
+          "status": "test_failed",
+          "duration_sec": 565.9744193380175,
+          "offline_verification_valid": true,
+          "cleanup_errors": []
+        }
+      }
+    }
+  },
+  "declared_control_outcomes_matched": 13,
+  "cuda_native_and_replay": {
+    "date": "2026-09-09",
+    "kind": "scripted_native_submission_and_independent_physical_replay",
+    "model_called": false,
+    "admission_status": "not_admitted",
+    "original_attempt": {
+      "name": "cuda-native-r4",
+      "terminal_status": "finished",
+      "submission": {
+        "status": "frozen",
+        "path": "patch.diff"
+      },
+      "information_boundary": {
+        "status": "enforced",
+        "source_history": "fresh_baseline",
+        "solver_network": "none",
+        "model_access": "none",
+        "scope": "execution observations only; task, image and provider admission are separate"
+      },
+      "agent_exit_code": 0,
+      "timing_protocol_revision": null,
+      "solver_startup_duration_sec": 145.8132781420136,
+      "agent_duration_sec": 78.94411335099721,
+      "solve_duration_sec": 224.75749788299436,
+      "public_reproducer_max_absolute_error": {
+        "before": 0.36510581450284363,
+        "after": 8.881784197001252e-16
+      },
+      "source_git": {
+        "commit_count_before_agent": 1,
+        "remotes": [],
+        "original_upstream_commit_absent": true,
+        "agent_created_local_commit": true
+      },
+      "evaluation_status": "test_failed",
+      "grading_failures": [
+        {
+          "case_id": "double_tail_values",
+          "reason": "CUDA out of memory in candidate process"
+        },
+        {
+          "case_id": "float32_forward_regressions",
+          "reason": "CUDA out of memory in candidate process"
+        }
+      ],
+      "cleanup_errors": []
+    },
+    "replay": {
+      "name": "cuda-native-replay-r4",
+      "status": "completed",
+      "evaluation_status": "resolved",
+      "duration_sec": 1169.5969183630077,
+      "evaluation_duration_sec": 1094.6022806630062,
+      "generation_performed": false,
+      "new_independent_repeat": false,
+      "origin_timing_protocol_revision": null,
+      "same_patch": true,
+      "offline_verification": {
+        "valid": true,
+        "findings": [],
+        "scope": "Artifact presence, recorded process outcomes, numeric observation comparison and score arithmetic; no candidate code is imported. Rerun evaluate to replay the patch; this check does not authenticate artifacts."
+      },
+      "cleanup_errors": [],
+      "cases": [
+        {
+          "id": "double_tail_values",
+          "status": "passed",
+          "numeric": {
+            "valid_observation": true,
+            "compared_values": 11829,
+            "mismatched_values": 0
+          }
+        },
+        {
+          "id": "float32_forward_regressions",
+          "status": "passed",
+          "numeric": {
+            "valid_observation": true,
+            "compared_values": 9331,
+            "mismatched_values": 0
+          }
+        },
+        {
+          "id": "double_neighbor_and_gradient_regressions",
+          "status": "passed",
+          "numeric": {
+            "valid_observation": true,
+            "compared_values": 9304,
+            "mismatched_values": 0
+          }
+        }
+      ]
+    },
+    "gpu_observations": {
+      "sample_count": 489,
+      "interval_sec": 2,
+      "free_memory_mib_min": 227.0,
+      "free_memory_mib_max": 32501.0,
+      "selected_device": 2,
+      "scope": "Concurrent replay telemetry on shared host; not original-failure-time evidence and not proof of the original OOM cause"
+    },
+    "kept_earlier_attempts": {
+      "cuda-native-r2": "controller Git pathspec initialization timeout before Agent; subsequently corrected by literal index streaming",
+      "cuda-native-r3": "scripted repair precondition was overbroad; Agent failed before modifying source; unmodified patch graded as failed"
+    },
+    "raw_evidence": "runs/v0.8_rebuild_validation/20260909-remote/remote/",
+    "limits": [
+      "Scripted known repair, no model capability measurement",
+      "Original failed evaluation is retained and not relabeled as successful",
+      "Whole shared-host resource control and real model canary remain unaccepted"
+    ]
+  },
+  "compile_review": {
+    "mathematical_review": "datasets/v0.8_candidates/vector_norm_compile_cpu/validation/independent_oracle_review.json",
+    "tolerance_clarification": "datasets/v0.8_candidates/vector_norm_compile_cpu/validation/tolerance_clarification_review.json",
+    "independently_recalculated_operations": 16,
+    "scalar_outputs": 115,
+    "encoded_values": 230,
+    "maximum_oracle_difference": 0,
+    "human_review": false,
+    "current_task_revision": "candidate.2",
+    "physically_executed_task_revision": "candidate.1",
+    "scoring_revision": "candidate.1",
+    "revision_change": "Public tolerance scope clarified only; inputs, oracle, commands, source, environment and control patches unchanged. Old physical runs are not relabeled."
+  },
+  "dataset_structure_check": {
+    "dataset_id": "opbench-v0.8-upstream-candidates",
+    "version": "0.8.0-candidate.2",
+    "tasks": 3,
+    "valid_structure": true,
+    "unprepared_task_ids": [
+      "opbench-layer-norm-cpu-001",
+      "opbench-vector-norm-compile-cpu-001"
+    ],
+    "semantic_admission": "not_established_by_schema_validation"
+  },
+  "formal_admitted_task_count": 0,
+  "real_provider_or_model_called": false,
+  "remote_resource_check": {
+    "checked_at_utc": "2026-09-09T06:31:50.798264+00:00",
+    "scope": "Only container/volume names derived from sessions in owned top-level baseline, native, replay and control evaluation records; no unrelated resources changed.",
+    "recorded_session_ids_checked": 61,
+    "remaining_recorded_containers": [],
+    "remaining_recorded_volumes": [],
+    "job_exit_markers": {
+      "cpu-source-fetch.exit": "128",
+      "cuda-image-build.exit": "1",
+      "cuda-image-build-offline.exit": "0",
+      "cuda-baseline-build.exit": "2",
+      "cuda-source-prepare.exit": "0",
+      "cpu-image-build.exit": "1",
+      "cpu-image-build-offline.exit": "1",
+      "cpu-image-build-r2.exit": "0",
+      "cuda-baseline-build-2.exit": "0",
+      "cpu-baseline-build-r2.exit": "2",
+      "cuda-native-r2.exit": "1",
+      "cuda-controls-r2.exit": "0",
+      "cpu-baseline-build-r3.exit": "0",
+      "cuda-native-r3.exit": "1",
+      "vector-norm-preflight-r1.exit": "1",
+      "vector-norm-preflight-r2.exit": "0",
+      "vector-norm-preflight-r3.exit": "0",
+      "cuda-native-r4.exit": "1",
+      "cpu-controls-r3.exit": "0",
+      "cuda-native-replay-r4.exit": "0",
+      "vector-norm-controls-r1.exit": "0"
+    },
+    "mutations_performed": false,
+    "baseline_workspaces_retained": true
+  },
+  "release_gates_remaining": [
+    "Real Provider/model configuration and authorization for API charges; actual native model canaries and declared comparison experiments",
+    "Appropriate controlled hardware conditions for formal experiments; shared-host diagnostics do not establish resource isolation",
+    "Independent human task/oracle/alternative-solution review, task admission and source/dependency contamination review",
+    "Research estimand, task/defect-group selection, repeats and complete analysis plan; actual four-level reproduction evidence",
+    "Code license pending author/school decision and upstream asset distribution review"
+  ],
+  "verification_scope": "Recorded process outcomes, numeric rejudgment, patch binding and score arithmetic. No file-hash freezing or artifact-authentication claim.",
+  "github_ci_executed": false,
+  "raw_evidence_root": "runs/v0.8_rebuild_validation/20260909-remote"
+}

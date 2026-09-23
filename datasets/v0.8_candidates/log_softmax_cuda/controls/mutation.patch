@@ -1,0 +1,31 @@
+--- a/aten/src/ATen/native/cuda/SoftMax.cu
++++ b/aten/src/ATen/native/cuda/SoftMax.cu
+@@ -468,7 +468,7 @@
+     if (offset >= shift && offset < size) {
+       threadVal = r(threadVal, data[offset]);
+     }
+-    size -= blockDim.x;
++    size -= blockDim.x > size ? size : blockDim.x;
+     data += blockDim.x;
+   }
+   index_t last = size % (ILP * blockDim.x);
+@@ -518,7 +518,7 @@
+     if (offset >= shift && offset < size) {
+       output[offset] = epilogue(input[offset]);
+     }
+-    size -= blockDim.x;
++    size -= blockDim.x > size ? size : blockDim.x;
+     input += blockDim.x;
+     output += blockDim.x;
+   }
+--- a/torch/nn/functional.py
++++ b/torch/nn/functional.py
+@@ -2248,7 +2248,7 @@
+         ret = input.log_softmax(dim)
+     else:
+         ret = input.log_softmax(dim, dtype=dtype)
+-    return ret
++    return ret * 0 - math.log(input.size(dim))
+ 
+ 
+ softshrink = _add_docstr(

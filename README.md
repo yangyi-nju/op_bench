@@ -1,315 +1,55 @@
 # OpBench
 
-Language: English | [中文](README.zh-CN.md)
+**OpBench evaluates models on operator repair tasks.** A model receives buggy code and a problem statement, repairs it using a shared set of tools, and submits a patch for independent evaluation. Tasks focus on operator numerics, behavior, and the compiler or runtime paths that directly affect them.
 
-OpBench is an operator-focused benchmark for evaluating coding agents on real framework issues. It follows the SWE-bench idea of repairing real repository snapshots, but treats the runtime environment as part of each task because operator bugs often depend on framework version, Python package layout, device availability, numerical behavior, and backend selection.
+The first phase asks: **which models repair operator defects best under the same tasks, tools, and budget?** v0.8 provides the evaluation workflow; dataset expansion and admission are planned for v0.9, followed by multi-model experiments in v0.10.
 
-v0.1 established the isolated replay/evaluation loop. v0.2 added asset registries and formal admission. v0.3 expanded the dataset to 10 verified tasks and added 3-repeat stability evaluation. v0.4 added CUDA tiers and remote Docker. v0.5 is now complete: the verified cumulative dataset contains 17 tasks, including a 6-task precision slice, and its 51-attempt Codex run reached **72.5% resolved** (37/51) with eight-dimensional reporting and hard experiment-integrity checks.
+[中文](README.zh-CN.md) · [Architecture guide (中文)](docs/architecture.md) · [Documentation](docs/README.md) · [Version history](docs/history/README.md)
 
-The v0.6 platform is **Completed** across M1–M7: strict versioned contracts, one authoritative workspace and immutable patch, a server-authoritative CLI/MCP action service, deterministic Attempt/trajectory/evaluation/artifact semantics, versioned Runtime Profiles, exact Attempt-owned Local/Docker/Remote resources, conformance and legacy replay, a process-isolated canonical Codex Adapter with resume and Integrity verification, and an executable public Demo/documentation surface. The recovered exact target passed representative Remote CPU, CUDA Overlay, and CUDA Kernel canaries. The complete frozen replay passed all 17 baseline + 17 gold + 51 historical final-patch cases with zero failures, blocks, or differences. A subsequent [real MCP full experiment](docs/v0.6/experiment_report.md) completed 51/51 valid Attempts with 35 resolved, 15 F2P failures, one P2P regression, zero infrastructure-invalid results, and zero retries. These are descriptive platform-validation results, not a causal comparison with v0.5. See the [v0.6 release notes](docs/v0.6/release_notes.md).
+## How one task is evaluated
 
-`opbench-v0.7.0` is complete. It freezes a [50-task cumulative Dataset](datasets/pytorch_v0.7/dataset.json) with 14 retained historical, 21 new, and 15 replacement Tasks, plus overlapping [31-task Boundary](datasets/pytorch_v0.7_boundary/dataset.json), [5-task Precision](datasets/pytorch_v0.7_precision/dataset.json), and [15-task Device](datasets/pytorch_v0.7_device/dataset.json) views. All 50 Tasks are verified: 46 hard, four independently confirmed medium, and no easy Tasks. The post-freeze replay passed 50/50; the real Codex experiment completed 17/17 cohorts, 122/122 valid logical Attempts, and 122/122 complete MCP traces, with 42 resolved, 52 F2P failed, and 28 invalid patches. These are descriptive **non-leaderboard** Task/platform results, not a formal multi-Agent ranking or causal claim. The former 25/6/8 release and 18-attempt cohort remain byte-preserved historical evidence under `archives/v0.7-pre-quality/`. See the [quality contract](docs/v0.7/quality_expansion.md), [Dataset Card](docs/v0.7/dataset_card.md), [validation report](docs/v0.7/validation_report.md), [global project plan](docs/project_plan.md), and [current project state](docs/project_state.md).
+For a softmax overflow bug, a task supplies source code, the expected behavior, an environment, and public tests. The model can inspect and edit files, build, and run those public tests. Private tests and reference patches are withheld from the model.
 
-## What The Current Code Contains
+1. **Prepare:** load the task and experiment configuration; prepare source and the execution environment.
+2. **Repair:** OpBench calls the model, executes its choices from the fixed MCP tools, and returns public feedback.
+3. **Evaluate:** stop solving, save the patch, then build and test it in an independent workspace.
+4. **Report:** retain the trajectory, patch, and test results; compute each model's `resolved_rate`.
 
-- A two-layer dataset model: `datasets/<slice>/dataset.json` points to task bundles under `tasks/`.
-- Real PyTorch task bundles with PR/issue metadata, hidden test patches, gold patches, source snapshots, and environment declarations.
-- Reusable Docker environments: `environments/pytorch-cpu/` (CPU), `environments/pytorch-cpu-compile/` (CPU + Inductor toolchain), `environments/pytorch-cuda/` (CUDA Python overlay), `environments/pytorch-cuda-devel/` (CUDA + nvcc/ccache/cmake for kernel builds).
-- Environment and source registries under `environments/registry.json` and `sources/registry.json`.
-- Three runtime tiers: `cpu_python_overlay`, `cuda_python_overlay`, `cuda_kernel_build` (last two use `remote_docker` backend over SSH).
-- Formal admission evidence through `scripts/run_admission.py`, offline preflight through `scripts/preflight_task.py`.
-- Dataset curation through `scripts/curate_dataset.py`.
-- Asset and container inspection through `scripts/inspect_assets.py` and `scripts/manage_containers.py`.
-- A replay evaluator that checks baseline failure, gold success, agent patch success, and pass-to-pass regressions; supports `python_overlay` and `inplace_build` source loading modes.
-- A remote GPU Docker executor (`src/op_bench/remote.py`) that runs `docker` on an SSH host, rsyncs workspaces both ways, and persists an environment-scoped ccache across isolated workspaces.
-- A standardized workspace action interface for file operations, patch application, command execution, tests, and diff export.
-- `codex_action_bridge`, the reference real-agent adapter with automatic rate-limit-aware retry. Codex runs on the host in a scratch workspace and can operate on the target repository only through OpBench actions.
-- Strict v0.6 runtime contracts and canonical SHA-256 identities under `src/op_bench/runtime/`, including deterministic RunManifest, Cohort ID, Attempt ID, and frozen task × agent × repeat matrices.
-- An explicit FullTaskSpec → AgentTaskView public whitelist with recursive answer-source, credential, private-output, and machine-local-path rejection; each projected view is frozen into Manifest and Attempt identity.
-- A path-independent Authoritative Workspace identity with bounded regular-file access, atomic scoped writes, symlink/special-file rejection, deterministic add/modify/delete/empty patches, concurrent Freeze convergence, and strict clean-base `git apply --check --index` verification.
-- A Canonical Action Service for list/search/read/write/apply-patch, policy-bound commands, registry-bound tests, diff, and finish; CLI and MCP share the same execution authority, and the standard Adapter receives only a scanned launch view plus a JSON-only action client.
-- An AttemptSession state machine with server-owned deadline/resource budgets, deterministic termination priority, in-flight Action/publication barriers, one patch freeze, and one terminal SessionResult.
-- A canonical append-only EventJournal with atomic Action event batches, continuous hash chaining, public Artifact spill, strict descriptor-bound persistence, and an Evaluation-aware AttemptLedger for deterministic retry/resume decisions.
-- Fresh evaluation from a verified local Source copy with strict patch apply, post-session evaluation-only test injection, F2P/P2P evidence, and independent validity/terminal/outcome axes.
-- Descriptor-bound public/private attempt artifacts, a read-only 14-check integrity graph, tamper detection, and byte-exact deterministic `results.jsonl`/`summary.json` rebuilds.
-- An independent zero-dependency JSON Schema validator, a strict schema artifact under `schemas/`, and offline build/validation CLIs that do not launch an Agent or contact a runtime.
+`resolved_rate = resolved tasks / planned tasks`. Passing public tests is feedback, not a final score: the build and required grading tests must pass. Missing results and execution errors are reported separately; an incomplete experiment report shows progress.
 
-Development-only experiment adapters have been removed from the public v0.1 surface. Future agents should integrate by implementing the same action-interface boundary used by `codex_action_bridge`.
+## Run an evaluation
 
-## Repository Map
+Use Python 3.12+, Git, Docker, and Linux/macOS. From the repository root:
 
-| Path | Purpose |
+```bash
+python -m pip install .
+opbench doctor
+opbench datasets validate --dataset datasets/v0.8_candidates/dataset.json
+```
+
+The current [candidate collection](datasets/v0.8_candidates/README.md) contains upstream operator tasks awaiting admission. Validation checks the manifest; running those tasks also requires their source checkouts, dependency images, and CPU/GPU resources. Prepare them using the [execution guide](docs/v0.8/remote_execution.md).
+
+Then create an experiment configuration selecting the dataset, models, and common budget. The [model integration guide](docs/v0.8/agent_integration.md#实验配置与运行) provides the configuration and `run`, `run --resume`, and `report` commands. Compatible Chat Completions services use per-model Base URLs and API-key environment variables; local Codex CLI is also available for model-only integration checks. Controlled evaluation uses offline Docker workspaces; the controller calls the model and executes its choices from OpBench's tools.
+
+For a quick installation or engine check without a full framework build, see [Contributing](CONTRIBUTING.md). Its small test fixtures are internal checks, not benchmark data.
+
+## Repository map
+
+| Directory | Contents |
 | --- | --- |
-| `datasets/` | Dataset manifests that select task bundles for experiments. |
-| `tasks/` | Individual benchmark tasks with issue text, patches, environment metadata, and test lists. |
-| `environments/` | Docker environment artifacts and the environment registry. |
-| `sources/` | Source snapshot registry metadata. |
-| `src/op_bench/` | Core implementation: task model, environment preparation, evaluator, actions, agent bridges, reporting. |
-| `scripts/` | CLI entry points for validation, environment preparation, source snapshots, replay, and experiments. |
-| `schemas/` | Strict v0.6 runtime wire-contract JSON Schema. |
-| `configs/examples/` | Public synthetic v0.6 configuration and manifest examples. |
-| `docs/` | Versioned design docs, experiment reports, developer guides, and historical records. |
-| `docs/project_plan.md` | Global mission, principles, roadmap, release gates, and research targets. |
-| `docs/project_state.md` | Current baseline, active version, decisions, and next actions. |
-| `docs/v0.6/` | v0.6 standardized Agent evaluation platform design, implementation plan, and acceptance matrix. |
-| `docs/v0.6/experiment_report.md` | v0.6 real MCP full experiment: 51 valid Attempts, outcomes, traces, and integrity evidence. |
-| `docs/v0.7/design.md` | v0.7 Dataset Factory, Boundary Slice, and matched-runtime recovery design. |
-| `docs/v0.7/quality_expansion.md` | Active 50-task quality, taxonomy, Admission, and 122-attempt release contract. |
-| `docs/v0.7/dataset_card.md` | v0.7 release identity, Dataset provenance, taxonomy, validation scope, and limitations. |
-| `docs/v0.7/validation_report.md` | v0.7 frozen 122-Attempt real Codex validation and integrity evidence. |
-| `docs/v0.5/design.md` | v0.5 dimension taxonomy and extended evaluation metrics. |
-| `docs/v0.5/experiment_report.md` | v0.5 full 17-task, 51-attempt Codex evaluation and precision breakdown. |
-| `docs/v0.4/design.md` | v0.4 CUDA tiers, remote GPU Docker executor over SSH, and `inplace_build` source loading. |
-| `docs/v0.4/experiment_report.md` | v0.4 13-task 3-repeat Codex evaluation: 84.6% resolved. |
-| `docs/v0.3/design.md` | v0.3 dataset expansion, multi-file overlay, public/hidden test split, and CUDA pilot design. |
-| `docs/v0.2/developer_guide.md` | v0.2 registry, admission, curation, asset, and container workflow. |
-| `docs/v0.1/developer_guide.md` | v0.1 module-level architecture and development guide. |
+| [`src/op_bench/`](src/op_bench/) | Implementation organized into data, runner, runtime, evaluation, and results; start with the [architecture guide](docs/architecture.md) |
+| [`tasks/`](tasks/README.md) | Historical task materials in the legacy schema, awaiting migration and admission |
+| [`datasets/`](datasets/) | Dataset manifests, candidate tasks, and data notes |
+| [`tests/`](tests/) | Behavior tests in `core/`; small integration task bundles in [fixtures/](tests/fixtures/README.md) |
+| [`runs/`](runs/README.md) | Local run evidence organized by version and batch, with separate validation, experiments, caches, and archives |
+| [`docs/`](docs/README.md) | Current guides and [records of earlier iterations](docs/history/README.md) |
 
-## Quick Start
+Adding a task primarily means creating a task bundle. Switching models primarily means editing an experiment configuration. Grading changes belong in `evaluation`. See the [architecture guide](docs/architecture.md) for module responsibilities, dependencies, and a reading order.
 
-OpBench has no third-party Python dependency. Create a clean environment, run
-the full suite, and validate all four frozen v0.7 Dataset views:
+## Current scope
 
-```bash
-python3 -m venv .venv
-PATH=.venv/bin:$PATH python --version
+v0.8's engineering implementation and local acceptance checks are complete; the package remains the unreleased development version `0.8.0.dev1`. Current candidate tasks and retained historical data await the revised admission process. v0.9 will introduce the category and admission workflow, with at least ten independent tasks per category. v0.10 will run the fixed-tool multi-model experiments; each target service first needs a real API smoke run under the chosen conditions. External Agent framework comparisons and behavior analysis come later.
 
-PATH=.venv/bin:$PATH PYTHONPATH=src python -m unittest discover \
-  -s tests -p 'test_*.py'
+See the [CHANGELOG](CHANGELOG.md), [current status](docs/v0.8/development_status.md), and [validation records](docs/v0.8/validation_report.md) for implementation details and evidence. Historical documents retain the design and experiment context of their release; they are not current usage instructions.
 
-PATH=.venv/bin:$PATH PYTHONPATH=src python \
-  scripts/check_public_tree_privacy.py
-
-PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/validate_dataset.py \
-  datasets/pytorch_v0.7/dataset.json --require-verified
-PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/validate_dataset.py \
-  datasets/pytorch_v0.7_boundary/dataset.json --require-verified
-PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/validate_dataset.py \
-  datasets/pytorch_v0.7_precision/dataset.json --require-verified
-PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/validate_dataset.py \
-  datasets/pytorch_v0.7_device/dataset.json --require-verified
-```
-
-Build and validate an offline v0.6 RunManifest. This command does not launch an
-Agent or contact a Runtime:
-
-```bash
-PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/build_run_manifest.py \
-  --dataset datasets/pytorch_v0.5/dataset.json \
-  --output /tmp/opbench-v0.6-manifest.json \
-  --agent example-agent \
-  --model example-model \
-  --adapter canonical-cli-v1 \
-  --repeat 1 \
-  --created-at 2026-07-18T00:00:00Z
-
-PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/validate_runtime_contract.py \
-  /tmp/opbench-v0.6-manifest.json
-```
-
-### Offline v1 Scripted Demo
-
-Prepare the synthetic local input, then run it through the production v1
-orchestrator and `local-cpu-process-v1` Runtime Profile:
-
-```bash
-PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/prepare_v0_6_demo.py \
-  --output-dir runs/v0.6_m7_demo_input
-
-PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/run_experiment.py \
-  --dataset runs/v0.6_m7_demo_input/dataset/dataset.json \
-  --verified-only \
-  --agent scripted_canonical \
-  --agent-repeat 1 \
-  --output-dir runs/v0.6_m7_scripted_demo \
-  --runtime-protocol v1 \
-  --runtime-profile local-cpu-process-v1
-```
-
-Run the exact `run_experiment.py` command again to exercise resume. The first
-run reports `ran=1, skipped=0`; the second reports `ran=0, skipped=1` and does
-not change the selected artifacts. Validate the frozen contract and exact
-Attempt-owned resource cleanup:
-
-```bash
-PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/validate_runtime_contract.py \
-  runs/v0.6_m7_scripted_demo/run_manifest.json
-
-PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/verify_runtime_resources.py \
-  --run-root runs/v0.6_m7_scripted_demo
-```
-
-Integrity verification and deterministic rebuilding of `results.jsonl` and
-`summary.json` are part of every successful v1 run. This synthetic Demo checks
-the controller and artifact lifecycle; it is not a benchmark score and does
-not measure repair quality.
-
-### Optional real Codex local canary
-
-The canonical Codex Adapter uses the same Demo Dataset, Runtime, action service,
-evaluator, and artifact path. This optional command invokes the locally
-configured Codex CLI and may use its normal OpenAI network access:
-
-```bash
-PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/run_experiment.py \
-  --dataset runs/v0.6_m7_demo_input/dataset/dataset.json \
-  --verified-only \
-  --agent codex_canonical \
-  --agent-repeat 1 \
-  --output-dir runs/v0.6_m7_codex_demo \
-  --runtime-protocol v1 \
-  --runtime-profile local-cpu-process-v1 \
-  --enable-external-canary
-```
-
-This is a Runtime/Adapter canary, not a benchmark score. M6 already recorded a
-valid real-Codex local Attempt and a two-repeat resume cohort. After the exact
-configured target recovered, representative Remote CPU, CUDA Overlay, and CUDA
-Kernel canaries passed, followed by an 85/85 exact replay. OpBench used only the
-configured target; it did not probe or discover replacement targets.
-
-### Real Codex MCP Adapter
-
-`codex_mcp_canonical` is the independent real-Agent MCP path. It starts one
-invocation-local `mcp-stdio` server, passes that server to a single ephemeral
-Codex invocation without changing global Codex configuration, and binds the
-exact model and CLI version into the Agent identity. The frozen v0.6 experiment
-uses `gpt-5.6-sol` and `codex-cli 0.145.0-alpha.27`:
-
-```bash
-PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/run_experiment.py \
-  --dataset runs/v0.6_m6_local_codex_input/dataset/dataset.json \
-  --verified-only \
-  --agent codex_mcp_canonical \
-  --codex-model gpt-5.6-sol \
-  --agent-repeat 1 \
-  --output-dir runs/v0.6_mcp_local_canary_r7 \
-  --runtime-protocol v1 \
-  --runtime-profile local-cpu-process-v1 \
-  --enable-external-canary
-```
-
-Provider network access is allowed for the host-side Codex invocation. Task network
-access remains denied, and the Agent reaches the task only through the
-nine canonical MCP Actions. Codex runs in a separate read-only working directory;
-the controller-private launcher, token-bound Action client, and trace are outside
-that directory and are identity-checked after exit. Each selected retry records public-safe
-`adapter_trace.json` initialize/list/call counters; the existing 14-check
-Integrity graph binds those counters to Action events, model/CLI identity,
-terminal state, evaluation, and exact resource cleanup. See the
-[v0.6 experiment report](docs/v0.6/experiment_report.md) for the results and
-analysis, and the
-[real MCP Agent experiment guide](docs/v0.6/mcp_agent_experiment.md) for the
-four cohorts, resume rules, evidence split, hard output bounds, exact
-formal-matrix contract, report builder, and safety boundary.
-
-### Legacy v0.5 compatibility
-
-Legacy remains the default protocol during migration. Legacy commands
-intentionally omit `--runtime-protocol`; v1-only flags are rejected instead of
-being silently ignored. Rebuild source snapshots after a fresh clone before
-running real v0.5 tasks:
-
-```bash
-PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/setup_sources.py
-
-PATH=.venv/bin:$PATH PYTHONPATH=src python scripts/run_experiment.py \
-  --dataset datasets/pytorch_v0.5/dataset.json \
-  --verified-only \
-  --agent gold \
-  --output-dir runs/experiments/pytorch_v0.5_gold
-```
-
-See the [v0.6 developer guide](docs/v0.6/developer_guide.md) for Runtime support,
-artifact layout, failure attribution, Comparability Key, resume, replay, and
-exact-target configuration.
-
-## Current Dataset
-
-`opbench-v0.7.0` freezes four verified, overlapping views over the same Task bundles:
-
-- [50-task cumulative](datasets/pytorch_v0.7/dataset.json): 14 retained historical, 21 new, and 15 replacement Tasks.
-- [31-task Boundary](datasets/pytorch_v0.7_boundary/dataset.json): derived from explicit boundary trigger evidence.
-- [5-task Precision](datasets/pytorch_v0.7_precision/dataset.json): derived from numerical/dtype evidence.
-- [15-task Device](datasets/pytorch_v0.7_device/dataset.json): all CUDA-dependent Tasks.
-
-The [Dataset Card](docs/v0.7/dataset_card.md) freezes membership, hashes,
-provenance, admission, contamination risks, and limitations. The
-[validation report](docs/v0.7/validation_report.md) records the frozen
-122-Attempt validation contract and its execution status. It is intentionally
-non-leaderboard evidence. The historical 25/6/8 views and 18-Attempt result are
-preserved separately and are not part of the current denominator.
-
-### Historical v0.5 result
-
-The verified [pytorch_v0.5 manifest](datasets/pytorch_v0.5/dataset.json) contains all 13 v0.4 tasks plus four newly admitted precision tasks. Deprecated tasks #129154 and #144073 are excluded. Its historical complete run scored **37/51 (72.5%)**; the reusable [precision slice](datasets/pytorch_v0.5_precision/dataset.json) scored **13/18 (72.2%)**:
-
-| Task | PR | Subclass | Tier | Rate |
-| --- | ---: | :---: | --- | ---: |
-| `pytorch__140557__layer_norm_decomp_precision` | #140557 | P2 | cpu | 0/3 |
-| `pytorch__139999__masked_mean_bool_upcast` | #139999 | P1 | cpu | 3/3 |
-| `pytorch__129138__linear_add_bias_autocast` | #129138 | P3 | cpu | 3/3 |
-| `pytorch__132835__njt_sdpa_autocast` | #132835 | P3 | cuda_py | 1/3 |
-| `pytorch__144009__softmax_ilpreduce_size` | #144009 | P5 | cuda_kernel | 3/3 |
-| `pytorch__139372__histc_int8_cuda_bounds` | #139372 | P5 | cuda_kernel | 3/3 |
-
-Full-run metrics: patch conciseness 1.000, pass-to-pass kept rate 94.1%, regression rate 0%, and tier-weighted score 76.8%. P4 remains N/A because no P4 task passed admission. See the [v0.5 experiment report](docs/v0.5/experiment_report.md) for integrity evidence, failure analysis, and metric definitions.
-
-Tier codes: `cpu` = `cpu_python_overlay`, `cuda_py` = `cuda_python_overlay`, `cuda_kernel` = `cuda_kernel_build`.
-
-Use `--verified-only` for benchmark runs that should count only admitted tasks. Use `--filter-tasks` to run a subset.
-
-Every verified task has task-local stable admission evidence at its own `admission/evidence.json`.
-
-## Runtime Boundary
-
-Agent identity, model calls, and control logic run on the host. Each repair attempt gets a prepared workspace and a task-scoped Docker runtime. The agent must interact with the target repository through OpBench actions:
-
-- `read_file`
-- `write_file`
-- `apply_patch`
-- `run_command`
-- `run_test`
-- `git_diff`
-
-For Docker tasks, preflight commands, setup commands, test commands, and action-interface command calls run in the same task container. This preserves setup state and avoids mixing host execution with benchmark execution.
-
-`codex_action_bridge` is the reference implementation of this boundary. It gives Codex a scratch directory plus an `opbench_action.py` CLI. The target repository path is not exposed to Codex, and final scoring uses the patch exported through the action interface.
-
-## Adding More Work
-
-Platform development follows the stable [v0.6 design](docs/v0.6/design.md), [implementation plan](docs/v0.6/implementation_plan.md), and [acceptance matrix](docs/v0.6/acceptance_matrix.md). Dataset expansion follows the existing admission workflow and the [v0.7 design](docs/v0.7/design.md):
-
-1. Add or curate task bundles under `tasks/<framework>/`.
-2. Register reusable environment/source assets under `environments/registry.json` and `sources/registry.json`.
-3. Run `scripts/preflight_task.py` to catch snapshot/patch/test-name issues offline.
-4. Run `scripts/run_admission.py --write-task-evidence`.
-5. Add only evidence-backed verified tasks to a verified dataset slice with `scripts/curate_dataset.py`.
-6. Run `scripts/run_experiment.py` on `--verified-only`.
-7. Add new real agents by implementing the action-interface boundary rather than giving them direct access to target workspaces.
-
-## References
-
-- [Docs index](docs/README.md)
-- [Global project plan](docs/project_plan.md)
-- [Current project state](docs/project_state.md)
-- [v0.6 platform design](docs/v0.6/design.md)
-- [v0.6 implementation plan](docs/v0.6/implementation_plan.md)
-- [v0.6 acceptance matrix](docs/v0.6/acceptance_matrix.md)
-- [v0.6 experiment report](docs/v0.6/experiment_report.md)
-- [v0.6 real MCP Agent experiment](docs/v0.6/mcp_agent_experiment.md)
-- [v0.6 real MCP Agent experiment verification](docs/v0.6/mcp_agent_experiment_verification.md)
-- [v0.7 Dataset Factory and Boundary design](docs/v0.7/design.md)
-- [v0.7 50-task quality expansion contract](docs/v0.7/quality_expansion.md)
-- [v0.7 Dataset Card](docs/v0.7/dataset_card.md)
-- [v0.7 validation report](docs/v0.7/validation_report.md)
-- [v0.5 design](docs/v0.5/design.md)
-- [v0.5 experiment report](docs/v0.5/experiment_report.md)
-- [v0.4 design](docs/v0.4/design.md)
-- [v0.4 experiment report](docs/v0.4/experiment_report.md)
-- [v0.3 design](docs/v0.3/design.md)
-- [v0.3 experiment report](docs/v0.3/experiment_report.md)
-- [v0.2 developer guide](docs/v0.2/developer_guide.md)
-- [v0.2 experiment report](docs/v0.2/experiment_report.md)
-- [v0.1 developer guide](docs/v0.1/developer_guide.md)
-- [v0.1 manual validation workflow](docs/v0.1/manual_validation.md)
+For development setup and testing, see [Contributing](CONTRIBUTING.md). Code licensing awaits author and school confirmation; upstream code and patches retain their own attribution and licensing requirements.

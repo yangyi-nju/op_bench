@@ -1,0 +1,91 @@
+{
+  "date": "2026-09-09",
+  "status": "ready",
+  "scope": "complete_configured_upstream_source_build",
+  "admission_status": "not_admitted",
+  "task_identity": {
+    "status": "declared",
+    "task_id": "opbench-layer-norm-cpu-001",
+    "task_revision": "candidate.2",
+    "scope": "operator_integration",
+    "defect_group": "pytorch-pr-140557",
+    "scoring_revision": "candidate.2",
+    "solver_environment": {
+      "environment_id": "pytorch-layernorm-cpu-py312",
+      "revision": "240aa77-cpu-gcc12-openblas-r3"
+    },
+    "required_variants": [
+      {
+        "variant_id": "default",
+        "environment": {
+          "environment_id": "pytorch-layernorm-cpu-py312",
+          "revision": "240aa77-cpu-gcc12-openblas-r3"
+        }
+      }
+    ]
+  },
+  "materialized_source": {
+    "kind": "git",
+    "revision": "240aa77ad01c4f0cd9b2417748272f2f617c112f"
+  },
+  "environment_revision": "240aa77-cpu-gcc12-openblas-r3",
+  "image_id": "sha256:8bc7df5037adcd4e6a78fed76ea0d8ba250aec624b4f76f049c36a0c12bf218e",
+  "duration_sec": 1925.0586280470015,
+  "stages": [
+    {
+      "stage": "prepare",
+      "argv": [
+        "{python}",
+        "-I",
+        "/opt/opbench-layernorm/build_source.py",
+        "{workspace}",
+        "--check"
+      ],
+      "log": "logs/prepare-000.log",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_sec": 0.21847033497761004,
+      "output_limited": false
+    },
+    {
+      "stage": "build",
+      "argv": [
+        "{python}",
+        "-I",
+        "/opt/opbench-layernorm/build_source.py",
+        "{workspace}"
+      ],
+      "log": "logs/build-000.log",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_sec": 1570.4516493040137,
+      "output_limited": false
+    }
+  ],
+  "configured_optional_backends": {
+    "USE_NNPACK": "0",
+    "USE_FBGEMM": "0",
+    "reason": "NNPACK required an online six download; FBGEMM failed on GCC 12 AVX512 maybe-uninitialized warnings. Both are optional and outside the declared CPU LayerNorm contract. r2 failures are retained."
+  },
+  "execution": {
+    "closed": true,
+    "execution_stopped": true,
+    "grader_access": false,
+    "network": "none",
+    "observed_network_mode": "none",
+    "workspace_capture_ready": true,
+    "cleanup_errors": [],
+    "resources": {
+      "cpus": 16.0,
+      "memory": "64g",
+      "pids_limit": 2048,
+      "gpus": null
+    }
+  },
+  "patch_applied": false,
+  "grader_provided": false,
+  "model_channel_provided": false,
+  "raw_evidence": "runs/v0.8_rebuild_validation/20260909-remote/remote/cpu-baseline-build-r3/",
+  "previous_failure_record": "r2_full_build_failure.json",
+  "limitation": "A successful full build is not a control-matrix result, model result or formal task admission."
+}

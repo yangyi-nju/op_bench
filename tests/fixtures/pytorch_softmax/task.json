@@ -1,0 +1,164 @@
+{
+  "schema_version": 2,
+  "task_id": "fixture-pytorch-stable-softmax",
+  "task_revision": "1",
+  "scoring_revision": "1",
+  "scope": "operator",
+  "defect_group": "synthetic:softmax-finite-offset-stability",
+  "statement": "This is an original synthetic engineering integration fixture, not a task from the formal PyTorch challenge dataset. Repair stable_softmax(input, dim=-1) in operator_impl.py. It computes softmax probabilities but large finite inputs can produce NaN through overflow or underflow. For finite, nonempty CPU tensors of dtype torch.float32 or torch.float64 and rank at least one, return numerically stable softmax probabilities along any legal dimension dim (-input.ndim <= dim < input.ndim, including zero), matching torch.softmax within normal floating-point tolerances (float32: 2e-6, float64: 1e-12). Preserve input shape, dtype, and device; do not mutate the input. Normalize separately along the requested dimension, including non-last dimensions and noncontiguous inputs. Preserve differentiability: first-order input gradients for weighted output sums must match the softmax derivative, including at large finite values (gradient tolerances: float32 rtol/atol 2e-6, float64 rtol 1e-10 and atol 1e-12). Delegating to an existing torch operation is allowed. Scalar tensors, empty dimensions, nonfinite inputs, other dtypes/devices, and higher-order gradients are outside this fixture's scope. Run python test_public.py -v from the source workspace for a public reproduction and control case.",
+  "source": {
+    "path": "source"
+  },
+  "environment": {
+    "backend": "docker",
+    "environment_id": "synthetic-pytorch-softmax-cpu",
+    "revision": "1",
+    "image": "opbench/softmax-fixture:torch2.6.0",
+    "python": "python",
+    "prepare": [],
+    "build": [],
+    "cpus": 2,
+    "memory": "4g",
+    "pids_limit": 512,
+    "environment": {
+      "OMP_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "PYTHONDONTWRITEBYTECODE": "1"
+    }
+  },
+  "grader_dir": "grader",
+  "public_commands": [
+    [
+      "{python}",
+      "{workspace}/test_public.py",
+      "-v"
+    ]
+  ],
+  "tests": [
+    {
+      "id": "large-values",
+      "group": "fail_to_pass",
+      "argv": [
+        "{python}",
+        "{grader}/test_softmax.py",
+        "{workspace}",
+        "SoftmaxTests.test_large_values",
+        "-v"
+      ],
+      "timeout_sec": 60,
+      "kind": "unittest",
+      "expected_tests": 1
+    },
+    {
+      "id": "large-gradient",
+      "group": "fail_to_pass",
+      "argv": [
+        "{python}",
+        "{grader}/test_softmax.py",
+        "{workspace}",
+        "SoftmaxTests.test_large_gradient",
+        "-v"
+      ],
+      "timeout_sec": 60,
+      "kind": "unittest",
+      "expected_tests": 1
+    },
+    {
+      "id": "large-nonlast-axis",
+      "group": "fail_to_pass",
+      "argv": [
+        "{python}",
+        "{grader}/test_softmax.py",
+        "{workspace}",
+        "SoftmaxTests.test_large_nonlast_axis",
+        "-v"
+      ],
+      "timeout_sec": 60,
+      "kind": "unittest",
+      "expected_tests": 1
+    },
+    {
+      "id": "normal-values",
+      "group": "pass_to_pass",
+      "argv": [
+        "{python}",
+        "{grader}/test_softmax.py",
+        "{workspace}",
+        "SoftmaxTests.test_normal_values",
+        "-v"
+      ],
+      "timeout_sec": 60,
+      "kind": "unittest",
+      "expected_tests": 1
+    },
+    {
+      "id": "two-dimensional-nonlast-axis",
+      "group": "pass_to_pass",
+      "argv": [
+        "{python}",
+        "{grader}/test_softmax.py",
+        "{workspace}",
+        "SoftmaxTests.test_two_dimensional_nonlast_axis",
+        "-v"
+      ],
+      "timeout_sec": 60,
+      "kind": "unittest",
+      "expected_tests": 1
+    },
+    {
+      "id": "float64-precision",
+      "group": "pass_to_pass",
+      "argv": [
+        "{python}",
+        "{grader}/test_softmax.py",
+        "{workspace}",
+        "SoftmaxTests.test_float64_precision",
+        "-v"
+      ],
+      "timeout_sec": 60,
+      "kind": "unittest",
+      "expected_tests": 1
+    },
+    {
+      "id": "legal-dimensions",
+      "group": "pass_to_pass",
+      "argv": [
+        "{python}",
+        "{grader}/test_softmax.py",
+        "{workspace}",
+        "SoftmaxTests.test_legal_dimensions",
+        "-v"
+      ],
+      "timeout_sec": 60,
+      "kind": "unittest",
+      "expected_tests": 1
+    },
+    {
+      "id": "normal-gradient",
+      "group": "pass_to_pass",
+      "argv": [
+        "{python}",
+        "{grader}/test_softmax.py",
+        "{workspace}",
+        "SoftmaxTests.test_normal_gradient",
+        "-v"
+      ],
+      "timeout_sec": 60,
+      "kind": "unittest",
+      "expected_tests": 1
+    }
+  ],
+  "metadata": {
+    "purpose": "engineering_integration_fixture",
+    "origin": "synthetic_original_example",
+    "formal_challenge_member": false,
+    "scope": "operator",
+    "operator": "softmax",
+    "authorship": "Original OpBench example code and tests; no upstream issue or patch copied",
+    "reference_patch": "gold.patch",
+    "alternative_patch": "alternative.patch",
+    "mutation_patch": "wrong.patch",
+    "validation_status": "requires_execution",
+    "note": "Patch and grader assets are outside source and are not part of the solver workspace. Expected control outcomes in README are not recorded execution evidence."
+  }
+}

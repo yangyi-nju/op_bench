@@ -1,0 +1,430 @@
+{
+  "date": "2026-09-09",
+  "status": "execution_controls_passed",
+  "admission_status": "not_admitted",
+  "task_id": "opbench-vector-norm-compile-cpu-001",
+  "executed_task_revision": "candidate.1",
+  "scoring_revision": "candidate.1",
+  "current_task_revision": "candidate.2",
+  "current_revision_note": "candidate.2 only clarifies the public tolerance scope; inputs, oracle, public commands, patches, source and environment are unchanged. These physical controls retain candidate.1 identity and are not new candidate.2 executions or model evidence.",
+  "source_revision": "240aa77ad01c4f0cd9b2417748272f2f617c112f",
+  "environment_id": "pytorch-layernorm-cpu-py312",
+  "environment_revision": "240aa77-cpu-gcc12-openblas-r3",
+  "image_id": "sha256:8bc7df5037adcd4e6a78fed76ea0d8ba250aec624b4f76f049c36a0c12bf218e",
+  "reused_baseline_artifact": "cpu-baseline-build-r3",
+  "matrix_duration_sec": 3159.3769219660026,
+  "checks": {
+    "baseline_fail_to_pass_fail": true,
+    "baseline_pass_to_pass_pass": true,
+    "reference_passes": true,
+    "provided_alternatives_pass": true,
+    "provided_mutations_rejected": true
+  },
+  "controls": {
+    "baseline": {
+      "status": "test_failed",
+      "duration_sec": 1295.5307249779871,
+      "offline_verification": {
+        "valid": true,
+        "findings": [],
+        "scope": "Artifact presence, recorded process outcomes, numeric observation comparison and score arithmetic; no candidate code is imported. Rerun evaluate to replay the patch; this check does not authenticate artifacts."
+      },
+      "cleanup_errors": [],
+      "cases": [
+        {
+          "id": "singleton_reductions",
+          "group": "fail_to_pass",
+          "status": "failed",
+          "process_exit_code": 0,
+          "numeric": {
+            "passed": false,
+            "reason": "numeric_value_mismatch",
+            "valid_observation": true,
+            "compared_values": 126,
+            "mismatched_values": 40,
+            "max_absolute_error_decimal": "16",
+            "examples": [
+              {
+                "index": 0,
+                "observed": 0.0,
+                "expected": 1.0
+              },
+              {
+                "index": 1,
+                "observed": 0.0,
+                "expected": 16.0
+              },
+              {
+                "index": 9,
+                "observed": 0.0,
+                "expected": 0.0625
+              },
+              {
+                "index": 11,
+                "observed": 0.0,
+                "expected": 0.0625
+              },
+              {
+                "index": 18,
+                "observed": 0.0,
+                "expected": 1.0
+              },
+              {
+                "index": 19,
+                "observed": 0.0,
+                "expected": 16.0
+              },
+              {
+                "index": 20,
+                "observed": 0.0,
+                "expected": 1.0
+              },
+              {
+                "index": 21,
+                "observed": 0.0,
+                "expected": 16.0
+              }
+            ]
+          },
+          "compilation_witness": {
+            "generated_kernels": 6,
+            "loaded_compiler_cache_libraries": 6
+          }
+        },
+        {
+          "id": "float32_regressions",
+          "group": "pass_to_pass",
+          "status": "passed",
+          "process_exit_code": 0,
+          "numeric": {
+            "passed": true,
+            "reason": null,
+            "valid_observation": true,
+            "compared_values": 38,
+            "mismatched_values": 0,
+            "max_absolute_error_decimal": "0",
+            "examples": []
+          },
+          "compilation_witness": {
+            "generated_kernels": 7,
+            "loaded_compiler_cache_libraries": 7
+          }
+        },
+        {
+          "id": "float64_regressions",
+          "group": "pass_to_pass",
+          "status": "passed",
+          "process_exit_code": 0,
+          "numeric": {
+            "passed": true,
+            "reason": null,
+            "valid_observation": true,
+            "compared_values": 66,
+            "mismatched_values": 0,
+            "max_absolute_error_decimal": "6.938893903907228377647697925567626953125E-18",
+            "examples": []
+          },
+          "compilation_witness": {
+            "generated_kernels": 4,
+            "loaded_compiler_cache_libraries": 3
+          }
+        }
+      ],
+      "supplemental_ordinary_singleton_strict_comparison": {
+        "passed": true,
+        "reason": null,
+        "valid_observation": true,
+        "compared_values": 12,
+        "mismatched_values": 0,
+        "max_absolute_error_decimal": "0",
+        "examples": []
+      }
+    },
+    "reference": {
+      "status": "resolved",
+      "duration_sec": 651.375204497017,
+      "offline_verification": {
+        "valid": true,
+        "findings": [],
+        "scope": "Artifact presence, recorded process outcomes, numeric observation comparison and score arithmetic; no candidate code is imported. Rerun evaluate to replay the patch; this check does not authenticate artifacts."
+      },
+      "cleanup_errors": [],
+      "cases": [
+        {
+          "id": "singleton_reductions",
+          "group": "fail_to_pass",
+          "status": "passed",
+          "process_exit_code": 0,
+          "numeric": {
+            "passed": true,
+            "reason": null,
+            "valid_observation": true,
+            "compared_values": 126,
+            "mismatched_values": 0,
+            "max_absolute_error_decimal": "0",
+            "examples": []
+          },
+          "compilation_witness": {
+            "generated_kernels": 6,
+            "loaded_compiler_cache_libraries": 6
+          }
+        },
+        {
+          "id": "float32_regressions",
+          "group": "pass_to_pass",
+          "status": "passed",
+          "process_exit_code": 0,
+          "numeric": {
+            "passed": true,
+            "reason": null,
+            "valid_observation": true,
+            "compared_values": 38,
+            "mismatched_values": 0,
+            "max_absolute_error_decimal": "0",
+            "examples": []
+          },
+          "compilation_witness": {
+            "generated_kernels": 7,
+            "loaded_compiler_cache_libraries": 7
+          }
+        },
+        {
+          "id": "float64_regressions",
+          "group": "pass_to_pass",
+          "status": "passed",
+          "process_exit_code": 0,
+          "numeric": {
+            "passed": true,
+            "reason": null,
+            "valid_observation": true,
+            "compared_values": 66,
+            "mismatched_values": 0,
+            "max_absolute_error_decimal": "0",
+            "examples": []
+          },
+          "compilation_witness": {
+            "generated_kernels": 4,
+            "loaded_compiler_cache_libraries": 3
+          }
+        }
+      ],
+      "supplemental_ordinary_singleton_strict_comparison": {
+        "passed": true,
+        "reason": null,
+        "valid_observation": true,
+        "compared_values": 12,
+        "mismatched_values": 0,
+        "max_absolute_error_decimal": "0",
+        "examples": []
+      }
+    },
+    "alternative-1": {
+      "status": "resolved",
+      "duration_sec": 571.1670495919825,
+      "offline_verification": {
+        "valid": true,
+        "findings": [],
+        "scope": "Artifact presence, recorded process outcomes, numeric observation comparison and score arithmetic; no candidate code is imported. Rerun evaluate to replay the patch; this check does not authenticate artifacts."
+      },
+      "cleanup_errors": [],
+      "cases": [
+        {
+          "id": "singleton_reductions",
+          "group": "fail_to_pass",
+          "status": "passed",
+          "process_exit_code": 0,
+          "numeric": {
+            "passed": true,
+            "reason": null,
+            "valid_observation": true,
+            "compared_values": 126,
+            "mismatched_values": 0,
+            "max_absolute_error_decimal": "0",
+            "examples": []
+          },
+          "compilation_witness": {
+            "generated_kernels": 6,
+            "loaded_compiler_cache_libraries": 6
+          }
+        },
+        {
+          "id": "float32_regressions",
+          "group": "pass_to_pass",
+          "status": "passed",
+          "process_exit_code": 0,
+          "numeric": {
+            "passed": true,
+            "reason": null,
+            "valid_observation": true,
+            "compared_values": 38,
+            "mismatched_values": 0,
+            "max_absolute_error_decimal": "0",
+            "examples": []
+          },
+          "compilation_witness": {
+            "generated_kernels": 7,
+            "loaded_compiler_cache_libraries": 7
+          }
+        },
+        {
+          "id": "float64_regressions",
+          "group": "pass_to_pass",
+          "status": "passed",
+          "process_exit_code": 0,
+          "numeric": {
+            "passed": true,
+            "reason": null,
+            "valid_observation": true,
+            "compared_values": 66,
+            "mismatched_values": 0,
+            "max_absolute_error_decimal": "0",
+            "examples": []
+          },
+          "compilation_witness": {
+            "generated_kernels": 4,
+            "loaded_compiler_cache_libraries": 3
+          }
+        }
+      ],
+      "supplemental_ordinary_singleton_strict_comparison": {
+        "passed": true,
+        "reason": null,
+        "valid_observation": true,
+        "compared_values": 12,
+        "mismatched_values": 0,
+        "max_absolute_error_decimal": "0",
+        "examples": []
+      }
+    },
+    "mutation-1": {
+      "status": "test_failed",
+      "duration_sec": 565.9744193380175,
+      "offline_verification": {
+        "valid": true,
+        "findings": [],
+        "scope": "Artifact presence, recorded process outcomes, numeric observation comparison and score arithmetic; no candidate code is imported. Rerun evaluate to replay the patch; this check does not authenticate artifacts."
+      },
+      "cleanup_errors": [],
+      "cases": [
+        {
+          "id": "singleton_reductions",
+          "group": "fail_to_pass",
+          "status": "failed",
+          "process_exit_code": 0,
+          "numeric": {
+            "passed": false,
+            "reason": "numeric_value_mismatch",
+            "valid_observation": true,
+            "compared_values": 126,
+            "mismatched_values": 38,
+            "max_absolute_error_decimal": "16",
+            "examples": [
+              {
+                "index": 0,
+                "observed": 0.0,
+                "expected": 1.0
+              },
+              {
+                "index": 1,
+                "observed": 0.0,
+                "expected": 16.0
+              },
+              {
+                "index": 9,
+                "observed": 0.0,
+                "expected": 0.0625
+              },
+              {
+                "index": 11,
+                "observed": 0.0,
+                "expected": 0.0625
+              },
+              {
+                "index": 18,
+                "observed": 0.0,
+                "expected": 1.0
+              },
+              {
+                "index": 19,
+                "observed": 0.0,
+                "expected": 16.0
+              },
+              {
+                "index": 20,
+                "observed": 0.0,
+                "expected": 1.0
+              },
+              {
+                "index": 21,
+                "observed": 0.0,
+                "expected": 16.0
+              }
+            ]
+          },
+          "compilation_witness": {
+            "generated_kernels": 6,
+            "loaded_compiler_cache_libraries": 6
+          }
+        },
+        {
+          "id": "float32_regressions",
+          "group": "pass_to_pass",
+          "status": "passed",
+          "process_exit_code": 0,
+          "numeric": {
+            "passed": true,
+            "reason": null,
+            "valid_observation": true,
+            "compared_values": 38,
+            "mismatched_values": 0,
+            "max_absolute_error_decimal": "0",
+            "examples": []
+          },
+          "compilation_witness": {
+            "generated_kernels": 7,
+            "loaded_compiler_cache_libraries": 7
+          }
+        },
+        {
+          "id": "float64_regressions",
+          "group": "pass_to_pass",
+          "status": "passed",
+          "process_exit_code": 0,
+          "numeric": {
+            "passed": true,
+            "reason": null,
+            "valid_observation": true,
+            "compared_values": 66,
+            "mismatched_values": 0,
+            "max_absolute_error_decimal": "6.938893903907228377647697925567626953125E-18",
+            "examples": []
+          },
+          "compilation_witness": {
+            "generated_kernels": 4,
+            "loaded_compiler_cache_libraries": 3
+          }
+        }
+      ],
+      "supplemental_ordinary_singleton_strict_comparison": {
+        "passed": true,
+        "reason": null,
+        "valid_observation": true,
+        "compared_values": 12,
+        "mismatched_values": 0,
+        "max_absolute_error_decimal": "0",
+        "examples": []
+      }
+    }
+  },
+  "model_called": false,
+  "raw_evidence": "runs/v0.8_rebuild_validation/20260909-remote/remote/vector-norm-controls-r1",
+  "controller_source_copy": "runs/v0.8_rebuild_validation/20260909-remote/remote/controller/snapshots/vector-norm-controls-r1/src",
+  "counting": "230 encoded values represent 115 scalar outputs across 16 operations. Mismatches count encoded entries, not logical operator outputs or tasks.",
+  "supplemental_comparison_scope": "Existing observations for ordinary_singleton were also compared at atol=rtol=1e-6 and pass all four controls. This is a diagnostic recalculation, not a changed saved score, physical rerun or independent repeat.",
+  "limitations": [
+    "All three batches generate and load native compiler-cache libraries, but these are batch-level diagnostics inside the candidate framework, not universal adversarial execution attestation.",
+    "Deterministic cases do not cover every value/shape combination; negative-order zero inputs remain untested.",
+    "AI-assisted independent oracle review is not independent human admission.",
+    "No Agent model, GPU, gradient or performance evidence is created by these CPU compile controls."
+  ]
+}

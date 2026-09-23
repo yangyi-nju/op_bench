@@ -1,0 +1,32 @@
+{
+  "source_revision": "2409b49a33c0ef594d89f9f477d56abad47e65bf",
+  "scope": "Patch context applicability against affected complete files exported from the pinned upstream commit; not compilation, source-loading or CUDA runtime validation.",
+  "controls": [
+    {
+      "control": "baseline",
+      "empty_patch": true
+    },
+    {
+      "control": "reference",
+      "patch_applies_to_declared_base_files": true,
+      "changed_paths": [
+        "aten/src/ATen/native/cuda/SoftMax.cu"
+      ]
+    },
+    {
+      "control": "alternative",
+      "patch_applies_to_declared_base_files": true,
+      "changed_paths": [
+        "aten/src/ATen/native/cuda/SoftMax.cu"
+      ]
+    },
+    {
+      "control": "mutation",
+      "patch_applies_to_declared_base_files": true,
+      "changed_paths": [
+        "aten/src/ATen/native/cuda/SoftMax.cu",
+        "torch/nn/functional.py"
+      ]
+    }
+  ]
+}

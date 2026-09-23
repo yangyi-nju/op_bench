@@ -1,0 +1,396 @@
+{
+  "executed_date": "2026-09-09",
+  "scope": "native Codex development integration and cohesive v0.8 cleanup; not a unified research comparison or formal release",
+  "software_identity": {
+    "version": "0.8.0.dev1",
+    "git_revision": "82c8e064bf30fead2d941d11cf94053ce3fc7e14",
+    "working_tree_modified": true,
+    "installation": "checkout"
+  },
+  "host": {
+    "platform": "macOS-26.5.1-arm64-arm-64bit",
+    "python": "3.12.13"
+  },
+  "software_provenance_limit": "Unpublished dirty working tree; execution identities retained. Controller copies under the run root record the actual round. No file-hash development gate.",
+  "core_suite": {
+    "passed": 280,
+    "skipped": 0,
+    "discovered": 280,
+    "duration_sec": 117.873,
+    "docker_enabled": true,
+    "command": "PYTHONPATH=src OPBENCH_TEST_DOCKER_IMAGE=opbench/cpp-fixture:cpu OPBENCH_TEST_DOCKER=1 .venv/bin/python -m unittest discover -s tests/core -v",
+    "log": "runs/v0.8_rebuild_validation/20260909-codex/final-core-docker.log",
+    "difference_from_previous_round": "Removed 14 tests dedicated to the retired schema-1 dataset audit script; added 2 unmanaged-model-access behavior tests. Test count is not an acceptance threshold."
+  },
+  "native_codex": {
+    "codex_version": "0.153.4",
+    "declared_model": "gpt-6-astra",
+    "declared_reasoning_effort": "ultra",
+    "authentication": "existing ChatGPT login; no authentication contents copied into task assets or records",
+    "model_called": true,
+    "physical_attempts": 3,
+    "distinct_tasks": 2,
+    "resolved_attempts": 3,
+    "information_profile": "development",
+    "unified_comparison_experiment": false,
+    "formal_benchmark": false,
+    "pure_inference_gateway_real_provider_exercised": false,
+    "usage_source": "Codex CLI turn.completed self-report; not trusted OpBench gateway billing",
+    "cost_usd": null,
+    "attempts": [
+      {
+        "run": "run-r1",
+        "attempt_id": "attempt-000001",
+        "task_id": "fixture-cpp-row-sum",
+        "task_identity": {
+          "status": "legacy_unidentified",
+          "task_id": "fixture-cpp-row-sum",
+          "task_revision": null,
+          "scope": null,
+          "defect_group": null,
+          "scoring_revision": null,
+          "solver_environment": {
+            "environment_id": "synthetic-cpp-macos-local",
+            "revision": "codex-canary-1"
+          },
+          "required_variants": [
+            {
+              "variant_id": "default",
+              "environment": {
+                "environment_id": "synthetic-cpp-macos-local",
+                "revision": "codex-canary-1"
+              }
+            }
+          ]
+        },
+        "terminal_status": "finished",
+        "agent_exit_code": 0,
+        "submission": {
+          "status": "frozen",
+          "path": "patch.diff"
+        },
+        "evaluation_status": "resolved",
+        "groups": {
+          "fail_to_pass": {
+            "passed": 3,
+            "total": 3
+          },
+          "pass_to_pass": {
+            "passed": 4,
+            "total": 4
+          }
+        },
+        "solve_duration_sec": 67.12824412505142,
+        "timing_protocol_revision": "2",
+        "information_profile": "development",
+        "information_boundary": {
+          "status": "unverified",
+          "source_history": "fresh_baseline",
+          "solver_network": "host",
+          "model_access": "unmanaged",
+          "scope": "execution observations only; task, image and provider admission are separate"
+        },
+        "cleanup_errors": [],
+        "offline_verification": {
+          "valid": true,
+          "findings": [],
+          "scope": "Artifact presence, recorded process outcomes, numeric observation comparison and score arithmetic; no candidate code is imported. Rerun evaluate to replay the patch; this check does not authenticate artifacts."
+        },
+        "frozen_patch_matches_evaluated": true,
+        "reported_usage": [
+          {
+            "input_tokens": 76551,
+            "cached_input_tokens": 61568,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 752,
+            "reasoning_output_tokens": 128
+          }
+        ],
+        "observed_connection_retries": [
+          "Reconnecting... 2/5 (stream disconnected before completion: Connection reset by peer (os error 54))",
+          "Reconnecting... 3/5 (stream disconnected before completion: Connection reset by peer (os error 54))",
+          "Reconnecting... 4/5 (stream disconnected before completion: Connection reset by peer (os error 54))",
+          "Reconnecting... 5/5 (stream disconnected before completion: Connection reset by peer (os error 54))"
+        ],
+        "completed_error_items": [
+          "Under-development features enabled: skip_host_skill_discovery. Under-development features are incomplete and may behave unpredictably. To suppress this warning, set `suppress_unstable_features_warning = true` in /Users/yy/.codex/config.toml.",
+          "Falling back from WebSockets to HTTPS transport. stream disconnected before completion: Connection reset by peer (os error 54)"
+        ],
+        "raw_attempt": "runs/v0.8_rebuild_validation/20260909-codex/run-r1/attempts/attempt-000001/attempt.json"
+      },
+      {
+        "run": "run-r1",
+        "attempt_id": "attempt-000002",
+        "task_id": "synthetic-numeric-softmax",
+        "task_identity": {
+          "status": "declared",
+          "task_id": "synthetic-numeric-softmax",
+          "task_revision": "1",
+          "scope": "operator",
+          "defect_group": "synthetic:softmax-finite-offset-stability",
+          "scoring_revision": "1",
+          "solver_environment": {
+            "environment_id": "synthetic-stdlib-python-local",
+            "revision": "1"
+          },
+          "required_variants": [
+            {
+              "variant_id": "default",
+              "environment": {
+                "environment_id": "synthetic-stdlib-python-local",
+                "revision": "1"
+              }
+            }
+          ]
+        },
+        "terminal_status": "finished",
+        "agent_exit_code": 0,
+        "submission": {
+          "status": "frozen",
+          "path": "patch.diff"
+        },
+        "evaluation_status": "resolved",
+        "groups": {
+          "fail_to_pass": {
+            "passed": 2,
+            "total": 2
+          },
+          "pass_to_pass": {
+            "passed": 1,
+            "total": 1
+          }
+        },
+        "solve_duration_sec": 113.52319187507965,
+        "timing_protocol_revision": "2",
+        "information_profile": "development",
+        "information_boundary": {
+          "status": "unverified",
+          "source_history": "fresh_baseline",
+          "solver_network": "host",
+          "model_access": "unmanaged",
+          "scope": "execution observations only; task, image and provider admission are separate"
+        },
+        "cleanup_errors": [],
+        "offline_verification": {
+          "valid": true,
+          "findings": [],
+          "scope": "Artifact presence, recorded process outcomes, numeric observation comparison and score arithmetic; no candidate code is imported. Rerun evaluate to replay the patch; this check does not authenticate artifacts."
+        },
+        "frozen_patch_matches_evaluated": true,
+        "reported_usage": [
+          {
+            "input_tokens": 101730,
+            "cached_input_tokens": 84480,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 1969,
+            "reasoning_output_tokens": 314
+          }
+        ],
+        "observed_connection_retries": [
+          "Reconnecting... 2/5 (stream disconnected before completion: Connection reset by peer (os error 54))",
+          "Reconnecting... 3/5 (stream disconnected before completion: Connection reset by peer (os error 54))",
+          "Reconnecting... 4/5 (stream disconnected before completion: Connection reset by peer (os error 54))",
+          "Reconnecting... 5/5 (stream disconnected before completion: Connection reset by peer (os error 54))"
+        ],
+        "completed_error_items": [
+          "Under-development features enabled: skip_host_skill_discovery. Under-development features are incomplete and may behave unpredictably. To suppress this warning, set `suppress_unstable_features_warning = true` in /Users/yy/.codex/config.toml.",
+          "Falling back from WebSockets to HTTPS transport. stream disconnected before completion: Connection reset by peer (os error 54)"
+        ],
+        "raw_attempt": "runs/v0.8_rebuild_validation/20260909-codex/run-r1/attempts/attempt-000002/attempt.json"
+      },
+      {
+        "run": "published-example-r2",
+        "attempt_id": "attempt-000001",
+        "task_id": "synthetic-numeric-softmax",
+        "task_identity": {
+          "status": "declared",
+          "task_id": "synthetic-numeric-softmax",
+          "task_revision": "1",
+          "scope": "operator",
+          "defect_group": "synthetic:softmax-finite-offset-stability",
+          "scoring_revision": "1",
+          "solver_environment": {
+            "environment_id": "synthetic-stdlib-python-local",
+            "revision": "1"
+          },
+          "required_variants": [
+            {
+              "variant_id": "default",
+              "environment": {
+                "environment_id": "synthetic-stdlib-python-local",
+                "revision": "1"
+              }
+            }
+          ]
+        },
+        "terminal_status": "finished",
+        "agent_exit_code": 0,
+        "submission": {
+          "status": "frozen",
+          "path": "patch.diff"
+        },
+        "evaluation_status": "resolved",
+        "groups": {
+          "fail_to_pass": {
+            "passed": 2,
+            "total": 2
+          },
+          "pass_to_pass": {
+            "passed": 1,
+            "total": 1
+          }
+        },
+        "solve_duration_sec": 135.15771070797928,
+        "timing_protocol_revision": "2",
+        "information_profile": "development",
+        "information_boundary": {
+          "status": "unverified",
+          "source_history": "fresh_baseline",
+          "solver_network": "host",
+          "model_access": "unmanaged",
+          "scope": "execution observations only; task, image and provider admission are separate"
+        },
+        "cleanup_errors": [],
+        "offline_verification": {
+          "valid": true,
+          "findings": [],
+          "scope": "Artifact presence, recorded process outcomes, numeric observation comparison and score arithmetic; no candidate code is imported. Rerun evaluate to replay the patch; this check does not authenticate artifacts."
+        },
+        "frozen_patch_matches_evaluated": true,
+        "reported_usage": [
+          {
+            "input_tokens": 92267,
+            "cached_input_tokens": 70272,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 2804,
+            "reasoning_output_tokens": 899
+          }
+        ],
+        "observed_connection_retries": [
+          "Reconnecting... 2/5 (stream disconnected before completion: Connection reset by peer (os error 54))",
+          "Reconnecting... 3/5 (stream disconnected before completion: Connection reset by peer (os error 54))",
+          "Reconnecting... 4/5 (stream disconnected before completion: Connection reset by peer (os error 54))",
+          "Reconnecting... 5/5 (stream disconnected before completion: Connection reset by peer (os error 54))"
+        ],
+        "completed_error_items": [
+          "Under-development features enabled: skip_host_skill_discovery. Under-development features are incomplete and may behave unpredictably. To suppress this warning, set `suppress_unstable_features_warning = true` in /Users/yy/.codex/config.toml.",
+          "Falling back from WebSockets to HTTPS transport. stream disconnected before completion: Connection reset by peer (os error 54)"
+        ],
+        "raw_attempt": "runs/v0.8_rebuild_validation/20260909-codex/published-example-r2/attempts/attempt-000001/attempt.json"
+      }
+    ],
+    "example": "examples/native_codex/experiment.json",
+    "published_example_recovery": {
+      "resume_exit_code": 0,
+      "report_exit_code": 0,
+      "existing_execution_records_unchanged": {
+        "attempts/attempt-000001/attempt.json": true,
+        "attempts/attempt-000001/agent.log": true,
+        "attempts/attempt-000001/patch.diff": true
+      },
+      "attempt_ids": [
+        "attempt-000001"
+      ],
+      "report": {
+        "planned": 1,
+        "started": 1,
+        "resolved": 1,
+        "unknown": 0,
+        "missing": 0,
+        "main_score_status": "generation_unverified",
+        "main_task_macro": null,
+        "diagnostic_main_task_macro": null
+      },
+      "report_complete": true
+    },
+    "controller_source_copies": [
+      "runs/v0.8_rebuild_validation/20260909-codex/run-r1/controller-source",
+      "runs/v0.8_rebuild_validation/20260909-codex/current-controller-source"
+    ],
+    "limitations": [
+      "Host filesystem and network are not isolated by OpBench containers; model access is unmanaged. Fresh Git and CLI context controls do not establish a closed information boundary.",
+      "The first C++ run used a pre-migration schema-1 fixture and retains legacy_unidentified identity. New task inputs now require schema 2; this result is not relabeled.",
+      "Three real attempts on two small fixtures establish local integration, not representative operator capability or independent replicated model statistics.",
+      "Recorded CLI connection resets, HTTPS fallback and unstable-feature warning remain in raw logs; eventual completion does not erase them."
+    ]
+  },
+  "clean_installed_package": {
+    "installation": "clean_package",
+    "cwd": "/tmp/opbench-v08-external-20260909-r4",
+    "PYTHONPATH_unset": true,
+    "controls": [
+      {
+        "control": "baseline",
+        "status": "test_failed",
+        "verified": true
+      },
+      {
+        "control": "reference",
+        "status": "resolved",
+        "verified": true
+      },
+      {
+        "control": "alternative-1",
+        "status": "resolved",
+        "verified": true
+      },
+      {
+        "control": "mutation-1",
+        "status": "test_failed",
+        "verified": true
+      }
+    ],
+    "software_identity": {
+      "version": "0.8.0.dev1",
+      "git_revision": null,
+      "working_tree_modified": null,
+      "installation": "package"
+    },
+    "execution_checks_passed": true
+  },
+  "cleanup": {
+    "base_revision": "55c8ef2bd7d0bf78fc26bfd25498d9252e70781f",
+    "cumulative_tracked_files_deleted_relative_to_v07": 1343,
+    "removed_obsolete_task_directories": 21,
+    "removed_obsolete_task_files": 186,
+    "retained_historical_task_directories": 50,
+    "removed_old_run_files": 408,
+    "removed_old_run_bytes": 62731897,
+    "old_run_roots": 18,
+    "untracked_local_files_preserved_in_mixed_run_roots": 2612,
+    "task_cleanup_manifest": "runs/v0.8_rebuild_validation/20260909-codex/legacy_task_cleanup.json",
+    "run_cleanup_manifest": "runs/v0.8_rebuild_validation/20260909-codex/legacy_runs_cleanup.json",
+    "other_removed_contents": [
+      "15 files under 9 obsolete pytorch dataset release views",
+      "schema-1-only audit_operator_dataset.py and its 14 tests",
+      "superseded rebuild_proposal, design_audit and audit_resolution documents",
+      "duplicate project_state and project_plan entry points",
+      "operator_quality_contract merged into task_format; duplicate status tables consolidated; old changelog journal replaced with v0.7 historical links"
+    ],
+    "current_task_input_schema": 2,
+    "old_task_execution_removed": true,
+    "historical_result_reading_retained": true,
+    "committed_or_pushed": false
+  },
+  "earlier_real_framework_evidence": "docs/v0.8/validation_remote_20260909.json",
+  "remaining_engineering_acceptance": [
+    "Real provider allowed inference through the closed pure-inference gateway",
+    "End-to-end validation of a real required multi-environment variant task",
+    "A previously unused same-kind task added entirely as data/environment assets",
+    "Withdrawal/scoring correction impact and reevaluation workflow exercise"
+  ],
+  "separate_research_and_release_work": [
+    "Independent human task review and admission",
+    "Unified Agent comparison experiments explicitly deferred by author",
+    "Author/school code license and upstream distribution permissions"
+  ],
+  "raw_evidence_root": "runs/v0.8_rebuild_validation/20260909-codex",
+  "final_document_and_structure_checks": {
+    "markdown_link_findings": 0,
+    "git_diff_check_passed": true,
+    "active_task_configs_loaded": 7,
+    "active_task_schema": 2,
+    "dataset_manifests_loaded": 4,
+    "scope": "Structure and local Markdown destinations only; source builds have their separately recorded evidence."
+  }
+}

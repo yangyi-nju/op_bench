@@ -1,0 +1,26 @@
+{
+  "task_revision": "candidate.2",
+  "base_commit": "240aa77ad01c4f0cd9b2417748272f2f617c112f",
+  "evidence_kind": "static_applicability_only",
+  "checks": [
+    {
+      "control": "reference",
+      "git_apply_check": "passed",
+      "complete_modified_module_syntax": "passed",
+      "runtime": "not_executed"
+    },
+    {
+      "control": "alternative",
+      "git_apply_check": "passed",
+      "complete_modified_module_syntax": "passed",
+      "runtime": "not_executed"
+    },
+    {
+      "control": "mutation",
+      "git_apply_check": "passed",
+      "complete_modified_module_syntax": "passed",
+      "runtime": "not_executed"
+    }
+  ],
+  "limitations": "No operator execution, full native build or admission conclusion follows from these checks."
+}

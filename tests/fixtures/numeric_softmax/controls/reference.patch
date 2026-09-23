@@ -1,0 +1,9 @@
+--- a/ops.py
++++ b/ops.py
+@@ -3,5 +3,5 @@
+ 
+ 
+ def softmax(values):
+-    numerators = [math.exp(value) for value in values]
++    numerators = [math.exp(value - max(values)) for value in values]
+     return [value / sum(numerators) for value in numerators]

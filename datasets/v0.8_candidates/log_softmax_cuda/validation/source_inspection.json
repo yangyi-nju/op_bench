@@ -1,0 +1,595 @@
+{
+  "date": "2026-09-09",
+  "source_revision": "2409b49a33c0ef594d89f9f477d56abad47e65bf",
+  "cache_head": "2a49b38afc39758594161cd87d2d1b89afb288e8",
+  "scope": "Read-only commit and recursive submodule availability inspection; not source build or CUDA execution. Export the declared source_revision, not cache HEAD or its Git history.",
+  "top_level_gitlinks": 37,
+  "recursive_gitlinks": 73,
+  "matching_recursive_gitlinks": 73,
+  "entries": [
+    {
+      "path": "android/libs/fbjni",
+      "expected_commit": "7e1e1fe3858c63c251c637ae41a20de425dde96f",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "7e1e1fe3858c63c251c637ae41a20de425dde96f",
+      "matching": true
+    },
+    {
+      "path": "third_party/FP16",
+      "expected_commit": "4dfe081cf6bcd15db339cf2680b9281b8451eeb3",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "4dfe081cf6bcd15db339cf2680b9281b8451eeb3",
+      "matching": true
+    },
+    {
+      "path": "third_party/FXdiv",
+      "expected_commit": "b408327ac2a15ec3e43352421954f5b1967701d1",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "b408327ac2a15ec3e43352421954f5b1967701d1",
+      "matching": true
+    },
+    {
+      "path": "third_party/NNPACK",
+      "expected_commit": "c07e3a0400713d546e0dea2d5466dd22ea389c73",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "c07e3a0400713d546e0dea2d5466dd22ea389c73",
+      "matching": true
+    },
+    {
+      "path": "third_party/NVTX",
+      "expected_commit": "e170594ac7cf1dac584da473d4ca9301087090c1",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "e170594ac7cf1dac584da473d4ca9301087090c1",
+      "matching": true
+    },
+    {
+      "path": "third_party/VulkanMemoryAllocator",
+      "expected_commit": "a6bfc237255a6bac1513f7c1ebde6d8aed6b5191",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "a6bfc237255a6bac1513f7c1ebde6d8aed6b5191",
+      "matching": true
+    },
+    {
+      "path": "third_party/XNNPACK",
+      "expected_commit": "4ea82e595b36106653175dcb04b2aa532660d0d8",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "4ea82e595b36106653175dcb04b2aa532660d0d8",
+      "matching": true
+    },
+    {
+      "path": "third_party/benchmark",
+      "expected_commit": "0d98dba29d66e93259db7daa53a9327df767a415",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "0d98dba29d66e93259db7daa53a9327df767a415",
+      "matching": true
+    },
+    {
+      "path": "third_party/composable_kernel",
+      "expected_commit": "50ee4267e27b875d149e642f4cebd47be1dc3b57",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "50ee4267e27b875d149e642f4cebd47be1dc3b57",
+      "matching": true
+    },
+    {
+      "path": "third_party/cpp-httplib",
+      "expected_commit": "3b6597bba913d51161383657829b7e644e59c006",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "3b6597bba913d51161383657829b7e644e59c006",
+      "matching": true
+    },
+    {
+      "path": "third_party/cpuinfo",
+      "expected_commit": "1e83a2fdd3102f65c6f1fb602c1b320486218a99",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "1e83a2fdd3102f65c6f1fb602c1b320486218a99",
+      "matching": true
+    },
+    {
+      "path": "third_party/cudnn_frontend",
+      "expected_commit": "936021bfed8c91dc416af1588b2c4eca631a9e45",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "936021bfed8c91dc416af1588b2c4eca631a9e45",
+      "matching": true
+    },
+    {
+      "path": "third_party/cutlass",
+      "expected_commit": "bbe579a9e3beb6ea6626d9227ec32d0dae119a49",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "bbe579a9e3beb6ea6626d9227ec32d0dae119a49",
+      "matching": true
+    },
+    {
+      "path": "third_party/eigen",
+      "expected_commit": "3147391d946bb4b6c68edd901f2add6ac1f31f8c",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "3147391d946bb4b6c68edd901f2add6ac1f31f8c",
+      "matching": true
+    },
+    {
+      "path": "third_party/fbgemm/third_party/asmjit",
+      "expected_commit": "d3fbf7c9bc7c1d1365a94a45614b91c5a3706b81",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "d3fbf7c9bc7c1d1365a94a45614b91c5a3706b81",
+      "matching": true
+    },
+    {
+      "path": "third_party/fbgemm/third_party/cpuinfo",
+      "expected_commit": "ed8b86a253800bafdb7b25c5c399f91bff9cb1f3",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "ed8b86a253800bafdb7b25c5c399f91bff9cb1f3",
+      "matching": true
+    },
+    {
+      "path": "third_party/fbgemm/third_party/cutlass",
+      "expected_commit": "fc9ebc645b63f3a6bc80aaefde5c063fb72110d6",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "fc9ebc645b63f3a6bc80aaefde5c063fb72110d6",
+      "matching": true
+    },
+    {
+      "path": "third_party/fbgemm/third_party/googletest",
+      "expected_commit": "cbf019de22c8dd37b2108da35b2748fd702d1796",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "cbf019de22c8dd37b2108da35b2748fd702d1796",
+      "matching": true
+    },
+    {
+      "path": "third_party/fbgemm/third_party/hipify_torch",
+      "expected_commit": "23f53b025b466d8ec3c45d52290d3442f7fbe6b1",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "23f53b025b466d8ec3c45d52290d3442f7fbe6b1",
+      "matching": true
+    },
+    {
+      "path": "third_party/fbgemm",
+      "expected_commit": "dbc3157bf256f1339b3fa1fef2be89ac4078be0e",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "dbc3157bf256f1339b3fa1fef2be89ac4078be0e",
+      "matching": true
+    },
+    {
+      "path": "third_party/flatbuffers",
+      "expected_commit": "01834de25e4bf3975a9a00e816292b1ad0fe184b",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "01834de25e4bf3975a9a00e816292b1ad0fe184b",
+      "matching": true
+    },
+    {
+      "path": "third_party/fmt",
+      "expected_commit": "e3ddede6c4ee818825c4e5a6dfa1d384860c27d9",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "e3ddede6c4ee818825c4e5a6dfa1d384860c27d9",
+      "matching": true
+    },
+    {
+      "path": "third_party/gemmlowp/gemmlowp",
+      "expected_commit": "3fb5c176c17c765a3492cd2f0321b0dab712f350",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "3fb5c176c17c765a3492cd2f0321b0dab712f350",
+      "matching": true
+    },
+    {
+      "path": "third_party/gloo",
+      "expected_commit": "5354032ea08eadd7fc4456477f7f7c6308818509",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "5354032ea08eadd7fc4456477f7f7c6308818509",
+      "matching": true
+    },
+    {
+      "path": "third_party/googletest",
+      "expected_commit": "b514bdc898e2951020cbdca1304b75f5950d1f59",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "b514bdc898e2951020cbdca1304b75f5950d1f59",
+      "matching": true
+    },
+    {
+      "path": "third_party/ideep/mkl-dnn",
+      "expected_commit": "66f0cb9eb66affd2da3bf5f8d897376f04aae6af",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "66f0cb9eb66affd2da3bf5f8d897376f04aae6af",
+      "matching": true
+    },
+    {
+      "path": "third_party/ideep",
+      "expected_commit": "e026f3b0318087fe19e2b062e8edf55bfe7a522c",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "e026f3b0318087fe19e2b062e8edf55bfe7a522c",
+      "matching": true
+    },
+    {
+      "path": "third_party/ittapi",
+      "expected_commit": "5b8a7d7422611c3a0d799fb5fc5dd4abfae35b42",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "5b8a7d7422611c3a0d799fb5fc5dd4abfae35b42",
+      "matching": true
+    },
+    {
+      "path": "third_party/kineto/libkineto/third_party/dynolog/third_party/DCGM",
+      "expected_commit": "ffde4e54bc7249a6039a5e6b45b395141e1217f9",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "ffde4e54bc7249a6039a5e6b45b395141e1217f9",
+      "matching": true
+    },
+    {
+      "path": "third_party/kineto/libkineto/third_party/dynolog/third_party/cpr",
+      "expected_commit": "871ed52d350214a034f6ef8a3b8f51c5ce1bd400",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "871ed52d350214a034f6ef8a3b8f51c5ce1bd400",
+      "matching": true
+    },
+    {
+      "path": "third_party/kineto/libkineto/third_party/dynolog/third_party/fmt",
+      "expected_commit": "cd4af11efc9c622896a3e4cb599fa28668ca3d05",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "cd4af11efc9c622896a3e4cb599fa28668ca3d05",
+      "matching": true
+    },
+    {
+      "path": "third_party/kineto/libkineto/third_party/dynolog/third_party/gflags/doc",
+      "expected_commit": "8411df715cf522606e3b1aca386ddfc0b63d34b4",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "8411df715cf522606e3b1aca386ddfc0b63d34b4",
+      "matching": true
+    },
+    {
+      "path": "third_party/kineto/libkineto/third_party/dynolog/third_party/gflags",
+      "expected_commit": "e171aa2d15ed9eb17054558e0b3a6a413bb01067",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "e171aa2d15ed9eb17054558e0b3a6a413bb01067",
+      "matching": true
+    },
+    {
+      "path": "third_party/kineto/libkineto/third_party/dynolog/third_party/glog",
+      "expected_commit": "b33e3bad4c46c8a6345525fd822af355e5ef9446",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "b33e3bad4c46c8a6345525fd822af355e5ef9446",
+      "matching": true
+    },
+    {
+      "path": "third_party/kineto/libkineto/third_party/dynolog/third_party/googletest",
+      "expected_commit": "58d77fa8070e8cec2dc1ed015d66b454c8d78850",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "58d77fa8070e8cec2dc1ed015d66b454c8d78850",
+      "matching": true
+    },
+    {
+      "path": "third_party/kineto/libkineto/third_party/dynolog/third_party/json",
+      "expected_commit": "4f8fba14066156b73f1189a2b8bd568bde5284c5",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "4f8fba14066156b73f1189a2b8bd568bde5284c5",
+      "matching": true
+    },
+    {
+      "path": "third_party/kineto/libkineto/third_party/dynolog/third_party/pfs",
+      "expected_commit": "f68a2fa8ea36c783bdd760371411fcb495aa3150",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "f68a2fa8ea36c783bdd760371411fcb495aa3150",
+      "matching": true
+    },
+    {
+      "path": "third_party/kineto/libkineto/third_party/dynolog",
+      "expected_commit": "7d04a0053a845370ae06ce317a22a48e9edcc74e",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "7d04a0053a845370ae06ce317a22a48e9edcc74e",
+      "matching": true
+    },
+    {
+      "path": "third_party/kineto/libkineto/third_party/fmt",
+      "expected_commit": "0041a40c1350ba702d475b9c4ad62da77caea164",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "0041a40c1350ba702d475b9c4ad62da77caea164",
+      "matching": true
+    },
+    {
+      "path": "third_party/kineto/libkineto/third_party/googletest",
+      "expected_commit": "7aca84427f224eeed3144123d5230d5871e93347",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "7aca84427f224eeed3144123d5230d5871e93347",
+      "matching": true
+    },
+    {
+      "path": "third_party/kineto",
+      "expected_commit": "bc1616a65cfe552516ce62f81ead48e45c85e18c",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "bc1616a65cfe552516ce62f81ead48e45c85e18c",
+      "matching": true
+    },
+    {
+      "path": "third_party/kleidiai",
+      "expected_commit": "202603f38a9df9d2ded89f12b41ded621c71d4ea",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "202603f38a9df9d2ded89f12b41ded621c71d4ea",
+      "matching": true
+    },
+    {
+      "path": "third_party/mimalloc",
+      "expected_commit": "b66e3214d8a104669c2ec05ae91ebc26a8f5ab78",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "b66e3214d8a104669c2ec05ae91ebc26a8f5ab78",
+      "matching": true
+    },
+    {
+      "path": "third_party/nccl/nccl",
+      "expected_commit": "ab2b89c4c339bd7f816fbc114a4b05d386b66290",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "ab2b89c4c339bd7f816fbc114a4b05d386b66290",
+      "matching": true
+    },
+    {
+      "path": "third_party/nlohmann",
+      "expected_commit": "87cda1d6646592ac5866dc703c8e1839046a6806",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "87cda1d6646592ac5866dc703c8e1839046a6806",
+      "matching": true
+    },
+    {
+      "path": "third_party/onnx/third_party/pybind11",
+      "expected_commit": "3e9dfa2866941655c56877882565e7577de6fc7b",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "3e9dfa2866941655c56877882565e7577de6fc7b",
+      "matching": true
+    },
+    {
+      "path": "third_party/onnx",
+      "expected_commit": "b8baa8446686496da4cc8fda09f2b6fe65c2a02c",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "b8baa8446686496da4cc8fda09f2b6fe65c2a02c",
+      "matching": true
+    },
+    {
+      "path": "third_party/opentelemetry-cpp/third_party/benchmark",
+      "expected_commit": "d572f4777349d43653b21d6c2fc63020ab326db2",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "d572f4777349d43653b21d6c2fc63020ab326db2",
+      "matching": true
+    },
+    {
+      "path": "third_party/opentelemetry-cpp/third_party/googletest",
+      "expected_commit": "b796f7d44681514f58a683a3a71ff17c94edb0c1",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "b796f7d44681514f58a683a3a71ff17c94edb0c1",
+      "matching": true
+    },
+    {
+      "path": "third_party/opentelemetry-cpp/third_party/ms-gsl",
+      "expected_commit": "6f4529395c5b7c2d661812257cd6780c67e54afa",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "6f4529395c5b7c2d661812257cd6780c67e54afa",
+      "matching": true
+    },
+    {
+      "path": "third_party/opentelemetry-cpp/third_party/nlohmann-json",
+      "expected_commit": "bc889afb4c5bf1c0d8ee29ef35eaaf4c8bef8a5d",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "bc889afb4c5bf1c0d8ee29ef35eaaf4c8bef8a5d",
+      "matching": true
+    },
+    {
+      "path": "third_party/opentelemetry-cpp/third_party/opentelemetry-proto",
+      "expected_commit": "4ca4f0335c63cda7ab31ea7ed70d6553aee14dce",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "4ca4f0335c63cda7ab31ea7ed70d6553aee14dce",
+      "matching": true
+    },
+    {
+      "path": "third_party/opentelemetry-cpp/third_party/opentracing-cpp",
+      "expected_commit": "06b57f48ded1fa3bdd3d4346f6ef29e40e08eaf5",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "06b57f48ded1fa3bdd3d4346f6ef29e40e08eaf5",
+      "matching": true
+    },
+    {
+      "path": "third_party/opentelemetry-cpp/third_party/prometheus-cpp/3rdparty/civetweb",
+      "expected_commit": "eefb26f82b233268fc98577d265352720d477ba4",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "eefb26f82b233268fc98577d265352720d477ba4",
+      "matching": true
+    },
+    {
+      "path": "third_party/opentelemetry-cpp/third_party/prometheus-cpp/3rdparty/googletest",
+      "expected_commit": "e2239ee6043f73722e7aa812a459f54a28552929",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "e2239ee6043f73722e7aa812a459f54a28552929",
+      "matching": true
+    },
+    {
+      "path": "third_party/opentelemetry-cpp/third_party/prometheus-cpp",
+      "expected_commit": "c9ffcdda9086ffd9e1283ea7a0276d831f3c8a8d",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "c9ffcdda9086ffd9e1283ea7a0276d831f3c8a8d",
+      "matching": true
+    },
+    {
+      "path": "third_party/opentelemetry-cpp/tools/vcpkg",
+      "expected_commit": "8eb57355a4ffb410a2e94c07b4dca2dffbee8e50",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "8eb57355a4ffb410a2e94c07b4dca2dffbee8e50",
+      "matching": true
+    },
+    {
+      "path": "third_party/opentelemetry-cpp",
+      "expected_commit": "a799f4aed9c94b765dcdaabaeab7d5e7e2310878",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "a799f4aed9c94b765dcdaabaeab7d5e7e2310878",
+      "matching": true
+    },
+    {
+      "path": "third_party/pocketfft",
+      "expected_commit": "9d3ab05a7fffbc71a492bc6a17be034e83e8f0fe",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "9d3ab05a7fffbc71a492bc6a17be034e83e8f0fe",
+      "matching": true
+    },
+    {
+      "path": "third_party/protobuf/third_party/benchmark",
+      "expected_commit": "5b7683f49e1e9223cf9927b24f6fd3d6bd82e3f8",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "5b7683f49e1e9223cf9927b24f6fd3d6bd82e3f8",
+      "matching": true
+    },
+    {
+      "path": "third_party/protobuf/third_party/googletest",
+      "expected_commit": "5ec7f0c4a113e2f18ac2c6cc7df51ad6afc24081",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "5ec7f0c4a113e2f18ac2c6cc7df51ad6afc24081",
+      "matching": true
+    },
+    {
+      "path": "third_party/protobuf",
+      "expected_commit": "d1eca4e4b421cd2997495c4b4e65cea6be4e9b8a",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "d1eca4e4b421cd2997495c4b4e65cea6be4e9b8a",
+      "matching": true
+    },
+    {
+      "path": "third_party/psimd",
+      "expected_commit": "072586a71b55b7f8c584153d223e95687148a900",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "072586a71b55b7f8c584153d223e95687148a900",
+      "matching": true
+    },
+    {
+      "path": "third_party/pthreadpool",
+      "expected_commit": "4fe0e1e183925bf8cfa6aae24237e724a96479b8",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "4fe0e1e183925bf8cfa6aae24237e724a96479b8",
+      "matching": true
+    },
+    {
+      "path": "third_party/pybind11",
+      "expected_commit": "a2e59f0e7065404b44dfe92a28aca47ba1378dc4",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "a2e59f0e7065404b44dfe92a28aca47ba1378dc4",
+      "matching": true
+    },
+    {
+      "path": "third_party/python-peachpy",
+      "expected_commit": "f45429b087dd7d5bc78bb40dc7cf06425c252d67",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "f45429b087dd7d5bc78bb40dc7cf06425c252d67",
+      "matching": true
+    },
+    {
+      "path": "third_party/sleef",
+      "expected_commit": "60e76d2bce17d278b439d9da17177c8f957a9e9b",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "60e76d2bce17d278b439d9da17177c8f957a9e9b",
+      "matching": true
+    },
+    {
+      "path": "third_party/tensorpipe/third_party/googletest",
+      "expected_commit": "aee0f9d9b5b87796ee8a0ab26b7587ec30e8858e",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "aee0f9d9b5b87796ee8a0ab26b7587ec30e8858e",
+      "matching": true
+    },
+    {
+      "path": "third_party/tensorpipe/third_party/libnop",
+      "expected_commit": "910b55815be16109f04f4180e9adee14fb4ce281",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "910b55815be16109f04f4180e9adee14fb4ce281",
+      "matching": true
+    },
+    {
+      "path": "third_party/tensorpipe/third_party/libuv",
+      "expected_commit": "1dff88e5161cba5c59276d2070d2e304e4dcb242",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "1dff88e5161cba5c59276d2070d2e304e4dcb242",
+      "matching": true
+    },
+    {
+      "path": "third_party/tensorpipe/third_party/pybind11/tools/clang",
+      "expected_commit": "6a00cbc4a9b8e68b71caf7f774b3f9c753ae84d5",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "6a00cbc4a9b8e68b71caf7f774b3f9c753ae84d5",
+      "matching": true
+    },
+    {
+      "path": "third_party/tensorpipe/third_party/pybind11",
+      "expected_commit": "a23996fce38ff6ccfbcdc09f1e63f2c4be5ea2ef",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "a23996fce38ff6ccfbcdc09f1e63f2c4be5ea2ef",
+      "matching": true
+    },
+    {
+      "path": "third_party/tensorpipe",
+      "expected_commit": "52791a2fd214b2a9dc5759d36725909c1daa7f2e",
+      "checkout_present": true,
+      "independent_checkout": true,
+      "checkout_commit": "52791a2fd214b2a9dc5759d36725909c1daa7f2e",
+      "matching": true
+    }
+  ]
+}

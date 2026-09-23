@@ -1,36 +1,8 @@
 .venv/
 .worktrees/
 .claude/
+.superpowers/
 .op_bench_cache/
-runs/*/workspaces/
-runs/**/codex_scratch/
-runs/**/claude_scratch/
-runs/**/*.log
-runs/**/*_actions.jsonl
-runs/**/*_last_message.txt
-runs/admission/
-runs/_baseline_cache/
-runs/v0.6_m6_codex_cpu_canary/
-runs/v0.6_m6_codex_local_batch/
-runs/v0.6_m6_codex_local_canary/
-runs/v0.6_m6_conformance/
-runs/v0.6_m6_conformance_fixture/
-runs/v0.6_m6_legacy_replay/
-runs/v0.6_m6_local_codex_input/
-runs/v0.6_m7_demo_input/
-runs/v0.6_m7_scripted_demo/
-runs/v0.7_matched_runtime/
-runs/v0.7_boundary_failed_probes/
-runs/v0.7_boundary_refresh/
-runs/v0.7_validation/
-# v0.7 quality replay/Agent roots contain private Runtime evidence. Keep only
-# their privacy-scanned top-level indexes and the separate public report tree.
-runs/v0.7_quality_replay/tasks/
-runs/v0.7_quality_validation/cohort-*/
-runs/v0.7_quality_admission_staging/
-runs/v0.7_historical_blind_pilots_*/
-runs/v0.7_rejected_*/
-runs/v0.7_task*/
 # Superseded/rejected v0.7 candidate bundles remain local audit material. The
 # selected 50-task release bundles are intentionally not ignored.
 tasks/pytorch/*/admission/full/
@@ -64,7 +36,28 @@ tasks/pytorch/189503_aoti_rejected_input_memory/
 __pycache__/
 *.pyc
 .DS_Store
+build/
+dist/
+*.egg-info/
+.opbench-runs/
 configs/agents/*.local.json
 configs/remote_hosts.json
 docs/interview/opbench_agent_interview_knowledge_base.md
 docs/superpowers/plans/2026-07-16-opbench-interview-knowledge-base.md
+
+# Raw runs and caches remain local; track navigation and historical reports.
+runs/**
+!runs/README.md
+!runs/archive/
+!runs/archive/README.md
+!runs/archive/v0.5/
+!runs/archive/v0.5/pr_screening/
+!runs/archive/v0.5/pr_screening/summary.md
+!runs/archive/v0.6/
+!runs/archive/v0.6/mcp_full_20260722_event_redaction_r5_report/
+!runs/archive/v0.6/mcp_full_20260722_event_redaction_r5_report/experiment_report.md
+!runs/archive/v0.7/
+!runs/archive/v0.7/quality_validation_report/
+!runs/archive/v0.7/quality_validation_report/experiment_report.md
+!runs/archive/v0.7/validation_report/
+!runs/archive/v0.7/validation_report/experiment_report.md

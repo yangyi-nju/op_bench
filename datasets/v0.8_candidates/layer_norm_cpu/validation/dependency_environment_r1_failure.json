@@ -1,0 +1,28 @@
+{
+  "environment_revision": "240aa77-cpu-gcc12-openblas-r1",
+  "image": "opbench/pytorch-layernorm-source:240aa77-cpu-r1",
+  "status": "dependency_installation_failed",
+  "remote_observation": {
+    "source": "controller report from actual image build attempts",
+    "phase": "pip check",
+    "package": "ninja==1.11.1.1",
+    "reported_diagnostic": "unsupported platform",
+    "raw_log": "Retained by deployment controller; not copied into this bundle"
+  },
+  "local_reproduction": {
+    "kind": "downloaded_wheel_metadata_inspection",
+    "wheel": "ninja-1.11.1.1-py2.py3-none-manylinux1_x86_64.manylinux_2_5_x86_64.whl",
+    "generator": "skbuild 0.17.6",
+    "parsed_tag_headers": [],
+    "cause": "A blank line ends the WHEEL headers before Tag entries, so those entries parse as the message body."
+  },
+  "previous_offline_resolution": "passed; dependency resolution did not validate installed WHEEL metadata",
+  "replacement": {
+    "environment_revision": "240aa77-cpu-gcc12-openblas-r2",
+    "package": "ninja==1.11.1.3",
+    "task_and_scoring_revision": "candidate.2 unchanged"
+  },
+  "complete_source_build": "not_executed",
+  "control_matrix": "not_executed",
+  "admission_status": "not_admitted"
+}

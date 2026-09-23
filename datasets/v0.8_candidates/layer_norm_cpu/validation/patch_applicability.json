@@ -1,0 +1,20 @@
+{
+  "scope": "Patch applicability against complete production-module files from the requested revision; no runtime or build validation.",
+  "controls": {
+    "reference": {
+      "applies_to_requested_revision_files": true,
+      "exit_code": 0,
+      "stderr": ""
+    },
+    "alternative": {
+      "applies_to_requested_revision_files": true,
+      "exit_code": 0,
+      "stderr": ""
+    },
+    "mutation": {
+      "applies_to_requested_revision_files": true,
+      "exit_code": 0,
+      "stderr": ""
+    }
+  }
+}

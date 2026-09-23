@@ -1,0 +1,11 @@
+diff --git a/operator_impl.py b/operator_impl.py
+--- a/operator_impl.py
++++ b/operator_impl.py
+@@ -5,5 +5,6 @@ import torch
+ 
+ def stable_softmax(input, dim=-1):
+     """Return softmax probabilities along dim for a finite floating tensor."""
+-    exponentials = torch.exp(input)
++    shifted = input - input.amax(dim=dim, keepdim=True)
++    exponentials = torch.exp(shifted)
+     return exponentials / exponentials.sum(dim=dim, keepdim=True)

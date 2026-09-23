@@ -1,0 +1,17 @@
+diff --git a/torch/_refs/linalg/__init__.py b/torch/_refs/linalg/__init__.py
+--- a/torch/_refs/linalg/__init__.py
++++ b/torch/_refs/linalg/__init__.py
+@@ -151,6 +151,13 @@
+         reduce_sum = partial(torch.sum, dim=dim, keepdim=keepdim)
+ 
+         is_ord_even = ord % 2 == 0 if isinstance(ord, IntLike) else ord % 2.0 == 0.0
++        singleton_group = (x.numel() == 1) if dim is None else all(
++            x.shape[axis] == 1 for axis in dim
++        )
++        if singleton_group:
++            magnitude = torch.abs(x)
++            return to_result_dtype(torch.sum(magnitude, dim=dim, keepdim=keepdim)).contiguous()
++
+         if not (is_ord_even and utils.is_float_dtype(x.dtype)):
+             x = torch.abs(x)
+         return to_result_dtype(torch.pow(reduce_sum(torch.pow(x, ord)), 1.0 / ord))  # type: ignore[return-value]

@@ -1,0 +1,22 @@
+--- a/aten/src/ATen/native/cuda/SoftMax.cu
++++ b/aten/src/ATen/native/cuda/SoftMax.cu
+@@ -468,6 +468,9 @@
+     if (offset >= shift && offset < size) {
+       threadVal = r(threadVal, data[offset]);
+     }
++    if (size <= static_cast<index_t>(blockDim.x)) {
++      return threadVal;
++    }
+     size -= blockDim.x;
+     data += blockDim.x;
+   }
+@@ -517,6 +520,9 @@
+ 
+     if (offset >= shift && offset < size) {
+       output[offset] = epilogue(input[offset]);
++    }
++    if (size <= static_cast<int>(blockDim.x)) {
++      return;
+     }
+     size -= blockDim.x;
+     input += blockDim.x;

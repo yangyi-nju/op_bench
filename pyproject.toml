@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "opbench"
+version = "0.8.0.dev1"
+description = "Reproducible evaluation of coding agents on operator defects"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
+
+[project.scripts]
+opbench = "op_bench.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

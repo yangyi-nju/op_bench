@@ -1,0 +1,12 @@
+diff --git a/operator.cpp b/operator.cpp
+--- a/operator.cpp
++++ b/operator.cpp
+@@ -3,7 +3,7 @@
+     for (int row = 0; row < rows; ++row) {
+         double total = 0.0;
+         for (int col = 0; col < cols; ++col) {
+-            total += input[col];
++            total += input[static_cast<long long>(row) * cols + col];
+         }
+         output[row] = total;
+     }

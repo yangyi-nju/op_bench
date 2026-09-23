@@ -1,0 +1,21 @@
+{
+  "schema_version": 2,
+  "dataset": "dataset.json",
+  "information_profile": "controlled",
+  "reuse_baseline": true,
+  "seed": 42,
+  "harness": {
+    "budget_sec": 900,
+    "max_turns": 16,
+    "per_tool_timeout_sec": 120
+  },
+  "models": [
+    {
+      "model_id": "gpt-5.5",
+      "backend": "codex_cli",
+      "model": "gpt-5.5",
+      "reasoning_effort": "high",
+      "codex_binary": "codex"
+    }
+  ]
+}

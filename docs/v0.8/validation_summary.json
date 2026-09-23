@@ -1,0 +1,393 @@
+{
+  "record_type": "v0.8_engineering_validation",
+  "recorded_at": "2026-09-07T10:27:16.014729+00:00",
+  "host": {
+    "python": "3.12.13",
+    "platform": "macOS-26.5.1-arm64-arm-64bit",
+    "docker_server": "29.2.1"
+  },
+  "unit_suite": {
+    "discovered": 88,
+    "passed": 86,
+    "skipped": 2,
+    "duration_sec": 10.564,
+    "result": "passed"
+  },
+  "explicit_docker_suite": {
+    "discovered": 2,
+    "passed": 2,
+    "skipped": 0,
+    "duration_sec": 3.636,
+    "result": "passed"
+  },
+  "controls": {
+    "softmax-final": {
+      "execution_checks_passed": true,
+      "admission_status": "human_review_required",
+      "inputs_snapshotted": true,
+      "outcomes": {
+        "baseline": {
+          "status": "test_failed",
+          "groups": {
+            "fail_to_pass": {
+              "passed": 0,
+              "total": 3
+            },
+            "pass_to_pass": {
+              "passed": 5,
+              "total": 5
+            }
+          },
+          "image_id": "sha256:83993db86f158f06f5470904a150cf98e4e58e82521b3f89c3fc7410867b8efa",
+          "possible_emulation": false,
+          "executed_test_counts": [
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "cleanup_errors": []
+        },
+        "reference": {
+          "status": "resolved",
+          "groups": {
+            "fail_to_pass": {
+              "passed": 3,
+              "total": 3
+            },
+            "pass_to_pass": {
+              "passed": 5,
+              "total": 5
+            }
+          },
+          "image_id": "sha256:83993db86f158f06f5470904a150cf98e4e58e82521b3f89c3fc7410867b8efa",
+          "possible_emulation": false,
+          "executed_test_counts": [
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "cleanup_errors": []
+        },
+        "alternative": {
+          "status": "resolved",
+          "groups": {
+            "fail_to_pass": {
+              "passed": 3,
+              "total": 3
+            },
+            "pass_to_pass": {
+              "passed": 5,
+              "total": 5
+            }
+          },
+          "image_id": "sha256:83993db86f158f06f5470904a150cf98e4e58e82521b3f89c3fc7410867b8efa",
+          "possible_emulation": false,
+          "executed_test_counts": [
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "cleanup_errors": []
+        },
+        "mutation": {
+          "status": "test_failed",
+          "groups": {
+            "fail_to_pass": {
+              "passed": 0,
+              "total": 3
+            },
+            "pass_to_pass": {
+              "passed": 1,
+              "total": 5
+            }
+          },
+          "image_id": "sha256:83993db86f158f06f5470904a150cf98e4e58e82521b3f89c3fc7410867b8efa",
+          "possible_emulation": false,
+          "executed_test_counts": [
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "cleanup_errors": []
+        }
+      }
+    },
+    "cpp-final": {
+      "execution_checks_passed": true,
+      "admission_status": "human_review_required",
+      "inputs_snapshotted": true,
+      "outcomes": {
+        "baseline": {
+          "status": "test_failed",
+          "groups": {
+            "fail_to_pass": {
+              "passed": 0,
+              "total": 3
+            },
+            "pass_to_pass": {
+              "passed": 4,
+              "total": 4
+            }
+          },
+          "image_id": "sha256:68167c6ef25bb8c8059793e8cb0fd8c3640217947df76666cf01d9529cc4b91e",
+          "possible_emulation": false,
+          "executed_test_counts": [
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "cleanup_errors": []
+        },
+        "reference": {
+          "status": "resolved",
+          "groups": {
+            "fail_to_pass": {
+              "passed": 3,
+              "total": 3
+            },
+            "pass_to_pass": {
+              "passed": 4,
+              "total": 4
+            }
+          },
+          "image_id": "sha256:68167c6ef25bb8c8059793e8cb0fd8c3640217947df76666cf01d9529cc4b91e",
+          "possible_emulation": false,
+          "executed_test_counts": [
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "cleanup_errors": []
+        },
+        "alternative": {
+          "status": "resolved",
+          "groups": {
+            "fail_to_pass": {
+              "passed": 3,
+              "total": 3
+            },
+            "pass_to_pass": {
+              "passed": 4,
+              "total": 4
+            }
+          },
+          "image_id": "sha256:68167c6ef25bb8c8059793e8cb0fd8c3640217947df76666cf01d9529cc4b91e",
+          "possible_emulation": false,
+          "executed_test_counts": [
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "cleanup_errors": []
+        },
+        "mutation": {
+          "status": "test_failed",
+          "groups": {
+            "fail_to_pass": {
+              "passed": 0,
+              "total": 3
+            },
+            "pass_to_pass": {
+              "passed": 1,
+              "total": 4
+            }
+          },
+          "image_id": "sha256:68167c6ef25bb8c8059793e8cb0fd8c3640217947df76666cf01d9529cc4b91e",
+          "possible_emulation": false,
+          "executed_test_counts": [
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "cleanup_errors": []
+        }
+      }
+    }
+  },
+  "native_smoke": {
+    "purpose": "scripted_integration_fixture_not_model_evaluation",
+    "planned_attempts": 4,
+    "complete": true,
+    "agents": {
+      "scripted-noop": {
+        "started": 2,
+        "valid": 2,
+        "resolved": 0,
+        "unknown": 0,
+        "missing": 0,
+        "delivery_rate": 0.0,
+        "cost_coverage": 0.0
+      },
+      "scripted-repair": {
+        "started": 2,
+        "valid": 2,
+        "resolved": 2,
+        "unknown": 0,
+        "missing": 0,
+        "delivery_rate": 1.0,
+        "cost_coverage": 0.0
+      }
+    },
+    "resume_outcomes_preserved": true,
+    "saved_attempt_count": 4
+  },
+  "independent_record_verification": [
+    {
+      "evaluation": "softmax-final/alternative-1",
+      "valid": true,
+      "findings": [],
+      "scope": "Artifact presence, recorded process outcomes and score arithmetic; rerun evaluate to replay the patch."
+    },
+    {
+      "evaluation": "softmax-final/baseline",
+      "valid": true,
+      "findings": [],
+      "scope": "Artifact presence, recorded process outcomes and score arithmetic; rerun evaluate to replay the patch."
+    },
+    {
+      "evaluation": "softmax-final/mutation-1",
+      "valid": true,
+      "findings": [],
+      "scope": "Artifact presence, recorded process outcomes and score arithmetic; rerun evaluate to replay the patch."
+    },
+    {
+      "evaluation": "softmax-final/reference",
+      "valid": true,
+      "findings": [],
+      "scope": "Artifact presence, recorded process outcomes and score arithmetic; rerun evaluate to replay the patch."
+    },
+    {
+      "evaluation": "cpp-final/alternative-1",
+      "valid": true,
+      "findings": [],
+      "scope": "Artifact presence, recorded process outcomes and score arithmetic; rerun evaluate to replay the patch."
+    },
+    {
+      "evaluation": "cpp-final/baseline",
+      "valid": true,
+      "findings": [],
+      "scope": "Artifact presence, recorded process outcomes and score arithmetic; rerun evaluate to replay the patch."
+    },
+    {
+      "evaluation": "cpp-final/mutation-1",
+      "valid": true,
+      "findings": [],
+      "scope": "Artifact presence, recorded process outcomes and score arithmetic; rerun evaluate to replay the patch."
+    },
+    {
+      "evaluation": "cpp-final/reference",
+      "valid": true,
+      "findings": [],
+      "scope": "Artifact presence, recorded process outcomes and score arithmetic; rerun evaluate to replay the patch."
+    },
+    {
+      "evaluation": "native-cpp/attempts/attempt-000001/evaluation",
+      "valid": true,
+      "findings": [],
+      "scope": "Artifact presence, recorded process outcomes and score arithmetic; rerun evaluate to replay the patch."
+    },
+    {
+      "evaluation": "native-cpp/attempts/attempt-000002/evaluation",
+      "valid": true,
+      "findings": [],
+      "scope": "Artifact presence, recorded process outcomes and score arithmetic; rerun evaluate to replay the patch."
+    },
+    {
+      "evaluation": "native-cpp/attempts/attempt-000003/evaluation",
+      "valid": true,
+      "findings": [],
+      "scope": "Artifact presence, recorded process outcomes and score arithmetic; rerun evaluate to replay the patch."
+    },
+    {
+      "evaluation": "native-cpp/attempts/attempt-000004/evaluation",
+      "valid": true,
+      "findings": [],
+      "scope": "Artifact presence, recorded process outcomes and score arithmetic; rerun evaluate to replay the patch."
+    }
+  ],
+  "installed_wheel": {
+    "filename": "opbench-0.8.0.dev1-py3-none-any.whl",
+    "clean_venv": true,
+    "working_directory": "/tmp",
+    "pythonpath_unset": true,
+    "portable_cpp_alternative_status": "resolved",
+    "portable_cpp_groups": {
+      "fail_to_pass": {
+        "passed": 3,
+        "total": 3
+      },
+      "pass_to_pass": {
+        "passed": 4,
+        "total": 4
+      }
+    },
+    "record_verification": {
+      "valid": true,
+      "findings": [],
+      "scope": "Artifact presence, recorded process outcomes and score arithmetic; rerun evaluate to replay the patch."
+    }
+  },
+  "historical_audit": {
+    "datasets": 4,
+    "unique_tasks": 50,
+    "input_errors": 0,
+    "manual_review_findings": 753,
+    "runtime_executed": false,
+    "admission_effect": "none"
+  },
+  "not_executed": [
+    "GitHub-hosted CI workflow",
+    "formal real-model native Agent experiment",
+    "CUDA/full-framework source build validation",
+    "historical task readmission",
+    "independent adversarial deployment review"
+  ],
+  "upstream_candidate_inspection": {
+    "candidate": "layer_norm_cpu",
+    "status": "not_admitted",
+    "requested_revision": "240aa77ad01c4f0cd9b2417748272f2f617c112f",
+    "cache_head": "637ddd1687dc57b74b3c2d25f28e110203287a26",
+    "sparse_checkout": true,
+    "uninitialized_submodule_count": 37,
+    "source_build_control_matrix": "not_executed",
+    "public_reproducer": "not_executed_requires_complete_source_build",
+    "review": "../../datasets/v0.8_candidates/layer_norm_cpu/migration_review.md"
+  },
+  "licensing": "pending_author_and_school_confirmation"
+}

@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "source_path": "/Users/yy/dev/graduate/op_bench/.op_bench_cache/sources/pytorch/pytorch/240aa77ad01c4f0cd9b2417748272f2f617c112f/source",
+  "status": "failed",
+  "revision": null,
+  "submodules": [],
+  "stages": [
+    {
+      "stage": "inspect_repository",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_sec": 0.014163167215883732,
+      "output_limited": false
+    },
+    {
+      "stage": "resolve_revision",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_sec": 0.00998612493276596,
+      "output_limited": false
+    },
+    {
+      "stage": "inspect_submodules",
+      "exit_code": 0,
+      "timed_out": false,
+      "duration_sec": 0.04949887492693961,
+      "output_limited": false
+    }
+  ],
+  "duration_sec": 0.07590391696430743,
+  "error": {
+    "type": "SourceProvisionError",
+    "message": "Required submodule android/libs/fbjni at 7e1e1fe3858c63c251c637ae41a20de425dde96f is not prepared. Use a new managed source.path to fetch a complete checkout; the existing source was left unchanged"
+  }
+}

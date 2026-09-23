@@ -1,0 +1,40 @@
+{
+  "date": "2026-09-09",
+  "status": "authoring_checks_passed",
+  "scope": "Task schema, bounded oracle parsing, independent scalar formula checks, small derivative finite differences, uniform-output rejection by controller comparison and Python 3.10 syntax. No candidate CUDA execution or full framework build occurred in this check.",
+  "runtime_validation": "not_executed",
+  "formal_admission": "not_established",
+  "checks": [
+    {
+      "case_id": "double_tail_values",
+      "stdlib_binary64_formula_matches_decimal_reference": true,
+      "compared_values": 11829,
+      "max_absolute_error_decimal": "3.552713678800500929355621337890625E-15",
+      "uniform_log_probabilities_rejected_in_controller_check": 9264
+    },
+    {
+      "case_id": "float32_forward_regressions",
+      "stdlib_binary64_formula_matches_decimal_reference": true,
+      "compared_values": 9331,
+      "max_absolute_error_decimal": "3.552713678800500929355621337890625E-15"
+    },
+    {
+      "case_id": "double_neighbor_and_gradient_regressions",
+      "stdlib_binary64_formula_matches_decimal_reference": true,
+      "compared_values": 9304,
+      "max_absolute_error_decimal": "1.7763568394002504646778106689453125E-15"
+    },
+    {
+      "operation": "grad_log_softmax",
+      "small_shape_gradient_finite_difference_check": true,
+      "max_error": 6.980160893732545e-11,
+      "step": 1e-05
+    },
+    {
+      "operation": "grad_softmax",
+      "small_shape_gradient_finite_difference_check": true,
+      "max_error": 3.473730851577539e-12,
+      "step": 1e-05
+    }
+  ]
+}

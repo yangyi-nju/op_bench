@@ -1,1 +1,0 @@
-Fixed the two tail-loop counter decrements in `aten/src/ATen/native/cuda/SoftMax.cu` to clamp at remaining `size`, preventing underflow and invalid tail accesses.

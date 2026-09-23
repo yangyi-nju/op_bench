@@ -1,0 +1,19 @@
+diff --git a/torch/_refs/__init__.py b/torch/_refs/__init__.py
+--- a/torch/_refs/__init__.py
++++ b/torch/_refs/__init__.py
+@@ -3306,6 +3306,15 @@
+     return (out, mean, rstd)
+ 
+ 
++@torch._subclasses.fake_impls.register_op_impl(aten.native_layer_norm.default)
++def native_layer_norm_fake(fake_mode, func, *args, **kwargs):
++    out, mean, rstd = native_layer_norm(*args)
++    # Incorrectly retain promoted statistics when either affine input is absent.
++    if args[2] is None or args[3] is None:
++        return out, mean.to(torch.float32), rstd.to(torch.float32)
++    return out, mean, rstd
++
++
+ # TODO: Adding this as a meta function causes functorch tests to fail when compiled with debug mode.
+ # test/test_eager_transforms.py::TestFunctionalizeCPU::test_functionalize_fx_transpose_simple_cpu
+ @register_decomposition(aten.permute)

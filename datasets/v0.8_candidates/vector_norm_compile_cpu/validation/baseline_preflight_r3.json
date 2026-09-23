@@ -1,0 +1,90 @@
+{
+  "date": "2026-09-09",
+  "scope": "read_only_full_source_baseline_preflight",
+  "admission_status": "not_admitted",
+  "source_revision": "240aa77ad01c4f0cd9b2417748272f2f617c112f",
+  "environment_revision": "240aa77-cpu-gcc12-openblas-r3",
+  "baseline_artifact": "cpu-baseline-build-r3",
+  "public_reproducer": {
+    "exit_code": 1,
+    "expected_defect_observed": true
+  },
+  "numeric_worker": {
+    "name": "numeric",
+    "exit_code": 0,
+    "duration_sec": 51.6143438470026
+  },
+  "numeric_judgment": {
+    "passed": false,
+    "reason": "numeric_value_mismatch",
+    "valid_observation": true,
+    "compared_values": 126,
+    "mismatched_values": 40,
+    "max_absolute_error_decimal": "16",
+    "examples": [
+      {
+        "index": 0,
+        "observed": 0.0,
+        "expected": 1.0
+      },
+      {
+        "index": 1,
+        "observed": 0.0,
+        "expected": 16.0
+      },
+      {
+        "index": 9,
+        "observed": 0.0,
+        "expected": 0.0625
+      },
+      {
+        "index": 11,
+        "observed": 0.0,
+        "expected": 0.0625
+      },
+      {
+        "index": 18,
+        "observed": 0.0,
+        "expected": 1.0
+      },
+      {
+        "index": 19,
+        "observed": 0.0,
+        "expected": 16.0
+      },
+      {
+        "index": 20,
+        "observed": 0.0,
+        "expected": 1.0
+      },
+      {
+        "index": 21,
+        "observed": 0.0,
+        "expected": 16.0
+      }
+    ]
+  },
+  "compilation_witness": {
+    "event": "cpu_compilation_witness",
+    "generated_kernels": 6,
+    "cache": "/workspace/.opbench-build-135224de5b214e759df354bde48114f2/tmp/opbench-inductor-3io08c4s",
+    "loaded_libraries": [
+      "/workspace/.opbench-build-135224de5b214e759df354bde48114f2/tmp/opbench-inductor-3io08c4s/tmp6rni01a7/wx/cwxibwal7jepsrnx7nk5onkb7ishcw45x4y4zmc5upatzth2wvhw.so",
+      "/workspace/.opbench-build-135224de5b214e759df354bde48114f2/tmp/opbench-inductor-3io08c4s/tmp74ukom4k/ik/cikmpn6aryx2fz5it4jbhfrdmqrhx3ku2evs4iunw6g2m7aqjbh4.so",
+      "/workspace/.opbench-build-135224de5b214e759df354bde48114f2/tmp/opbench-inductor-3io08c4s/tmp7tsvvkth/wc/cwcwhzk3jebnly4fyxaijrwm3leuqho7y3za664clx5qpu2eyyyo.so",
+      "/workspace/.opbench-build-135224de5b214e759df354bde48114f2/tmp/opbench-inductor-3io08c4s/tmp9p6wglew/7n/c7ntflduhhg44dn6oqropf5lcdevbmprukpm2hthkc3dseb3lrrl.so",
+      "/workspace/.opbench-build-135224de5b214e759df354bde48114f2/tmp/opbench-inductor-3io08c4s/tmp_22kdi6l/di/cdi2z3ibcbt4pvikj6aacsi7xvocu4zsxfo4n2cw35kan2tvdina.so",
+      "/workspace/.opbench-build-135224de5b214e759df354bde48114f2/tmp/opbench-inductor-3io08c4s/tmpn517cd1w/pc/cpcx5m3ldkp5hjj3fpfn43smznd54iqyujqnt2lyapfrjc2sc3qv.so"
+    ],
+    "limit": "Ordinary compilation/loading diagnostics, not adversarial attestation of candidate code"
+  },
+  "read_only_source_workspace": true,
+  "separate_executable_runtime_tmpfs": true,
+  "model_called": false,
+  "previous_preflight_errors": [
+    "r1 controller field lookup failed before container execution",
+    "r2 custom preflight tmpfs was noexec; Inductor built a library but could not load it. Normal evaluator workspace volumes are executable."
+  ],
+  "raw_evidence": "runs/v0.8_rebuild_validation/20260909-remote/remote/vector-norm-preflight-r3/",
+  "limitation": "This checks public feedback and baseline F2P observations on a completed full build. It does not replace the full baseline/reference/alternative/mutation matrix, independent review or formal admission."
+}

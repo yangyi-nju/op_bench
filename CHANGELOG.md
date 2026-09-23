@@ -1,311 +1,140 @@
 # Changelog
 
-This file records user-visible OpBench version milestones. Detailed design,
-implementation, and experiment evidence remain in the versioned documents
-under `docs/`.
-
-## v0.7 - Completed 2026-08-11 (50-task quality release)
-
-The 2026-07-28 25-task release below remains an immutable, reproducible
-historical freeze under `archives/v0.7-pre-quality/`. The final v0.7 release
-contains exactly 14 re-admitted historical tasks plus 21 new and
-15 replacement tasks. All 50 Tasks and all 36 new/replacement Runtime
-Admissions are verified; the cumulative/Boundary/Precision/Device views contain
-50/31/5/15 Tasks. The p9 release and 122-attempt validation contract are frozen.
-The fresh replay passed 50/50. The real Codex experiment completed 17/17 cohorts,
-122/122 valid logical Attempts, and 122/122 complete MCP traces: 42 resolved,
-52 F2P failed, and 28 invalid patches. Eight infrastructure-invalid retry
-records remain in the append-only audit history and do not enter the Agent
-failure denominator. The public report rebuilds byte-for-byte and the result is
-descriptive **non-leaderboard** evidence. Final repository regression passed
-1101/1101 tests. The authoritative contract is
-`docs/v0.7/quality_expansion.md`.
-
-Final Dataset hashes are cumulative
-`sha256:3695622dd2619a760d510ef49e0a9dbff637c98790ad3263c521bae8e99c9518`,
-Boundary `sha256:2890f5937a5b2c7f5a12c870fc9cc550f0f16ff065467245ecf65223b5976a01`,
-Precision `sha256:508ec6928d94c159499ae84bf4f37e594b2bdafdef89b04369f481deeddb2c8d`,
-and Device `sha256:b598fdfe94af9921132b147ab693477de8fb360dabe7e5f611792e5f38c0f138`.
-
-### Historical 25-task freeze (completed 2026-07-28)
-
-`opbench-v0.7.0` completed on 2026-07-28:
-
-- P1–P5 deliver the reusable Dataset Factory, matched-runtime recovery, six
-  verified Boundary Tasks covering B1–B5, content-addressed Dataset release,
-  real Codex validation, Dataset Card, and bilingual release surface.
-- The final Dataset hashes are cumulative
-  `sha256:4d7bde25e747bcc041aa5105ce5ce881a3f1e9fe2a7545667cdbc2c14d85064a`,
-  Boundary
-  `sha256:810a9cc85c576f44edd2672197ab83b7dfee7f674e597c76c78050bd119d606a`,
-  and Precision
-  `sha256:65818466a02e99466386cb8e038dc4da59d91dcb3bea7b83c8901d31a96aa8eb`.
-- The accepted validation cohort is 18/18 valid, 14 resolved, 3 F2P failed,
-  1 no patch, and 0 accepted-cohort retries. It is descriptive
-  **non-leaderboard**, non-causal Task/platform evidence.
-- Exact-source hardening includes the source-build timeout correction and
-  separate CPU/CUDA build commands, preventing CPU profiles from inheriting
-  CUDA-only build arguments.
-- The final release gate rebuilt P3 screening, P4 Freeze, all three Dataset
-  releases, the validation contract, and the public report byte-for-byte.
-  Verification passed 868/868 tests plus four verified Dataset validations,
-  compileall, all tracked JSON, links, public-safety scans, and diff checks.
-
-P4 Dataset Freeze and Validation Cohort completed on 2026-07-28:
-
-- Froze content-addressed 25-task cumulative, 6-task Boundary, and 8-task Precision Datasets. Their generated Dataset hashes are `sha256:4d7bde25e747bcc041aa5105ce5ce881a3f1e9fe2a7545667cdbc2c14d85064a`, `sha256:810a9cc85c576f44edd2672197ab83b7dfee7f674e597c76c78050bd119d606a`, and `sha256:65818466a02e99466386cb8e038dc4da59d91dcb3bea7b83c8901d31a96aa8eb`.
-- Added deterministic Release Composition, manifest-aware slice summaries, five exact Boundary Runtime Profiles, and evaluator-side current-source preparation before registered tests.
-- Ran the six new Boundary Tasks three times through `codex_mcp_canonical`, `gpt-5.6-sol`, and `codex-cli 0.146.0-alpha.3.1`: 18/18 Attempts are valid, with 14 resolved, 3 F2P failed, and 1 no patch; Agent terminals are 17 finished and 1 timeout.
-- Verified 18/18 complete Adapter traces with zero MCP protocol errors. Every accepted root passed fresh 14/14 Integrity checks, exact runtime resource ownership, and cleanup; all accepted logical Attempts came from retry index 1.
-- Audited floor/ceiling Tasks without changing Admission or tests. Five Tasks resolved 3/3; rank-zero `cummin` resolved 2/3 with one no-patch result; the Triton Y-grid Task failed F2P 3/3 because of Agent patch regressions, not infrastructure.
-- Fixed remote transport attribution discovered during pre-acceptance source-cohort audit. Pre-execution SSH failures are bounded retries; a remote-start sentinel prevents replay after possible command execution. Polluted pre-acceptance roots are excluded, and the uniformly rerun source cohort resolved 6/6 without transport evidence.
-- Published a deterministic three-file public report plus `docs/v0.7/validation_report.md`. The cohort is descriptive platform/Task evidence and explicitly non-leaderboard and non-causal.
-- P4 verification passed 68 focused tests and 865/865 full repository tests in 1183.222 seconds, plus byte-for-byte Freeze/Release/report rebuilds, compileall, all tracked JSON parsing, 17/25/6/8 verified Dataset validation, and diff checks.
-
-P4 documents:
-
-- `docs/v0.7/validation_report.md`
-- `runs/v0.7_validation_report/experiment_report.md`
-
-P3 Boundary Tasks completed on 2026-07-27:
-
-- Froze a deterministic funnel of ten real PyTorch candidates: six accepted, two deferred, and two rejected. Human review additionally rejected #147433 because its landed fix was reverted upstream; #127448 remains deferred.
-- Added six verified Boundary tasks covering B1–B5: empty `addmv`, zero-dimensional index copy, rank-zero cumulative lowering, checked storage-offset overflow, the default weight-norm `dim` endpoint, and a non-divisible Triton Y-grid mask.
-- Added four digest-pinned official-wheel runtimes and an exact-source CPU build runtime. #143792 and #147352 use full-source builds; the other tasks use matched Python overlays.
-- Every task passed 6/6 compatibility checks, Baseline F2P 0/1 with P2P 1/1, Gold F2P 1/1 with P2P 1/1, replay-hash verification, human review, and an immutable eight-stage Factory Admission chain ending in `verified`.
-- Kept B3 and B5 memory-bounded: B3 exercises checked arithmetic with a small tensor and extreme integer, while B5 calls the production mask predicate through a reviewed low-memory surrogate.
-- Hardened exact-source loading, resumable remote source synchronization, source-build timeout selection, Python 3.9 probe compatibility, registry-aware Factory promotion, canonical Admission duration conversion, and draft-versus-restored promotion notes.
-- Kept failed runtime probes and full private build/Admission logs under ignored run directories; committed evidence contains only bounded public identities, summaries, hashes, reviews, and chains.
-- Focused verification passed 90 core/evidence tests and 53 final Factory/P3 tests; full repository verification passed 818/818 tests in 1174.098 seconds, plus all six Task/Compatibility/Admission/Factory validations and the existing verified 17-task v0.5 Dataset. Formal v0.7 Dataset Freeze and the real Codex Validation Cohort remain P4 work.
-
-P3 document:
-
-- `docs/v0.7/boundary_tasks.md`
-
-P2 Matched Runtime completed on 2026-07-27:
-
-- Added a strict, canonical matched-runtime compatibility contract and JSON Schema, six-check live probe, validation CLI, and fail-closed task promotion bound to compatibility evidence, Admission evidence, and replay hashes.
-- Added two reproducible official-wheel environments with observed immutable local image IDs: torch 2.4.0+cu124 for #129154 and torch 2.7.0+cpu plus torchvision 0.22.0+cpu for #144073.
-- Hardened live probing to use the CUDA Runtime C ABI, isolate runtime imports from unbuilt workspace packages, and apply frozen hidden tests before selector collection.
-- Restored #129154 and #144073 from deprecated to verified. Each passed 6/6 compatibility checks, Baseline F2P 0/1 with P2P 1/1, and Gold F2P 1/1 with P2P 1/1.
-- Restored 2/2 tasks in the P2 scope; seven historical deprecated tasks remain outside this milestone.
-- Kept #144073's Agent Patch Scope to the single target linalg module, declared one exact Base-Commit Inductor test-support overlay, and curated its Gold Patch to the same enforced scope.
-- Both tasks passed with matched wheels; source-built wheel and full-source fallbacks were not executed. Formal Precision/Cumulative Dataset inclusion remains a P4 Freeze action.
-- Full private runtime logs remain under ignored run directories; committed task evidence contains only canonical public summaries and hashes.
-- Verification passed 47 matched-runtime focused tests, 793 full repository tests, compileall, all tracked JSON parsing, the verified 17-task v0.5 Dataset, affected Task/Compatibility validation, replay-hash comparison, and diff checks.
-
-P2 documents:
-
-- `docs/v0.7/setup_matched_runtime.md`
-- `docs/superpowers/specs/2026-07-26-v0.7-p2-matched-runtime-design.md`
-- `docs/superpowers/plans/2026-07-26-v0.7-p2-matched-runtime.md`
-
-P1 Dataset Factory foundation completed on 2026-07-26:
-
-- Added strict, content-addressed Candidate, Decision, Factory Admission, and Dataset Freeze contracts with four Draft 2020-12 JSON Schemas.
-- Added the frozen B1–B5 Boundary taxonomy, literal keyword packs, optional strict Task taxonomy fields, and compatibility for historical Precision manifests that predate `failure_contract`.
-- Added deterministic automatic screening with stable reason codes, immutable Decision history, evidence-gated Admission transitions, and cross-stage source/runtime/selector identity checks.
-- Added a descriptor-relative immutable Factory Artifact Store plus validation, screening, and synthetic Freeze CLIs.
-- Added nine fully synthetic offline candidate captures covering B1–B5 and accepted/rejected/deferred behavior. The frozen result is 5 accepted, 2 deferred, and 2 rejected; repeated runs are byte-identical. Automatic acceptance is not human review or verified Admission.
-- P1 verification passed 73 Factory tests, 45 compatibility tests, 741 full repository tests, all four Factory Schema parses, compileall/diff checks, and the existing 17-task verified v0.5 Dataset validation.
-- P1 used no live network, real Agent, Docker, SSH, CUDA, or remote Runtime workload and did not publish a formal v0.7 Dataset. Matched Runtime, real Boundary Task Admission, formal Dataset Freeze, and the Codex Validation Cohort remain P2–P4 work.
-
-P1 documents:
-
-- `docs/v0.7/candidate_search.md`
-- `docs/superpowers/specs/2026-07-26-v0.7-p1-factory-contract-design.md`
-- `docs/superpowers/plans/2026-07-26-v0.7-p1-factory-contract.md`
-
-## v0.6 - Completed
-
-Platform completed on 2026-07-19; the real MCP full experiment completed on
-2026-07-23:
-
-- v0.6 upgrades the existing real-Codex benchmark demo into a standardized Agent evaluation platform with versioned contracts, canonical CLI/MCP actions, explicit AttemptSession lifecycle and budgets, trajectory artifacts, patch freeze, fresh evaluation, failure attribution, replay, and rebuildable summaries.
-- v0.6 M1 is complete: strict versioned runtime contracts, canonical JSON/SHA-256, deterministic RunManifest/Cohort/Attempt identities, a frozen expected matrix, v0.5 compatibility projection, independent JSON Schema validation, and offline manifest CLIs are implemented. This is platform evidence, not a new benchmark score.
-- v0.6 M2 is complete: AgentTaskView is an explicit scanned public projection and a Manifest/Attempt identity axis; Authoritative Workspace applies regular-file/path/scope/mode/size/symlink/binary policy; Freeze converges concurrent mutations into one canonical add/modify/delete/empty patch, verifies strict clean-base application, and binds one patch hash across Session, artifact metadata, and EvaluationSpec. Existing v0.5 Action Bridge patch export remains compatible.
-- v0.6 M3 is complete: all nine versioned actions run through one server-authoritative service over the M2 workspace; command/test execution is policy/registry bound; action IDs are idempotent; deadlines and budgets are enforced server-side; CLI/MCP scripted sequences produce equivalent observations, patches, usage, and audit exchanges; and the standard Adapter boundary exposes only a scanned launch view plus a JSON-only client. The v0.5 bridge remains compatible; real Codex standard-adapter conformance remains an M6 release gate.
-- v0.6 M4 is complete: AttemptSession converges lifecycle, all server-owned budgets, concurrent stop reasons, patch freeze, and one terminal result; canonical Action events are atomically paired in a continuous hash chain; public JSON artifacts are content-addressed, rescanned, and descriptor-bound; and the append-only resume ledger preserves retry history while selecting one valid logical result. Journal and ledger writes use bound regular-file descriptors, `O_APPEND`, cross-instance locks, strict reopen validation, and uncertain-commit reconciliation or fail-closed poisoning. Fresh evaluation events and private artifact isolation remain M5 gates.
-- v0.6 M5 is complete: evaluator-owned structured test evidence rejects forged stdout and workspace runner shadowing; immutable retry-specific artifacts preserve and verify every retry; RunManifest/private EvaluationSpec/results/summary bind exact Evaluation identity and frozen task authority; private selector evidence, Session attribution, lifecycle ordering, patch bytes, and outcome semantics can be rebuilt and verified independently; and public/private artifacts produce deterministic results and summaries. Final local verification passed 62 focused, 252 runtime, and 421 full tests, with independent review at Critical/Important/Minor 0/0/0. This is platform work, not a new Agent benchmark score; M6 runtime conformance and real-Codex validation have not started.
-- v0.6 M6 is complete: five versioned Runtime Profiles, exact Attempt-owned resource ledgers, Local/Docker/Remote backends, canonical CLI/MCP conformance, immutable 17+17+51 replay inventory, process-isolated canonical Codex Adapter, explicit v1 orchestration, interruption-safe retry, and resource verification are implemented. Real Codex local CPU single and two-repeat resume canaries passed Integrity and cleanup. The initial exact-target `connection_timeout` was retained as historical evidence; after the same target recovered, representative Remote CPU, CUDA Overlay, and CUDA Kernel canaries passed, followed by an 85/85 exact replay with zero failures, blocks, or differences.
-- v0.6 M7 is complete: a deterministic public v1 Scripted Demo, bilingual executable Quickstart, developer/support guide, representative path-independent Artifact index, and strict release review are delivered. The post-M7 exact-target closure passed R-05–R-08 and R-10, so every unified v0.6 Must gate is Passed.
-- Final v0.6 verification passed 581 full tests, 17-task verified Dataset validation, Runtime contract validation, tracked JSON/diff checks, and historical-result hash checks. This is platform validation and compatibility evidence, not a new Agent ranking or a relabeling of the v0.5 37/51 score.
-- The subsequent real MCP full experiment ran the 17-task Dataset three times
-  through `codex_mcp_canonical`: 51/51 Attempts were valid, with 35 resolved,
-  15 F2P failed, one P2P regression, zero infrastructure-invalid results, and
-  zero retries. All 51 traces, Integrity reports, and exact cleanup gates
-  passed; the result is descriptive and not a causal comparison with v0.5.
-- The final repository cleanup retains one three-file redacted MCP report under
-  `runs/`, removes superseded tracked canary/replay trees and internal v0.6
-  process drafts, and preserves their verified facts and hashes in the
-  versioned release documents.
-- v0.6 is one platform release with M1–M7 internal milestones. It does not expand the dataset or run the formal multi-Agent study.
-- v0.7 builds the reusable Dataset Factory, adds the Boundary Slice, and revisits the two matched-runtime Precision candidates.
-- v0.8 adds Device/API Compatibility and freezes Evaluation/Scoring Specification RC; v0.9 runs the formal multi-Agent and feedback-ablation cohorts.
-
-Planning and evidence documents:
-
-- `docs/project_plan.md`
-- `docs/project_state.md`
-- `docs/v0.6/design.md`
-- `docs/v0.6/implementation_plan.md`
-- `docs/v0.6/acceptance_matrix.md`
-- `docs/v0.6/experiment_report.md`
-- `docs/v0.6/mcp_agent_experiment.md`
-- `docs/v0.6/mcp_agent_experiment_verification.md`
-- `docs/v0.7/design.md`
-
-## v0.5 - Completed
-
-Development and the full experiment completed on 2026-07-11. v0.5 establishes
-the first problem-dimension slice (numerical precision) and freezes a verified
-17-task cumulative dataset. Boundary and compatibility are separate future
-versions, not blockers for this release.
-
-Implemented:
-
-- Added the precision taxonomy (`problem_dimension=precision`, subclasses P1-P5) and ghstack-aware PyTorch candidate screening workflow.
-- Added extended experiment reporting: resolved rate, patch conciseness, pass-to-pass kept rate, strict resolved rate, regression rate, tier-weighted score, per-problem breakdown, and median runtime.
-- Added `datasets/pytorch_v0.5_precision/dataset.json` as a reusable 6-task precision slice; P4 remains an explicit N/A coverage gap.
-- Added persistent remote ccache reuse, replay-spec evidence hashes, per-source-load build environments, and one source load per evaluation phase.
-- Added the `pytorch-cpu-compile` environment for CPU Inductor/`torch.compile` tasks.
-- Unified all official task replay on Linux `remote_docker`; re-admitted the 10 inherited CPU tasks under that policy.
-- Optimized CUDA kernel builds with `BUILD_TEST=0` and `TORCH_CUDA_ARCH_LIST=7.0`; the warm incremental compile dropped from tens of minutes to roughly 3 minutes.
-- Made resume task-content-aware, excluded explicit environment failures from completed attempt keys, retained append-only audit rows, and deduplicated retries for scoring.
-- Added bounded rsync retry (including mutable Git pack exit 23), incremental summaries, strict F2P/P2P status classification, and aggregate completeness enforcement.
-
-v0.5 cumulative dataset (`datasets/pytorch_v0.5/dataset.json`): **17 verified tasks** (13 inherited from v0.4 plus #140557, #139999, #129138, and #139372). Deprecated #129154 and #144073 are excluded.
-
-Full experiment result (Codex CLI 0.144.0-alpha.4, 17 tasks x 3 repeats):
-
-- **37/51 = 72.5% resolved**; tier-weighted score 76.8%.
-- Patch conciseness 1.000; pass-to-pass kept rate 94.1%; strict regression rate 0%.
-- CPU overlay 27/39, CUDA overlay 4/6, CUDA kernel build 6/6.
-- Precision slice: **13/18 = 72.2%**; P1 3/3, P2 0/3, P3 4/6, P4 N/A, P5 6/6.
-- Aggregate integrity: 17/17 baselines and 51/51 logical attempts, with zero logical environment transient.
-
-Deferred to later versions:
-
-- Admit a real P4 numerical-instability task; P4 remains N/A rather than being filled with a non-matching task.
-- v0.6 standardizes the Agent evaluation platform; v0.7 adds boundary tasks; v0.8 adds device/API compatibility tasks.
-- #129154 and #144073 require a matched wheel or source-build environment and remain v0.7 backlog candidates.
-
-Documents:
-
-- `docs/v0.5/design.md`
-- `docs/v0.5/candidate_search.md`
-- `docs/v0.5/setup_remote_agent.md`
-- `docs/v0.5/experiment_report.md`
-
-## v0.4 - Completed
-
-Development started on 2026-06-21. Experiment completed on 2026-07-08.
-
-Implemented:
-
-- Remote GPU Docker executor via SSH (`src/op_bench/remote.py`) with rsync workspace sync (excludes `.ccache/`, `build/`, `torch.egg-info/`, `__pycache__/`), `--gpus all` flag injection, `ServerAliveInterval=30` keep-alive, and `_kill_remote_container_processes` fallback on subprocess timeout.
-- Two new runtime tiers: `cuda_python_overlay`, `cuda_kernel_build`.
-- `inplace_build` source loading mode for full PyTorch source rebuilds (cuda_kernel_build tier); default build command streams `setup.py develop` output to `.op_bench_build.log` and preserves progress on timeout.
-- `kernel_full` snapshot mode (`scripts/setup_sources.py`) with recursive submodule init from `.gitmodules`.
-- CUDA Docker images: `pytorch-cuda` (overlay, torch 2.6.0 wheel) and `pytorch-cuda-devel` (with nvcc + ccache via `/usr/lib/ccache` symlinks + `cmake<4` + `CMAKE_POLICY_VERSION_MINIMUM=3.5` + `setuptools>=70,<81` + `USE_NCCL=0 USE_DISTRIBUTED=0 USE_TENSORPIPE=0 USE_GLOO=0 USE_MPI=0 USE_KINETO=0`).
-- Codex CLI rate-limit auto-retry (`_run_codex`): detects 429 / "rate limit" / "quota exceeded" signatures, sleeps `OP_BENCH_CODEX_RATE_LIMIT_WAIT_SEC` (default 5h5min), retries up to `OP_BENCH_CODEX_RATE_LIMIT_MAX_RETRIES` (default 3).
-- `TaskManifest.build_timeout_sec` property (defaults to 6h for `cuda_kernel_build` / `inplace_build`).
-- Empty `hidden_test.patch` support (skip apply when PR fixes a pre-existing test).
-- Patch apply fuzz fallback (`patch -F 3`) for minor base-commit drift.
-- `--no-public-tests` ablation flag (mechanism present, not exercised in v0.4).
-- Preflight script (`scripts/preflight_task.py`) to verify task admission readiness offline: snapshot exists, patches apply, test names resolve.
-
-v0.4 dataset (`datasets/pytorch_v0.4/dataset.json`): **13 tasks verified** (10 from v0.3 + 2 cuda_python_overlay: 132616, 132835 + 1 cuda_kernel_build: 144009).
-
-v0.4 experiment result (Codex CLI, 3-repeat):
-
-- **33/39 = 84.6% resolved** (v0.3 was 76.7%).
-- Batch A (CPU, 10 tasks × 3): 24/30, median 45.9s. 2 stable failures (162340, 163961) carried over from v0.3.
-- Batch B (GPU, 3 tasks × 3, remote_docker on 4× V100): 9/9, median 82.2s.
-- `cuda_kernel_build` (144009): 3/3, median ~91min per attempt (build-heavy).
-
-Deferred to v0.5:
-
-- Multi-agent comparison with Claude Code (blocked on external conditions; agent adapter design retained).
-- Public test ablation (no task ships `public_test.patch` yet; mechanism kept, content deferred).
-
-Documents:
-
-- `docs/v0.4/design.md`
-- `docs/v0.4/experiment_report.md`
-- `docs/v0.4/candidate_tasks_cuda.md`
-- `docs/v0.4/public_test_ablation.md`
-
-## v0.3 - Completed
-
-Development started on 2026-06-05.
-
-Implemented milestones:
-
-- Expanded PyTorch verified dataset from 3 to 10 tasks across 5 subsystems.
-- Added patch scope validation with `enforced` mode (`src/op_bench/patch_scope.py`).
-- Added public/hidden test separation (`hidden_test_patch` + `public_test_patch`).
-- Added multi-file Python overlay support (verified with conv.py + utils.py task).
-- Added `--filter-tasks` for incremental experiment runs on task subsets.
-- Added batch admission runner (`scripts/run_admission_batch.py`).
-- Upgraded agent prompt to communicate patch scope and public test visibility.
-- Upgraded evaluator to check patch scope before scoring.
-- Ran 3-repeat Codex CLI evaluation on all 10 tasks: 76.7% resolved (23/30).
-
-Documents:
-
-- `docs/v0.3/design.md`
-- `docs/v0.3/experiment_report.md`
-- `docs/v0.3/candidate_tasks.md`
-
-## v0.2 - Completed
-
-Development started on 2026-06-04.
-
-Planned scope:
-
-- Expand the verified PyTorch operator dataset to 3-5 tasks.
-- Add reusable environment and source snapshot registries.
-- Add a formal task admission pipeline with stable replay evidence.
-- Add evidence-aware dataset validation and environment lifecycle management.
-- Continue using the v0.1 Codex action-bridge path for isolated agent scoring.
-
-Implemented milestones:
-
-- Added committed environment and source snapshot registries with typed loaders.
-- Added backward-compatible task references and v0.2 runtime/admission fields.
-- Added `run_admission.py` and stable task-local admission evidence.
-- Added evidence-aware dataset validation with registry reference checks.
-- Added registry-driven task resolution for dataset, admission, replay, source, and environment CLIs.
-- Added asset cache inspection and OpBench-managed Docker container lifecycle utilities.
-- Added dataset curation utilities for verified-only slices and summaries.
-- Migrated `pytorch__149693__lazylinear_init` and re-verified baseline/gold replay.
-- Promoted `pytorch__160952__bilinear_lazy_check` to verified after fixing its hidden test replay.
-- Added and verified `pytorch__147599__lazylinear_state_forward` from PyTorch PR #147599.
-- Updated `datasets/pytorch_mini` to a 3-task verified PyTorch CPU operator slice.
-- Ran the `gold` agent loop on the 3-task slice; all three tasks resolved.
-- Ran a real Codex CLI `codex_action_bridge` experiment on the 3-task verified slice; all three tasks resolved with isolated final scoring.
-
-Documents:
-
-- `docs/v0.2/design.md`
-- `docs/v0.2/developer_guide.md`
-- `docs/v0.2/experiment_report.md`
-- `docs/v0.2/implementation_plan.md`
-
-## v0.1 - Completed
-
-OpBench v0.1 established the minimum isolated benchmark loop:
-
-- Built task bundles from real PyTorch issues and PRs.
-- Replayed fail-to-pass and pass-to-pass tests in task-specific Docker environments.
-- Managed local full-repository source snapshots for reproducible workspaces.
-- Ran a real Codex CLI agent through the OpBench action interface.
-- Scored agent patches in fresh isolated workspaces and recorded experiment evidence.
-
-Documents:
-
-- `docs/v0.1/product_requirements.md`
-- `docs/v0.1/experiment_report.md`
-- `docs/v0.1/developer_guide.md`
-- `docs/v0.1/manual_validation.md`
+## v0.8 — Fixed model evaluation framework (unreleased)
+
+Comments and pre-PR documentation review, 2026-09-23:
+
+- Explain model-client, attempt, recovery, budget and grading boundaries beside
+  the implementation. Clarify current model API integration and later Agent
+  framework integration; runtime behavior and experiment protocols are unchanged.
+- Align the English/Chinese entry points, current status, task/runtime contracts
+  and CLI examples. Date historical validation claims and separate earlier real
+  model smoke runs from current scripted coverage; preserve original evidence.
+
+Internal simplification and run organization, 2026-09-22:
+
+- Consolidate engineering tasks under `tests/fixtures/`; remove the separate
+  `examples/` tree, redundant guides and unused dataset/model configurations.
+  Keep one fixture guide and one Docker model smoke configuration. User guides
+  now start from actual candidate tasks and the shared experiment workflow.
+- Give the standard-library numeric fixture its own Python/Git Docker image
+  (environment revision 2), and align Docker CI and tests with it. Retain the
+  separate C++ and PyTorch checks for their compilation and framework behavior.
+  Remove the unused empty baseline patch; baseline evaluation is a CLI operation.
+- Store each grading result once. Variant parents and controls use schema 2
+  references to child `result.json` files, retaining statuses and interruption
+  evidence without duplicate case lists or full inline results. Share the
+  control execution loop and remove derivable counters.
+- Normalize legacy model labels and terminal aliases at the record boundary;
+  report protocol 5 consumes the normalized records without editing history.
+  Replay requires an explicit frozen-submission declaration.
+- Validate `HarnessSpec` at construction, share source identity and local process
+  environment rules, remove unused baseline return fields, and keep Codex stdin
+  in its temporary directory instead of persisting a duplicate request.
+- Organize existing runs by version, purpose and batch; separate caches and
+  historical archives. Preserve failed/interrupted evidence and historical
+  reports. Add [storage guidance](runs/README.md) and a
+  [relocation index](runs/archive/README.md); raw runs remain ignored by Git.
+
+Detailed architecture review, 2026-09-22:
+
+- Separate experiment scheduling/recovery, single-attempt execution and input
+  preparation within `runner`. Remove unused repeat configuration, duplicate
+  workspace task files and inline harness results; attempts reference the saved
+  harness result and evaluation.
+- Make baseline relocation a runtime responsibility. Preserve its original build
+  path so moving an artifact does not leave local runtime variables pointing at
+  the old directory; orchestration no longer rewrites baseline records.
+- Share one subprocess lifecycle for commands and numeric observations, and one
+  installed-image ID resolver. Remove the unused Docker network choice and an
+  unused workspace-initialization parameter.
+- Share pure grading judgments between execution and verification. Verification
+  no longer imports the evaluator; reports consume evaluation rules. Reject
+  variant revision/environment mismatches and handle damaged patch encoding or
+  overflowing duration values as invalid evidence.
+- Rename grading-control output to `controls.json` and remove constant admission
+  declarations. Dataset selection/admission remains a v0.9 responsibility.
+- Validate output paths before writing any artifacts. One task-level rule keeps
+  evaluation, attempts, controls, replays and preparation outputs out of source
+  and private grader directories, including symlink aliases.
+- Record the harness protocol in plans and attempts, and reject pending work
+  under changed tools or harnesses. At that review stage the harness became
+  `opbench-fixed-tools-3`, tools remained `controlled-tools-2`, and the report
+  protocol was 4 (superseded by 5 in the later internal simplification). Completed older
+  records retain their original conditions.
+- Repair stale commands, distinguish historical task materials from executable
+  bundles, and make CI run an installed-package evaluation and verification away
+  from the checkout. Architecture documentation describes the current structure;
+  changes and validation evidence have their own records.
+
+Simplification review, 2026-09-22:
+
+- Keep the five responsibility packages within one Python application; remove
+  the parallel batch prediction-import experiment flow. `evaluate` now handles
+  one task and patch or baseline; `run` owns model experiment plans and recovery.
+- Save complete scores only in `evaluation/result.json`. Attempt and replay
+  records reference that file; reads verify its evidence and frozen submission.
+- Share one report calculation between `run` and `report`; remove `report --reason`,
+  report history directories and version chains. Original attempts, evaluations
+  and historical version documents remain intact.
+  Summarize once at completion or interruption, avoiding repeated verification
+  of all prior scores after every attempt; manual progress reports remain available.
+- Share fixed tool argument validation and remove the unused MCP stdio entry
+  point. Advance tool/harness protocols to version 2 for the unified validation
+  behavior, without relabeling earlier experiments.
+  Reject new model executions when resuming an unfinished plan with another
+  tool protocol, while completed plans remain readable.
+- Close HTTP responses on rejected or interrupted model calls, including status,
+  content-type, response-size and deadline failures.
+
+Architecture and documentation organization, 2026-09-21:
+
+- Organize the implementation into `data`, `runner`, `runtime`, `evaluation` and
+  `results`, with one CLI entry point. Extract workspace management and patch
+  capture from evaluation and experiment orchestration.
+- Rename the task-control module to `evaluation/controls.py`; it validates
+  grading behavior and does not implement dataset admission.
+- Restore v0.1–v0.7 design, implementation and experiment documents, with a
+  [history index](docs/history/README.md). Add a [source map](docs/architecture.md)
+  and rewrite the reading and quickstart paths.
+
+The scope was revised on 2026-09-14: compare models with the same controller loop,
+MCP workspace tools, prompts and budgets, then independently grade frozen patches.
+This replaces the earlier v0.8 autonomous-Agent and inference-gateway proposal.
+
+- Separate task loading, model clients, fixed execution, independent evaluation
+  and read-only reporting. Retain one implementation of workspace tools.
+- Keep offline workspace isolation, clean baseline source, private-grader-free
+  builds, frozen submissions, actual candidate builds and independent scoring.
+- Use one main metric, `resolved_rate`, with the complete planned denominator and
+  explicit missing/error status. Dataset admission does not gate development rates.
+- Remove arbitrary Agent command launching, model gateways/relays and their
+  examples, along with retired multi-repeat and comparison statistics.
+- Retain Task schema 2, grading controls, execution provenance, recovery and
+  frozen-patch re-evaluation. Historical evidence keeps its original protocol.
+- Reserve classification, ten independent tasks per category and a reusable
+  selection/admission process for v0.9; fixed-framework model experiments for v0.10.
+  Agent-framework comparison and behavior analysis follow later.
+
+The final September 22 internal simplification passed 224 core tests with Docker
+enabled and a fresh installed-package scripted HTTP run, resume, report, verify,
+replay and four grading controls. Output destinations inside task inputs were
+also rejected before writing any artifacts.
+Archived September 14 and September 22 runs still passed read-only report and
+grading verification after directory organization.
+Local Codex gpt-5.5/high completed a controlled fixture on September 14;
+resume, reporting and independent verification passed. Evidence is maintained in the
+[acceptance matrix](docs/v0.8/acceptance_matrix.md) and
+[validation report](docs/v0.8/validation_report.md). Earlier successful native
+model runs do not by themselves validate the new fixed loop.
+
+See the [design](docs/v0.8/design.md) and [task guide](docs/v0.8/task_format.md).
+Code licensing awaits author/school confirmation; this update selects no license.
+
+## Earlier releases
+
+The [version documents](docs/history/README.md),
+[complete historical changelog](docs/history/CHANGELOG-through-v0.7.md) and
+[v0.7 source](https://github.com/yangyi-nju/op_bench/tree/82c8e064bf30fead2d941d11cf94053ce3fc7e14)
+retain earlier designs, implementation and reported results. Verification labels and
+scores belong to those protocols; selected task materials remain for v0.9 review.

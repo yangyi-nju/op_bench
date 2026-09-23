@@ -1,0 +1,231 @@
+{
+  "schema_version": 1,
+  "status": "blocked",
+  "inspected_at": "2026-09-07",
+  "requested_revision": "240aa77ad01c4f0cd9b2417748272f2f617c112f",
+  "cache_path": ".op_bench_cache/sources/pytorch/pytorch/240aa77ad01c4f0cd9b2417748272f2f617c112f/source",
+  "cache_head": "637ddd1687dc57b74b3c2d25f28e110203287a26",
+  "sparse_checkout": true,
+  "submodule_count": 37,
+  "uninitialized_submodule_count": 37,
+  "submodules": [
+    {
+      "path": "android/libs/fbjni",
+      "required_revision": "7e1e1fe3858c63c251c637ae41a20de425dde96f",
+      "checkout_initialized": false
+    },
+    {
+      "path": "third_party/FP16",
+      "required_revision": "4dfe081cf6bcd15db339cf2680b9281b8451eeb3",
+      "checkout_initialized": false
+    },
+    {
+      "path": "third_party/FXdiv",
+      "required_revision": "b408327ac2a15ec3e43352421954f5b1967701d1",
+      "checkout_initialized": false
+    },
+    {
+      "path": "third_party/NNPACK",
+      "required_revision": "c07e3a0400713d546e0dea2d5466dd22ea389c73",
+      "checkout_initialized": false
+    },
+    {
+      "path": "third_party/NVTX",
+      "required_revision": "e170594ac7cf1dac584da473d4ca9301087090c1",
+      "checkout_initialized": false
+    },
+    {
+      "path": "third_party/VulkanMemoryAllocator",
+      "required_revision": "a6bfc237255a6bac1513f7c1ebde6d8aed6b5191",
+      "checkout_initialized": false
+    },
+    {
+      "path": "third_party/XNNPACK",
+      "required_revision": "4ea82e595b36106653175dcb04b2aa532660d0d8",
+      "checkout_initialized": false
+    },
+    {
+      "path": "third_party/benchmark",
+      "required_revision": "0d98dba29d66e93259db7daa53a9327df767a415",
+      "checkout_initialized": false
+    },
+    {
+      "path": "third_party/composable_kernel",
+      "required_revision": "cedccd59c94cb0c74e7ec0d0f6c791aed081febc",
+      "checkout_initialized": false
+    },
+    {
+      "path": "third_party/cpp-httplib",
+      "required_revision": "3b6597bba913d51161383657829b7e644e59c006",
+      "checkout_initialized": false
+    },
+    {
+      "path": "third_party/cpuinfo",
+      "required_revision": "1e83a2fdd3102f65c6f1fb602c1b320486218a99",
+      "checkout_initialized": false
+    },
+    {
+      "path": "third_party/cudnn_frontend",
+      "required_revision": "936021bfed8c91dc416af1588b2c4eca631a9e45",
+      "checkout_initialized": false
+    },
+    {
+      "path": "third_party/cutlass",
+      "required_revision": "bbe579a9e3beb6ea6626d9227ec32d0dae119a49",
+      "checkout_initialized": false
+    },
+    {
+      "path": "third_party/eigen",
+      "required_revision": "3147391d946bb4b6c68edd901f2add6ac1f31f8c",
+      "checkout_initialized": false
+    },
+    {
+      "path": "third_party/fbgemm",
+      "required_revision": "dbc3157bf256f1339b3fa1fef2be89ac4078be0e",
+      "checkout_initialized": false
+    },
+    {
+      "path": "third_party/flatbuffers",
+      "required_revision": "01834de25e4bf3975a9a00e816292b1ad0fe184b",
+      "checkout_initialized": false
+    },
+    {
+      "path": "third_party/fmt",
+      "required_revision": "0c9fce2ffefecfdce794e1859584e25877b7b592",
+      "checkout_initialized": false
+    },
+    {
+      "path": "third_party/gemmlowp/gemmlowp",
+      "required_revision": "3fb5c176c17c765a3492cd2f0321b0dab712f350",
+      "checkout_initialized": false
+    },
+    {
+      "path": "third_party/gloo",
+      "required_revision": "5354032ea08eadd7fc4456477f7f7c6308818509",
+      "checkout_initialized": false
+    },
+    {
+      "path": "third_party/googletest",
+      "required_revision": "e2239ee6043f73722e7aa812a459f54a28552929",
+      "checkout_initialized": false
+    },
+    {
+      "path": "third_party/ideep",
+      "required_revision": "41d636c2bbcea6bff0faf97cdb65a48cdde987af",
+      "checkout_initialized": false
+    },
+    {
+      "path": "third_party/ittapi",
+      "required_revision": "5b8a7d7422611c3a0d799fb5fc5dd4abfae35b42",
+      "checkout_initialized": false
+    },
+    {
+      "path": "third_party/kineto",
+      "required_revision": "338140f58a28d599da3434ced4fd2d75dd1a213d",
+      "checkout_initialized": false
+    },
+    {
+      "path": "third_party/mimalloc",
+      "required_revision": "b66e3214d8a104669c2ec05ae91ebc26a8f5ab78",
+      "checkout_initialized": false
+    },
+    {
+      "path": "third_party/nccl/nccl",
+      "required_revision": "ab2b89c4c339bd7f816fbc114a4b05d386b66290",
+      "checkout_initialized": false
+    },
+    {
+      "path": "third_party/nlohmann",
+      "required_revision": "87cda1d6646592ac5866dc703c8e1839046a6806",
+      "checkout_initialized": false
+    },
+    {
+      "path": "third_party/onnx",
+      "required_revision": "b8baa8446686496da4cc8fda09f2b6fe65c2a02c",
+      "checkout_initialized": false
+    },
+    {
+      "path": "third_party/opentelemetry-cpp",
+      "required_revision": "a799f4aed9c94b765dcdaabaeab7d5e7e2310878",
+      "checkout_initialized": false
+    },
+    {
+      "path": "third_party/pocketfft",
+      "required_revision": "9d3ab05a7fffbc71a492bc6a17be034e83e8f0fe",
+      "checkout_initialized": false
+    },
+    {
+      "path": "third_party/protobuf",
+      "required_revision": "d1eca4e4b421cd2997495c4b4e65cea6be4e9b8a",
+      "checkout_initialized": false
+    },
+    {
+      "path": "third_party/psimd",
+      "required_revision": "072586a71b55b7f8c584153d223e95687148a900",
+      "checkout_initialized": false
+    },
+    {
+      "path": "third_party/pthreadpool",
+      "required_revision": "4fe0e1e183925bf8cfa6aae24237e724a96479b8",
+      "checkout_initialized": false
+    },
+    {
+      "path": "third_party/pybind11",
+      "required_revision": "a2e59f0e7065404b44dfe92a28aca47ba1378dc4",
+      "checkout_initialized": false
+    },
+    {
+      "path": "third_party/python-peachpy",
+      "required_revision": "f45429b087dd7d5bc78bb40dc7cf06425c252d67",
+      "checkout_initialized": false
+    },
+    {
+      "path": "third_party/sleef",
+      "required_revision": "60e76d2bce17d278b439d9da17177c8f957a9e9b",
+      "checkout_initialized": false
+    },
+    {
+      "path": "third_party/tensorpipe",
+      "required_revision": "52791a2fd214b2a9dc5759d36725909c1daa7f2e",
+      "checkout_initialized": false
+    },
+    {
+      "path": "third_party/x86-simd-sort",
+      "required_revision": "f99c3929044aefca8957ee8824b378f9cd89e663",
+      "checkout_initialized": false
+    }
+  ],
+  "available_image_inspection": {
+    "image": "opbench/softmax-fixture:torch2.6.0",
+    "image_id": "sha256:83993db86f158f06f5470904a150cf98e4e58e82521b3f89c3fc7410867b8efa",
+    "os": "linux",
+    "architecture": "arm64",
+    "python_version": "3.12",
+    "torch_version": "2.6.0+cpu",
+    "torch_file": "/usr/local/lib/python3.12/site-packages/torch/__init__.py",
+    "tools": {
+      "git": "/usr/bin/git",
+      "cmake": null,
+      "ninja": null,
+      "gcc": null,
+      "g++": null
+    },
+    "modules": {
+      "numpy": false,
+      "yaml": false,
+      "setuptools": true,
+      "expecttest": false,
+      "hypothesis": false
+    },
+    "probe_lifecycle": "Metadata was printed, but this direct docker-run process did not terminate on its own; its exact probe container was explicitly removed. No candidate operator score was produced."
+  },
+  "source_build_control_matrix": {
+    "baseline": "not_executed",
+    "reference": "not_executed",
+    "alternative": "not_executed",
+    "mutation": "not_executed"
+  },
+  "runtime_validation": "not_executed",
+  "admission_status": "not_admitted",
+  "old_cache_modified": false
+}

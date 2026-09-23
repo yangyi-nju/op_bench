@@ -1,0 +1,54 @@
+{
+  "date": "2026-09-09",
+  "scope": "static author checks only; no Torch import, full build, compilation, GPU or model execution",
+  "admission_status": "not_admitted",
+  "task_revision": "candidate.1",
+  "scoring_revision": "candidate.1",
+  "relocated_source": "240aa77ad01c4f0cd9b2417748272f2f617c112f",
+  "original_parent": "06e9deabb623e004eb6024e703a976c5748d51e6",
+  "source_environment_equal_to_layernorm_r3": true,
+  "source_comparison": "vector_norm AST equal across the two exact Git trees; entire files/frameworks differ",
+  "control_patch_checks": [
+    {
+      "name": "reference",
+      "patch_application": "passed",
+      "modified_source_syntax": "passed",
+      "runtime": "not_executed"
+    },
+    {
+      "name": "alternative",
+      "patch_application": "passed",
+      "modified_source_syntax": "passed",
+      "runtime": "not_executed"
+    },
+    {
+      "name": "mutation",
+      "patch_application": "passed",
+      "modified_source_syntax": "passed",
+      "runtime": "not_executed"
+    }
+  ],
+  "public_and_private_driver_syntax": "passed",
+  "dataset_schema": "passed",
+  "oracle_checks": "all singleton absolute-value identities and six independently calculated float32 regression anchors passed",
+  "nonfinite_transport": "finite-flag/value encoding remains valid numeric evidence and is rejected against a finite reference",
+  "float32_underflow_anchor": "binary32 rounding of 16**-41 is zero",
+  "cases": {
+    "singleton_reductions": {
+      "group": "fail_to_pass",
+      "operations": 6
+    },
+    "float32_regressions": {
+      "group": "pass_to_pass",
+      "operations": 7
+    },
+    "float64_regressions": {
+      "group": "pass_to_pass",
+      "operations": 3
+    }
+  },
+  "remote_control_matrix": "not_executed",
+  "real_model_execution": "not_executed",
+  "generator_check": "Temporary generation matches task object; shared source/environment revision guard present",
+  "documented_cli": "parsed without execution"
+}
